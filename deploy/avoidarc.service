@@ -1,0 +1,36 @@
+# 게임 서버를 자동으로 띄우고, 죽으면 다시 살린다.
+#
+#   sudo cp deploy/avoidarc.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now avoidarc
+#
+# 로그 보기:  sudo journalctl -u avoidarc -f
+
+[Unit]
+Description=AvoidArc
+After=network.target
+
+[Service]
+Type=simple
+User=avoidarc
+WorkingDirectory=/home/avoidarc/AvoidArc
+ExecStart=/usr/bin/node --env-file-if-exists=.env server.js
+Restart=always
+RestartSec=3
+
+# 3000 번은 안에서만 열어 둔다. 바깥은 nginx 가 받는다.
+Environment=PORT=3000
+Environment=NODE_ENV=production
+
+# 데이터는 코드와 떨어진 곳에 둔다. 코드를 새로 받아도 안 지워진다.
+Environment=DATA_DIR=/home/avoidarc/data
+
+# 서버가 건드릴 수 있는 곳을 좁힌다. 뚫려도 피해를 줄인다.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=no
+ReadWritePaths=/home/avoidarc/data
+
+[Install]
+WantedBy=multi-user.target

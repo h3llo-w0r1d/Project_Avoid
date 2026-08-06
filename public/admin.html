@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AvoidArc 랭킹 관리</title>
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="stylesheet" href="./admin.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🛠️</text></svg>" />
+</head>
+<body class="admin">
+  <main>
+    <h1>랭킹 관리</h1>
+
+    <!-- 열쇠 입력 -->
+    <section id="login" class="panel">
+      <label class="field">
+        <span>관리자 열쇠</span>
+        <input id="token" type="password" placeholder="서버 콘솔에 찍힌 열쇠" autocomplete="off" />
+        <em id="login-error" class="field-error"></em>
+      </label>
+      <button id="login-btn" class="primary">열기</button>
+      <p class="hint">
+        서버를 켤 때 콘솔에 찍힙니다. 배포 환경에서는 <code>ADMIN_TOKEN</code>
+        환경변수로 고정해 두세요.
+      </p>
+    </section>
+
+    <!-- 목록 -->
+    <section id="board" class="panel hidden">
+      <div class="toolbar">
+        <span id="summary"></span>
+        <span class="spacer"></span>
+        <button id="refresh-btn" class="ghost small">새로고침</button>
+        <button id="clear-btn" class="danger small">전체 비우기</button>
+      </div>
+
+      <div id="notice" class="notice"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th class="col-rank">순위</th>
+            <th>닉네임</th>
+            <th class="col-time">기록</th>
+            <th class="col-when">등록</th>
+            <th class="col-act"></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+
+    <p class="footnote">
+      점수는 브라우저가 보고합니다. 서버가 플레이를 다시 검증하지 않으므로
+      조작된 기록을 원천 차단할 수는 없고, 여기서 지우는 방식으로 관리합니다.
+    </p>
+  </main>
+
+  <script type="module" src="./js/admin.js"></script>
+</body>
+</html>

@@ -1,7 +1,49 @@
 services:
   - type: web
-    name: avoid-game
-    env: node
-    buildCommand: npm install
-    startCommand: node server.js
+    name: avoidarc
+    runtime: node
     plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      # node:sqlite 를 쓰므로 22 이상이어야 한다
+      - key: NODE_VERSION
+        value: "22"
+      # 랭킹 관리 화면(/admin.html) 열쇠.
+      # 지정하지 않으면 서버가 매번 새로 만들어 관리 화면에 못 들어간다.
+      # Render 대시보드에서 값을 직접 넣는다.
+      - key: ADMIN_TOKEN
+        sync: false
+      # 로그인 리디렉트 주소의 기준. 배포 주소를 그대로 넣는다.
+      - key: BASE_URL
+        sync: false
+      # Google 로그인. 없으면 버튼이 안 뜬다.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      # Apple 로그인. 유료 개발자 계정과 HTTPS 도메인이 필요하다.
+      - key: APPLE_CLIENT_ID
+        sync: false
+      - key: APPLE_TEAM_ID
+        sync: false
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: APPLE_PRIVATE_KEY
+        sync: false
+      # 게임 안 관리 버튼을 볼 계정 (쉼표로 여러 명)
+      - key: ADMIN_NICKNAMES
+        sync: false
+      # - key: ADMIN_USER_IDS
+      #   sync: false
+
+      # 데이터베이스를 둘 곳. 디스크를 붙이면 반드시 이 값을 함께 켠다.
+      # 안 켜면 인스턴스가 다시 뜰 때 랭킹과 계정이 통째로 사라진다.
+      # - key: DATA_DIR
+      #   value: /var/data
+
+# 영구 디스크. 무료 플랜에는 없다.
+# disk:
+#   name: avoidarc-data
+#   mountPath: /var/data
+#   sizeGB: 1

@@ -1,3 +1,5 @@
 node_modules/
-leaderboard.json
+data/
+*.log
+.DS_Store
 .env

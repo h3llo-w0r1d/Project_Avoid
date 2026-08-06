@@ -1,0 +1,163 @@
+/* 관리 화면. 게임의 style.css 를 그대로 쓰고 표 관련만 덧붙인다. */
+
+body.admin {
+  overflow: auto;
+  touch-action: auto;
+  background: radial-gradient(ellipse at 50% -10%, #131c33 0%, var(--bg) 60%);
+}
+
+body.admin main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+
+body.admin h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 22px;
+}
+
+/* 게임의 .panel 은 400px 로 묶여 있다. 표를 담으려면 풀어야 한다. */
+body.admin .panel {
+  width: 100%;
+  max-width: none;
+  margin-bottom: 20px;
+}
+
+/* 열쇠 입력 칸은 굳이 넓힐 필요가 없다 */
+body.admin #login { max-width: 420px; }
+
+.hint {
+  margin-top: 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.hint code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.footnote {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+  padding: 14px 16px;
+  border-left: 2px solid var(--stroke);
+}
+
+/* ---------- 도구 모음 ---------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.toolbar .spacer { flex: 1; }
+
+button.small {
+  width: auto;
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+button.danger {
+  background: transparent;
+  color: var(--volt-soft);
+  border: 1px solid rgba(255, 58, 78, 0.45);
+}
+
+button.danger:hover { background: rgba(255, 58, 78, 0.15); }
+
+.notice {
+  min-height: 0;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.notice:not(:empty) { min-height: 20px; margin-bottom: 12px; }
+.notice.error { color: var(--volt-soft); }
+
+/* ---------- 표 ---------- */
+
+body.admin table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+body.admin th {
+  padding: 8px 6px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--stroke);
+}
+
+body.admin td {
+  padding: 10px 6px;
+  border-bottom: 1px solid rgba(120, 170, 255, 0.09);
+  vertical-align: middle;
+}
+
+.col-rank { width: 52px; }
+.col-time { width: 88px; text-align: right; }
+.col-when { width: 150px; }
+.col-act { width: 64px; }
+
+td.rank { font-weight: 800; color: var(--muted); font-variant-numeric: tabular-nums; }
+td.time { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent); }
+td.when { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* 닉네임 칸이 남는 폭을 다 가져가게 한다. break-all 만 걸어 두면
+   칸이 좁을 때 한 글자씩 세로로 쪼개진다. */
+th:nth-child(2) { width: auto; }
+td.who { word-break: break-word; }
+
+/* 다른 기록보다 유독 튀는 값 — 눈으로 걸러 보라는 표시일 뿐, 판정은 아니다 */
+tr.suspect { background: rgba(255, 196, 77, 0.07); }
+
+.flag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffc44d;
+  border: 1px solid rgba(255, 196, 77, 0.4);
+  vertical-align: middle;
+}
+
+.del-btn {
+  width: auto;
+  margin: 0;
+  padding: 5px 11px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--stroke);
+  border-radius: 7px;
+}
+
+.del-btn:hover { color: var(--volt-soft); border-color: rgba(255, 58, 78, 0.5); }
+.del-btn:disabled { opacity: 0.4; cursor: default; }
+
+.empty-row { text-align: center; color: var(--muted); padding: 30px 0; }
+
+@media (max-width: 560px) {
+  .col-when { display: none; }
+  body.admin td.when { display: none; }
+}
