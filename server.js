@@ -13,6 +13,7 @@ import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { openBoardStore } from './lib/board.js';
+import { openPlaysStore } from './lib/plays.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 
@@ -77,6 +78,9 @@ const stats = openStatsStore(db);
 
 // 자유 게시판.
 const board = openBoardStore(db);
+
+// 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
+const plays = openPlaysStore(db);
 const matchLog = await openMatchStore(DATA_DIR, db);
 
 const app = express();
@@ -293,8 +297,11 @@ app.post('/api/scores', async (req, res) => {
 
   try {
     await scores.rollSeasons();
-    const entry = await scores.add(finalName, Math.round(t * 100) / 100, req.user?.id ?? null);
+    const seconds = Math.round(t * 100) / 100;
+    const entry = await scores.add(finalName, seconds, req.user?.id ?? null);
     stats.runFinished(t);
+    // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
+    plays.add({ name: finalName, seconds, userId: req.user?.id ?? null });
     res.json({
       id: entry.id,
       rank: scores.rankOf(entry.id),
@@ -446,6 +453,26 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
     res.json({ ok: true, left: scores.size });
   } catch (err) {
     console.error('기록 삭제 실패:', err);
+    res.status(500).json({ error: '삭제에 실패했습니다.' });
+  }
+});
+
+// 모든 판 기록(플레이 로그). 시간 역순 한 쪽씩 준다.
+app.get('/api/admin/plays', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(plays.page(limit, offset));
+});
+
+// 플레이 로그 비우기. 확인 문구를 요구한다.
+app.post('/api/admin/plays/clear', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== 'DELETE ALL') {
+    return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+  }
+  try {
+    res.json({ ok: true, removed: plays.clear() });
+  } catch (err) {
+    console.error('플레이 로그 삭제 실패:', err);
     res.status(500).json({ error: '삭제에 실패했습니다.' });
   }
 });
