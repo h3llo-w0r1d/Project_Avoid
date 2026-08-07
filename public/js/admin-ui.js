@@ -69,28 +69,43 @@ export class AdminUI {
       this.draw();
     });
 
-    // 기록 전체 비우기. 기록 탭에서만, 지울 게 있을 때만 나타난다.
+    // 비우기 버튼. 탭에 따라 지우는 대상이 달라진다.
     this.el.clear = AdminUI.button('전체 비우기', () => this.clearAll(), 'danger');
     this.el.clear.classList.add('hidden');
     this.el.search.parentElement.appendChild(this.el.clear);
   }
 
+  // 지금 탭에서 비울 것이 무엇인지. 없으면 버튼을 감춘다.
+  clearTarget() {
+    if (this.panel === 'scores') {
+      const n = this.data?.scores?.length ?? 0;
+      return n ? { label: '전체 비우기', what: `기록 ${n}개`, run: () => this.h.clearScores() } : null;
+    }
+    if (this.panel === 'usage') {
+      const n = this.data?.usage?.length ?? 0;
+      return n
+        ? { label: '이용 기록 비우기', what: `이용 현황 ${n}일치`, run: () => this.h.clearUsage() }
+        : null;
+    }
+    return null;
+  }
+
   // 되돌릴 수 없는 일이다. 두 번 묻고, 두 번째는 직접 입력하게 한다.
   // 확인 문구는 서버도 요구하므로 여기서 빠뜨리면 400 으로 되돌아온다.
   async clearAll() {
-    const n = this.data?.scores?.length ?? 0;
-    if (n === 0) return;
-    if (!confirm(`기록 ${n}개를 모두 지웁니다. 되돌릴 수 없습니다.`)) return;
+    const target = this.clearTarget();
+    if (!target) return;
+    if (!confirm(`${target.what}를 모두 지웁니다. 되돌릴 수 없습니다.`)) return;
     if (prompt('정말 지우려면 DELETE ALL 을 입력하세요.') !== 'DELETE ALL') {
       this.say('취소했습니다.');
       return;
     }
     try {
-      const r = await this.h.clearScores();
+      const r = await target.run();
       await this.reload();
       this.say(`${r.removed}개를 모두 지웠습니다.`);
     } catch (err) {
-      this.say(`전체 삭제 실패: ${err.message}`, true);
+      this.say(`삭제 실패: ${err.message}`, true);
     }
   }
 
@@ -138,10 +153,11 @@ export class AdminUI {
   draw() {
     if (!this.data) return;
 
-    // 기록 탭에서, 지울 게 있고, 대전 기록을 들여다보는 중이 아닐 때만 보인다.
+    // 지울 게 있고, 대전 기록을 들여다보는 중이 아닐 때만 보인다.
     // 검색으로 걸러진 개수가 아니라 전체 개수로 판단한다 — 비우기는 전체를 지운다.
-    this.el.clear.classList.toggle('hidden',
-      this.inspecting !== null || this.panel !== 'scores' || this.data.scores.length === 0);
+    const target = this.inspecting ? null : this.clearTarget();
+    this.el.clear.classList.toggle('hidden', !target);
+    if (target) this.el.clear.textContent = target.label;
 
     if (this.inspecting) return this.drawHistory();
 

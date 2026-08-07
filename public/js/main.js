@@ -122,6 +122,7 @@ const admin = new AdminUI({
   load: () => api.adminOverview(),
   removeScore: (id) => api.adminRemoveScore(id),
   clearScores: () => api.adminClearScores(),
+  clearUsage: () => api.adminClearUsage(),
   resetUser: (id) => api.adminResetUser(id),
   matchesOf: (id) => api.adminMatches(id)
 });

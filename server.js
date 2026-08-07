@@ -371,6 +371,19 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// 이용 현황 비우기. 기록 전체 비우기와 같은 방식으로 확인 문구를 요구한다.
+app.post('/api/admin/usage/clear', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== 'DELETE ALL') {
+    return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+  }
+  try {
+    res.json({ ok: true, removed: stats.clear() });
+  } catch (err) {
+    console.error('이용 현황 삭제 실패:', err);
+    res.status(500).json({ error: '삭제에 실패했습니다.' });
+  }
+});
+
 // 전체 비우기. 실수로 눌리지 않게 DELETE 가 아니라 POST 로 받고,
 // 본문에 확인 문구까지 있어야 실행한다.
 app.post('/api/admin/scores/clear', requireAdmin, async (req, res) => {

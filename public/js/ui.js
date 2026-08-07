@@ -411,6 +411,16 @@ export const api = {
     return res.json();
   },
 
+  async adminClearUsage() {
+    const res = await fetch('/api/admin/usage/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: 'DELETE ALL' })
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
+    return res.json();
+  },
+
   async adminMatches(userId) {
     const res = await fetch(`/api/admin/matches?user=${encodeURIComponent(userId)}`);
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
