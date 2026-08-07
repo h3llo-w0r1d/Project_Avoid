@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>AvoidArc 관리</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🛠</text></svg>">
+<style>
+  :root {
+    --bg: #05060f; --volt: #ff3a4e; --accent: #4fd6ff;
+    --panel: rgba(10, 14, 30, 0.82); --stroke: rgba(120, 170, 255, 0.22);
+    --text: #e8eeff; --muted: #8ea0c8; --warn: #ffb454;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); line-height: 1.6;
+    font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 0 16px 80px;
+  }
+  main { max-width: 960px; margin: 0 auto; }
+
+  header.bar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 18px 4px; margin-bottom: 8px;
+    background: linear-gradient(180deg, var(--bg) 70%, transparent);
+  }
+  .bar h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  .bar h1 em { color: var(--volt); font-style: normal; }
+  .bar .meta { color: var(--muted); font-size: 14px; }
+  .bar .spacer { flex: 1; }
+  .bar a, .bar button {
+    color: var(--muted); background: rgba(255,255,255,0.05);
+    border: 1px solid var(--stroke); border-radius: 8px;
+    padding: 7px 12px; font-size: 13px; text-decoration: none; cursor: pointer;
+    font-family: inherit;
+  }
+  .bar button:hover, .bar a:hover { color: var(--text); }
+
+  h2 { font-size: 15px; font-weight: 700; color: var(--muted); margin: 32px 0 12px; }
+
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 620px) { .cards { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel); border: 1px solid var(--stroke); border-radius: 14px;
+    padding: 18px; text-align: center;
+  }
+  .card .big { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+  .card .big em { font-size: 0.5em; font-style: normal; color: var(--muted); margin-left: 3px; }
+  .card .lbl { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .card .sub { font-size: 12px; color: var(--accent); margin-top: 4px; }
+
+  .tools { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tools input {
+    flex: 1; min-width: 160px; padding: 9px 12px; font-size: 14px; font-family: inherit;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--stroke);
+    border-radius: 8px; color: var(--text);
+  }
+  .tools .count { font-size: 12px; color: var(--muted); }
+  .tools button.danger {
+    background: rgba(255,58,78,0.12); border: 1px solid rgba(255,58,78,0.4);
+    color: #ff9aa6; border-radius: 8px; padding: 8px 12px; font-size: 13px;
+    cursor: pointer; font-family: inherit;
+  }
+
+  .wrap { overflow-x: auto; border: 1px solid var(--stroke); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; color: var(--muted); font-size: 12px; font-weight: 600;
+       padding: 10px 14px; border-bottom: 1px solid var(--stroke); white-space: nowrap; }
+  td { padding: 11px 14px; border-bottom: 1px solid rgba(120,170,255,0.1); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr.click { cursor: pointer; }
+  tr.click:hover td { background: rgba(255,255,255,0.03); }
+  .num { font-variant-numeric: tabular-nums; }
+  .name { font-weight: 700; }
+  .dim { color: var(--muted); font-size: 12px; }
+  td button.act {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--stroke);
+    color: var(--muted); border-radius: 6px; padding: 5px 10px; font-size: 12px;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+  }
+  td button.act:hover { color: #fff; background: var(--volt); border-color: transparent; }
+
+  .pager { display: flex; gap: 6px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  .pager button {
+    background: rgba(255,255,255,0.05); border: 1px solid var(--stroke); color: var(--muted);
+    border-radius: 7px; padding: 6px 11px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .pager button.on { color: var(--text); border-color: var(--accent); background: rgba(79,214,255,0.14); }
+  .pager button:disabled { opacity: 0.4; cursor: default; }
+
+  .detail { background: rgba(0,0,0,0.25); }
+  .detail-inner { padding: 6px 14px 16px; }
+  .flags { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 8px 0 14px; }
+  @media (max-width: 620px) { .flags { grid-template-columns: repeat(2, 1fr); } }
+  .flag {
+    background: var(--panel); border: 1px solid var(--stroke); border-radius: 10px;
+    padding: 10px; text-align: center;
+  }
+  .flag.bad { border-color: rgba(255,180,84,0.6); background: rgba(255,180,84,0.08); }
+  .flag .v { font-size: 18px; font-weight: 800; }
+  .flag.bad .v { color: var(--warn); }
+  .flag .l { font-size: 11px; color: var(--muted); }
+  .flag .s { font-size: 10px; color: var(--muted); }
+  .res-win { color: #6fe0a0; font-weight: 700; }
+  .res-lose { color: #ff8a96; font-weight: 700; }
+  .res-draw { color: var(--muted); font-weight: 700; }
+
+  .empty { color: var(--muted); text-align: center; padding: 28px; }
+  .state { color: var(--muted); font-size: 13px; margin: 8px 0; min-height: 20px; }
+  .state.err { color: #ff9aa6; }
+</style>
+</head>
+<body>
+<main>
+  <header class="bar">
+    <h1>Avoid<em>Arc</em> 관리</h1>
+    <span class="meta" id="meta">불러오는 중…</span>
+    <span class="spacer"></span>
+    <button id="refresh" type="button">새로고침</button>
+    <a href="/">← 게임으로</a>
+  </header>
+
+  <p class="state" id="state"></p>
+
+  <h2>이용 현황</h2>
+  <div class="cards" id="usage-cards"></div>
+  <div class="wrap" id="usage-table" style="margin-top:12px"></div>
+
+  <h2>계정 <span class="dim" id="acc-count"></span></h2>
+  <div class="tools">
+    <input id="acc-search" type="text" placeholder="닉네임으로 찾기" autocomplete="off">
+  </div>
+  <div class="wrap" id="acc-table"></div>
+  <div class="pager" id="acc-pager"></div>
+
+  <h2>버티기 기록 <span class="dim" id="score-count"></span></h2>
+  <div class="tools">
+    <input id="score-search" type="text" placeholder="이름으로 찾기" autocomplete="off">
+    <button class="danger" id="score-clear" type="button">전체 비우기</button>
+  </div>
+  <div class="wrap" id="score-table"></div>
+  <div class="pager" id="score-pager"></div>
+</main>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const PER = 15;
+let data = null;
+const page = { acc: 0, score: 0 };
+const query = { acc: '', score: '' };
+const openUser = new Set();       // 펼쳐 놓은 계정
+const matchCache = new Map();     // userId -> 대전 기록
+
+const api = async (path, opts) => {
+  const res = await fetch(path, opts);
+  if (res.status === 401) { location.href = '/'; throw new Error('관리자 권한이 없습니다'); }
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
+  return res.json();
+};
+
+const say = (msg, err = false) => {
+  $('state').textContent = msg;
+  $('state').classList.toggle('err', err);
+};
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+const spellTime = (sec) => {
+  if (sec < 60) return `${sec}<em>초</em>`;
+  if (sec < 3600) return `${Math.round(sec / 60)}<em>분</em>`;
+  return `${(sec / 3600).toFixed(1)}<em>시간</em>`;
+};
+const when = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()}`; };
+
+async function load() {
+  say('불러오는 중…');
+  try {
+    data = await api('/api/admin/overview');
+    matchCache.clear();
+    $('meta').textContent = `${data.season.name} · 지금 접속 ${data.online?.online ?? 0}명`;
+    say('');
+    drawUsage(); drawAccounts(); drawScores();
+  } catch (e) { say(e.message, true); }
+}
+
+/* ---- 이용 현황 ---- */
+function drawUsage() {
+  const rows = data.usage ?? [];
+  const week = rows.slice(0, 7);
+  const sum = (k) => week.reduce((s, r) => s + r[k], 0);
+  const today = rows[0] ?? { visits: 0, players: 0, seconds: 0, runs: 0 };
+
+  $('usage-cards').innerHTML = `
+    <div class="card"><div class="big">${today.visits}</div><div class="lbl">오늘 방문</div>
+      <div class="sub">${today.players}명이 놀았음</div></div>
+    <div class="card"><div class="big">${sum('visits')}</div><div class="lbl">최근 7일 방문</div>
+      <div class="sub">판 ${sum('runs')}회</div></div>
+    <div class="card"><div class="big">${spellTime(sum('seconds'))}</div><div class="lbl">최근 7일 논 시간</div>
+      <div class="sub">오늘 ${spellTime(today.seconds).replace(/<[^>]+>/g, '')}</div></div>`;
+
+  if (rows.length === 0) { $('usage-table').innerHTML = '<p class="empty">아직 기록이 없습니다</p>'; return; }
+  const body = rows.map((u) => {
+    const done = u.runs ? Math.round((u.finished / u.runs) * 100) : 0;
+    return `<tr><td class="num">${when(u.day.replace(/-/g, '/'))}</td>
+      <td class="num">${u.visits}</td>
+      <td class="num">${u.players}명${u.members ? ` <span class="dim">(회원 ${u.members})</span>` : ''}</td>
+      <td class="num">${u.runs}회 ${u.runs ? `<span class="dim">완주 ${done}%</span>` : ''}</td>
+      <td class="num">${spellTime(u.seconds).replace(/<[^>]+>/g, '')}</td></tr>`;
+  }).join('');
+  $('usage-table').innerHTML =
+    `<table><thead><tr><th>날짜</th><th>방문</th><th>논 사람</th><th>판</th><th>논 시간</th></tr></thead><tbody>${body}</tbody></table>`;
+}
+
+/* ---- 계정 ---- */
+function accRows() {
+  const all = data.accounts ?? [];
+  if (!query.acc) return all;
+  return all.filter((a) => (a.nickname ?? '').toLowerCase().includes(query.acc));
+}
+
+function drawAccounts() {
+  const rows = accRows();
+  const pages = Math.max(1, Math.ceil(rows.length / PER));
+  page.acc = Math.min(page.acc, pages - 1);
+  $('acc-count').textContent = query.acc ? `${rows.length} / ${data.accounts.length}` : `${data.accounts.length}명`;
+
+  if (rows.length === 0) { $('acc-table').innerHTML = '<p class="empty">없습니다</p>'; $('acc-pager').innerHTML = ''; return; }
+  const slice = rows.slice(page.acc * PER, page.acc * PER + PER);
+
+  const body = slice.map((a) => {
+    const nm = a.nickname ?? '(닉네임 없음)';
+    const head = `<tr class="click" data-user="${a.id}">
+      <td class="name">${esc(nm)}</td>
+      <td class="num">${a.seasonWins}승 ${a.seasonLosses}패</td>
+      <td class="num dim">통산 ${a.wins}-${a.losses} · ${a.streak}연승</td>
+      <td class="dim">${when(a.createdAt)} 가입</td>
+      <td><button class="act" data-reset="${a.id}" data-name="${esc(nm)}">전적 초기화</button></td></tr>`;
+    const detail = openUser.has(a.id)
+      ? `<tr class="detail"><td colspan="5"><div class="detail-inner" id="detail-${a.id}">불러오는 중…</div></td></tr>`
+      : '';
+    return head + detail;
+  }).join('');
+
+  $('acc-table').innerHTML =
+    `<table><thead><tr><th>닉네임</th><th>이번 시즌</th><th>통산</th><th>가입</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+  pager('acc-pager', pages, page.acc, (p) => { page.acc = p; drawAccounts(); });
+
+  for (const tr of $('acc-table').querySelectorAll('tr.click')) {
+    tr.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      const id = tr.dataset.user;
+      if (openUser.has(id)) openUser.delete(id); else openUser.add(id);
+      drawAccounts();
+      if (openUser.has(id)) fillDetail(id);
+    });
+  }
+  for (const b of $('acc-table').querySelectorAll('[data-reset]')) {
+    b.addEventListener('click', () => resetUser(b.dataset.reset, b.dataset.name));
+  }
+  for (const id of openUser) if ($(`detail-${id}`)) fillDetail(id);
+}
+
+async function fillDetail(userId) {
+  const box = $(`detail-${userId}`);
+  if (!box) return;
+  try {
+    if (!matchCache.has(userId)) matchCache.set(userId, await api(`/api/admin/matches?user=${encodeURIComponent(userId)}`));
+    box.innerHTML = renderMatches(matchCache.get(userId));
+  } catch (e) { box.innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+function renderMatches(m) {
+  const f = m.flags;
+  if (!f) return '<p class="empty">기록된 대전이 없습니다.</p>';
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const flags = [
+    { l: '같은 상대', v: pct(f.topOpponentShare), s: `${esc(f.topOpponent)} 와 ${f.topOpponentGames}판`, bad: f.topOpponentShare >= 0.7 && f.games >= 5 },
+    { l: '방 코드 비율', v: pct(f.roomShare), s: `${f.games}판 중`, bad: f.roomShare >= 0.9 && f.games >= 5 },
+    { l: '짧은 승리', v: pct(f.shortWinShare), s: `${f.wins}승 중 ${f.shortWins}판`, bad: f.shortWinShare >= 0.5 && f.wins >= 3 },
+    { l: '평균 시간', v: `${f.avgSeconds}초`, s: `상대 ${f.opponents}명`, bad: f.avgSeconds < 10 }
+  ];
+  const cards = flags.map((x) =>
+    `<div class="flag${x.bad ? ' bad' : ''}"><div class="v">${x.v}</div><div class="l">${x.l}</div><div class="s">${x.s}</div></div>`).join('');
+  const list = m.rows.map((r) => {
+    const d = new Date(r.at);
+    const t = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const res = r.result === 'win' ? '승' : r.result === 'lose' ? '패' : '무';
+    return `<tr><td class="res-${r.result}">${res}</td><td class="name">${esc(r.opponent)}</td>
+      <td class="num">${r.seconds.toFixed(1)}초</td>
+      <td class="dim">${r.mode === 'room' ? '방 코드' : '무작위'} · ${t}</td></tr>`;
+  }).join('');
+  return `<div class="flags">${cards}</div>
+    <div class="wrap"><table><tbody>${list}</tbody></table></div>`;
+}
+
+async function resetUser(id, name) {
+  if (!confirm(`"${name}" 의 이번 시즌 승패를 0 으로 되돌립니다.`)) return;
+  try { await api(`/api/admin/users/${encodeURIComponent(id)}/reset`, { method: 'POST' }); say(`${name} 전적을 초기화했습니다.`); await load(); }
+  catch (e) { say(e.message, true); }
+}
+
+/* ---- 기록 ---- */
+function scoreRows() {
+  const all = data.scores ?? [];
+  if (!query.score) return all;
+  return all.filter((s) => (s.name ?? '').toLowerCase().includes(query.score));
+}
+
+function drawScores() {
+  const rows = scoreRows();
+  const pages = Math.max(1, Math.ceil(rows.length / PER));
+  page.score = Math.min(page.score, pages - 1);
+  $('score-count').textContent = query.score ? `${rows.length} / ${data.scores.length}` : `${data.scores.length}개`;
+  $('score-clear').style.display = data.scores.length ? '' : 'none';
+
+  if (rows.length === 0) { $('score-table').innerHTML = '<p class="empty">없습니다</p>'; $('score-pager').innerHTML = ''; return; }
+  const start = page.score * PER;
+  const body = rows.slice(start, start + PER).map((s, i) =>
+    `<tr><td class="num dim">${start + i + 1}</td><td class="name">${esc(s.name)}</td>
+      <td class="num">${s.time.toFixed(2)}초</td>
+      <td class="dim">${s.runs}번 · ${when(s.at)}</td>
+      <td><button class="act" data-del="${s.id}" data-name="${esc(s.name)}" data-time="${s.time.toFixed(2)}">삭제</button></td></tr>`).join('');
+  $('score-table').innerHTML =
+    `<table><thead><tr><th>#</th><th>이름</th><th>기록</th><th>올린 때</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+  pager('score-pager', pages, page.score, (p) => { page.score = p; drawScores(); });
+
+  for (const b of $('score-table').querySelectorAll('[data-del]')) {
+    b.addEventListener('click', () => delScore(b.dataset.del, b.dataset.name, b.dataset.time));
+  }
+}
+
+async function delScore(id, name, time) {
+  if (!confirm(`"${name}" 의 ${time}초 기록을 지웁니다.`)) return;
+  try { await api(`/api/admin/scores/${encodeURIComponent(id)}`, { method: 'DELETE' }); say('지웠습니다.'); await load(); }
+  catch (e) { say(e.message, true); }
+}
+
+async function clearScores() {
+  const n = data.scores.length;
+  if (!n) return;
+  if (!confirm(`기록 ${n}개를 모두 지웁니다. 되돌릴 수 없습니다.`)) return;
+  if (prompt('정말 지우려면 DELETE ALL 을 입력하세요.') !== 'DELETE ALL') { say('취소했습니다.'); return; }
+  try {
+    const r = await api('/api/admin/scores/clear', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: 'DELETE ALL' })
+    });
+    say(`${r.removed}개를 모두 지웠습니다.`); await load();
+  } catch (e) { say(e.message, true); }
+}
+
+function pager(id, pages, cur, go) {
+  const el = $(id); el.innerHTML = '';
+  if (pages <= 1) return;
+  const mk = (label, p, dis, on) => {
+    const b = document.createElement('button');
+    b.textContent = label; b.disabled = dis; if (on) b.classList.add('on');
+    b.addEventListener('click', () => go(p)); return b;
+  };
+  el.appendChild(mk('‹', Math.max(0, cur - 1), cur === 0));
+  for (let i = 0; i < pages; i++) el.appendChild(mk(String(i + 1), i, false, i === cur));
+  el.appendChild(mk('›', Math.min(pages - 1, cur + 1), cur === pages - 1));
+}
+
+$('refresh').addEventListener('click', load);
+$('acc-search').addEventListener('input', (e) => { query.acc = e.target.value.trim().toLowerCase(); page.acc = 0; drawAccounts(); });
+$('score-search').addEventListener('input', (e) => { query.score = e.target.value.trim().toLowerCase(); page.score = 0; drawScores(); });
+$('score-clear').addEventListener('click', clearScores);
+
+load();
+</script>
+</body>
+</html>

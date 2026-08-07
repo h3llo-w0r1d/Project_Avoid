@@ -90,6 +90,14 @@ const auth = attachAuth(app, users, {
   onRename: (userId, name) => scores.renameUser(userId, name)
 });
 
+// 관리 대시보드. 관리자 계정으로 로그인했을 때만 페이지 자체를 내준다.
+// 아무나 주소를 쳐도 관리자가 아니면 홈으로 튕긴다. 데이터 API 는 이미
+// requireAdmin 이 막고 있지만, 페이지까지 막아 두면 남에게 존재조차 안 보인다.
+app.get('/admin', (req, res) => {
+  if (!isAdminUser(req.user)) return res.redirect('/');
+  res.sendFile(join(root, 'public', 'admin-dashboard.html'));
+});
+
 // 게임 화면을 연 횟수를 센다. 방침·약관 페이지는 세지 않는다.
 //
 // 정적 파일 미들웨어보다 먼저 놓아야 한다. 뒤에 놓으면 express.static 이
