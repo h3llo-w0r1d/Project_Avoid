@@ -74,9 +74,11 @@ app.use(cookieParser());
 // 아래 랭킹 API 가 "누가 올린 기록인지" 알 수 있다.
 const auth = attachAuth(app, users, { port: PORT });
 
-// 개인정보처리방침. 구글 로그인 심사에서 이 주소를 요구하고, 거기 적는 주소는
-// 확장자 없이 깔끔한 편이 낫다. 파일은 public/privacy.html 하나뿐이다.
-app.get('/privacy', (req, res) => res.sendFile(join(root, 'public', 'privacy.html')));
+// 약관 문서들. 구글 로그인 심사에서 이 주소를 요구하고, 거기 적는 주소는
+// 확장자 없이 깔끔한 편이 낫다. 파일은 public/ 아래 html 하나씩이다.
+for (const page of ['privacy', 'terms']) {
+  app.get(`/${page}`, (req, res) => res.sendFile(join(root, 'public', `${page}.html`)));
+}
 
 // 벤더링한 three.js 는 거의 안 바뀌므로 길게 캐시한다.
 app.use('/js/vendor', express.static(join(root, 'public', 'js', 'vendor'), { maxAge: '7d' }));
