@@ -15,6 +15,7 @@
     <div id="corner-buttons">
       <!-- 관리자로 로그인했을 때만 나타난다 -->
       <button id="admin-btn" class="hidden" type="button" aria-label="관리" title="관리">🛠</button>
+      <button id="board-btn" type="button" aria-label="게시판" title="게시판">💬</button>
       <button id="profile-btn" type="button" aria-label="내 프로필" title="내 프로필">👤</button>
       <button id="char-btn" type="button" aria-label="캐릭터 고르기" title="캐릭터">🌱</button>
       <button id="rank-btn" type="button" aria-label="전체 랭킹 보기" title="전체 랭킹">🏆</button>
@@ -55,6 +56,27 @@
       <p id="admin-state" class="rank-note"></p>
       <div id="admin-body" class="admin-body"></div>
       <nav id="admin-pager" class="pager"></nav>
+    </div>
+  </div>
+
+  <!-- 게시판 (말풍선 버튼) -->
+  <div id="board-modal" class="modal hidden">
+    <div class="modal-card panel">
+      <div class="modal-head">
+        <h2>게시판</h2>
+        <button id="board-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+      </div>
+      <p class="board-hint">한 줄 남기고 가세요. 서로 존중해 주세요 🙂</p>
+      <div class="board-write">
+        <textarea id="board-input" maxlength="200" rows="2"
+          placeholder="자유롭게 남겨 보세요 (200자)"></textarea>
+        <div class="board-write-row">
+          <span id="board-count" class="board-count">0 / 200</span>
+          <button id="board-send" class="primary small" type="button">남기기</button>
+        </div>
+        <em id="board-error" class="field-error"></em>
+      </div>
+      <ol id="board-list" class="board-list"><li class="board-empty">불러오는 중…</li></ol>
     </div>
   </div>
 

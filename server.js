@@ -12,7 +12,8 @@ import { attachAuth } from './lib/auth-routes.js';
 import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
-import { GUEST_PATTERN } from './public/js/profanity.js';
+import { openBoardStore } from './lib/board.js';
+import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -73,6 +74,9 @@ const runTickets = createTickets();
 
 // 날짜별 이용 현황. 누가 왔는지는 안 적고 횟수만 센다.
 const stats = openStatsStore(db);
+
+// 자유 게시판.
+const board = openBoardStore(db);
 const matchLog = await openMatchStore(DATA_DIR, db);
 
 const app = express();
@@ -292,6 +296,54 @@ app.post('/api/scores', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------- 게시판
+
+// 로그인했으면 계정 닉네임을, 게스트면 Guest#### 형식만 허용한다.
+// 기록 올리기와 같은 규칙 — 로그인한 채로 남의 이름을 사칭하지 못하게.
+function posterName(req, name) {
+  if (req.user) {
+    if (!req.user.nickname) return { error: '닉네임을 먼저 정해 주세요.' };
+    return { name: req.user.nickname };
+  }
+  if (!GUEST_PATTERN.test(String(name ?? ''))) {
+    return { error: '게스트 이름 형식이 아닙니다.' };
+  }
+  return { name };
+}
+
+// 도배 방지 — 한 곳에서 글을 너무 자주 못 올리게. 기록보다 길게 잡는다.
+const lastPostBoard = new Map();
+const BOARD_COOLDOWN_MS = 15_000;
+
+app.get('/api/board', (req, res) => {
+  res.json({ posts: board.latest(50) });
+});
+
+app.post('/api/board', (req, res) => {
+  const ip = clientIp(req);
+  const now = Date.now();
+  const wait = BOARD_COOLDOWN_MS - (now - (lastPostBoard.get(ip) || 0));
+  if (wait > 0) {
+    return res.status(429).json({ error: `잠시 후 다시 올려 주세요. (${Math.ceil(wait / 1000)}초)` });
+  }
+
+  const who = posterName(req, req.body?.name);
+  if (who.error) return res.status(400).json({ error: who.error });
+
+  // 내용 검사(욕설·길이·빈 글). 통과하면 다듬어진 text 를 그대로 저장한다.
+  const checked = checkMessage(req.body?.body);
+  if (!checked.ok) return res.status(400).json({ error: checked.reason });
+
+  lastPostBoard.set(ip, now);
+  try {
+    board.add({ name: who.name, body: checked.text, userId: req.user?.id ?? null });
+    res.json({ posts: board.latest(50) });
+  } catch (err) {
+    console.error('게시글 저장 실패:', err);
+    res.status(500).json({ error: '글을 저장하지 못했습니다.' });
+  }
+});
+
 // ---------------------------------------------------------------- 관리
 
 // 관리자를 가리는 방법이 둘이다.
@@ -382,6 +434,17 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
     res.json({ ok: true, left: scores.size });
   } catch (err) {
     console.error('기록 삭제 실패:', err);
+    res.status(500).json({ error: '삭제에 실패했습니다.' });
+  }
+});
+
+// 게시글 삭제(관리자). 부적절한 글을 지운다.
+app.delete('/api/admin/board/:id', requireAdmin, (req, res) => {
+  try {
+    if (!board.remove(req.params.id)) return res.status(404).json({ error: '이미 없는 글입니다.' });
+    res.json({ ok: true, posts: board.latest(50) });
+  } catch (err) {
+    console.error('게시글 삭제 실패:', err);
     res.status(500).json({ error: '삭제에 실패했습니다.' });
   }
 });

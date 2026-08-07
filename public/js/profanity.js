@@ -122,3 +122,46 @@ export function checkNickname(raw) {
 
   return { ok: true, name };
 }
+
+// 게시글 최대 길이.
+export const MAX_MESSAGE = 200;
+
+/**
+ * 게시글 내용을 검사한다. 닉네임과 달리 문장이라 길이가 길고 띄어쓰기가 있다.
+ *
+ * 닉네임 검사(fuzzyIncludes)는 글자를 한 줄로 이어 붙여 사이에 낀 글자까지
+ * 잡는데, 긴 문장에 그대로 쓰면 서로 다른 낱말의 글자가 우연히 이어져
+ * 멀쩡한 글이 걸린다. 그래서 여기서는 공백만 없앤 본과 숫자를 글자로
+ * 되돌린 본에서 금지어가 통째로 들어 있는지만 본다.
+ *
+ * @returns {{ok: true, text: string} | {ok: false, reason: string}}
+ */
+export function checkMessage(raw, maxLen = MAX_MESSAGE) {
+  const text = String(raw ?? '')
+    .replace(CONTROL_CHARS, '')      // 제어문자 제거 (개행은 아래에서 따로 둔다)
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')       // 개행 도배 방지
+    .replace(/^\s+|\s+$/g, '');
+
+  if (!text) return { ok: false, reason: '내용을 입력해 주세요.' };
+  if (Array.from(text).length > maxLen) {
+    return { ok: false, reason: `${maxLen}자까지 쓸 수 있습니다.` };
+  }
+  if (!MEANINGFUL.test(text)) {
+    return { ok: false, reason: '글자나 숫자를 넣어 주세요.' };
+  }
+
+  // 공백을 없애 '시 발' 같은 우회를 잡고, 멀쩡한 낱말(essex 등)은 먼저 뺀다.
+  let despaced = text.toLowerCase().replace(/\s+/g, '');
+  for (const w of ALLOW) despaced = despaced.split(w).join('');
+  const leet = Array.from(despaced).map((ch) => LEET[ch] ?? ch).join('');
+
+  for (const word of BLOCKED) {
+    if (despaced.includes(word) || leet.includes(word)) {
+      return { ok: false, reason: '사용할 수 없는 표현이 들어 있습니다.' };
+    }
+  }
+
+  return { ok: true, text };
+}

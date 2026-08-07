@@ -411,6 +411,32 @@ export const api = {
     return res.json();
   },
 
+  // ---- 게시판 ----
+
+  async boardList() {
+    const res = await fetch('/api/board');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).posts;
+  },
+
+  // 게스트면 이름을 같이 보낸다. 로그인했으면 서버가 계정 닉네임을 쓴다.
+  async boardPost(body, guestName) {
+    const res = await fetch('/api/board', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body, name: guestName })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+    return data.posts;
+  },
+
+  async boardRemove(id) {
+    const res = await fetch(`/api/admin/board/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+    return data.posts;
+  },
+
   async adminClearUsage() {
     const res = await fetch('/api/admin/usage/clear', {
       method: 'POST',

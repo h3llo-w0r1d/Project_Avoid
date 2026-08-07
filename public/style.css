@@ -329,6 +329,57 @@ body.zapped::after {
 /* 검색칸이 flex:1 로 늘어나므로, 버튼은 줄어들지 않게 못 박는다. */
 .admin-tools .admin-act { flex: none; }
 
+/* ---------- 게시판 ---------- */
+.board-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+.board-write {
+  margin: 14px 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--stroke);
+  border-radius: 12px;
+}
+.board-write textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 44px;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--stroke);
+  border-radius: 8px;
+}
+.board-write-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.board-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.primary.small { width: auto; margin: 0; padding: 8px 18px; font-size: 14px; }
+
+.board-list { list-style: none; margin-top: 6px; max-height: 46vh; overflow-y: auto; }
+.board-empty { color: var(--muted); text-align: center; padding: 26px; font-size: 14px; }
+
+.board-post {
+  padding: 11px 2px;
+  border-bottom: 1px solid rgba(120, 170, 255, 0.12);
+}
+.board-post:last-child { border-bottom: none; }
+.board-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.board-name { font-weight: 700; font-size: 14px; color: var(--text); }
+.board-name.member { color: var(--accent); }      /* 로그인 유저는 파란 이름 */
+.board-time { font-size: 12px; color: var(--muted); }
+.board-del {
+  width: auto; margin: 0 0 0 auto; padding: 3px 9px;
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--stroke); border-radius: 6px;
+}
+.board-del:hover { color: #fff; background: var(--volt); border-color: transparent; }
+.board-body { font-size: 14px; line-height: 1.6; color: #d3ddf5; word-break: break-word; }
+
 /* 관리 창에서 전체 대시보드로 가는 링크 */
 .admin-full-link {
   font-size: 12px;

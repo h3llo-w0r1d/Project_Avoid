@@ -10,6 +10,7 @@ import { Auth } from './auth.js';
 import { CharacterUI } from './char-ui.js';
 import { ProfileUI } from './profile-ui.js';
 import { AdminUI } from './admin-ui.js';
+import { BoardUI } from './board-ui.js';
 import { VoiceUI } from './voice-ui.js';
 import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable } from './characters.js';
 import { Net } from './net.js';
@@ -136,9 +137,19 @@ const admin = new AdminUI({
   matchesOf: (id) => api.adminMatches(id)
 });
 
+// 게시판에서 관리자에게만 삭제 버튼을 보여 줄지 정한다. 실제 삭제는 서버가 막는다.
+let isAdmin = false;
 api.amIAdmin()
-  .then((yes) => admin.setAdmin(yes))
+  .then((yes) => { isAdmin = yes; admin.setAdmin(yes); })
   .catch(() => admin.setAdmin(false));
+
+// 자유 게시판. 게스트는 이름을 같이 보내고, 로그인했으면 서버가 계정 닉네임을 쓴다.
+const board = new BoardUI({
+  list: () => api.boardList(),
+  post: (body) => api.boardPost(body, auth.signedIn ? undefined : auth.displayName),
+  remove: (id) => api.boardRemove(id),
+  isAdmin: () => isAdmin
+});
 
 const characters = new CharacterUI({
   bestSeconds,
