@@ -240,6 +240,11 @@ function startGame() {
   audio.unlock();
   audio.startAmbient();
 
+  // 표를 미리 받아 둔다. 기다리지 않는다 — 게임은 바로 시작하고,
+  // 기록을 올릴 때 이 약속이 끝나 있으면 된다.
+  // 실패해도 여기서 터뜨리지 않는다. 그러면 판이 시작조차 안 된다.
+  state.ticket = api.startRun().catch(() => null);
+
   player.reset();
   setArenaVisible(true);
   hazards.reset();
@@ -317,8 +322,9 @@ async function finishGame() {
 
   ui.setSubmitState('기록 등록 중…');
   try {
+    const ticket = await state.ticket;
     // 로그인했으면 서버가 계정 닉네임을 쓴다. 여기서 보내는 이름은 게스트용.
-    const result = await api.submit(auth.displayName, score);
+    const result = await api.submit(auth.displayName, score, ticket);
     ui.setSubmitState(result.rank ? `전체 ${result.rank}위 등록!` : '기록이 등록되었습니다');
     ui.renderLeaderboard(result, result.id, 'time');
   } catch (err) {

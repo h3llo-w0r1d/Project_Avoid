@@ -10,6 +10,7 @@ import { importUsersJson, openUserStore } from './lib/users.js';
 import { importMatchesJson, openMatchStore } from './lib/matches.js';
 import { attachAuth } from './lib/auth-routes.js';
 import { attachLobby } from './lib/lobby.js';
+import { createTickets } from './lib/tickets.js';
 import { GUEST_PATTERN } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 
@@ -64,6 +65,10 @@ async function resolveAdminToken() {
 }
 
 const users = await openUserStore(DATA_DIR, db);
+
+// 혼자 하기 기록이 진짜인지 최소한이라도 확인하는 표. 메모리에만 둔다 —
+// 서버를 다시 켜면 진행 중이던 판의 기록은 못 올린다. 대신 표가 새는 일도 없다.
+const runTickets = createTickets();
 const matchLog = await openMatchStore(DATA_DIR, db);
 
 const app = express();
@@ -192,21 +197,35 @@ app.get('/api/profile', (req, res) => {
 const lastPost = new Map();
 const POST_COOLDOWN_MS = 1500;
 
+const clientIp = (req) =>
+  req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '?';
+
+// 혼자 하기를 시작할 때 표를 하나 내준다. 기록을 올릴 때 이 표가 있어야
+// 하고, 표를 받은 뒤 실제로 흐른 시간보다 긴 기록은 거절된다.
+app.post('/api/run/start', (req, res) => {
+  res.json({ ticket: runTickets.issue(clientIp(req), req.user?.id ?? null) });
+});
+
 app.post('/api/scores', async (req, res) => {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || '?';
+  const ip = clientIp(req);
   const now = Date.now();
   if (now - (lastPost.get(ip) || 0) < POST_COOLDOWN_MS) {
     return res.status(429).json({ error: '너무 빠릅니다. 잠시 후 다시 시도하세요.' });
   }
   lastPost.set(ip, now);
 
-  const { name, time } = req.body ?? {};
+  const { name, time, ticket } = req.body ?? {};
 
   const t = Number(time);
   // 상한 3600초 — 실수로든 조작으로든 말도 안 되는 값이 들어오는 걸 막는다.
   if (!Number.isFinite(t) || t < 1 || t > 3600) {
     return res.status(400).json({ error: '기록 값이 올바르지 않습니다.' });
   }
+
+  // 값을 먼저 보고 표를 본다. 표는 한 번 쓰면 버려지므로, 어차피 거절할
+  // 요청 때문에 멀쩡한 표를 태우지 않는다.
+  const check = runTickets.redeem(String(ticket ?? ''), t, { ip, userId: req.user?.id ?? null });
+  if (check.error) return res.status(400).json({ error: check.error });
 
   // 로그인했으면 계정 닉네임을 쓴다. 브라우저가 보낸 이름은 무시한다.
   // 안 그러면 로그인한 채로 남의 이름을 사칭해 기록을 올릴 수 있다.

@@ -435,11 +435,19 @@ export const api = {
     return res.json();
   },
 
-  async submit(name, time) {
+  // 판을 시작할 때 표를 받아 둔다. 기록을 올릴 때 이 표를 같이 내야 하고,
+  // 표를 받은 뒤 실제로 흐른 시간보다 긴 기록은 서버가 거절한다.
+  async startRun() {
+    const res = await fetch('/api/run/start', { method: 'POST' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).ticket;
+  },
+
+  async submit(name, time, ticket) {
     const res = await fetch('/api/scores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, time })
+      body: JSON.stringify({ name, time, ticket })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
