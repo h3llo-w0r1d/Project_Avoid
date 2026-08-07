@@ -239,6 +239,7 @@ function startGame() {
   // 이 함수는 항상 버튼 클릭 안에서 불리므로 여기가 소리를 여는 자리다.
   audio.unlock();
   audio.startAmbient();
+  audio.playMusic('music');
 
   // 표를 미리 받아 둔다. 기다리지 않는다 — 게임은 바로 시작하고,
   // 기록을 올릴 때 이 약속이 끝나 있으면 된다.
@@ -289,6 +290,7 @@ function goHome() {
   state.phase = 'title';
   input.enabled = false;
   audio.stopAmbient();
+  audio.playMusic('homeMusic');
   versus.hide();
   setArenaVisible(false);
   ui.showTitle();
@@ -310,6 +312,8 @@ function killPlayer(cause) {
 async function finishGame() {
   state.phase = 'over';
   audio.stopAmbient();
+  // 판이 끝났으니 긴장을 푼다. 결과 화면은 첫 화면과 같은 곡으로.
+  audio.playMusic('homeMusic');
   const score = state.elapsed;
   ui.showGameOver(score, state.cause);
 
@@ -402,6 +406,7 @@ function leaveVersus() {
   net.endMatch();
   hideRival();
   audio.stopAmbient();
+  audio.playMusic('homeMusic');
   state.mode = 'solo';
   state.phase = 'title';
   state.paused = false;
@@ -501,6 +506,7 @@ function beginVersusMatch(msg) {
   ui.showGame();
   versus.showVersusHud();
   audio.startAmbient();
+  audio.playMusic('music');
 
   input.enabled = false;   // 카운트다운 동안은 못 움직인다
   input.releaseAll();
@@ -522,6 +528,7 @@ function endVersusMatch(msg) {
   net.endMatch();
   hideRival();
   audio.stopAmbient();
+  audio.playMusic('homeMusic');
 
   const outcome = msg.winner === null ? 'draw' : msg.winner === net.id ? 'win' : 'lose';
   versus.showResult({
@@ -666,6 +673,18 @@ function animateAmbient(dt, now) {
 
 ui.showTitle();
 setArenaVisible(false);
+
+// 브라우저는 사용자가 뭔가 하기 전에는 소리를 못 내게 막는다.
+// 첫 화면 음악을 들려주려면 게임 시작 버튼을 기다릴 게 아니라,
+// 무엇을 누르든 그 첫 순간에 소리를 열어야 한다.
+audio.playMusic('homeMusic');
+// click 까지 듣는 이유: 마우스로 누르면 pointerdown 이 먼저 오지만,
+// 키보드나 보조기기로 버튼을 누르면 click 만 오는 경우가 있다.
+const openSound = () => audio.unlock();
+for (const evt of ['pointerdown', 'keydown', 'touchstart', 'click']) {
+  window.addEventListener(evt, openSound, { once: true, passive: true });
+}
+
 auth.init();
 refreshLeaderboard();
 frame();

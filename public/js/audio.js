@@ -30,6 +30,8 @@ export class Audio {
     this.raw = {};          // 이름 -> ArrayBuffer (아직 디코딩 전)
     this.userVoice = null;         // { buffer, rate } — 유저가 녹음한 점프 소리
     this.pendingVoice = null;      // 아직 소리가 안 깨어서 못 푼 것
+    this.playing = null;           // { name, src, gain } — 지금 흐르는 배경음악
+    this.wantMusic = null;         // 아직 소리가 안 깨어서 못 튼 곡
     this.prefetch();
   }
 
@@ -62,7 +64,14 @@ export class Audio {
       this.buffers[name] = await this.ctx.decodeAudioData(raw);
     } catch (err) {
       console.warn(`소리 파일을 해독하지 못해 합성음을 씁니다 (${name}):`, err.message);
+      return;
     }
+
+    // 이 곡을 틀라고 했었는데 그때는 아직 안 받아져 있었다면 이제 시작한다.
+    //
+    // 소리를 여는 순간(unlock)에 해독이 시작되므로, 바로 이어서 playMusic 을
+    // 부르면 아직 준비가 안 돼 조용히 넘어간다. 그래서 첫 판만 음악이 없었다.
+    if (this.wantMusic === name && this.playing?.name !== name) this.playMusic(name);
   }
 
   // 반드시 클릭·키 입력 같은 사용자 제스처 안에서 불러야 한다.
@@ -95,6 +104,10 @@ export class Audio {
       this.pendingVoice = null;
       this.setUserVoice(blob, rate);
     }
+
+    // 첫 화면 음악은 페이지를 열자마자 틀라고 하지만, 그때는 브라우저가
+    // 소리를 막고 있다. 여기까지 미뤄 뒀다가 이제 시작한다.
+    if (this.wantMusic) this.playMusic(this.wantMusic);
   }
 
   // 파일이 준비돼 있으면 그걸 틀고 true, 아니면 false.
@@ -359,6 +372,53 @@ export class Audio {
     });
   }
 
+  // ---------------------------------------------------------------- 배경음악
+  //
+  // 화면마다 다른 곡을 튼다. 첫 화면과 게임 중이 다르다.
+  //
+  // 환경음(바람·풀벌레)과 따로 두는 이유: 환경음은 게임이 시작하고 끝날 때
+  // 켜고 끄면 되지만, 음악은 화면이 바뀔 때마다 갈아 끼워야 한다.
+  // 한 덩어리로 묶으면 곡을 바꿀 때마다 바람 소리까지 끊긴다.
+  //
+  // 브라우저는 사용자가 뭔가 누르기 전에는 소리를 못 내게 막는다. 그전에
+  // 불리면 무엇을 틀지만 적어 두고, unlock() 때 그 곡을 시작한다.
+
+  playMusic(name) {
+    this.wantMusic = name || null;
+    if (!this.ctx) return;
+    // 같은 곡이면 그대로 흐르게 둔다. 다시 틀면 처음으로 되감겨서,
+    // 게임을 시작할 때마다 곡이 앞으로 돌아가 거슬린다.
+    if (this.playing?.name === this.wantMusic) return;
+
+    this.stopMusic(1.2);
+    if (!this.wantMusic) return;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0;
+    gain.connect(this.master);
+
+    const src = this.playFile(this.wantMusic, { loop: true, target: gain, volume: 1 });
+    if (!src) return;      // 파일을 안 넣었으면 조용히 넘어간다
+
+    const volume = entryOf(SOUNDS[this.wantMusic])?.volume ?? 0.5;
+    gain.gain.setTargetAtTime(volume, this.now, 0.8);
+    this.playing = { name: this.wantMusic, src, gain };
+  }
+
+  // 페이드로 끈다. 뚝 끊으면 '틱' 소리가 난다.
+  stopMusic(seconds = 0.8) {
+    const cur = this.playing;
+    if (!cur) return;
+    this.playing = null;
+    cur.gain.gain.cancelScheduledValues(this.now);
+    cur.gain.gain.setTargetAtTime(0, this.now, seconds / 3);
+    // 페이드가 끝난 뒤에 정리한다. 바로 멈추면 페이드가 들리지 않는다.
+    setTimeout(() => {
+      try { cur.src.stop(); } catch { /* 이미 끝났을 수 있다 */ }
+      cur.gain.disconnect();
+    }, seconds * 1000 + 200);
+  }
+
   // ---------------------------------------------------------------- 환경음
 
   // 해질녘 풀숲 — 낮은 바람과 이따금 우는 풀벌레.
@@ -371,8 +431,10 @@ export class Audio {
     group.gain.setTargetAtTime(0.35, this.now, 1.5);
     group.connect(this.master);
 
-    // 배경음악은 환경음과 별개다. 둘 다 넣으면 같이 흐른다.
-    const music = this.playFile('music', { loop: true, target: group });
+    // 배경음악은 여기서 다루지 않는다. 환경음은 게임이 시작하고 끝날 때
+    // 켜고 끄지만, 음악은 화면이 바뀔 때마다 곡을 갈아 끼워야 해서
+    // 수명이 다르다. playMusic() 이 따로 맡는다.
+    const music = null;
 
     // 환경음 파일이 있으면 바람·풀벌레 합성은 건너뛴다
     const file = this.playFile('ambient', { loop: true, target: group });

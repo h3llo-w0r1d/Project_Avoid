@@ -110,7 +110,15 @@ export const SOUNDS = {
   stageUp: null,     // 스테이지 상승
 
   ambient: null,     // 환경음 (반복 재생)
-  music: null        // 배경음악 (반복 재생)
+
+  // 배경음악. 화면마다 다른 곡을 튼다. 파일은 public/sounds/ 에 둔다.
+  // 문자열만 적으면 원래 크기로 나오고, 볼륨을 따로 주려면 이렇게 적는다.
+  //
+  //   music: { url: './sounds/game.mp3', volume: 0.5 }
+  //
+  // 반복 재생이라 크게 틀면 금세 거슬린다. 효과음이 묻히지 않을 만큼만.
+  homeMusic: null,   // 첫 화면
+  music: null        // 게임 중
 };
 
 // 점프할 때 낼 내 목소리. 타이틀 화면에서 직접 녹음한다.
