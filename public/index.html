@@ -15,6 +15,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="AvoidArc" />
   <link rel="apple-touch-icon" href="/icons/apple-touch.png" />
+
+  <!-- 설치 신호(beforeinstallprompt)는 페이지 로딩 아주 초반에 딱 한 번 뜬다.
+       main.js 는 무거운 모듈을 다 불러온 뒤에야 뜨므로, 그 사이에 신호가
+       지나가면 놓쳐서 '바로 설치'가 안 된다. 그래서 여기 맨 앞에서 미리
+       잡아 둔다. main.js 는 window.__deferredInstall 로 이걸 꺼내 쓴다. -->
+  <script>
+    window.__deferredInstall = null;
+    addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__deferredInstall = e;
+      dispatchEvent(new Event('install-available'));
+    });
+  </script>
 </head>
 <body>
   <canvas id="stage"></canvas>

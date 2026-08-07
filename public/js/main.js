@@ -268,7 +268,9 @@ addEventListener('resize', () => fitCamera(camera, renderer));
 (() => {
   const btn = document.getElementById('install-btn');
   const help = document.getElementById('install-help');
-  let deferred = null;
+  // <head> 에서 미리 잡아 둔 신호가 있으면 그걸 이어받는다. 없으면 아래
+  // 리스너로 나중에 오는 것을 받는다.
+  let deferred = window.__deferredInstall || null;
 
   // 이미 앱으로 켰으면(홈 화면 아이콘으로 실행) 버튼을 숨긴다.
   const standalone = matchMedia('(display-mode: standalone)').matches
@@ -279,6 +281,8 @@ addEventListener('resize', () => fitCamera(camera, renderer));
   // 아직 앱으로 설치하지 않았으면 어느 기기든 버튼을 보여 준다.
   if (!standalone) btn.classList.remove('hidden');
 
+  // head 스크립트가 신호를 나중에 잡으면 알려 준다.
+  addEventListener('install-available', () => { deferred = window.__deferredInstall || deferred; });
   addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferred = e;
