@@ -78,6 +78,19 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+/* 가로로 든 폰: 화면이 위아래로 납작해서 큰 타이머가 무대 한가운데를 가린다.
+   높이 기준으로 작게 줄이고 상단 바 바로 아래로 바짝 올린다. (세로·PC 는 그대로.)
+   이 규칙은 위 #timer 기본값보다 뒤에 와야 덮어쓴다. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #hud { top: calc(52px + env(safe-area-inset-top)); }
+  #timer {
+    font-size: clamp(26px, 6vh, 44px);
+    text-shadow: 0 0 14px rgba(79, 214, 255, 0.5), 0 2px 10px rgba(0, 0, 0, 0.7);
+  }
+  #stage-label { margin-top: 1px; font-size: 11px; letter-spacing: 0.18em; }
+  #best-inline { margin-top: 1px; font-size: 11px; }
+}
+
 /* 감전 순간 화면 플래시 */
 body.zapped::after {
   content: "";
