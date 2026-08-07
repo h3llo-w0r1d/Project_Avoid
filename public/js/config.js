@@ -118,7 +118,7 @@ export const SOUNDS = {
   //
   // 반복 재생이라 크게 틀면 금세 거슬린다. 효과음이 묻히지 않을 만큼만.
   homeMusic: null,   // 첫 화면
-  music: null        // 게임 중
+  music: { url: './sounds/game.mp3', volume: 0.4 }        // 게임 중
 };
 
 // 점프할 때 낼 내 목소리. 타이틀 화면에서 직접 녹음한다.

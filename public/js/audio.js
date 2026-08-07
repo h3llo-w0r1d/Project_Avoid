@@ -37,6 +37,12 @@ export class Audio {
 
   // AudioContext 없이도 내려받기는 할 수 있다. 첫 클릭 때 바로 쓸 수 있도록
   // 미리 받아 두고, 디코딩만 unlock() 뒤로 미룬다.
+  //
+  // 배경음악은 파일이 몇 MB 씩 되지만 이것도 여기서 같이 받는다.
+  // 첫 클릭 때로 미뤄 볼까 했는데, 재 보니 그럴 이유가 없었다.
+  //   - 미뤄도 시작 버튼이 눌리는 시각은 그대로였다 (1.5Mbps 에서 7.4초로 동일).
+  //     브라우저가 게임 코드를 먼저 챙기고 음악 내려받기는 뒤로 미루기 때문이다.
+  //   - 오히려 미루면 첫 판에 음악이 늦게 나온다. 큰 파일일수록 더 늦다.
   prefetch() {
     for (const [name, value] of Object.entries(SOUNDS)) {
       const entry = entryOf(value);
