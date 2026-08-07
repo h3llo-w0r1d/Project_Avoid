@@ -354,6 +354,19 @@ body.zapped::after {
 }
 .install-btn:hover { background: rgba(79, 214, 255, 0.18); }
 
+/* 설치 창을 못 쓸 때 나오는 직접 추가 방법 안내 */
+.install-help {
+  margin-top: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--stroke);
+  border-radius: 10px;
+}
+
 /* ---------- 게시판 ---------- */
 .board-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
 

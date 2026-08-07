@@ -172,9 +172,11 @@
         <button id="versus-btn" class="ghost">⚔️ 온라인 1v1</button>
       </div>
 
-      <!-- 홈 화면에 앱으로 추가. 설치할 수 있을 때만 JS 가 보여 준다
-           (안드로이드). 이미 앱으로 켰거나 아이폰이면 안 뜬다. -->
+      <!-- 홈 화면에 앱으로 추가. 폰에서만, 아직 설치 안 했을 때만 뜬다.
+           PC 에서는 안 뜬다(설치는 누른 기기에 된다). 브라우저가 설치 창을
+           안 주면 눌렀을 때 직접 추가하는 방법을 알려 준다. -->
       <button id="install-btn" class="install-btn hidden" type="button">📲 홈 화면에 앱으로 추가</button>
+      <p id="install-help" class="install-help hidden"></p>
 
       <div class="bottom-row">
         <div class="controls">

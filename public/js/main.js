@@ -257,31 +257,53 @@ addEventListener('resize', () => fitCamera(camera, renderer));
   document.addEventListener('webkitfullscreenchange', paint);
 })();
 
-// '홈 화면에 앱으로 추가' 버튼.
+// '홈 화면에 앱으로 추가' 버튼. PC·폰 어디서든 보인다. 설치는 누른 그
+// 기기에 된다 — PC 에서 누르면 PC 에, 폰에서 누르면 폰에.
 //
-// 안드로이드 크롬·삼성인터넷은 설치할 수 있게 되면 beforeinstallprompt 를
-// 준다. 기본 배너 대신 우리 버튼으로 원할 때 띄운다. 아이폰 사파리는 이
-// 이벤트를 안 줘서 버튼이 안 뜬다(아이폰은 공유 → 홈 화면에 추가 로 직접).
+// 크롬·삼성인터넷은 설치할 수 있을 때 beforeinstallprompt 를 주는데, 늘
+// 바로 주지는 않는다(한동안 써 본 사이트에만 주기도 한다). 그래서 버튼을
+// 처음부터 띄워 두고, 눌렀을 때:
+//   - 설치 창을 쓸 수 있으면 그걸 띄우고
+//   - 아니면 브라우저 메뉴로 직접 추가하는 방법을 알려 준다.
 (() => {
   const btn = document.getElementById('install-btn');
+  const help = document.getElementById('install-help');
   let deferred = null;
 
+  // 이미 앱으로 켰으면(홈 화면 아이콘으로 실행) 버튼을 숨긴다.
+  const standalone = matchMedia('(display-mode: standalone)').matches
+    || matchMedia('(display-mode: fullscreen)').matches
+    || window.navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  // 아직 앱으로 설치하지 않았으면 어느 기기든 버튼을 보여 준다.
+  if (!standalone) btn.classList.remove('hidden');
+
   addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();          // 브라우저 기본 배너를 막고
-    deferred = e;                // 우리가 원할 때 띄우려고 쥐고 있는다
-    btn.classList.remove('hidden');
+    e.preventDefault();
+    deferred = e;
+    if (!standalone) btn.classList.remove('hidden');
   });
 
   btn.addEventListener('click', async () => {
-    if (!deferred) return;
-    deferred.prompt();
-    await deferred.userChoice;   // 사용자가 추가/취소를 고른다
-    deferred = null;
-    btn.classList.add('hidden');
+    if (deferred) {
+      deferred.prompt();
+      await deferred.userChoice;
+      deferred = null;
+      btn.classList.add('hidden');
+      return;
+    }
+    // 설치 창을 못 쓰는 경우 → 브라우저별로 방법을 알려 준다.
+    help.textContent = isIOS
+      ? '사파리 아래 공유 버튼( ⬆️ )을 누르고 "홈 화면에 추가"를 선택하세요.'
+      : '브라우저 메뉴( ⋮ )를 열고 "앱 설치" 또는 "홈 화면에 추가"를 누르세요.';
+    help.classList.remove('hidden');
   });
 
-  // 이미 추가했으면 버튼을 감춘다.
-  addEventListener('appinstalled', () => btn.classList.add('hidden'));
+  addEventListener('appinstalled', () => {
+    btn.classList.add('hidden');
+    help.classList.add('hidden');
+  });
 })();
 
 // ---------------------------------------------------------------- 게임 흐름
