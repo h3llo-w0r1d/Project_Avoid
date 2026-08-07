@@ -329,6 +329,42 @@ body.zapped::after {
 /* 검색칸이 flex:1 로 늘어나므로, 버튼은 줄어들지 않게 못 박는다. */
 .admin-tools .admin-act { flex: none; }
 
+/* ---------- 세로로 든 폰에 '돌려주세요' 안내 ----------
+   평소에는 숨어 있고, 터치 기기(폰·태블릿)가 세로일 때만 뜬다.
+   가로로 돌리면 미디어 쿼리가 어긋나 저절로 사라진다. 순수 CSS 라
+   아이폰에서도 그대로 동작한다(화면 방향 강제는 웹에서 막혀 있다). */
+#rotate-overlay { display: none; }
+
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+  #rotate-overlay {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 100;              /* 무엇보다 위. 게임·상단바·창을 모두 덮는다 */
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    background: var(--bg);
+  }
+}
+
+.rotate-inner { max-width: 320px; }
+.rotate-phone {
+  font-size: 64px;
+  line-height: 1;
+  /* 폰이 눕는 시늉 — 세워진 상태에서 살짝 기울여 '돌려라'를 암시 */
+  display: inline-block;
+  transform: rotate(-90deg);
+  animation: rotate-hint 2.2s ease-in-out infinite;
+}
+@keyframes rotate-hint {
+  0%, 55%, 100% { transform: rotate(-90deg); }
+  70%, 85% { transform: rotate(0deg); }
+}
+.rotate-title { font-size: 19px; font-weight: 800; margin-top: 22px; letter-spacing: -0.02em; }
+.rotate-sub { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
 /* ---------- 게시판 ---------- */
 .board-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
