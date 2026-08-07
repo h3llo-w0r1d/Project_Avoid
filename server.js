@@ -247,8 +247,9 @@ app.post('/api/scores', async (req, res) => {
 
 // 관리자를 가리는 방법이 둘이다.
 //
-//   1. 열쇠(ADMIN_TOKEN)  — /admin.html 이 쓴다. 로그인 없이 들어간다.
-//   2. 로그인한 계정       — 게임 안 관리 창이 쓴다.
+//   1. 로그인한 계정       — 게임 안 관리 창(🛠)이 쓴다. 평소에 쓰는 길이다.
+//   2. 열쇠(ADMIN_TOKEN)  — 헤더 x-admin-token 으로 들어간다. 화면은 없다.
+//      계정으로 못 들어가는 상황(구글 계정 분실 등)을 위한 여벌 열쇠다.
 //
 // 누가 관리자인지는 .env 로 정한다. 코드에 계정을 박아 두면 저장소에
 // 남고, 관리자를 바꿀 때마다 배포해야 한다.
@@ -357,7 +358,7 @@ app.get('/api/online', (req, res) => {
 const httpServer = app.listen(PORT, () => {
   console.log(`AvoidArc 서버 실행 중 → http://localhost:${PORT}`);
   console.log(`1v1 대전 → ws://localhost:${PORT}/ws`);
-  console.log(`관리 화면 → http://localhost:${PORT}/admin.html`);
+  console.log('관리 화면 → 게임에 관리자 계정으로 로그인하면 상단 🛠 버튼');
   if (TOKEN_SOURCE === 'env') {
     console.log('관리자 열쇠: 환경변수 ADMIN_TOKEN 사용 중');
   } else {

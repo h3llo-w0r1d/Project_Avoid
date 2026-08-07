@@ -119,6 +119,7 @@ profile.openMine = () => showProfile(auth.displayName);
 const admin = new AdminUI({
   load: () => api.adminOverview(),
   removeScore: (id) => api.adminRemoveScore(id),
+  clearScores: () => api.adminClearScores(),
   resetUser: (id) => api.adminResetUser(id),
   matchesOf: (id) => api.adminMatches(id)
 });

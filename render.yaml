@@ -9,8 +9,8 @@ services:
       # node:sqlite 를 쓰므로 22 이상이어야 한다
       - key: NODE_VERSION
         value: "22"
-      # 랭킹 관리 화면(/admin.html) 열쇠.
-      # 지정하지 않으면 서버가 매번 새로 만들어 관리 화면에 못 들어간다.
+      # 관리 API 여벌 열쇠(헤더 x-admin-token).
+      # 지정하지 않으면 서버가 매번 새로 만들어 예전 열쇠가 안 통한다.
       # Render 대시보드에서 값을 직접 넣는다.
       - key: ADMIN_TOKEN
         sync: false

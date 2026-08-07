@@ -1,9 +1,9 @@
 // 게임 안 관리 창. 관리자로 로그인했을 때만 상단 바에 버튼이 뜬다.
 //
-// /admin.html 과 하는 일이 겹치지만 들어가는 길이 다르다. 저기는 열쇠를
-// 들고 들어가는 곳이고(로그인 없이도 된다), 여기는 이미 로그인한 채로
-// 바로 쓰는 곳이다. 서버 규칙은 하나를 같이 쓴다 — requireAdmin 이
-// 열쇠와 관리자 계정을 둘 다 받아 준다.
+// 관리 화면은 이것 하나뿐이다. 전에는 열쇠(ADMIN_TOKEN)를 들고 들어가는
+// /admin.html 이 따로 있었는데, 하는 일이 여기와 겹쳐서 지웠다.
+// 서버의 requireAdmin 은 여전히 열쇠도 받아 주므로, 계정으로 못 들어가는
+// 상황이 오면 그 열쇠로 API 를 직접 부를 수는 있다.
 
 const $ = (id) => document.getElementById(id);
 
@@ -60,6 +60,30 @@ export class AdminUI {
       this.page = 0;      // 걸러 놓고 옛 쪽에 남아 있으면 아무것도 안 보인다
       this.draw();
     });
+
+    // 기록 전체 비우기. 기록 탭에서만, 지울 게 있을 때만 나타난다.
+    this.el.clear = AdminUI.button('전체 비우기', () => this.clearAll(), 'danger');
+    this.el.clear.classList.add('hidden');
+    this.el.search.parentElement.appendChild(this.el.clear);
+  }
+
+  // 되돌릴 수 없는 일이다. 두 번 묻고, 두 번째는 직접 입력하게 한다.
+  // 확인 문구는 서버도 요구하므로 여기서 빠뜨리면 400 으로 되돌아온다.
+  async clearAll() {
+    const n = this.data?.scores?.length ?? 0;
+    if (n === 0) return;
+    if (!confirm(`기록 ${n}개를 모두 지웁니다. 되돌릴 수 없습니다.`)) return;
+    if (prompt('정말 지우려면 DELETE ALL 을 입력하세요.') !== 'DELETE ALL') {
+      this.say('취소했습니다.');
+      return;
+    }
+    try {
+      const r = await this.h.clearScores();
+      await this.reload();
+      this.say(`${r.removed}개를 모두 지웠습니다.`);
+    } catch (err) {
+      this.say(`전체 삭제 실패: ${err.message}`, true);
+    }
   }
 
   // 관리자일 때만 버튼을 보여 준다. 버튼이 없다고 안전해지는 건 아니지만
@@ -104,6 +128,12 @@ export class AdminUI {
 
   draw() {
     if (!this.data) return;
+
+    // 기록 탭에서, 지울 게 있고, 대전 기록을 들여다보는 중이 아닐 때만 보인다.
+    // 검색으로 걸러진 개수가 아니라 전체 개수로 판단한다 — 비우기는 전체를 지운다.
+    this.el.clear.classList.toggle('hidden',
+      this.inspecting !== null || this.panel !== 'scores' || this.data.scores.length === 0);
+
     if (this.inspecting) return this.drawHistory();
 
     const rows = this.rows();

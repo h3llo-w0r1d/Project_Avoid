@@ -399,6 +399,18 @@ export const api = {
     return res.json();
   },
 
+  // 기록을 통째로 비운다. 서버가 확인 문구까지 요구한다 — 실수로 눌려도
+  // 본문이 정확히 맞지 않으면 400 으로 되돌린다.
+  async adminClearScores() {
+    const res = await fetch('/api/admin/scores/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: 'DELETE ALL' })
+    });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
+    return res.json();
+  },
+
   async adminMatches(userId) {
     const res = await fetch(`/api/admin/matches?user=${encodeURIComponent(userId)}`);
     if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
