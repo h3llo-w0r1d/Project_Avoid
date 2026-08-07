@@ -268,6 +268,7 @@ addEventListener('resize', () => fitCamera(camera, renderer));
 (() => {
   const btn = document.getElementById('install-btn');
   const help = document.getElementById('install-help');
+  const note = document.getElementById('install-note');
   // <head> 에서 미리 잡아 둔 신호가 있으면 그걸 이어받는다. 없으면 아래
   // 리스너로 나중에 오는 것을 받는다.
   let deferred = window.__deferredInstall || null;
@@ -286,14 +287,17 @@ addEventListener('resize', () => fitCamera(camera, renderer));
   // PC 에서는 이 버튼으로 바탕화면 바로가기를 만들 수 없어(브라우저가 막음)
   // 헷갈리기만 한다. PC 는 주소창 아이콘을 끌어다 놓으면 된다.
   const canShow = touch && !standalone;
-  if (canShow) btn.classList.remove('hidden');
+  if (canShow) {
+    btn.classList.remove('hidden');
+    note.classList.remove('hidden');    // "앱·PC 로 하면 더 편하다" 안내도 같이
+  }
 
   // head 스크립트가 신호를 나중에 잡으면 알려 준다.
   addEventListener('install-available', () => { deferred = window.__deferredInstall || deferred; });
   addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferred = e;
-    if (canShow) btn.classList.remove('hidden');
+    if (canShow) { btn.classList.remove('hidden'); note.classList.remove('hidden'); }
   });
 
   const label = btn.textContent;
@@ -306,6 +310,7 @@ addEventListener('resize', () => fitCamera(camera, renderer));
     deferred = null;
     btn.classList.add('hidden');
     help.classList.add('hidden');
+    note.classList.add('hidden');
     return true;
   }
 
@@ -355,6 +360,7 @@ addEventListener('resize', () => fitCamera(camera, renderer));
   addEventListener('appinstalled', () => {
     btn.classList.add('hidden');
     help.classList.add('hidden');
+    note.classList.add('hidden');
   });
 })();
 

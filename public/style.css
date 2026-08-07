@@ -372,6 +372,15 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 }
 .install-btn:hover { background: rgba(79, 214, 255, 0.18); }
 
+/* 설치 버튼 아래 안내: 앱·PC 로 하면 더 편하다 */
+.install-note {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--muted);
+}
+
 /* 설치 창을 못 쓸 때 나오는 직접 추가 방법 안내 */
 .install-help {
   margin-top: 8px;
