@@ -232,6 +232,31 @@ hazards.onFire = () => audio.zap();
 fitCamera(camera, renderer);
 addEventListener('resize', () => fitCamera(camera, renderer));
 
+// 전체화면. 폰에서 주소창·내비바를 숨겨 게임이 화면을 꽉 채우게 한다.
+// 화면이 커지면 위 resize 가 fitCamera 를 다시 불러 무대도 커진다.
+(() => {
+  const btn = document.getElementById('fullscreen-btn');
+  const root = document.documentElement;
+  // 지원하는 기기에서만 버튼을 보여 준다 (아이폰 사파리는 지원 안 함).
+  if (!(root.requestFullscreen || root.webkitRequestFullscreen)) return;
+  root.classList.add('can-fullscreen');
+
+  const isFull = () => document.fullscreenElement || document.webkitFullscreenElement;
+  // 켜져 있으면 버튼을 살짝 강조만 한다. 아이콘 글자를 바꾸면 폰에 따라
+  // 깨진 네모로 보일 수 있어 ⛶ 하나로 둔다.
+  const paint = () => btn.classList.toggle('on', !!isFull());
+
+  btn.addEventListener('click', () => {
+    if (isFull()) {
+      (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+    } else {
+      (root.requestFullscreen || root.webkitRequestFullscreen)?.call(root);
+    }
+  });
+  document.addEventListener('fullscreenchange', paint);
+  document.addEventListener('webkitfullscreenchange', paint);
+})();
+
 // ---------------------------------------------------------------- 게임 흐름
 
 // 타이틀에서는 무대를 감춘다. 로그인 창 뒤로 흐릿하게 비치면 어수선하다.
