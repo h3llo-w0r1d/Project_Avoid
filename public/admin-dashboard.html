@@ -174,6 +174,12 @@ const spellTime = (sec) => {
   return `${(sec / 3600).toFixed(1)}<em>시간</em>`;
 };
 const when = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()}`; };
+const p2 = (n) => String(n).padStart(2, '0');
+// 날짜 + 시:분:초. 보는 사람 브라우저 시간대라 관리자에게는 한국 시간으로 보인다.
+const stamp = (at) => {
+  const d = new Date(at);
+  return `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+};
 
 async function load() {
   say('불러오는 중…');
@@ -321,7 +327,7 @@ function drawScores() {
   const body = rows.slice(start, start + PER).map((s, i) =>
     `<tr><td class="num dim">${start + i + 1}</td><td class="name">${esc(s.name)}</td>
       <td class="num">${s.time.toFixed(2)}초</td>
-      <td class="dim">${s.runs}번 · ${when(s.at)}</td>
+      <td class="dim">${s.runs}번 · ${stamp(s.at)}</td>
       <td><button class="act" data-del="${s.id}" data-name="${esc(s.name)}" data-time="${s.time.toFixed(2)}">삭제</button></td></tr>`).join('');
   $('score-table').innerHTML =
     `<table><thead><tr><th>#</th><th>이름</th><th>기록</th><th>올린 때</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
