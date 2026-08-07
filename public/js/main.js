@@ -279,15 +279,18 @@ addEventListener('resize', () => fitCamera(camera, renderer));
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
 
-  // 아직 앱으로 설치하지 않았으면 어느 기기든 버튼을 보여 준다.
-  if (!standalone) btn.classList.remove('hidden');
+  // 폰(터치)에서만, 아직 앱으로 설치하지 않았을 때만 보여 준다.
+  // PC 에서는 이 버튼으로 바탕화면 바로가기를 만들 수 없어(브라우저가 막음)
+  // 헷갈리기만 한다. PC 는 주소창 아이콘을 끌어다 놓으면 된다.
+  const canShow = touch && !standalone;
+  if (canShow) btn.classList.remove('hidden');
 
   // head 스크립트가 신호를 나중에 잡으면 알려 준다.
   addEventListener('install-available', () => { deferred = window.__deferredInstall || deferred; });
   addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferred = e;
-    if (!standalone) btn.classList.remove('hidden');
+    if (canShow) btn.classList.remove('hidden');
   });
 
   const label = btn.textContent;
