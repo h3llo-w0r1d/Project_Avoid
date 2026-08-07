@@ -76,12 +76,19 @@ const stats = openStatsStore(db);
 const matchLog = await openMatchStore(DATA_DIR, db);
 
 const app = express();
+// 무엇으로 만들었는지 알려 줄 이유가 없다. 알려 주면 그 버전에 알려진
+// 약점을 골라 찔러 보기 쉬워진다.
+app.disable('x-powered-by');
 app.use(express.json({ limit: '4kb' }));
 app.use(cookieParser());
 
 // 로그인 라우트를 먼저 붙인다. 여기서 req.user 를 채워 줘야
 // 아래 랭킹 API 가 "누가 올린 기록인지" 알 수 있다.
-const auth = attachAuth(app, users, { port: PORT });
+const auth = attachAuth(app, users, {
+  port: PORT,
+  // 닉네임을 바꾸면 이미 올려 둔 기록의 이름도 따라가야 한다.
+  onRename: (userId, name) => scores.renameUser(userId, name)
+});
 
 // 게임 화면을 연 횟수를 센다. 방침·약관 페이지는 세지 않는다.
 //

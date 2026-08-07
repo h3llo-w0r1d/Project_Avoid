@@ -171,22 +171,25 @@ export class Auth {
     this.h.onSetupOpen?.();
   }
 
+  // 닉네임을 서버에 올린다. 처음 정할 때도, 나중에 바꿀 때도 같은 길이다.
+  async putNickname(nickname) {
+    const res = await fetch('/api/me/nickname', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nickname })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    this.user = data;
+    this.render();
+    return data;
+  }
+
   async saveNickname() {
-    const nickname = this.el.setupInput.value.trim();
     this.el.setupError.textContent = '';
-
     try {
-      const res = await fetch('/api/me/nickname', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nickname })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-
-      this.user = data;
+      await this.putNickname(this.el.setupInput.value.trim());
       this.el.setupScreen.classList.add('hidden');
-      this.render();
       this.h.onSetupDone?.();
     } catch (err) {
       this.el.setupError.textContent = err.message;

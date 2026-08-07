@@ -22,6 +22,8 @@ export class ProfileUI {
     });
 
     this.openMine = null;   // main.js 가 채운다
+    this.onRename = null;   // main.js 가 채운다. 없으면 바꾸기 버튼을 안 만든다.
+    this.me = null;         // 지금 로그인한 사람의 닉네임 (게스트면 null)
   }
 
   get isOpen() { return !this.el.modal.classList.contains('hidden'); }
@@ -99,5 +101,42 @@ export class ProfileUI {
       '통산 기록만 시즌이 바뀌어도 남습니다.</p>');
 
     this.el.body.innerHTML = parts.join('');
+
+    // 내 프로필일 때만 닉네임을 바꿀 수 있다. 남의 프로필에 이 버튼이
+    // 뜨면 안 되므로 이름이 같은지 확인한다.
+    if (this.onRename && this.me && this.me === p.name) {
+      const row = document.createElement('div');
+      row.className = 'profile-actions';
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'ghost small';
+      btn.textContent = '닉네임 바꾸기';
+      btn.addEventListener('click', () => this.askRename(p.name));
+      row.appendChild(btn);
+      this.el.body.appendChild(row);
+    }
+  }
+
+  async askRename(current) {
+    const next = prompt('새 닉네임 (10자 이내)', current);
+    if (next === null) return;                 // 취소
+    const name = next.trim();
+    if (!name || name === current) return;
+
+    const note = document.createElement('p');
+    note.className = 'profile-empty';
+    note.textContent = '바꾸는 중…';
+    this.el.body.appendChild(note);
+
+    try {
+      await this.onRename(name);
+      // 바뀐 이름으로 화면을 다시 그린다. 옛 이름이 남아 있으면
+      // 방금 바꾼 게 안 된 것처럼 보인다.
+      this.me = name;
+      await this.openMine?.();
+    } catch (err) {
+      note.textContent = err.message;
+      note.classList.add('error');
+    }
   }
 }

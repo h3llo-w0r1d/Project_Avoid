@@ -114,7 +114,16 @@ async function showProfile(name) {
 }
 
 ui.onName = (name) => showProfile(name);
-profile.openMine = () => showProfile(auth.displayName);
+profile.openMine = () => {
+  // 게스트는 계정이 없어 이름을 못 바꾼다. 그때는 버튼도 안 만든다.
+  profile.me = auth.signedIn ? auth.displayName : null;
+  return showProfile(auth.displayName);
+};
+profile.onRename = async (name) => {
+  await auth.putNickname(name);
+  // 이름이 바뀌었으니 랭킹도 다시 받는다. 안 그러면 옛 이름이 남는다.
+  refreshLeaderboard();
+};
 
 // 관리 창. 서버가 "너는 관리자다" 라고 할 때만 버튼이 뜬다.
 // 버튼을 감추는 건 눈에 안 띄게 하려는 것뿐이고, 실제로 막는 건 서버다.
