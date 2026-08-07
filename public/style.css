@@ -333,9 +333,26 @@ body.zapped::after {
    보인다. 지원 여부는 JS 가 <html> 에 붙이는 .can-fullscreen 으로 판단한다. */
 #fullscreen-btn { display: none; }
 @media (hover: none) and (pointer: coarse) {
-  :root.can-fullscreen #fullscreen-btn { display: inline-flex; }
+  /* inline-flex 로 SVG 를 가운데 정렬한다 */
+  :root.can-fullscreen #fullscreen-btn { display: inline-flex; align-items: center; justify-content: center; }
 }
+#fullscreen-btn { color: #d3ddf5; }        /* 이모지 버튼만큼 또렷하게 */
+#fullscreen-btn svg { width: 23px; height: 23px; display: block; }
 #fullscreen-btn.on { color: var(--accent); border-color: var(--accent); }
+
+/* 홈 화면에 추가 버튼. 설치 가능할 때만 뜬다. */
+.install-btn {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(79, 214, 255, 0.1);
+  border: 1px solid rgba(79, 214, 255, 0.4);
+  border-radius: 12px;
+}
+.install-btn:hover { background: rgba(79, 214, 255, 0.18); }
 
 /* ---------- 게시판 ---------- */
 .board-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }

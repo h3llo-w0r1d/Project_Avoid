@@ -29,8 +29,17 @@
       <button id="char-btn" type="button" aria-label="캐릭터 고르기" title="캐릭터">🌱</button>
       <button id="rank-btn" type="button" aria-label="전체 랭킹 보기" title="전체 랭킹">🏆</button>
       <!-- 폰에서만 보인다. 눌러서 주소창·내비바를 숨기고 화면을 꽉 채운다.
-           전체화면을 지원하지 않는 기기(아이폰 사파리)에서는 JS 가 숨긴다. -->
-      <button id="fullscreen-btn" type="button" aria-label="전체화면" title="전체화면">⛶</button>
+           전체화면을 지원하지 않는 기기(아이폰 사파리)에서는 JS 가 숨긴다.
+           ⛶ 글자는 기기에 따라 얇은 테두리로만 보여서 SVG 로 그린다. -->
+      <button id="fullscreen-btn" type="button" aria-label="전체화면" title="전체화면">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 9V5a1 1 0 0 1 1-1h4" />
+          <path d="M20 9V5a1 1 0 0 0-1-1h-4" />
+          <path d="M4 15v4a1 1 0 0 0 1 1h4" />
+          <path d="M20 15v4a1 1 0 0 1-1 1h-4" />
+        </svg>
+      </button>
       <button id="mute-btn" type="button" aria-label="소리 켜기/끄기">🔊</button>
     </div>
   </header>
@@ -162,6 +171,10 @@
         <button id="start-btn" class="primary">혼자 하기</button>
         <button id="versus-btn" class="ghost">⚔️ 온라인 1v1</button>
       </div>
+
+      <!-- 홈 화면에 앱으로 추가. 설치할 수 있을 때만 JS 가 보여 준다
+           (안드로이드). 이미 앱으로 켰거나 아이폰이면 안 뜬다. -->
+      <button id="install-btn" class="install-btn hidden" type="button">📲 홈 화면에 앱으로 추가</button>
 
       <div class="bottom-row">
         <div class="controls">

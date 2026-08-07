@@ -257,6 +257,33 @@ addEventListener('resize', () => fitCamera(camera, renderer));
   document.addEventListener('webkitfullscreenchange', paint);
 })();
 
+// '홈 화면에 앱으로 추가' 버튼.
+//
+// 안드로이드 크롬·삼성인터넷은 설치할 수 있게 되면 beforeinstallprompt 를
+// 준다. 기본 배너 대신 우리 버튼으로 원할 때 띄운다. 아이폰 사파리는 이
+// 이벤트를 안 줘서 버튼이 안 뜬다(아이폰은 공유 → 홈 화면에 추가 로 직접).
+(() => {
+  const btn = document.getElementById('install-btn');
+  let deferred = null;
+
+  addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();          // 브라우저 기본 배너를 막고
+    deferred = e;                // 우리가 원할 때 띄우려고 쥐고 있는다
+    btn.classList.remove('hidden');
+  });
+
+  btn.addEventListener('click', async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    await deferred.userChoice;   // 사용자가 추가/취소를 고른다
+    deferred = null;
+    btn.classList.add('hidden');
+  });
+
+  // 이미 추가했으면 버튼을 감춘다.
+  addEventListener('appinstalled', () => btn.classList.add('hidden'));
+})();
+
 // ---------------------------------------------------------------- 게임 흐름
 
 // 타이틀에서는 무대를 감춘다. 로그인 창 뒤로 흐릿하게 비치면 어수선하다.
