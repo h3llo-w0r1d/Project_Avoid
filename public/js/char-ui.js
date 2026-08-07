@@ -4,7 +4,7 @@
 // 그림 파일을 따로 두지 않아도 되고, 캐릭터를 고치면 미리보기도 같이 바뀐다.
 
 import * as THREE from 'three';
-import { CHARACTERS, isUnlocked } from './characters.js';
+import { PLAYABLE, HAS_WIP, isUnlocked } from './characters.js';
 import { buildFallbackAvatar } from './avatar.js';
 
 const $ = (id) => document.getElementById(id);
@@ -106,14 +106,14 @@ export class CharacterUI {
   draw() {
     const best = this.h.bestSeconds();
     const chosen = this.h.selected();
-    const locked = CHARACTERS.filter((c) => !isUnlocked(c, best));
+    const locked = PLAYABLE.filter((c) => !isUnlocked(c, best));
 
     this.el.hint.textContent = locked.length
       ? `기록을 세우면 하나씩 열립니다 · 내 최고 ${best.toFixed(1)}초`
-      : '전부 열렸습니다';
+      : `내 최고 ${best.toFixed(1)}초`;
 
     this.el.grid.innerHTML = '';
-    for (const c of CHARACTERS) {
+    for (const c of PLAYABLE) {
       const unlocked = isUnlocked(c, best);
 
       const card = document.createElement('button');
@@ -154,6 +154,17 @@ export class CharacterUI {
       });
 
       this.el.grid.appendChild(card);
+    }
+
+    // 아직 다듬는 중인 캐릭터가 있으면, 빈자리 대신 안내를 한 칸 놓는다.
+    // 칸을 통째로 비워 두면 화면이 잘못된 것처럼 보인다.
+    if (HAS_WIP) {
+      const soon = document.createElement('div');
+      soon.className = 'char-soon';
+      soon.innerHTML = '<span class="char-soon-mark">🚧</span>' +
+        '<span class="char-soon-text">제작 중</span>' +
+        '<span class="char-soon-sub">캐릭터를 다듬고 있습니다</span>';
+      this.el.grid.appendChild(soon);
     }
   }
 }

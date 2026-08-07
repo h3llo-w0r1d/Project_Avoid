@@ -744,6 +744,31 @@ kbd {
   margin-top: 16px;
 }
 
+/* 아직 다듬는 중이라 안 보여 주는 캐릭터 자리.
+   두 칸을 차지해 남은 줄을 채운다 — 칸을 비워 두면 화면이 깨진 것처럼 보인다. */
+.char-soon {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 18px 10px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--stroke);
+  border-radius: 14px;
+}
+
+.char-soon-mark { font-size: 26px; opacity: 0.75; }
+.char-soon-text { font-size: 14px; font-weight: 700; color: var(--text); }
+.char-soon-sub { font-size: 11px; color: var(--muted); }
+
+@media (max-width: 480px) {
+  .char-soon { padding: 14px 8px; }
+  .char-soon-mark { font-size: 22px; }
+}
+
 .char-card {
   position: relative;
   width: auto;

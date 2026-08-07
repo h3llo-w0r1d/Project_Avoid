@@ -8,6 +8,8 @@
 // top:     머리 위 장식 (leaves / cap / acorn / spikes / sprout)
 // skin:    몸통 표면 무늬 (fiber / grooves / ribs / speckle / 없으면 민무늬)
 // unlockAt: 이 초 이상 버틴 적이 있으면 열린다. 0 이면 처음부터.
+// wip:     아직 다듬는 중. 고르는 화면에 안 나오고 고를 수도 없다.
+//          정의는 그대로 두었다가 마음에 들면 이 줄만 지우면 된다.
 
 export const CHARACTERS = [
   {
@@ -26,6 +28,7 @@ export const CHARACTERS = [
   },
   {
     id: 'carrot',
+    wip: true,
     name: '당근',
     unlockAt: 30,
     body: 0xf0954a,
@@ -43,6 +46,7 @@ export const CHARACTERS = [
   },
   {
     id: 'mushroom',
+    wip: true,
     name: '버섯',
     unlockAt: 60,
     body: 0xf6ecd8,
@@ -56,6 +60,7 @@ export const CHARACTERS = [
   },
   {
     id: 'acorn',
+    wip: true,
     name: '도토리',
     unlockAt: 90,
     body: 0xe8c48f,
@@ -68,6 +73,7 @@ export const CHARACTERS = [
   },
   {
     id: 'cactus',
+    wip: true,
     name: '선인장',
     unlockAt: 120,
     body: 0x5aa05a,
@@ -84,6 +90,7 @@ export const CHARACTERS = [
   },
   {
     id: 'potato',
+    wip: true,
     name: '감자',
     unlockAt: 150,
     body: 0xc8a06a,
@@ -100,9 +107,19 @@ export const CHARACTERS = [
 
 export const DEFAULT_CHARACTER = CHARACTERS[0].id;
 
+// 지금 고를 수 있는 것들. 화면에도 이것만 나온다.
+export const PLAYABLE = CHARACTERS.filter((c) => !c.wip);
+
+// 아직 다듬는 중인 캐릭터가 남아 있는가. 있으면 고르는 화면에 안내를 띄운다.
+export const HAS_WIP = CHARACTERS.some((c) => c.wip);
+
+// findCharacter 는 wip 도 찾아 준다. 1v1 상대가 예전에 고른 캐릭터를
+// 보내올 수 있는데, 여기서 못 찾으면 상대가 통째로 안 보인다.
 export function findCharacter(id) {
   return CHARACTERS.find((c) => c.id === id) ?? CHARACTERS[0];
 }
+
+export const isPlayable = (spec) => !!spec && !spec.wip;
 
 // 최고 기록으로 열린 캐릭터인지
 export function isUnlocked(spec, bestSeconds) {

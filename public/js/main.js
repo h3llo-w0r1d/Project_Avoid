@@ -11,7 +11,7 @@ import { CharacterUI } from './char-ui.js';
 import { ProfileUI } from './profile-ui.js';
 import { AdminUI } from './admin-ui.js';
 import { VoiceUI } from './voice-ui.js';
-import { DEFAULT_CHARACTER, findCharacter, isUnlocked } from './characters.js';
+import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable } from './characters.js';
 import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
@@ -28,8 +28,10 @@ const CHAR_KEY = 'avoidarc.character';
 function savedCharacter() {
   const id = localStorage.getItem(CHAR_KEY) ?? DEFAULT_CHARACTER;
   const spec = findCharacter(id);
-  // 저장해 둔 캐릭터가 아직 안 열렸으면(기록을 지웠다면) 기본으로 되돌린다
-  return isUnlocked(spec, bestSeconds()) ? spec.id : DEFAULT_CHARACTER;
+  // 저장해 둔 캐릭터가 아직 안 열렸거나(기록을 지웠다면), 다듬는 중으로
+  // 내려간 캐릭터면 기본으로 되돌린다. 전에 골라 둔 사람이 그대로 쓰고
+  // 있으면 "화면에서 없앴는데 계속 보인다" 가 된다.
+  return isPlayable(spec) && isUnlocked(spec, bestSeconds()) ? spec.id : DEFAULT_CHARACTER;
 }
 
 function bestSeconds() {
