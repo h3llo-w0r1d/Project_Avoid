@@ -276,8 +276,11 @@ addEventListener('resize', () => fitCamera(camera, renderer));
   const standalone = matchMedia('(display-mode: standalone)').matches
     || matchMedia('(display-mode: fullscreen)').matches
     || window.navigator.standalone === true;
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const ua = navigator.userAgent;
+  const isIOS = /iphone|ipad|ipod/i.test(ua);
   const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+  // 카톡·인스타 등 앱 안의 미니 브라우저. 여기서는 홈 화면 추가가 아예 안 된다.
+  const inApp = /KAKAOTALK|Instagram|FBAN|FBAV|Line\/|NAVER|DaumApps|everytimeApp/i.test(ua);
 
   // 폰(터치)에서만, 아직 앱으로 설치하지 않았을 때만 보여 준다.
   // PC 에서는 이 버튼으로 바탕화면 바로가기를 만들 수 없어(브라우저가 막음)
@@ -329,14 +332,24 @@ addEventListener('resize', () => fitCamera(camera, renderer));
     btn.textContent = label;
     if (got && await installNow()) return;
 
-    // 그래도 없으면(이미 설치됐거나 브라우저가 막은 경우) 기기에 맞는 직접
-    // 추가 방법을 알려 준다. 웹은 바탕화면에 파일을 못 만들어서, 이 마지막
-    // 한 걸음은 사용자가 직접 해야 한다.
-    help.textContent = isIOS
-      ? '사파리 아래 공유 버튼( ⬆️ )을 누르고 "홈 화면에 추가"를 선택하세요.'
-      : touch
-        ? '브라우저 메뉴( ⋮ )를 열고 "홈 화면에 추가"를 누르세요.'
-        : '주소창 왼쪽 아이콘을 바탕화면으로 끌어다 놓으면 바로가기가 생겨요.';
+    // 그래도 없으면(이미 설치됐거나 브라우저가 막은 경우) 상황에 맞는 방법을
+    // 알려 준다. 웹은 바탕화면에 파일을 못 만들어서 마지막 한 걸음은 사용자 몫이다.
+    //
+    // 카톡·인스타 안의 미니 브라우저가 제일 흔한 걸림돌이다. 여기서는 설치가
+    // 아예 안 되므로, 다른 방법을 안내하기 전에 "크롬으로 열라"고 먼저 알린다.
+    let msg;
+    if (inApp) {
+      msg = '지금은 카카오톡·인스타 등 앱 안의 브라우저예요. ' +
+        '오른쪽 위 ⋮(또는 공유) → "다른 브라우저로 열기 / Chrome으로 열기" 로 ' +
+        '크롬에서 연 다음 이 버튼을 다시 누르면 설치돼요.';
+    } else if (isIOS) {
+      msg = '사파리 아래 공유 버튼( ⬆️ )을 누르고 "홈 화면에 추가"를 선택하세요.';
+    } else if (touch) {
+      msg = '크롬 오른쪽 위 ⋮ 메뉴 → "앱 설치" 또는 "홈 화면에 추가"를 누르세요.';
+    } else {
+      msg = '주소창 왼쪽 아이콘을 바탕화면으로 끌어다 놓으면 바로가기가 생겨요.';
+    }
+    help.textContent = msg;
     help.classList.remove('hidden');
   });
 
