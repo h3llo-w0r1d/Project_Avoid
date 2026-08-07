@@ -195,14 +195,14 @@ const versus = new VersusUI({
 //
 // 내 목소리는 두 번 다 낸다. 다만 2단 점프는 조금 높은 음으로 낸다.
 // 같은 소리를 0.2초 간격으로 두 번 틀면 말을 더듬는 것처럼 들린다.
+//
+// 목소리를 녹음해 뒀으면 기본 점프 효과음은 내지 않는다. 둘이 겹치면
+// 애써 녹음한 목소리가 묻힌다.
 player.onJump = (isDouble) => {
-  if (isDouble) {
-    audio.doubleJump();
-    audio.say(VOICE.doubleRate);
-    return;
-  }
-  audio.jump();
-  audio.say();
+  const spoke = audio.say(isDouble ? VOICE.doubleRate : 1);
+  if (spoke) return;
+  if (isDouble) audio.doubleJump();
+  else audio.jump();
 };
 player.onLand = () => audio.land();
 hazards.onWarn = () => audio.warn();

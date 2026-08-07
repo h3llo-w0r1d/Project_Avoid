@@ -227,11 +227,16 @@ export class Audio {
     return played;
   }
 
-  // 점프할 때 내 목소리. 녹음해 둔 게 없으면 아무 소리도 내지 않는다
-  // (점프 효과음은 따로 난다).
+  // 점프할 때 내 목소리. 냈으면 true 를 돌려준다.
+  //
+  // 부르는 쪽은 이 값을 보고 기본 점프 효과음을 낼지 정한다. 둘 다 내면
+  // 겹쳐서 목소리가 묻힌다. 애써 녹음한 걸 들으려고 넣은 기능이다.
+  //
+  // 음소거 중이면 false 다 — 어차피 아무 소리도 안 나므로, 효과음을
+  // 대신 내려 해도 그것 역시 안 난다.
   say(boost = 1) {
-    if (!VOICE.enabled || this.muted || !this.ctx) return;
-    this.playUserVoice(boost);
+    if (!VOICE.enabled || this.muted || !this.ctx) return false;
+    return this.playUserVoice(boost);
   }
 
   // ---------------------------------------------------------------- 재료
