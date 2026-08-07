@@ -289,18 +289,46 @@ addEventListener('resize', () => fitCamera(camera, renderer));
     if (!standalone) btn.classList.remove('hidden');
   });
 
+  const label = btn.textContent;
+
+  // 설치 창을 띄운다. 신호가 있으면 true.
+  async function installNow() {
+    if (!deferred) return false;
+    deferred.prompt();
+    await deferred.userChoice;
+    deferred = null;
+    btn.classList.add('hidden');
+    help.classList.add('hidden');
+    return true;
+  }
+
+  // 신호가 아직 안 왔으면 잠깐 기다린다. 크롬이 신호를 조금 늦게 줄 때가
+  // 있어서, 눌렀을 때 바로 안내문으로 빠지지 않고 이만큼은 기다려 본다.
+  function waitForSignal(ms) {
+    if (deferred) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      const done = (ok) => { removeEventListener('install-available', onSig); resolve(ok); };
+      const onSig = () => { deferred = window.__deferredInstall || deferred; done(!!deferred); };
+      addEventListener('install-available', onSig);
+      setTimeout(() => done(!!deferred), ms);
+    });
+  }
+
   btn.addEventListener('click', async () => {
-    if (deferred) {
-      deferred.prompt();
-      await deferred.userChoice;
-      deferred = null;
-      btn.classList.add('hidden');
-      return;
-    }
-    // 설치 창을 못 쓰는 경우 → 브라우저별로 방법을 알려 준다.
+    if (await installNow()) return;
+
+    // 신호를 잠깐 기다렸다가 오면 바로 설치창을 띄운다.
+    btn.disabled = true;
+    btn.textContent = '설치 준비 중…';
+    const got = await waitForSignal(2500);
+    btn.disabled = false;
+    btn.textContent = label;
+    if (got && await installNow()) return;
+
+    // 그래도 없으면(이미 설치됐거나 브라우저가 설치를 막은 경우) 방법을 알려 준다.
     help.textContent = isIOS
       ? '사파리 아래 공유 버튼( ⬆️ )을 누르고 "홈 화면에 추가"를 선택하세요.'
-      : '브라우저 메뉴( ⋮ )를 열고 "앱 설치" 또는 "홈 화면에 추가"를 누르세요.';
+      : '이미 설치되어 있거나, 브라우저 메뉴( ⋮ )에서 "앱 설치"를 눌러야 할 수 있어요.';
     help.classList.remove('hidden');
   });
 
