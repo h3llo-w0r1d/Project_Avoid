@@ -277,6 +277,7 @@ addEventListener('resize', () => fitCamera(camera, renderer));
     || matchMedia('(display-mode: fullscreen)').matches
     || window.navigator.standalone === true;
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const touch = matchMedia('(hover: none) and (pointer: coarse)').matches;
 
   // 아직 앱으로 설치하지 않았으면 어느 기기든 버튼을 보여 준다.
   if (!standalone) btn.classList.remove('hidden');
@@ -325,10 +326,14 @@ addEventListener('resize', () => fitCamera(camera, renderer));
     btn.textContent = label;
     if (got && await installNow()) return;
 
-    // 그래도 없으면(이미 설치됐거나 브라우저가 설치를 막은 경우) 방법을 알려 준다.
+    // 그래도 없으면(이미 설치됐거나 브라우저가 막은 경우) 기기에 맞는 직접
+    // 추가 방법을 알려 준다. 웹은 바탕화면에 파일을 못 만들어서, 이 마지막
+    // 한 걸음은 사용자가 직접 해야 한다.
     help.textContent = isIOS
       ? '사파리 아래 공유 버튼( ⬆️ )을 누르고 "홈 화면에 추가"를 선택하세요.'
-      : '이미 설치되어 있거나, 브라우저 메뉴( ⋮ )에서 "앱 설치"를 눌러야 할 수 있어요.';
+      : touch
+        ? '브라우저 메뉴( ⋮ )를 열고 "홈 화면에 추가"를 누르세요.'
+        : '주소창 왼쪽 아이콘을 바탕화면으로 끌어다 놓으면 바로가기가 생겨요.';
     help.classList.remove('hidden');
   });
 
