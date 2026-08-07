@@ -382,9 +382,11 @@ async function drawPlays() {
     $('play-clear').style.display = total ? '' : 'none';
 
     if (total === 0) { $('play-table').innerHTML = '<p class="empty">아직 기록이 없습니다</p>'; $('play-pager').innerHTML = ''; return; }
+    // 번호는 "몇 번째로 한 판인지". 제일 오래된 첫 판이 1, 최근 판이 total.
+    // 화면은 최근이 위(서버가 시간 역순으로 주므로)라, 위에서부터 번호가 줄어든다.
     const start = playPage * PLAY_PER;
     const body = rows.map((r, i) =>
-      `<tr><td class="num dim">${start + i + 1}</td>
+      `<tr><td class="num dim">${total - start - i}</td>
         <td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
         <td class="dim">${stamp(r.at)}</td></tr>`).join('');
