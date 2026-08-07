@@ -329,6 +329,10 @@ body.zapped::after {
 /* 검색칸이 flex:1 로 늘어나므로, 버튼은 줄어들지 않게 못 박는다. */
 .admin-tools .admin-act { flex: none; }
 
+/* 이용 현황 맨 위 요약 */
+.admin-usage-sum { margin-bottom: 14px; }
+.admin-usage-sum .stat-value em { font-size: 0.55em; font-style: normal; margin-left: 2px; }
+
 .admin-count {
   font-size: 11px;
   color: var(--muted);

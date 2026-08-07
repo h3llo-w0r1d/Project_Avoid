@@ -11,6 +11,7 @@ import { importMatchesJson, openMatchStore } from './lib/matches.js';
 import { attachAuth } from './lib/auth-routes.js';
 import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
+import { openStatsStore } from './lib/stats.js';
 import { GUEST_PATTERN } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 
@@ -69,6 +70,9 @@ const users = await openUserStore(DATA_DIR, db);
 // 혼자 하기 기록이 진짜인지 최소한이라도 확인하는 표. 메모리에만 둔다 —
 // 서버를 다시 켜면 진행 중이던 판의 기록은 못 올린다. 대신 표가 새는 일도 없다.
 const runTickets = createTickets();
+
+// 날짜별 이용 현황. 누가 왔는지는 안 적고 횟수만 센다.
+const stats = openStatsStore(db);
 const matchLog = await openMatchStore(DATA_DIR, db);
 
 const app = express();
@@ -78,6 +82,15 @@ app.use(cookieParser());
 // 로그인 라우트를 먼저 붙인다. 여기서 req.user 를 채워 줘야
 // 아래 랭킹 API 가 "누가 올린 기록인지" 알 수 있다.
 const auth = attachAuth(app, users, { port: PORT });
+
+// 게임 화면을 연 횟수를 센다. 방침·약관 페이지는 세지 않는다.
+//
+// 정적 파일 미들웨어보다 먼저 놓아야 한다. 뒤에 놓으면 express.static 이
+// 파일을 내주고 끝내 버려서 여기까지 오지 않는다.
+app.get(['/', '/index.html'], (req, res, next) => {
+  stats.visit();
+  next();
+});
 
 // 약관 문서들. 구글 로그인 심사에서 이 주소를 요구하고, 거기 적는 주소는
 // 확장자 없이 깔끔한 편이 낫다. 파일은 public/ 아래 html 하나씩이다.
@@ -203,6 +216,7 @@ const clientIp = (req) =>
 // 혼자 하기를 시작할 때 표를 하나 내준다. 기록을 올릴 때 이 표가 있어야
 // 하고, 표를 받은 뒤 실제로 흐른 시간보다 긴 기록은 거절된다.
 app.post('/api/run/start', (req, res) => {
+  stats.runStarted();
   res.json({ ticket: runTickets.issue(clientIp(req), req.user?.id ?? null) });
 });
 
@@ -249,6 +263,7 @@ app.post('/api/scores', async (req, res) => {
   try {
     await scores.rollSeasons();
     const entry = await scores.add(finalName, Math.round(t * 100) / 100, req.user?.id ?? null);
+    stats.runFinished(t);
     res.json({
       id: entry.id,
       rank: scores.rankOf(entry.id),
@@ -310,7 +325,8 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     season: seasonInfo(),
     online: lobby.stats(),
     scores: scores.all(),
-    accounts: users.listAccounts()
+    accounts: users.listAccounts(),
+    usage: stats.recent(30)
   });
 });
 

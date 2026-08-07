@@ -11,6 +11,14 @@ const $ = (id) => document.getElementById(id);
 // 더 늘리면 쪽번호가 화면 밖으로 밀려나 쪽을 넘길 수가 없다.
 const PER_PAGE = 10;
 
+// 논 시간을 사람이 읽을 단위로. 전부 분으로 반올림하면 짧게 논 날이
+// 죄다 "0분" 이 되어 아무것도 알 수 없다.
+const spell = (seconds) => {
+  if (seconds < 60) return [seconds, '초'];
+  if (seconds < 3600) return [Math.round(seconds / 60), '분'];
+  return [(seconds / 3600).toFixed(1), '시간'];
+};
+
 const when = (at) => {
   if (!at) return '';
   const d = new Date(at);
@@ -121,6 +129,7 @@ export class AdminUI {
   // 지금 탭에서 보여 줄 목록 (검색어까지 적용)
   rows() {
     if (!this.data) return [];
+    if (this.panel === 'usage') return this.data.usage ?? [];
     const all = this.panel === 'scores' ? this.data.scores : this.data.accounts;
     if (!this.query) return all;
     return all.filter((e) => (e.name ?? e.nickname ?? '').toLowerCase().includes(this.query));
@@ -136,35 +145,92 @@ export class AdminUI {
 
     if (this.inspecting) return this.drawHistory();
 
+    // 이용 현황은 이름으로 찾을 게 없다. 검색칸을 숨긴다.
+    this.el.search.classList.toggle('hidden', this.panel === 'usage');
+
     const rows = this.rows();
     const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
     // 지우다 보면 마지막 쪽이 통째로 비는 수가 있다. 그때는 한 쪽 당긴다.
     this.page = Math.min(this.page, pages - 1);
 
-    const total = this.panel === 'scores' ? this.data.scores.length : this.data.accounts.length;
-    this.el.count.textContent = this.query
-      ? `${rows.length}개 / 전체 ${total}개`
-      : `${total}개`;
+    if (this.panel === 'usage') {
+      this.el.count.textContent = rows.length ? `최근 ${rows.length}일` : '';
+    } else {
+      const total = this.panel === 'scores' ? this.data.scores.length : this.data.accounts.length;
+      this.el.count.textContent = this.query
+        ? `${rows.length}개 / 전체 ${total}개`
+        : `${total}개`;
+    }
 
     this.el.body.innerHTML = '';
     if (rows.length === 0) {
       this.el.body.innerHTML = `<p class="profile-empty">${
-        this.query ? '찾는 이름이 없습니다' : '비어 있습니다'}</p>`;
+        this.panel === 'usage' ? '아직 쌓인 기록이 없습니다'
+          : this.query ? '찾는 이름이 없습니다' : '비어 있습니다'}</p>`;
       this.el.pager.innerHTML = '';
       return;
     }
+
+    if (this.panel === 'usage') this.el.body.appendChild(this.usageSummary(rows));
 
     const start = this.page * PER_PAGE;
     const list = document.createElement('ul');
     list.className = 'admin-list';
 
     for (const [offset, e] of rows.slice(start, start + PER_PAGE).entries()) {
-      list.appendChild(this.panel === 'scores'
-        ? this.scoreRow(e, start + offset + 1)
-        : this.accountRow(e));
+      list.appendChild(
+        this.panel === 'scores' ? this.scoreRow(e, start + offset + 1)
+          : this.panel === 'usage' ? this.usageRow(e)
+            : this.accountRow(e));
     }
     this.el.body.appendChild(list);
     this.drawPager(pages);
+  }
+
+  // 오늘과 최근 7일을 맨 위에 크게 보여 준다. 날짜 목록만 늘어놓으면
+  // "요즘 잘 되고 있나" 를 한눈에 알 수 없다.
+  usageSummary(rows) {
+    const week = rows.slice(0, 7);
+    const sum = (k) => week.reduce((s, r) => s + r[k], 0);
+    const today = rows[0] ?? { visits: 0, players: 0, seconds: 0 };
+    const [wv, wu] = spell(sum('seconds'));
+    const [tv, tu] = spell(today.seconds);
+
+    const box = document.createElement('div');
+    box.className = 'stat-row admin-usage-sum';
+    box.innerHTML = `
+      <div class="stat">
+        <span class="stat-value">${today.visits}</span>
+        <span class="stat-label">오늘 방문</span>
+        <span class="stat-sub">${today.players}명이 놀았음</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">${sum('visits')}</span>
+        <span class="stat-label">최근 7일 방문</span>
+        <span class="stat-sub">판 ${sum('runs')}회</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">${wv}<em>${wu}</em></span>
+        <span class="stat-label">최근 7일 논 시간</span>
+        <span class="stat-sub">오늘 ${tv}${tu}</span>
+      </div>`;
+    return box;
+  }
+
+  usageRow(u) {
+    const [, month, date] = u.day.split('-');
+    // 시작한 판 중 몇 개가 끝까지 갔는지. 낮으면 들어왔다 바로 나간다는 뜻이다.
+    const done = u.runs ? Math.round((u.finished / u.runs) * 100) : 0;
+    const [v, unit] = spell(u.seconds);
+    return this.row([
+      AdminUI.text(`${Number(month)}/${Number(date)}`, 'admin-rank'),
+      AdminUI.text(`방문 ${u.visits}`, 'admin-name'),
+      AdminUI.text(`${v}${unit}`, 'admin-value'),
+      AdminUI.text(
+        `${u.players}명 · 판 ${u.runs}회${u.runs ? ` (완주 ${done}%)` : ''}` +
+        `${u.members ? ` · 회원 ${u.members}명` : ''}`,
+        'admin-sub')
+    ]);
   }
 
   drawPager(pages) {
