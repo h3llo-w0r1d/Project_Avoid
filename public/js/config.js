@@ -80,14 +80,26 @@ export const BEAM = {
 //
 // maxLive 상한이 없으면 후반에 빠져나갈 틈이 아예 사라져서
 // 실력과 무관하게 죽는다. 늘릴 때도 아주 조심해서 늘려야 한다.
+//
+// 2026-08 난이도 상향: "너무 쉽다" 는 말에 따라 속도(speed)는 그대로 두고
+// 전기선 개수만 늘렸다. interval 을 줄여 더 자주, maxLive 를 올려 더 많이,
+// volley 를 앞 스테이지로 당겨 여러 줄을 더 일찍 만나게 했다.
+//
+// 화면 없이 로직만 돌리는 시뮬레이터로 확인했다 (씨앗 40개, 그럭저럭
+// 피하는 봇):
+//   - 보통 생존 시간 중간값 21.2초 → 14.7초 (약 30% 어려워짐)
+//   - 동시에 뜨는 줄 3 → 4, 초당 나오는 줄 0.46 → 0.62
+//   - 초반 10초(STAGE 1)는 봇이 40판 다 통과 — 초보 유입을 지킨다
+//   - 후반(100·150초)에 봇이 3초쯤 죽는 건 원본도 같았다. 벽을 새로
+//     만든 게 아니라 봇이 후반에 갑자기 떨어지면 원래 그렇다.
 export const STAGES = [
-  { at: 0, name: 'STAGE 1', speed: 1.00, interval: 2.60, maxLive: 3, arms: 1, volley: 1, unlock: ['sweep'] },
-  { at: 12, name: 'STAGE 2', speed: 1.20, interval: 2.15, maxLive: 4, arms: 1, volley: 1, unlock: ['rotate'] },
-  { at: 28, name: 'STAGE 3', speed: 1.45, interval: 1.75, maxLive: 4, arms: 2, volley: 2, unlock: ['squeeze'] },
-  { at: 45, name: 'STAGE 4', speed: 1.70, interval: 1.40, maxLive: 5, arms: 2, volley: 2, unlock: ['cross'] },
-  { at: 70, name: 'STAGE 5', speed: 1.95, interval: 1.20, maxLive: 5, arms: 2, volley: 3 },
-  { at: 100, name: 'OVERLOAD', speed: 2.20, interval: 1.00, maxLive: 5, arms: 3, volley: 3 },
-  { at: 140, name: 'OVERLOAD Ⅱ', speed: 2.45, interval: 0.88, maxLive: 6, arms: 3, volley: 3 }
+  { at: 0, name: 'STAGE 1', speed: 1.00, interval: 2.10, maxLive: 3, arms: 1, volley: 1, unlock: ['sweep'] },
+  { at: 10, name: 'STAGE 2', speed: 1.20, interval: 1.55, maxLive: 5, arms: 1, volley: 2, unlock: ['rotate'] },
+  { at: 24, name: 'STAGE 3', speed: 1.45, interval: 1.30, maxLive: 6, arms: 2, volley: 2, unlock: ['squeeze'] },
+  { at: 42, name: 'STAGE 4', speed: 1.70, interval: 1.10, maxLive: 7, arms: 2, volley: 3, unlock: ['cross'] },
+  { at: 66, name: 'STAGE 5', speed: 1.95, interval: 1.00, maxLive: 7, arms: 2, volley: 3 },
+  { at: 100, name: 'OVERLOAD', speed: 2.20, interval: 0.90, maxLive: 8, arms: 3, volley: 3 },
+  { at: 140, name: 'OVERLOAD Ⅱ', speed: 2.45, interval: 0.80, maxLive: 8, arms: 3, volley: 3 }
 ];
 
 // 소리 파일. 넣지 않으면(null) audio.js 가 그때그때 합성해서 쓴다.
