@@ -184,6 +184,9 @@ export class UI {
     this.setRankOpen(false);
   }
 
+  // 게임 중 표시를 끈다. 상단바가 다시 나온다.
+  #endPlaying() { document.body.classList.remove('playing'); }
+
   showRankButton() {
     this.el.rankBtn.classList.remove('hidden');
     this.onPlayableChange?.(true);
@@ -195,6 +198,7 @@ export class UI {
     this.el.hud.classList.add('hidden');
     this.el.touchUi.classList.add('hidden');
     this.el.rankBtn.classList.remove('hidden');
+    this.#endPlaying();
     this.onPlayableChange?.(true);
   }
 
@@ -203,6 +207,9 @@ export class UI {
     this.el.over.classList.add('hidden');
     this.el.hud.classList.remove('hidden');
     this.el.touchUi.classList.toggle('hidden', !this.isTouch);
+    // 게임 중에는 상단 버튼 줄을 감춘다. 화면이 좁은 폰에서 타이머를 가리고,
+    // 어차피 게임 중엔 안 쓰는 버튼들이다. (CSS 가 body.playing 을 보고 감춘다.)
+    document.body.classList.add('playing');
     // 게임 중에는 랭킹·캐릭터 창을 못 열게 한다. 게임이 멈추지 않아 그냥 죽는다.
     this.el.rankBtn.classList.add('hidden');
     this.setRankOpen(false);
@@ -239,6 +246,7 @@ export class UI {
     this.el.touchUi.classList.add('hidden');
     this.el.over.classList.remove('hidden');
     this.el.rankBtn.classList.remove('hidden');
+    this.#endPlaying();
     this.el.finalTime.textContent = elapsed.toFixed(2);
 
     const isBest = elapsed > this.best;

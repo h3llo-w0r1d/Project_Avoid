@@ -109,6 +109,11 @@ body.zapped::after {
 
 /* ---------- 상단 바 ---------- */
 
+/* 게임 중에는 상단 버튼 줄을 감춘다. 좁은 화면에서 타이머를 가리고,
+   달리는 중엔 안 쓰는 버튼들이다. 감춘 만큼 HUD 를 위로 바짝 올린다. */
+body.playing #top-bar { display: none; }
+body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
+
 /* 화면(z 10)과 일시정지(z 28) 위에 떠서 항상 손이 닿게 한다.
    랭킹 창(z 40) 만 이 위로 올라온다. */
 #top-bar {
@@ -707,6 +712,36 @@ body.zapped::after {
   color: var(--muted);
   font-size: 14px;
   line-height: 1.6;
+}
+
+/* 가로로 든 폰: 화면이 납작해서 세로로 쌓으면 스크롤해야 다 보인다.
+   가로는 넓으니 시작 패널을 2단으로 흘려 높이를 반으로 줄인다.
+   (세로·PC 는 그대로 한 단.) */
+@media (orientation: landscape) and (max-height: 560px) {
+  .screen { padding: 58px 16px 10px; gap: 10px; align-items: flex-start; }
+
+  /* 시작 화면 패널만 2단. (일시정지·결과·닉네임 창은 건드리지 않는다.) */
+  #title-screen .panel {
+    width: min(760px, 100%);
+    padding: 14px 18px;
+    border-radius: 14px;
+    column-count: 2;
+    column-gap: 20px;
+  }
+  /* 버튼·줄이 두 단에 걸쳐 잘리지 않게 한다. */
+  #title-screen .panel > * { break-inside: avoid; }
+  /* 로고는 왼쪽 단 맨 위 한 줄을 통째로 차지한다. */
+  #title-screen .logo { font-size: 30px; column-span: all; }
+  #title-screen .tagline { margin-top: 5px; font-size: 12px; line-height: 1.4; }
+
+  #title-screen button { margin-top: 8px; padding: 10px; font-size: 14px; border-radius: 10px; }
+  #title-screen .field { margin-top: 10px; }
+  #title-screen .account-row { margin-top: 4px; }
+  #title-screen .bottom-row { margin-top: 10px; padding-top: 10px; gap: 8px; flex-direction: column; }
+  #title-screen .controls div { font-size: 11px; }
+  #title-screen .voice-panel { width: 100%; padding: 8px; }
+  #title-screen .install-btn { margin-top: 8px; padding: 9px; font-size: 13px; }
+  #title-screen .legal-links { margin-top: 8px; }
 }
 
 .field { display: block; margin-top: 22px; }
