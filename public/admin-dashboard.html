@@ -197,7 +197,10 @@ async function load() {
   try {
     data = await api('/api/admin/overview');
     matchCache.clear();
-    $('meta').textContent = `${data.season.name} · 지금 접속 ${data.online?.online ?? 0}명`;
+    // '지금 접속' = 사이트에 실시간으로 있는 사람 수(present). 괄호 안은 1v1 대기·대전 수.
+    const versus = data.online?.online ?? 0;
+    $('meta').textContent = `${data.season.name} · 지금 접속 ${data.present ?? 0}명` +
+      (versus ? ` (1v1 ${versus}명)` : '');
     say('');
     drawUsage(); drawAccounts(); drawScores(); drawPlays();
   } catch (e) { say(e.message, true); }

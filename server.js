@@ -14,6 +14,7 @@ import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
+import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 
@@ -81,6 +82,9 @@ const board = openBoardStore(db);
 
 // 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
 const plays = openPlaysStore(db);
+
+// 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
+const presence = openPresence();
 const matchLog = await openMatchStore(DATA_DIR, db);
 
 const app = express();
@@ -334,6 +338,13 @@ function posterName(req, name) {
 const lastPostBoard = new Map();
 const BOARD_COOLDOWN_MS = 15_000;
 
+// 실시간 접속 신호. 페이지를 열어 둔 브라우저가 주기적으로 보낸다.
+// 아무것도 저장하지 않고, 그 순간 접속자 수만 세어 돌려준다.
+app.post('/api/presence', (req, res) => {
+  presence.beat(req.body?.id);
+  res.json({ online: presence.count() });
+});
+
 app.get('/api/board', (req, res) => {
   res.json({ posts: board.latest(50) });
 });
@@ -409,6 +420,8 @@ app.get('/api/admin/me', (req, res) => {
 app.get('/api/admin/overview', requireAdmin, (req, res) => {
   res.json({
     season: seasonInfo(),
+    // 지금 사이트에 있는 사람 수(실시간). lobby.stats() 는 1v1 대기·대전 수라 따로 둔다.
+    present: presence.count(),
     online: lobby.stats(),
     scores: scores.all(),
     accounts: users.listAccounts(),

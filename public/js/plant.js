@@ -761,6 +761,13 @@ export function buildPlant(id) {
   // 몸이 가늘면 눈도 좁게 붙여야 옆으로 삐져나가지 않는다
   const eyeGap = Math.min(0.175, radiusAt(eyeY) * 0.42);
 
+  // 표정. 캐릭터마다 눈동자·눈썹을 조금씩 어긋내 개성을 준다.
+  //   face.pupil : [[왼dx,왼dy],[오dx,오dy]]  검은자 이동 (사시·얼빠짐용)
+  //   face.brow  : [왼raise, 오raise]          눈썹 높이 어긋내기
+  // 없으면(대부분) 기본 순한 표정 그대로.
+  const face = spec.face ?? null;
+  const eyeIndex = (dir) => (dir < 0 ? 0 : 1);
+
   const browGeo = new THREE.SphereGeometry(0.062, 12, 8);
   browGeo.scale(1.75, 0.42, 0.4);
   browGeo.computeVertexNormals();
@@ -797,19 +804,22 @@ export function buildPlant(id) {
     sclera.scale.set(1, 1.2, 0.32);
     root.add(sclera);
 
-    // 검은자를 살짝 위로 올리면 아래쪽에 흰자가 더 보여 순해 보인다
+    // 검은자를 살짝 위로 올리면 아래쪽에 흰자가 더 보여 순해 보인다.
+    // 표정이 있으면 눈동자를 그만큼 어긋내 사시·얼빠진 눈을 만든다.
+    const ps = face?.pupil?.[eyeIndex(dir)] ?? [0, 0];
     const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-    pupil.position.set(x, eyeY + 0.026, depth(2));
+    pupil.position.set(x + ps[0], eyeY + 0.026 + ps[1], depth(2));
     pupil.scale.set(1, 1.1, 0.32);
     root.add(pupil);
 
     const glint = new THREE.Mesh(glintGeo, glintMat);
-    glint.position.set(x - dir * 0.03, eyeY + 0.058, depth(3));
+    glint.position.set(x - dir * 0.03 + ps[0], eyeY + 0.058 + ps[1], depth(3));
     glint.scale.set(1, 1, 0.38);
     root.add(glint);
 
     // 눈썹. 눈만 있으면 표정이 없어 인형처럼 보인다.
-    const browY = eyeY + 0.2;
+    const browRaise = face?.brow?.[eyeIndex(dir)] ?? 0;
+    const browY = eyeY + 0.2 + browRaise;
     const brow = new THREE.Mesh(browGeo, ringMat);
     brow.position.set(x, browY, surfaceZ(x, browY) * 0.86);
     brow.rotation.z = dir * 0.2;
