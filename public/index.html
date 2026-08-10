@@ -371,9 +371,22 @@
           keepalive: true
         }).catch(function () {});
       }
+      // 탭을 닫거나 다른 페이지로 나갈 때, 45초를 기다리지 않고 바로 빠지도록
+      // 작별 신호를 보낸다. sendBeacon 은 페이지가 닫히는 중에도 전송이 보장된다.
+      function bye() {
+        try {
+          var body = JSON.stringify({ id: id, bye: 1 });
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/presence', new Blob([body], { type: 'application/json' }));
+          } else {
+            fetch('/api/presence', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function () {});
+          }
+        } catch (e) {}
+      }
       beat();
       setInterval(beat, 20000);
       document.addEventListener('visibilitychange', function () { if (!document.hidden) beat(); });
+      window.addEventListener('pagehide', bye);
     })();
   </script>
 </body>

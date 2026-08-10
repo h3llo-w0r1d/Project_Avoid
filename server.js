@@ -341,7 +341,13 @@ const BOARD_COOLDOWN_MS = 15_000;
 // 실시간 접속 신호. 페이지를 열어 둔 브라우저가 주기적으로 보낸다.
 // 아무것도 저장하지 않고, 그 순간 접속자 수만 세어 돌려준다.
 app.post('/api/presence', (req, res) => {
-  presence.beat(req.body?.id);
+  const body = req.body ?? {};
+  // 탭을 닫을 때 오는 작별 신호(sendBeacon). 바로 빼고 끝낸다.
+  if (body.bye) {
+    presence.leave(body.id);
+    return res.json({ ok: true });
+  }
+  presence.beat(body.id);
   res.json({ online: presence.count() });
 });
 
