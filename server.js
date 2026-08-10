@@ -433,7 +433,8 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     online: lobby.stats(),
     scores: scores.all(),
     accounts: users.listAccounts(),
-    usage: stats.recent(30)
+    usage: stats.recent(30),
+    usageMonthly: stats.monthly(24)
   });
 });
 
