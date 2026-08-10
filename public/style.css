@@ -968,6 +968,11 @@ kbd {
   width: 74px;
   height: 74px;
   object-fit: contain;
+  /* 캐릭터 뒤 은은한 원형 스포트라이트. 어두운 소품(권총·선글라스)이 어두운
+     카드 배경에 묻히지 않게 가운데만 살짝 밝힌다. 밝은 캐릭터엔 영향이 적다. */
+  background: radial-gradient(circle at 50% 44%,
+    rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.06) 42%, transparent 70%);
+  border-radius: 12px;
   pointer-events: none;
 }
 
