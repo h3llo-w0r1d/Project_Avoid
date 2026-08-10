@@ -348,6 +348,8 @@ app.post('/api/presence', (req, res) => {
     return res.json({ ok: true });
   }
   presence.beat(body.id);
+  // 이 브라우저의 오늘 첫 신호면 순 방문자로 한 번 센다(중복은 stats 가 거른다).
+  stats.uniqueVisit(body.id);
   res.json({ online: presence.count() });
 });
 

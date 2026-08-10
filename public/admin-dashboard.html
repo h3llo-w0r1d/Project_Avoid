@@ -211,13 +211,13 @@ function drawUsage() {
   const rows = data.usage ?? [];
   const week = rows.slice(0, 7);
   const sum = (k) => week.reduce((s, r) => s + r[k], 0);
-  const today = rows[0] ?? { visits: 0, players: 0, seconds: 0, runs: 0 };
+  const today = rows[0] ?? { visits: 0, uniques: 0, players: 0, seconds: 0, runs: 0 };
 
   $('usage-cards').innerHTML = `
-    <div class="card"><div class="big">${today.visits}</div><div class="lbl">오늘 방문</div>
-      <div class="sub">${today.players}명이 놀았음</div></div>
-    <div class="card"><div class="big">${sum('visits')}</div><div class="lbl">최근 7일 방문</div>
-      <div class="sub">판 ${sum('runs')}회</div></div>
+    <div class="card"><div class="big">${today.uniques}</div><div class="lbl">오늘 순 방문자</div>
+      <div class="sub">서로 다른 사람 · 총 ${today.visits}번 열림 · ${today.players}명이 놀았음</div></div>
+    <div class="card"><div class="big">${sum('uniques')}</div><div class="lbl">최근 7일 순 방문자</div>
+      <div class="sub">총 ${sum('visits')}번 열림 · 판 ${sum('runs')}회</div></div>
     <div class="card"><div class="big">${spellTime(sum('seconds'))}</div><div class="lbl">최근 7일 논 시간</div>
       <div class="sub">오늘 ${spellTime(today.seconds).replace(/<[^>]+>/g, '')}</div></div>`;
 
@@ -225,13 +225,14 @@ function drawUsage() {
   const body = rows.map((u) => {
     const done = u.runs ? Math.round((u.finished / u.runs) * 100) : 0;
     return `<tr><td class="num">${when(u.day.replace(/-/g, '/'))}</td>
+      <td class="num">${u.uniques ?? 0}</td>
       <td class="num">${u.visits}</td>
       <td class="num">${u.players}명${u.members ? ` <span class="dim">(회원 ${u.members})</span>` : ''}</td>
       <td class="num">${u.runs}회 ${u.runs ? `<span class="dim">완주 ${done}%</span>` : ''}</td>
       <td class="num">${spellTime(u.seconds).replace(/<[^>]+>/g, '')}</td></tr>`;
   }).join('');
   $('usage-table').innerHTML =
-    `<table><thead><tr><th>날짜</th><th>방문</th><th>논 사람</th><th>판</th><th>논 시간</th></tr></thead><tbody>${body}</tbody></table>`;
+    `<table><thead><tr><th>날짜</th><th>순 방문자</th><th>방문(열림)</th><th>논 사람</th><th>판</th><th>논 시간</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
 /* ---- 계정 ---- */
