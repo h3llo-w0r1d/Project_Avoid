@@ -717,6 +717,111 @@ function addPleat(root, ruler, spec, outlineMat) {
 
 const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat };
 
+// ---------------------------------------------------------------- 소품 (보스라고라)
+
+// 선글라스 — 눈을 덮는 검은 렌즈 두 짝에 콧대 다리. 눈 자리에 그대로 얹는다.
+function addShades(root, ruler, eyeY, eyeGap, outlineMat) {
+  const dark = new THREE.MeshToonMaterial({ color: 0x14161c, gradientMap: GRADIENT });
+  const lensY = eyeY + 0.008;
+  const proud = 0.05;   // 눈보다 조금 더 앞으로 내밀어 확실히 덮는다
+
+  const lensGeo = new THREE.SphereGeometry(0.15, 18, 14);
+  lensGeo.scale(1.2, 0.92, 0.34);
+  lensGeo.computeVertexNormals();
+
+  for (const dir of [-1, 1]) {
+    const x = dir * eyeGap;
+    const z = ruler.surfaceZ(x, lensY) + proud;
+
+    const lens = new THREE.Mesh(lensGeo, dark);
+    lens.position.set(x, lensY, z);
+    root.add(lens);
+    addOutline(lens, 0.02, outlineMat);
+
+    // 유리에 비친 빛 한 줄
+    const glint = new THREE.Mesh(
+      new THREE.SphereGeometry(0.028, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xcfe6ff })
+    );
+    glint.position.set(x - dir * 0.055, lensY + 0.045, z + 0.05);
+    glint.scale.set(1.8, 0.7, 1);
+    root.add(glint);
+  }
+
+  // 콧대 다리 — 두 렌즈 사이를 잇는다
+  const bridgeZ = ruler.surfaceZ(0, lensY) + proud;
+  const bridge = new THREE.Mesh(new THREE.BoxGeometry(eyeGap * 1.2, 0.035, 0.05), dark);
+  bridge.position.set(0, lensY + 0.03, bridgeZ);
+  root.add(bridge);
+}
+
+// 권총 — 상자 몇 개로 조립한 만화풍 권총. 왼손에 총구가 위를 보게 세워 든다.
+// (담배가 입 오른쪽에 있어, 권총은 왼쪽에 둬서 겹치지 않게 한다.)
+function addGun(root, ruler, outlineMat) {
+  const metal = new THREE.MeshToonMaterial({ color: 0x2b2f36, gradientMap: GRADIENT });
+  const gun = new THREE.Group();
+
+  // 총열(슬라이드) — 위로 향한 긴 상자
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.5, 0.17), metal);
+  slide.position.set(0, 0.13, 0);
+  gun.add(slide);
+  addOutline(slide, 0.022, outlineMat);
+
+  // 손잡이 — 아래로 살짝 기울여
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.27, 0.16), metal);
+  grip.position.set(-0.02, -0.16, 0);
+  grip.rotation.z = 0.22;
+  gun.add(grip);
+  addOutline(grip, 0.022, outlineMat);
+
+  // 방아쇠울 — 손잡이 앞의 작은 고리
+  const guard = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.02, 8, 14), metal);
+  guard.position.set(0.02, -0.03, 0);
+  gun.add(guard);
+
+  // 왼손 앞에 세워 든다
+  const armY = ruler.at(0.42);
+  const handX = ruler.radiusAt(armY) * 0.82 + 0.16;
+  gun.position.set(-handX, armY + 0.04, 0.24);
+  gun.rotation.set(0.18, 0, 0.14);
+  gun.scale.setScalar(0.95);
+  root.add(gun);
+}
+
+// 담배 — 입에 문 흰 막대에 불붙은 끝과 옅은 연기.
+function addCigarette(root, ruler) {
+  const mouthY = ruler.at(0.42);
+  const paper = new THREE.MeshToonMaterial({ color: 0xf3efe4, gradientMap: GRADIENT });
+  const cig = new THREE.Group();
+
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.36, 12), paper);
+  stick.rotation.z = Math.PI / 2;
+  cig.add(stick);
+
+  const ember = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.032, 0.03, 0.045, 12),
+    new THREE.MeshBasicMaterial({ color: 0xff6a2b })
+  );
+  ember.rotation.z = Math.PI / 2;
+  ember.position.x = 0.2;
+  cig.add(ember);
+
+  // 피어오르는 연기 몇 조각
+  const smokeMat = new THREE.MeshBasicMaterial({ color: 0xe2e8ef, transparent: true, opacity: 0.26 });
+  for (let i = 0; i < 3; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(0.045 + i * 0.02, 8, 8), smokeMat);
+    puff.position.set(0.24 + i * 0.02, 0.14 + i * 0.13, 0);
+    cig.add(puff);
+  }
+
+  // 입 오른쪽 끝에 물린 자리
+  const x = 0.11;
+  const y = mouthY - 0.015;
+  cig.position.set(x + 0.15, y, ruler.surfaceZ(x, y) + 0.05);
+  cig.rotation.z = -0.16;
+  root.add(cig);
+}
+
 // ---------------------------------------------------------------- 조립
 
 export function buildPlant(id) {
@@ -904,6 +1009,11 @@ export function buildPlant(id) {
     blush.scale.set(1.3, 0.85, 1);
     root.add(blush);
   }
+
+  // ---- 소품 (보스라고라: 선글라스·권총·담배) ------------------------------
+  if (spec.shades) addShades(root, ruler, eyeY, eyeGap, outlineMat);
+  if (spec.hold === 'gun') addGun(root, ruler, outlineMat);
+  if (spec.cigarette) addCigarette(root, ruler);
 
   // ---- 머리 장식 ---------------------------------------------------------
   const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat);
