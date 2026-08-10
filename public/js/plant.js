@@ -663,7 +663,59 @@ function addSprouts(root, ruler, spec) {
   return swaying;
 }
 
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts };
+// 만두 꼭지 — 반죽 주름들이 가운데 위로 오므라들어 만두를 여민 모양.
+// 잎 대신 이걸 얹으면 뿌리채소가 아니라 만두처럼 보인다.
+function addPleat(root, ruler, spec, outlineMat) {
+  const color = spec.color ?? 0xf3e2bf;
+  const mat = toon(color);
+  const topY = ruler.top;
+
+  // 주름은 어깨(윗부분 넓은 데)에서 시작해 낮게 오므라든다. 좁은 꼭대기에서
+  // 시작하면 한 점으로 뭉쳐 마늘 꼭지처럼 보인다.
+  const baseFrac = 0.84;
+  const baseY = ruler.at(baseFrac);
+  const bodyR = ruler.radiusAt(baseY);
+  const ringR = Math.max(0.2, bodyR * 0.92);
+
+  // 짧고 통통한 반죽 주름 한 조각. 밑을 피벗에 두고 위로 뻗게 미리 올려 둔다.
+  const foldGeo = new THREE.SphereGeometry(0.13, 12, 10);
+  foldGeo.scale(0.72, 1.15, 0.55);
+  foldGeo.translate(0, 0.12, 0);
+  foldGeo.computeVertexNormals();
+
+  // 주름들이 살짝 모여드는 낮고 뭉툭한 꼭지. 높게 잡으면 뾰족해진다.
+  const apex = new THREE.Vector3(0, topY + 0.03, 0);
+  const up = new THREE.Vector3(0, 1, 0);
+
+  const count = 8;
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 + 0.2;
+    const base = new THREE.Vector3(Math.cos(a) * ringR, baseY, Math.sin(a) * ringR);
+    const dir = apex.clone().sub(base).normalize();
+
+    const pivot = new THREE.Group();
+    pivot.position.copy(base);
+    pivot.quaternion.setFromUnitVectors(up, dir);  // 조각의 위끝이 꼭지를 향하게
+
+    const fold = new THREE.Mesh(foldGeo, mat);
+    fold.castShadow = true;
+    pivot.add(fold);
+    addOutline(fold, 0.018, outlineMat);
+    root.add(pivot);
+  }
+
+  // 여민 가운데 꼭지 — 작고 낮게.
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), mat);
+  tip.position.y = topY + 0.02;
+  tip.scale.set(1, 0.82, 1);
+  tip.castShadow = true;
+  root.add(tip);
+  addOutline(tip, 0.018, outlineMat);
+
+  return [];
+}
+
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat };
 
 // ---------------------------------------------------------------- 조립
 
