@@ -434,7 +434,8 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     scores: scores.all(),
     accounts: users.listAccounts(),
     usage: stats.recent(30),
-    usageMonthly: stats.monthly(24)
+    usageMonthly: stats.monthly(24),
+    usageTotals: stats.totals()
   });
 });
 

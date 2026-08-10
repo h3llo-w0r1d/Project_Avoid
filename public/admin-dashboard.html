@@ -234,17 +234,18 @@ let usageView = 'day';   // 'day'(일별) | 'month'(월별)
 
 function drawUsage() {
   const rows = data.usage ?? [];
-  const today = rows[0] ?? { visits: 0, uniques: 0, players: 0, seconds: 0, runs: 0, finished: 0 };
-  const doneToday = today.runs ? Math.round((today.finished / today.runs) * 100) : 0;
+  const today = rows[0] ?? { visits: 0, uniques: 0, seconds: 0, runs: 0, finished: 0 };
+  const totals = data.usageTotals ?? { runs: 0, finished: 0, seconds: 0 };
+  const num = (n) => (n ?? 0).toLocaleString('ko-KR');
 
-  // 카드는 '오늘' 것만 보여 준다.
+  // 카드는 '오늘' 것만 큰 숫자로. 판 카드 아래엔 지금까지의 누적 판수를 붙인다.
   $('usage-cards').innerHTML = `
     <div class="card"><div class="big">${today.uniques}</div><div class="lbl">오늘 순 방문자</div>
       <div class="sub">서로 다른 사람 · 총 ${today.visits}번 열림</div></div>
     <div class="card"><div class="big">${today.runs}<em>판</em></div><div class="lbl">오늘 판 수</div>
-      <div class="sub">${today.players}명이 놀았음${today.runs ? ` · 완주 ${doneToday}%` : ''}</div></div>
+      <div class="sub">누적 ${num(totals.runs)}판</div></div>
     <div class="card"><div class="big">${spellTime(today.seconds)}</div><div class="lbl">오늘 논 시간</div>
-      <div class="sub">기록 ${today.finished}개</div></div>`;
+      <div class="sub">누적 ${spellTime(totals.seconds).replace(/<[^>]+>/g, '')}</div></div>`;
 
   if (usageView === 'month') drawUsageMonth();
   else drawUsageDay();
@@ -258,12 +259,11 @@ function drawUsageDay() {
     return `<tr><td class="num">${when(u.day.replace(/-/g, '/'))}</td>
       <td class="num">${u.uniques ?? 0}</td>
       <td class="num">${u.visits}</td>
-      <td class="num">${u.players}명${u.members ? ` <span class="dim">(회원 ${u.members})</span>` : ''}</td>
       <td class="num">${u.runs}회 ${u.runs ? `<span class="dim">완주 ${done}%</span>` : ''}</td>
       <td class="num">${spellTime(u.seconds).replace(/<[^>]+>/g, '')}</td></tr>`;
   }).join('');
   $('usage-table').innerHTML =
-    `<table><thead><tr><th>날짜</th><th>순 방문자</th><th>방문(열림)</th><th>논 사람</th><th>판</th><th>논 시간</th></tr></thead><tbody>${body}</tbody></table>`;
+    `<table><thead><tr><th>날짜</th><th>순 방문자</th><th>방문(열림)</th><th>판</th><th>논 시간</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
 function drawUsageMonth() {
@@ -272,14 +272,13 @@ function drawUsageMonth() {
   const body = rows.map((u) => {
     const done = u.runs ? Math.round((u.finished / u.runs) * 100) : 0;
     return `<tr><td class="num">${monthLabel(u.month)}</td>
-      <td class="num">${u.players}명${u.members ? ` <span class="dim">(회원 ${u.members})</span>` : ''}</td>
+      <td class="num">${u.uniques ?? 0}</td>
       <td class="num">${u.visits}</td>
       <td class="num">${u.runs}회 ${u.runs ? `<span class="dim">완주 ${done}%</span>` : ''}</td>
       <td class="num">${spellTime(u.seconds).replace(/<[^>]+>/g, '')}</td></tr>`;
   }).join('');
   $('usage-table').innerHTML =
-    `<table><thead><tr><th>달</th><th>논 사람</th><th>방문(열림)</th><th>판</th><th>논 시간</th></tr></thead><tbody>${body}</tbody></table>`
-    + `<p class="dim" style="padding:8px 14px 12px">'논 사람'은 그 달에 게임을 한 서로 다른 사람 수입니다.</p>`;
+    `<table><thead><tr><th>달</th><th>순 방문자</th><th>방문(열림)</th><th>판</th><th>논 시간</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
 function monthLabel(m) {
