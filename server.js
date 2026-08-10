@@ -468,6 +468,27 @@ app.get('/api/admin/scores', requireAdmin, (req, res) => {
   res.json(scores.all());
 });
 
+// 홍보용 벤치마크 기록 심기(관리자). 랭킹에 "이 기록을 넘으세요" 목표를
+// 하나 올린다. 계정에 묶지 않는 독립 기록이라, 필요 없어지면 /admin 에서
+// 그 줄만 지우면 된다.
+app.post('/api/admin/scores/seed', requireAdmin, async (req, res) => {
+  const name = String(req.body?.name ?? '').trim();
+  const time = Number(req.body?.time);
+  if (!name || name.length > 20) {
+    return res.status(400).json({ error: '이름이 올바르지 않습니다.' });
+  }
+  if (!Number.isFinite(time) || time <= 0 || time > 100000) {
+    return res.status(400).json({ error: '기록이 올바르지 않습니다.' });
+  }
+  try {
+    const entry = await scores.add(name, time, null);
+    res.json({ ok: true, entry });
+  } catch (err) {
+    console.error('기록 심기 실패:', err);
+    res.status(500).json({ error: '심기에 실패했습니다.' });
+  }
+});
+
 // 기록 하나 삭제
 app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
   try {
