@@ -961,8 +961,18 @@ kbd {
   background: rgba(79, 214, 255, 0.14);
 }
 
-.char-card.locked { opacity: 0.45; cursor: default; }
-.char-card.locked img { filter: grayscale(1) brightness(0.6); }
+/* 잠긴 캐릭터 — 모습·이름을 숨긴 '???' 카드. 너무 흐리면 목표가 안 보이니
+   점선 테두리로 잠금만 표시하고 글자는 읽히게 둔다. */
+.char-card.locked { cursor: default; border-style: dashed; background: rgba(255, 255, 255, 0.03); }
+.char-mystery {
+  width: 74px; height: 74px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 42px; font-weight: 900; color: var(--muted);
+  background: radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.08) 0%, transparent 68%);
+  border-radius: 12px;
+}
+.char-name.mystery { color: var(--muted); letter-spacing: 2px; }
+.char-note.goal { color: #ffc06a; font-weight: 700; }
 
 .char-card img {
   width: 74px;

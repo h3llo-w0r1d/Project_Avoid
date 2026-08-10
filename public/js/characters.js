@@ -33,7 +33,7 @@ export const CHARACTERS = [
     // 폭은 자동으로 똑같이 맞춰지므로(판정 공정), '통통함'은 실루엣으로 낸다.
     id: 'mandu',
     name: '왕만두라고라',
-    unlockAt: 0,
+    unlockAt: 15,
     body: 0xf5e8c8,          // 노릇한 만두 반죽색
     profile: [               // 둥글고 통통한 찐만두. 위로 갈수록 좁아져 꼭지가 앉는다.
       [0.000, 0.00], [0.045, 0.32], [0.130, 0.47], [0.270, 0.56],
@@ -48,7 +48,7 @@ export const CHARACTERS = [
     // 색은 칙칙하고, 몸은 삐뚤빼뚤, 잎은 축 처지고, 표정은 더 얼빠졌다.
     id: 'mandragura',
     name: '만드라구라',
-    unlockAt: 0,
+    unlockAt: 30,
     previewZoom: 1.18,       // 만드라고라와 같은 이유로 살짝 당긴다
     body: 0xd8cfa2,          // 원본보다 누리끼리하고 칙칙한 짝퉁 색
     lumpy: 0.07,             // 삐뚤빼뚤 — 잘못 빚은 느낌
@@ -70,7 +70,7 @@ export const CHARACTERS = [
     // 공정성엔 영향이 없다.
     id: 'boss',
     name: '보스라고라',
-    unlockAt: 0,
+    unlockAt: 45,
     previewZoom: 1.18,
     body: 0xe4d4b0,
     profile: [

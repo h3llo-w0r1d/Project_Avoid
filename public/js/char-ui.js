@@ -126,24 +126,39 @@ export class CharacterUI {
       card.classList.toggle('chosen', c.id === chosen);
       card.disabled = !unlocked;
 
-      const img = document.createElement('img');
-      img.src = this.preview(c.id);
-      img.alt = c.name;
-      card.appendChild(img);
+      if (unlocked) {
+        const img = document.createElement('img');
+        img.src = this.preview(c.id);
+        img.alt = c.name;
+        card.appendChild(img);
 
-      const name = document.createElement('span');
-      name.className = 'char-name';
-      name.textContent = c.name;
-      card.appendChild(name);
+        const name = document.createElement('span');
+        name.className = 'char-name';
+        name.textContent = c.name;
+        card.appendChild(name);
 
-      const note = document.createElement('span');
-      note.className = 'char-note';
-      note.textContent = unlocked
-        ? (c.id === chosen ? '사용 중' : '')
-        : `${c.unlockAt}초 달성 시`;
-      card.appendChild(note);
+        const note = document.createElement('span');
+        note.className = 'char-note';
+        note.textContent = c.id === chosen ? '사용 중' : '';
+        card.appendChild(note);
+      } else {
+        // 잠긴 캐릭터는 모습도 이름도 숨긴다. "???" 와 해금 조건만 보여
+        // 궁금증을 남긴다. (preview 를 부르지 않아 렌더로도 새어 나가지 않는다.)
+        const mystery = document.createElement('div');
+        mystery.className = 'char-mystery';
+        mystery.textContent = '?';
+        card.appendChild(mystery);
 
-      if (!unlocked) {
+        const name = document.createElement('span');
+        name.className = 'char-name mystery';
+        name.textContent = '???';
+        card.appendChild(name);
+
+        const note = document.createElement('span');
+        note.className = 'char-note goal';
+        note.textContent = `${c.unlockAt}초 달성 시`;
+        card.appendChild(note);
+
         const lock = document.createElement('span');
         lock.className = 'char-lock';
         lock.textContent = '🔒';
