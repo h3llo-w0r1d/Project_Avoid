@@ -337,9 +337,11 @@
         // 사파리 비공개 탭 등 localStorage 가 막힌 경우엔 임시 id 로 둔다
         id = rnd();
       }
-      function beat() {
-        // 화면이 숨겨졌으면(탭 뒤로) 굳이 보내지 않는다
-        if (document.hidden) return;
+      function beat(force) {
+        // 평소엔 화면이 숨겨진 탭(뒤로 물러난 탭)은 접속자로 세지 않는다.
+        // 다만 force 면(페이지가 막 열렸을 때) 숨은 탭이어도 방문은 한 번 보낸다.
+        // 그래야 게임을 배경 탭으로 열어도 '순 방문자'에 잡힌다.
+        if (!force && document.hidden) return;
         fetch('/api/presence', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -359,8 +361,8 @@
           }
         } catch (e) {}
       }
-      beat();
-      setInterval(beat, 20000);
+      beat(true);   // 열리면 숨은 탭이어도 방문은 한 번 기록
+      setInterval(function () { beat(); }, 20000);
       document.addEventListener('visibilitychange', function () { if (!document.hidden) beat(); });
       window.addEventListener('pagehide', bye);
     })();
