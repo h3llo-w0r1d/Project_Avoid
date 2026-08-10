@@ -16,6 +16,7 @@ export const CHARACTERS = [
     id: 'mandragora',
     name: '만드라고라',
     unlockAt: 0,
+    previewZoom: 1.18,       // 잎이 길어 작아 보여, 고르는 화면에서만 살짝 당긴다
     body: 0xf2e6cd,
     profile: [
       [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
@@ -48,6 +49,7 @@ export const CHARACTERS = [
     id: 'mandragura',
     name: '만드라구라',
     unlockAt: 0,
+    previewZoom: 1.18,       // 만드라고라와 같은 이유로 살짝 당긴다
     body: 0xd8cfa2,          // 원본보다 누리끼리하고 칙칙한 짝퉁 색
     lumpy: 0.07,             // 삐뚤빼뚤 — 잘못 빚은 느낌
     profile: [               // 원본보다 홀쭉하고 길쭉하게 — 어딘가 어설프다

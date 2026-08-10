@@ -4,7 +4,7 @@
 // 그림 파일을 따로 두지 않아도 되고, 캐릭터를 고치면 미리보기도 같이 바뀐다.
 
 import * as THREE from 'three';
-import { PLAYABLE, HAS_WIP, isUnlocked } from './characters.js';
+import { PLAYABLE, HAS_WIP, isUnlocked, findCharacter } from './characters.js';
 import { buildFallbackAvatar } from './avatar.js';
 
 const $ = (id) => document.getElementById(id);
@@ -45,7 +45,10 @@ function snapshot(characterId) {
   box.getSize(size);
   box.getCenter(center);
   const reach = Math.max(size.x, size.y) * 0.62;
-  const dist = reach / Math.tan(THREE.MathUtils.degToRad(15));
+  // 잎이 긴 캐릭터는 키에 맞추느라 뒤로 빠져 작아 보인다. previewZoom 으로
+  // 그런 캐릭터만 카메라를 조금 당겨 카드에 크게 담는다 (판정과는 무관).
+  const zoom = findCharacter(characterId).previewZoom ?? 1;
+  const dist = reach / Math.tan(THREE.MathUtils.degToRad(15)) / zoom;
 
   shot.camera.position.set(0, center.y, dist);
   shot.camera.lookAt(0, center.y, 0);
