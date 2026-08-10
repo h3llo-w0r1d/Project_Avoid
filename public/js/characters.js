@@ -30,9 +30,8 @@ export const CHARACTERS = [
     // 왜만두라고라 — 만드라고라 + 만두. 물방울이 아니라 둥글고 낮은 만두 모양.
     // 폭은 자동으로 똑같이 맞춰지므로(판정 공정), '통통함'은 실루엣으로 낸다.
     id: 'mandu',
-    wip: true,
     name: '왜만두라고라',
-    unlockAt: 40,
+    unlockAt: 0,
     body: 0xf3e2bf,          // 살짝 노릇한 만두 반죽색
     profile: [
       [0.000, 0.00], [0.030, 0.24], [0.100, 0.42], [0.240, 0.52],
@@ -45,9 +44,8 @@ export const CHARACTERS = [
   {
     // 만드라구라 — 이름 오타 밈. 만드라고라랑 똑같이 생겼는데 표정만 얼빠짐.
     id: 'mandragura',
-    wip: true,
     name: '만드라구라',
-    unlockAt: 20,
+    unlockAt: 0,
     body: 0xefe3cf,
     profile: [
       [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
