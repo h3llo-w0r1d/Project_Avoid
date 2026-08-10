@@ -10,7 +10,9 @@
 export const MAX_LENGTH = 10;
 
 // 게스트 이름 형식. 로그인하지 않은 사람은 이 모양만 쓸 수 있다.
-export const GUEST_PATTERN = /^Guest\d{4}$/;
+// 새 게스트는 여덟 자리로 짓지만(사람이 많아져도 안 겹치게), 예전에 만든
+// 네 자리 이름도 그대로 인정한다 — 안 그러면 기존 게스트 이름이 흩어진다.
+export const GUEST_PATTERN = /^Guest\d{4,8}$/;
 
 const CONTROL_CHARS = new RegExp('[\\u0000-\\u001F\\u007F]', 'g');
 

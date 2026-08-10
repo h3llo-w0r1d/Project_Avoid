@@ -4,17 +4,20 @@
 // 로그인한 사람이 누구인지"는 서버에 물어본다(/api/me). 쿠키를 못 읽는
 // 대신, XSS 로 세션을 훔쳐가지도 못한다.
 
+import { GUEST_PATTERN } from './profanity.js';
+
 const $ = (id) => document.getElementById(id);
 
 const GUEST_KEY = 'avoidarc.guestName';
 
-// 게스트 이름은 Guest + 네 자리 숫자로 자동으로 짓는다.
-// 한 번 정해지면 이 브라우저에서는 계속 같은 이름을 쓴다. 매번 바뀌면
-// 랭킹에 같은 사람의 기록이 다른 이름으로 흩어진다.
+// 게스트 이름은 Guest + 여덟 자리 숫자로 자동으로 짓는다. 사람이 많아져도
+// 이름이 겹치지 않게 넉넉히 잡는다. 한 번 정해지면 이 브라우저에서는 계속
+// 같은 이름을 쓴다(매번 바뀌면 랭킹에 같은 사람 기록이 흩어진다).
+// 검사 형식은 서버와 공유하는 GUEST_PATTERN 을 쓴다(예전 네 자리도 인정).
 export function guestName() {
   let name = localStorage.getItem(GUEST_KEY);
-  if (!/^Guest\d{4}$/.test(name ?? '')) {
-    name = `Guest${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+  if (!GUEST_PATTERN.test(name ?? '')) {
+    name = `Guest${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`;
     localStorage.setItem(GUEST_KEY, name);
   }
   return name;
