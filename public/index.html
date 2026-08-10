@@ -346,8 +346,21 @@
        잠시 뒤 저절로 빠진다. -->
   <script>
     (function () {
-      var id = (crypto.randomUUID && crypto.randomUUID()) ||
-        (Date.now().toString(36) + Math.random().toString(36).slice(2));
+      // id 를 브라우저에 저장해 새로고침·여러 탭에서 같은 값을 쓴다.
+      // 안 그러면 열 때마다 새 id 라, 한 사람이 새로고침만 해도 접속자가 늘어난다.
+      // 이 id 는 접속자 중복을 지우는 용도뿐이고 서버에 저장되지 않는다.
+      var id;
+      var rnd = function () {
+        return (crypto.randomUUID && crypto.randomUUID()) ||
+          (Date.now().toString(36) + Math.random().toString(36).slice(2));
+      };
+      try {
+        id = localStorage.getItem('avoidarc.cid');
+        if (!id) { id = rnd(); localStorage.setItem('avoidarc.cid', id); }
+      } catch (e) {
+        // 사파리 비공개 탭 등 localStorage 가 막힌 경우엔 임시 id 로 둔다
+        id = rnd();
+      }
       function beat() {
         // 화면이 숨겨졌으면(탭 뒤로) 굳이 보내지 않는다
         if (document.hidden) return;
