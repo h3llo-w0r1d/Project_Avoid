@@ -9,7 +9,6 @@ import { PauseUI } from './pause-ui.js';
 import { Auth } from './auth.js';
 import { CharacterUI } from './char-ui.js';
 import { ProfileUI } from './profile-ui.js';
-import { AdminUI } from './admin-ui.js';
 import { BoardUI } from './board-ui.js';
 import { VoiceUI } from './voice-ui.js';
 import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable } from './characters.js';
@@ -126,22 +125,13 @@ profile.onRename = async (name) => {
   refreshLeaderboard();
 };
 
-// 관리 창. 서버가 "너는 관리자다" 라고 할 때만 버튼이 뜬다.
-// 버튼을 감추는 건 눈에 안 띄게 하려는 것뿐이고, 실제로 막는 건 서버다.
-const admin = new AdminUI({
-  load: () => api.adminOverview(),
-  removeScore: (id) => api.adminRemoveScore(id),
-  clearScores: () => api.adminClearScores(),
-  clearUsage: () => api.adminClearUsage(),
-  resetUser: (id) => api.adminResetUser(id),
-  matchesOf: (id) => api.adminMatches(id)
-});
-
-// 게시판에서 관리자에게만 삭제 버튼을 보여 줄지 정한다. 실제 삭제는 서버가 막는다.
+// 관리는 별도 페이지 /admin 하나로 한다. 게임 안 관리 창은 없앴다.
+// 여기서는 게시판에서 관리자에게만 삭제 버튼을 보여 줄지 정하는 데만 쓴다.
+// (실제 삭제는 서버가 막는다.)
 let isAdmin = false;
 api.amIAdmin()
-  .then((yes) => { isAdmin = yes; admin.setAdmin(yes); })
-  .catch(() => admin.setAdmin(false));
+  .then((yes) => { isAdmin = yes; })
+  .catch(() => { isAdmin = false; });
 
 // 자유 게시판. 게스트는 이름을 같이 보내고, 로그인했으면 서버가 계정 닉네임을 쓴다.
 const board = new BoardUI({

@@ -35,8 +35,6 @@
   <header id="top-bar">
     <div class="brand">Avoid<span>Arc</span></div>
     <div id="corner-buttons">
-      <!-- 관리자로 로그인했을 때만 나타난다 -->
-      <button id="admin-btn" class="hidden" type="button" aria-label="관리" title="관리">🛠</button>
       <button id="board-btn" type="button" aria-label="게시판" title="게시판">💬</button>
       <button id="profile-btn" type="button" aria-label="내 프로필" title="내 프로필">👤</button>
       <button id="char-btn" type="button" aria-label="캐릭터 고르기" title="캐릭터">🌱</button>
@@ -69,29 +67,7 @@
     </div>
   </div>
 
-  <!-- 관리 (관리자만) -->
-  <div id="admin-modal" class="modal hidden">
-    <div class="modal-card panel">
-      <div class="modal-head">
-        <h2>관리</h2>
-        <span id="admin-summary" class="season-label"></span>
-        <a id="admin-full" href="/admin" target="_blank" rel="noopener" class="admin-full-link">큰 화면 ↗</a>
-        <button id="admin-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
-      </div>
-      <nav id="admin-tabs" class="rank-tabs">
-        <button type="button" data-panel="scores" class="current">기록</button>
-        <button type="button" data-panel="accounts">계정</button>
-        <button type="button" data-panel="usage">이용</button>
-      </nav>
-      <div class="admin-tools">
-        <input id="admin-search" type="text" placeholder="이름으로 찾기" autocomplete="off" />
-        <span id="admin-count" class="admin-count"></span>
-      </div>
-      <p id="admin-state" class="rank-note"></p>
-      <div id="admin-body" class="admin-body"></div>
-      <nav id="admin-pager" class="pager"></nav>
-    </div>
-  </div>
+  <!-- 관리 화면은 별도 페이지 /admin 하나로 통합했다. 게임 안 관리 창은 없앴다. -->
 
   <!-- 게시판 (말풍선 버튼) -->
   <div id="board-modal" class="modal hidden">
