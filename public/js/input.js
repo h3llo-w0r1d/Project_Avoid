@@ -1,5 +1,11 @@
 // 키보드 + 터치 입력을 하나의 {move, jumpPressed} 형태로 합친다.
 // move.y 는 화면 위쪽이 양수.
+//
+// 화면을 강제로 가로로 돌렸을 때(아이폰 세로)는 터치 좌표도 함께 돌려야
+// 조이스틱이 올바른 방향으로 움직인다. toLocal() 이 화면 좌표를 회전된
+// 화면의 로컬 좌표로 되돌린다. 안 돌렸으면 그대로 반환한다.
+
+import { toLocal } from './orientation.js';
 
 const KEY_MAP = {
   KeyW: 'up', ArrowUp: 'up',
@@ -56,11 +62,12 @@ export class Input {
 
     const start = (e) => {
       const t = e.changedTouches[0];
+      const p = toLocal(t.clientX, t.clientY);
       this.touch.id = t.identifier;
-      this.touch.x = t.clientX;
-      this.touch.y = t.clientY;
-      base.style.left = `${t.clientX}px`;
-      base.style.top = `${t.clientY}px`;
+      this.touch.x = p.x;
+      this.touch.y = p.y;
+      base.style.left = `${p.x}px`;
+      base.style.top = `${p.y}px`;
       base.classList.add('on');
       knob.style.transform = 'translate(0,0)';
       e.preventDefault();
@@ -69,8 +76,9 @@ export class Input {
     const move = (e) => {
       for (const t of e.changedTouches) {
         if (t.identifier !== this.touch.id) continue;
-        let dx = t.clientX - this.touch.x;
-        let dy = t.clientY - this.touch.y;
+        const p = toLocal(t.clientX, t.clientY);
+        let dx = p.x - this.touch.x;
+        let dy = p.y - this.touch.y;
         const d = Math.hypot(dx, dy);
         if (d > RANGE) {
           dx = (dx / d) * RANGE;

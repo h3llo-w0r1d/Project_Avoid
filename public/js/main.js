@@ -1,5 +1,6 @@
 ﻿import * as THREE from 'three';
 import { createWorld, fitCamera } from './scene.js';
+import { startOrientationManager } from './orientation.js';
 import { Player } from './player.js';
 import { Hazards } from './hazards.js';
 import { Input } from './input.js';
@@ -219,6 +220,9 @@ player.onLand = () => audio.land();
 hazards.onWarn = () => audio.warn();
 hazards.onFire = () => audio.zap();
 
+// 세로로 열린 폰이면 화면을 가로로 돌린다. 방향이 바뀔 때 resize 를 쏴서
+// 아래 fitCamera 가 다시 맞추게 한다.
+startOrientationManager();
 fitCamera(camera, renderer);
 addEventListener('resize', () => fitCamera(camera, renderer));
 

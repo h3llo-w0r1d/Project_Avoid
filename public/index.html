@@ -29,6 +29,19 @@
   <!-- PWA: 홈 화면에 추가하면 주소창 없이 전체화면 앱으로 열린다. -->
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#05060f" />
+
+  <!-- 세로로 열린 폰(특히 아이폰 PWA)이면 화면을 미리 가로로 돌려 둔다.
+       페이지가 다 뜨기 전에 정해야 세로로 잠깐 보였다가 도는 깜빡임이 없다.
+       이후 방향 변화는 js/orientation.js 가 관리한다. -->
+  <script>
+    (function () {
+      var touch = matchMedia('(pointer: coarse)').matches ||
+        navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+      if (touch && window.innerHeight > window.innerWidth) {
+        document.documentElement.classList.add('force-landscape');
+      }
+    })();
+  </script>
   <!-- 아이폰은 manifest 를 덜 따르므로 애플 전용 태그를 따로 준다. -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

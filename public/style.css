@@ -36,6 +36,21 @@ html, body {
 
 .hidden { display: none !important; }
 
+/* 세로로 열린 폰(특히 아이폰 PWA)에서 화면 전체를 가로로 돌린다.
+   iOS 는 매니페스트의 가로 잠금을 무시하므로, body 를 90도 돌려 가로처럼
+   꽉 채운다. width/height 를 vh/vw 로 맞바꿔 회전 후 화면에 딱 맞게 한다.
+   좌표계 역변환은 js/orientation.js 의 toLocal() 이 맡는다 — 함께 고쳐야 한다. */
+:root.force-landscape body {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vh;
+  height: 100vw;
+  transform-origin: 0 0;
+  transform: rotate(-90deg) translate(-100%, 0);
+  overflow: hidden;
+}
+
 /* ---------- HUD ---------- */
 
 /* 상단 바(58px) 아래에서 시작한다 */

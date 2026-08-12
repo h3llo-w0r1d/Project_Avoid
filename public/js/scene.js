@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
+import { view } from './orientation.js';
 import {
   makeGrassTexture, makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture
 } from './textures.js';
@@ -361,8 +362,8 @@ function allVisible(camera) {
 
 // 화면 비율이 어떻든 무대 전체가 프레임에 들어오도록 카메라 거리를 다시 잡는다.
 export function fitCamera(camera, renderer) {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
+  // 화면을 강제로 가로로 돌렸으면 폭·높이가 뒤바뀐다. view() 가 그걸 맞춰 준다.
+  const { w, h } = view();
   renderer.setSize(w, h, false);
 
   const aspect = w / h;
