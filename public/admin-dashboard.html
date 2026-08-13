@@ -232,16 +232,23 @@ async function load() {
 /* ---- 이용 현황 ---- */
 let usageView = 'day';   // 'day'(일별) | 'month'(월별)
 
+// PC/모바일 몫을 "PC n · 모바일 m" 으로. 전체에서 모바일을 빼면 PC.
+function pcMobile(total, mobile) {
+  const mob = mobile ?? 0;
+  const pc = Math.max(0, (total ?? 0) - mob);
+  return `PC ${pc} · 모바일 ${mob}`;
+}
+
 function drawUsage() {
   const rows = data.usage ?? [];
-  const today = rows[0] ?? { visits: 0, uniques: 0, seconds: 0, runs: 0, finished: 0 };
+  const today = rows[0] ?? { visits: 0, uniques: 0, visitsMobile: 0, uniquesMobile: 0, seconds: 0, runs: 0, finished: 0 };
   const totals = data.usageTotals ?? { runs: 0, finished: 0, seconds: 0 };
   const num = (n) => (n ?? 0).toLocaleString('ko-KR');
 
-  // 카드는 '오늘' 것만 큰 숫자로. 판 카드 아래엔 지금까지의 누적 판수를 붙인다.
+  // 카드는 '오늘' 것만 큰 숫자로. 순 방문자 아래엔 PC/모바일 나눠 보여 준다.
   $('usage-cards').innerHTML = `
     <div class="card"><div class="big">${today.uniques}</div><div class="lbl">오늘 순 방문자</div>
-      <div class="sub">서로 다른 사람 · 총 ${today.visits}번 열림</div></div>
+      <div class="sub">${pcMobile(today.uniques, today.uniquesMobile)} · 총 ${today.visits}번 열림</div></div>
     <div class="card"><div class="big">${today.runs}<em>판</em></div><div class="lbl">오늘 판 수</div>
       <div class="sub">누적 ${num(totals.runs)}판</div></div>
     <div class="card"><div class="big">${spellTime(today.seconds)}</div><div class="lbl">오늘 논 시간</div>
@@ -257,8 +264,8 @@ function drawUsageDay() {
   const body = rows.map((u) => {
     const done = u.runs ? Math.round((u.finished / u.runs) * 100) : 0;
     return `<tr><td class="num">${when(u.day.replace(/-/g, '/'))}</td>
-      <td class="num">${u.uniques ?? 0}</td>
-      <td class="num">${u.visits}</td>
+      <td class="num">${u.uniques ?? 0}<div class="dim">${pcMobile(u.uniques, u.uniquesMobile)}</div></td>
+      <td class="num">${u.visits}<div class="dim">${pcMobile(u.visits, u.visitsMobile)}</div></td>
       <td class="num">${u.runs}회 ${u.runs ? `<span class="dim">완주 ${done}%</span>` : ''}</td>
       <td class="num">${spellTime(u.seconds).replace(/<[^>]+>/g, '')}</td></tr>`;
   }).join('');
@@ -272,8 +279,8 @@ function drawUsageMonth() {
   const body = rows.map((u) => {
     const done = u.runs ? Math.round((u.finished / u.runs) * 100) : 0;
     return `<tr><td class="num">${monthLabel(u.month)}</td>
-      <td class="num">${u.uniques ?? 0}</td>
-      <td class="num">${u.visits}</td>
+      <td class="num">${u.uniques ?? 0}<div class="dim">${pcMobile(u.uniques, u.uniquesMobile)}</div></td>
+      <td class="num">${u.visits}<div class="dim">${pcMobile(u.visits, u.visitsMobile)}</div></td>
       <td class="num">${u.runs}회 ${u.runs ? `<span class="dim">완주 ${done}%</span>` : ''}</td>
       <td class="num">${spellTime(u.seconds).replace(/<[^>]+>/g, '')}</td></tr>`;
   }).join('');
