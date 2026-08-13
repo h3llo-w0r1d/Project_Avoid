@@ -683,12 +683,12 @@ function addPleat(root, ruler, spec, outlineMat) {
   foldGeo.translate(0, 0.12, 0);
   foldGeo.computeVertexNormals();
 
-  // 주름들이 모여드는 꼭지. 높게 잡을수록 봉우리가 뾰족해진다.
-  // 만두처럼 '살짝' 뾰족하게 — 뭉툭한 혹이 아니라 여민 봉우리로.
-  const apex = new THREE.Vector3(0, topY + 0.16, 0);
+  // 주름들이 모여드는 꼭지. 낮게 잡아 뿔이 아니라 '낮게 여민 주름'이 되게 한다.
+  // 높으면 뿔·마늘종처럼 보이고, 너무 낮으면 밋밋한 혹이 된다. 그 중간.
+  const apex = new THREE.Vector3(0, topY + 0.07, 0);
   const up = new THREE.Vector3(0, 1, 0);
 
-  const count = 8;
+  const count = 9;
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + 0.2;
     const base = new THREE.Vector3(Math.cos(a) * ringR, baseY, Math.sin(a) * ringR);
@@ -705,19 +705,13 @@ function addPleat(root, ruler, spec, outlineMat) {
     root.add(pivot);
   }
 
-  // 여민 가운데 꼭지 — 아래는 통통, 위는 좁아지는 살짝 뾰족한 봉우리.
-  // 끝을 완전히 뾰족하게(원뿔) 하지 않고 살짝 둥글려 만두 느낌을 낸다.
-  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.13, 0.3, 14), mat);
-  tip.position.y = topY + 0.12;
+  // 여민 가운데 꼭지 — 넓고 낮게, 끝만 살짝 좁아지는 만두 오므림.
+  // 뿔처럼 솟지 않게 키를 낮게(0.12) 잡고 밑을 넓게(0.15) 둔다.
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.15, 0.12, 14), mat);
+  tip.position.y = topY + 0.04;
   tip.castShadow = true;
   root.add(tip);
   addOutline(tip, 0.018, outlineMat);
-
-  // 뾰족한 끝을 살짝 둥글리는 작은 구슬.
-  const nub = new THREE.Mesh(new THREE.SphereGeometry(0.032, 10, 8), mat);
-  nub.position.y = topY + 0.27;
-  root.add(nub);
-  addOutline(nub, 0.016, outlineMat);
 
   return [];
 }
