@@ -515,7 +515,8 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
 app.get('/api/admin/visits', requireAdmin, async (req, res) => {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
   const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(await readVisits({ limit, offset }));
+  const since = Math.max(0, Number(req.query.since) || 0);
+  res.json(await readVisits({ limit, offset, since }));
 });
 
 // 모든 판 기록(플레이 로그). 시간 역순 한 쪽씩 준다.
