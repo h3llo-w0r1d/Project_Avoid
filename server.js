@@ -13,6 +13,7 @@ import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { isBot, isMobile } from './lib/bots.js';
+import { readVisits } from './lib/visitlog.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPresence } from './lib/presence.js';
@@ -507,6 +508,14 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
     console.error('기록 삭제 실패:', err);
     res.status(500).json({ error: '삭제에 실패했습니다.' });
   }
+});
+
+// 방문 기록(디버깅용). nginx 접속 로그에서 게임 페이지를 연 요청을 읽어
+// 시간·IP·기기·봇여부를 준다. 앱 DB 에 새로 저장하는 것은 없다.
+app.get('/api/admin/visits', requireAdmin, async (req, res) => {
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(await readVisits({ limit, offset }));
 });
 
 // 모든 판 기록(플레이 로그). 시간 역순 한 쪽씩 준다.

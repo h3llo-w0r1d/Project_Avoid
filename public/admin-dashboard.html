@@ -176,6 +176,12 @@
   </div>
   <div class="wrap" id="play-table"></div>
   <div class="pager" id="play-pager"></div>
+
+  <h2>방문 기록 <span class="dim" id="visit-count"></span></h2>
+  <p class="hint">게임 페이지를 연 요청을 서버 접속 로그에서 읽어 보여 줍니다(디버깅용).
+    IP·기기·봇여부까지 나옵니다. 앱에 새로 저장하는 정보는 없습니다.</p>
+  <div class="wrap" id="visit-table"></div>
+  <div class="pager" id="visit-pager"></div>
 </main>
 
 <script type="module">
@@ -225,7 +231,7 @@ async function load() {
     $('meta').textContent = `${data.season.name} · 지금 접속 ${data.present ?? 0}명` +
       (versus ? ` (1v1 ${versus}명)` : '');
     say('');
-    drawUsage(); drawAccounts(); drawScores(); drawPlays();
+    drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawVisits();
   } catch (e) { say(e.message, true); }
 }
 
@@ -459,6 +465,30 @@ async function drawPlays() {
     playPage = Math.min(playPage, pages - 1);
     pager('play-pager', pages, playPage, (p) => { playPage = p; drawPlays(); });
   } catch (e) { $('play-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+/* ---- 방문 기록 (nginx 접속 로그) ----
+   앱 DB 가 아니라 서버 접속 로그를 읽어 온다. 최근 것부터 페이지 단위로 준다. */
+const VISIT_PER = 25;
+let visitPage = 0;
+
+async function drawVisits() {
+  try {
+    const { rows, total, error } = await api(`/api/admin/visits?limit=${VISIT_PER}&offset=${visitPage * VISIT_PER}`);
+    if (error) { $('visit-table').innerHTML = `<p class="empty">${esc(error)}</p>`; $('visit-pager').innerHTML = ''; return; }
+    $('visit-count').textContent = total ? `최근 ${total}건` : '';
+    if (!total) { $('visit-table').innerHTML = '<p class="empty">최근 방문 기록이 없습니다</p>'; $('visit-pager').innerHTML = ''; return; }
+    const body = rows.map((r) =>
+      `<tr><td class="dim">${stamp(r.at)}</td>
+        <td class="num">${esc(r.ip)}</td>
+        <td>${r.device === 'mobile' ? '폰' : 'PC'}</td>
+        <td>${r.bot ? '<span style="color:#ff9aa6">봇</span>' : '<span class="dim">사람</span>'}</td></tr>`).join('');
+    $('visit-table').innerHTML =
+      `<table><thead><tr><th>시간</th><th>IP</th><th>기기</th><th>봇?</th></tr></thead><tbody>${body}</tbody></table>`;
+    const pages = Math.max(1, Math.ceil(total / VISIT_PER));
+    visitPage = Math.min(visitPage, pages - 1);
+    pager('visit-pager', pages, visitPage, (p) => { visitPage = p; drawVisits(); });
+  } catch (e) { $('visit-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
 async function clearPlays() {
