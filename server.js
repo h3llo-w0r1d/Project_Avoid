@@ -13,9 +13,9 @@ import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { isBot, isMobile } from './lib/bots.js';
-import { readVisits } from './lib/visitlog.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
+import { openVisitsStore } from './lib/visits.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
@@ -85,6 +85,9 @@ const board = openBoardStore(db);
 // 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
 const plays = openPlaysStore(db);
 
+// 방문 기록(디버깅용). 게임 페이지를 연 요청을 IP·기기·봇여부와 함께 쌓는다.
+const visits = openVisitsStore(db);
+
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
 const presence = openPresence();
 const matchLog = await openMatchStore(DATA_DIR, db);
@@ -129,9 +132,13 @@ app.get('/manifest.webmanifest', (req, res) => {
 // 정적 파일 미들웨어보다 먼저 놓아야 한다. 뒤에 놓으면 express.static 이
 // 파일을 내주고 끝내 버려서 여기까지 오지 않는다.
 app.get(['/', '/index.html'], (req, res, next) => {
-  // 봇·크롤러·스캐너는 방문으로 세지 않는다(집계를 부풀린다).
   const ua = req.get('user-agent');
-  if (!isBot(ua)) stats.visit(isMobile(ua));
+  const bot = isBot(ua);
+  const mobile = isMobile(ua);
+  // 봇·크롤러·스캐너는 집계(방문 수)에 넣지 않는다.
+  if (!bot) stats.visit(mobile);
+  // 방문 기록에는 봇도 남긴다 — 어떤 게 봇인지 눈으로 가려내려는 디버깅용.
+  visits.add({ ip: clientIp(req), device: mobile ? 'mobile' : 'pc', bot });
   next();
 });
 
@@ -510,13 +517,24 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
   }
 });
 
-// 방문 기록(디버깅용). nginx 접속 로그에서 게임 페이지를 연 요청을 읽어
-// 시간·IP·기기·봇여부를 준다. 앱 DB 에 새로 저장하는 것은 없다.
-app.get('/api/admin/visits', requireAdmin, async (req, res) => {
-  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+// 방문 기록(디버깅용). 게임 페이지를 연 요청을 시간순으로 준다.
+app.get('/api/admin/visits', requireAdmin, (req, res) => {
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
   const offset = Math.max(0, Number(req.query.offset) || 0);
-  const since = Math.max(0, Number(req.query.since) || 0);
-  res.json(await readVisits({ limit, offset, since }));
+  res.json(visits.page(limit, offset));
+});
+
+// 방문 기록 전체 비우기. 다른 기록과 같은 방식으로 확인 문구를 요구한다.
+app.post('/api/admin/visits/clear', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== 'DELETE ALL') {
+    return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+  }
+  try {
+    res.json({ ok: true, removed: visits.clear() });
+  } catch (err) {
+    console.error('방문 기록 삭제 실패:', err);
+    res.status(500).json({ error: '삭제에 실패했습니다.' });
+  }
 });
 
 // 모든 판 기록(플레이 로그). 시간 역순 한 쪽씩 준다.
