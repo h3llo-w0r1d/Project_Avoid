@@ -12,6 +12,7 @@ import { attachAuth } from './lib/auth-routes.js';
 import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
+import { isBot } from './lib/bots.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPresence } from './lib/presence.js';
@@ -127,7 +128,8 @@ app.get('/manifest.webmanifest', (req, res) => {
 // 정적 파일 미들웨어보다 먼저 놓아야 한다. 뒤에 놓으면 express.static 이
 // 파일을 내주고 끝내 버려서 여기까지 오지 않는다.
 app.get(['/', '/index.html'], (req, res, next) => {
-  stats.visit();
+  // 봇·크롤러·스캐너는 방문으로 세지 않는다(집계를 부풀린다).
+  if (!isBot(req.get('user-agent'))) stats.visit();
   next();
 });
 
@@ -347,9 +349,13 @@ app.post('/api/presence', (req, res) => {
     presence.leave(body.id);
     return res.json({ ok: true });
   }
-  presence.beat(body.id);
-  // 이 브라우저의 오늘 첫 신호면 순 방문자로 한 번 센다(중복은 stats 가 거른다).
-  stats.uniqueVisit(body.id);
+  // 봇(HeadlessChrome 등)은 JS 를 돌려 신호를 보내기도 한다. 접속자·순
+  // 방문자에서 빼야 진짜 사람 수에 가까워진다.
+  if (!isBot(req.get('user-agent'))) {
+    presence.beat(body.id);
+    // 이 브라우저의 오늘 첫 신호면 순 방문자로 한 번 센다(중복은 stats 가 거른다).
+    stats.uniqueVisit(body.id);
+  }
   res.json({ online: presence.count() });
 });
 
