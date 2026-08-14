@@ -13,6 +13,7 @@ import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { isBot, isMobile } from './lib/bots.js';
+import { isDatacenterIp } from './lib/datacenter.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openVisitsStore } from './lib/visits.js';
@@ -133,12 +134,14 @@ app.get('/manifest.webmanifest', (req, res) => {
 // 파일을 내주고 끝내 버려서 여기까지 오지 않는다.
 app.get(['/', '/index.html'], (req, res, next) => {
   const ua = req.get('user-agent');
-  const bot = isBot(ua);
+  const ip = clientIp(req);
   const mobile = isMobile(ua);
-  // 봇·크롤러·스캐너는 집계(방문 수)에 넣지 않는다.
+  // 봇 판정: 자기소개(UA)가 봇이거나, IP 가 클라우드/데이터센터면 봇.
+  // UA 를 진짜 브라우저로 위장한 봇도 클라우드에서 오면 여기서 걸린다.
+  const bot = isBot(ua) || isDatacenterIp(ip);
   if (!bot) stats.visit(mobile);
   // 방문 기록에는 봇도 남긴다 — 어떤 게 봇인지 눈으로 가려내려는 디버깅용.
-  visits.add({ ip: clientIp(req), device: mobile ? 'mobile' : 'pc', bot });
+  visits.add({ ip, device: mobile ? 'mobile' : 'pc', bot });
   next();
 });
 
@@ -358,10 +361,10 @@ app.post('/api/presence', (req, res) => {
     presence.leave(body.id);
     return res.json({ ok: true });
   }
-  // 봇(HeadlessChrome 등)은 JS 를 돌려 신호를 보내기도 한다. 접속자·순
-  // 방문자에서 빼야 진짜 사람 수에 가까워진다.
+  // 봇(HeadlessChrome 등)은 JS 를 돌려 신호를 보내기도 한다. UA 위장 봇도
+  // 클라우드 IP 면 걸러, 접속자·순 방문자를 진짜 사람에 가깝게 한다.
   const ua = req.get('user-agent');
-  if (!isBot(ua)) {
+  if (!isBot(ua) && !isDatacenterIp(clientIp(req))) {
     presence.beat(body.id);
     // 이 브라우저의 오늘 첫 신호면 순 방문자로 한 번 센다(중복은 stats 가 거른다).
     stats.uniqueVisit(body.id, isMobile(ua));
