@@ -49,11 +49,27 @@ export function toLocal(clientX, clientY) {
 let applied = null;
 function apply() {
   const want = shouldForce();
-  if (want === applied) return;
-  applied = want;
   root.classList.toggle('force-landscape', want);
-  // 크기가 바뀌었으니 게임이 카메라·캔버스를 다시 맞추게 한다.
-  dispatchEvent(new Event('resize'));
+
+  // iOS 는 CSS 의 100vh/100vw 가 실제 화면 크기와 어긋난다(주소창 영역 탓).
+  // 그래서 회전한 body 크기를 '실제 픽셀'로 직접 맞춘다. 폭·높이를 맞바꾼다.
+  // 이 값은 주소창이 나타났다 사라질 때(resize)마다 다시 맞춰야 한다.
+  const body = document.body;
+  if (body) {
+    if (want) {
+      body.style.width = window.innerHeight + 'px';
+      body.style.height = window.innerWidth + 'px';
+    } else if (applied) {
+      body.style.width = '';
+      body.style.height = '';
+    }
+  }
+
+  if (want !== applied) {
+    applied = want;
+    // 방향이 바뀌었으니 게임이 카메라·캔버스를 다시 맞추게 한다.
+    dispatchEvent(new Event('resize'));
+  }
 }
 
 export function startOrientationManager() {
