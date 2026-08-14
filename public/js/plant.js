@@ -307,15 +307,16 @@ function makeMouthTexture(kind = 'smile', size = 256) {
   const g = cv.getContext('2d');
   const cx = size / 2;
 
-  // 갸우뚱·의문 입 — 작고 삐뚜름하게 벌린 "으에?" 느낌.
+  // 갸우뚱·의문 입 — 크고 삐뚜름하게 쩍 벌린 "으에?!" 느낌.
   if (kind === 'confused') {
-    const my = size * 0.44;
+    const my = size * 0.46;
     const shape = () => {
       g.beginPath();
-      g.moveTo(cx - size * 0.15, my - size * 0.01);
-      g.quadraticCurveTo(cx - size * 0.02, my - size * 0.08, cx + size * 0.17, my - size * 0.03);
-      g.quadraticCurveTo(cx + size * 0.11, my + size * 0.13, cx - size * 0.04, my + size * 0.14);
-      g.quadraticCurveTo(cx - size * 0.16, my + size * 0.09, cx - size * 0.15, my - size * 0.01);
+      // 왼쪽은 처지고 오른쪽은 올라간 비대칭. 아래로 크게 벌어진다.
+      g.moveTo(cx - size * 0.22, my - size * 0.02);
+      g.quadraticCurveTo(cx - size * 0.04, my - size * 0.13, cx + size * 0.24, my - size * 0.06);
+      g.quadraticCurveTo(cx + size * 0.17, my + size * 0.21, cx - size * 0.02, my + size * 0.23);
+      g.quadraticCurveTo(cx - size * 0.23, my + size * 0.16, cx - size * 0.22, my - size * 0.02);
       g.closePath();
     };
     shape();
@@ -324,7 +325,7 @@ function makeMouthTexture(kind = 'smile', size = 256) {
     g.save(); shape(); g.clip();
     g.fillStyle = '#e4837c';
     g.beginPath();
-    g.ellipse(cx, my + size * 0.11, size * 0.09, size * 0.045, 0, 0, Math.PI * 2);
+    g.ellipse(cx, my + size * 0.16, size * 0.14, size * 0.07, 0.1, 0, Math.PI * 2);
     g.fill();
     g.restore();
     shape();
@@ -1010,14 +1011,17 @@ export function buildPlant(id) {
       return z + proud - geo.boundingSphere.radius * zScale;
     };
 
+    // 눈 크기 배율. 좌우를 다르게 주면 짝짝이 눈이 되어 어리둥절·못생긴 느낌.
+    const es = face?.eyeScale?.[eyeIndex(dir)] ?? 1;
+
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.set(x, eyeY, depth(0));
-    ring.scale.set(1, 1.2, 0.30);
+    ring.scale.set(es, 1.2 * es, 0.30);
     root.add(ring);
 
     const sclera = new THREE.Mesh(scleraGeo, scleraMat);
     sclera.position.set(x, eyeY, depth(1));
-    sclera.scale.set(1, 1.2, 0.32);
+    sclera.scale.set(es, 1.2 * es, 0.32);
     root.add(sclera);
 
     // 검은자를 살짝 위로 올리면 아래쪽에 흰자가 더 보여 순해 보인다.
@@ -1025,12 +1029,12 @@ export function buildPlant(id) {
     const ps = face?.pupil?.[eyeIndex(dir)] ?? [0, 0];
     const pupil = new THREE.Mesh(pupilGeo, pupilMat);
     pupil.position.set(x + ps[0], eyeY + 0.026 + ps[1], depth(2));
-    pupil.scale.set(1, 1.1, 0.32);
+    pupil.scale.set(es, 1.1 * es, 0.32);
     root.add(pupil);
 
     const glint = new THREE.Mesh(glintGeo, glintMat);
     glint.position.set(x - dir * 0.03 + ps[0], eyeY + 0.058 + ps[1], depth(3));
-    glint.scale.set(1, 1, 0.38);
+    glint.scale.set(es, es, 0.38);
     root.add(glint);
 
     // 눈썹. 눈만 있으면 표정이 없어 인형처럼 보인다.
