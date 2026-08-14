@@ -301,10 +301,40 @@ function makeLeafGeometry(width, length) {
 
 // 벌린 입. 테두리·안쪽·혀를 한 장에 그린다.
 // 도형을 겹쳐 쌓으면 테두리가 안 생겨서 붉은 얼룩처럼 보인다.
-function makeMouthTexture(size = 256) {
+// kind 로 표정을 바꾼다: 기본은 활짝 벌린 웃는 입, 'confused' 는 갸우뚱한 의문 입.
+function makeMouthTexture(kind = 'smile', size = 256) {
   const cv = canvas(size);
   const g = cv.getContext('2d');
   const cx = size / 2;
+
+  // 갸우뚱·의문 입 — 작고 삐뚜름하게 벌린 "으에?" 느낌.
+  if (kind === 'confused') {
+    const my = size * 0.44;
+    const shape = () => {
+      g.beginPath();
+      g.moveTo(cx - size * 0.15, my - size * 0.01);
+      g.quadraticCurveTo(cx - size * 0.02, my - size * 0.08, cx + size * 0.17, my - size * 0.03);
+      g.quadraticCurveTo(cx + size * 0.11, my + size * 0.13, cx - size * 0.04, my + size * 0.14);
+      g.quadraticCurveTo(cx - size * 0.16, my + size * 0.09, cx - size * 0.15, my - size * 0.01);
+      g.closePath();
+    };
+    shape();
+    g.fillStyle = '#7a3330';
+    g.fill();
+    g.save(); shape(); g.clip();
+    g.fillStyle = '#e4837c';
+    g.beginPath();
+    g.ellipse(cx, my + size * 0.11, size * 0.09, size * 0.045, 0, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+    shape();
+    g.strokeStyle = '#3d3226';
+    g.lineWidth = size * 0.05;
+    g.lineJoin = 'round';
+    g.stroke();
+    return textureFrom(cv);
+  }
+
   const top = size * 0.34;
   const w = size * 0.34;
   const deep = size * 0.42;
@@ -337,6 +367,22 @@ function makeMouthTexture(size = 256) {
   g.lineJoin = 'round';
   g.stroke();
 
+  return textureFrom(cv);
+}
+
+// 물음표 "?" 그림. 머리 옆에 띄워 '의문 가득' 느낌을 준다.
+function makeQuestionTexture(size = 128) {
+  const cv = canvas(size);
+  const g = cv.getContext('2d');
+  g.font = `900 ${Math.round(size * 0.82)}px "Arial Black", Arial, sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.lineJoin = 'round';
+  g.lineWidth = size * 0.16;
+  g.strokeStyle = '#3d3226';
+  g.strokeText('?', size / 2, size * 0.55);
+  g.fillStyle = '#ffd24a';
+  g.fillText('?', size / 2, size * 0.55);
   return textureFrom(cv);
 }
 
@@ -996,11 +1042,11 @@ export function buildPlant(id) {
     root.add(brow);
   }
 
-  // 벌린 입
+  // 입 (기본은 웃는 입, spec.mouth 로 표정을 바꾼다)
   const mouthY = at(0.42);
   const mouth = new THREE.Mesh(
     new THREE.PlaneGeometry(0.44, 0.44),
-    new THREE.MeshBasicMaterial({ map: makeMouthTexture(), transparent: true })
+    new THREE.MeshBasicMaterial({ map: makeMouthTexture(spec.mouth), transparent: true })
   );
   mouth.position.set(0, mouthY, decalZ(0, mouthY));
   root.add(mouth);
@@ -1023,10 +1069,21 @@ export function buildPlant(id) {
     root.add(blush);
   }
 
-  // ---- 소품 (보스라고라: 선글라스·권총·담배) ------------------------------
+  // ---- 소품 -------------------------------------------------------------
   if (spec.shades) addShades(root, ruler, eyeY, eyeGap, outlineMat);
   if (spec.hold === 'gun') addGun(root, ruler, outlineMat);
   if (spec.cigarette) addCigarette(root, ruler, outlineMat);
+
+  // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
+  if (spec.question) {
+    const q = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.MeshBasicMaterial({ map: makeQuestionTexture(), transparent: true, depthWrite: false })
+    );
+    q.position.set(radiusAt(ruler.top) * 0 + 0.62, ruler.top + 0.34, 0.22);
+    q.rotation.z = 0.18;
+    root.add(q);
+  }
 
   // ---- 머리 장식 ---------------------------------------------------------
   const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat);
