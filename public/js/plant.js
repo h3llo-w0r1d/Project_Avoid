@@ -1046,10 +1046,11 @@ export function buildPlant(id) {
     root.add(brow);
   }
 
-  // 입 (기본은 웃는 입, spec.mouth 로 표정을 바꾼다)
+  // 입 (기본은 웃는 입, spec.mouth 로 표정을, spec.mouthScale 로 크기를 바꾼다)
   const mouthY = at(0.42);
+  const ms = spec.mouthScale ?? 1;
   const mouth = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.44, 0.44),
+    new THREE.PlaneGeometry(0.44 * ms, 0.44 * ms),
     new THREE.MeshBasicMaterial({ map: makeMouthTexture(spec.mouth), transparent: true })
   );
   mouth.position.set(0, mouthY, decalZ(0, mouthY));
