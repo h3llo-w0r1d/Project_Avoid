@@ -12,7 +12,7 @@ import { CharacterUI } from './char-ui.js';
 import { ProfileUI } from './profile-ui.js';
 import { BoardUI } from './board-ui.js';
 import { VoiceUI } from './voice-ui.js';
-import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable } from './characters.js';
+import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable, PLAYABLE } from './characters.js';
 import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
@@ -456,12 +456,61 @@ function killPlayer(cause) {
   }
 }
 
+// 새로 열린 캐릭터를 가운데에 크게 보여 준다. 여러 개면 하나씩 차례로.
+// 클릭하면 건너뛴다. 애니메이션이 끝나면(또는 건너뛰면) resolve 된다.
+function showUnlock(list) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">새 캐릭터 해금!</div>' +
+      '<img class="unlock-face" alt="">' +
+      '<div class="unlock-name"></div>' +
+      '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    const face = overlay.querySelector('.unlock-face');
+    const nameEl = overlay.querySelector('.unlock-name');
+    requestAnimationFrame(() => overlay.classList.add('show'));
+
+    let i = 0;
+    let timer = null;
+    const done = () => {
+      clearTimeout(timer);
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    const next = () => {
+      if (i >= list.length) { done(); return; }
+      const c = list[i++];
+      try { face.src = characters.preview(c.id); } catch (e) { /* 미리보기 실패는 무시 */ }
+      nameEl.textContent = c.name;
+      // 캐릭터가 바뀔 때마다 얼굴을 팝 시킨다
+      face.style.animation = 'none';
+      void face.offsetWidth;
+      face.style.animation = 'unlockPop 0.5s ease-out';
+      timer = setTimeout(next, 1900);
+    };
+    overlay.addEventListener('click', done);
+    next();
+  });
+}
+
 async function finishGame() {
   state.phase = 'over';
   audio.stopAmbient();
   // 판이 끝났으니 긴장을 푼다. 결과 화면은 첫 화면과 같은 곡으로.
   audio.playMusic('homeMusic');
   const score = state.elapsed;
+
+  // 이번 판으로 새로 열린 캐릭터가 있으면, 결과창 전에 해금 연출을 띄운다.
+  // 최고기록은 showGameOver 가 갱신하므로, 지금 읽으면 '이전' 최고기록이다.
+  const prevBest = bestSeconds();
+  const freshUnlocks = PLAYABLE.filter(
+    (c) => c.unlockAt > 0 && prevBest < c.unlockAt && c.unlockAt <= score
+  );
+  if (freshUnlocks.length) await showUnlock(freshUnlocks);
+
   ui.showGameOver(score, state.cause);
 
   // 1초도 못 버틴 기록은 랭킹을 어지럽히므로 올리지 않는다
