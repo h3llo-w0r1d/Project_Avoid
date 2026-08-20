@@ -496,8 +496,11 @@ function showUnlock(list) {
   });
 }
 
-// 111초 돌파 커피 이벤트 창. 캡처해서 인스타 DM 을 보내야 하므로 자동으로
-// 사라지지 않고, '확인' 을 누르거나 바깥을 눌러야 닫힌다.
+// 커피 이벤트 기준 초. ⚠️ 지금은 테스트용 10초. 실제 이벤트는 111 로 되돌릴 것.
+const COFFEE_SECONDS = 10;
+
+// 커피 이벤트 창. 캡처해서 인스타 DM 을 보내야 하므로 자동으로 사라지지 않고,
+// '확인' 을 누르거나 바깥을 눌러야 닫힌다.
 function showCoffee(score) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
@@ -505,9 +508,9 @@ function showCoffee(score) {
     overlay.innerHTML =
       '<div class="unlock-card coffee-card">' +
       '<div class="coffee-emoji">☕</div>' +
-      '<div class="coffee-kicker">111초 돌파!</div>' +
+      '<div class="coffee-kicker">' + COFFEE_SECONDS + '초 돌파!</div>' +
       '<div class="coffee-title">커피 이벤트 당첨 🎉</div>' +
-      '<div class="coffee-body">' + score.toFixed(2) + '초로 111초를 넘겼어요!<br>' +
+      '<div class="coffee-body">' + score.toFixed(2) + '초로 ' + COFFEE_SECONDS + '초를 넘겼어요!<br>' +
       '이 화면을 캡처해서<br><b>AvoidArc 인스타그램 DM</b> 으로 보내주세요.</div>' +
       '<button class="coffee-ok" type="button">확인</button>' +
       '</div>';
@@ -537,8 +540,10 @@ async function finishGame() {
   );
   if (freshUnlocks.length) await showUnlock(freshUnlocks);
 
-  // 111초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다.
-  if (prevBest < 111 && score >= 111) await showCoffee(score);
+  // 기준 초를 넘긴 사람에게 커피 이벤트 창을 띄운다.
+  // ⚠️ 테스트용: 지금은 넘길 때마다 뜬다. 실제 이벤트로 되돌릴 때는
+  //    앞에 `prevBest < COFFEE_SECONDS &&` 를 붙여 '처음 한 번'만 뜨게 할 것.
+  if (score >= COFFEE_SECONDS) await showCoffee(score);
 
   ui.showGameOver(score, state.cause);
 
