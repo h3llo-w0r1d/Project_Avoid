@@ -721,6 +721,33 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
 }
 
+/* 시작 화면 배경: 은은한 전기 노선도. 카드보다 뒤(z:0), 카드 뒤 가운데는 어둡게. */
+#title-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.6;
+}
+#title-backdrop svg { width: 100%; height: 100%; display: block; }
+#title-backdrop polyline { opacity: 0.5; }
+/* 가운데(카드 뒤)와 위/아래를 어둡게 덮어 글자를 방해하지 않게 한다 */
+#title-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(58% 54% at 50% 47%, rgba(5,6,15,0.94) 0%, rgba(5,6,15,0.6) 42%, transparent 74%),
+    linear-gradient(to bottom, rgba(5,6,15,0.55), transparent 22%, transparent 78%, rgba(5,6,15,0.65));
+}
+/* 볼트 레드 라인에 전류가 흐르는 느낌 */
+.tb-live { stroke-dasharray: 42 400; animation: tbFlow 7s linear infinite; }
+@keyframes tbFlow { to { stroke-dashoffset: -884; } }
+@media (prefers-reduced-motion: reduce) { .tb-live { animation: none; } }
+/* 카드는 배경 위로 */
+#title-screen .panel { position: relative; z-index: 1; }
+
 .logo {
   font-size: 52px;
   font-weight: 900;

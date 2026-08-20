@@ -168,6 +168,36 @@
 
   <!-- 시작 화면 -->
   <div id="title-screen" class="screen">
+    <!-- 배경: 은은하게 빛나는 전기 노선도. 타이틀에서만 보이고 카드 뒤는 어둡게(비네트). -->
+    <div id="title-backdrop" aria-hidden="true">
+      <svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <filter id="tbGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+        <g filter="url(#tbGlow)" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+          <!-- 시안 라인 -->
+          <polyline stroke="#4fd6ff" points="120,220 640,220 760,340 1280,340 1400,220 1820,220" />
+          <!-- 보라 라인 -->
+          <polyline stroke="#9a6cff" points="80,560 500,560 620,440 1160,440 1280,560 1860,560" />
+          <!-- 초록 라인 (세로) -->
+          <polyline stroke="#35c26a" points="330,1040 330,720 490,560 490,240 650,80" />
+          <!-- 앰버 라인 (아래) -->
+          <polyline stroke="#d9903a" points="240,900 720,900 840,1020 1320,1020 1520,840 1880,840" />
+          <!-- 볼트 레드 (전류 흐름 애니메이션) -->
+          <polyline class="tb-live" stroke="#ff3a4e" points="40,410 420,410 540,530 940,530 1080,380 1520,380 1660,530 1900,530" />
+        </g>
+        <g fill="#0a0e1e" stroke-width="4">
+          <circle cx="640" cy="220" r="9" stroke="#4fd6ff" /><circle cx="1280" cy="340" r="9" stroke="#4fd6ff" />
+          <circle cx="620" cy="440" r="9" stroke="#9a6cff" /><circle cx="1280" cy="560" r="9" stroke="#9a6cff" />
+          <circle cx="490" cy="560" r="9" stroke="#35c26a" /><circle cx="490" cy="240" r="9" stroke="#35c26a" />
+          <circle cx="840" cy="1020" r="9" stroke="#d9903a" /><circle cx="1520" cy="840" r="9" stroke="#d9903a" />
+          <circle cx="540" cy="530" r="9" stroke="#ff3a4e" /><circle cx="1080" cy="380" r="9" stroke="#ff3a4e" /><circle cx="1660" cy="530" r="9" stroke="#ff3a4e" />
+        </g>
+      </svg>
+    </div>
     <div class="panel">
       <h1 class="logo">Avoid<span>Arc</span></h1>
       <p class="tagline">붉은 전기선에 닿으면 GAMEOVER</p>
