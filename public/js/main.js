@@ -496,8 +496,8 @@ function showUnlock(list) {
   });
 }
 
-// 커피 이벤트 기준 초. ⚠️ 지금은 테스트용 10초. 실제 이벤트는 111 로 되돌릴 것.
-const COFFEE_SECONDS = 10;
+// 커피 이벤트 기준 초.
+const COFFEE_SECONDS = 111;
 
 // 커피 이벤트 창. 캡처해서 인스타 DM 을 보내야 하므로 자동으로 사라지지 않고,
 // '확인' 을 누르거나 바깥을 눌러야 닫힌다.
@@ -540,10 +540,8 @@ async function finishGame() {
   );
   if (freshUnlocks.length) await showUnlock(freshUnlocks);
 
-  // 기준 초를 넘긴 사람에게 커피 이벤트 창을 띄운다.
-  // ⚠️ 테스트용: 지금은 넘길 때마다 뜬다. 실제 이벤트로 되돌릴 때는
-  //    앞에 `prevBest < COFFEE_SECONDS &&` 를 붙여 '처음 한 번'만 뜨게 할 것.
-  if (score >= COFFEE_SECONDS) await showCoffee(score);
+  // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다.
+  if (prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
 
   ui.showGameOver(score, state.cause);
 
