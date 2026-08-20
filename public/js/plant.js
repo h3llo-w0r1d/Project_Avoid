@@ -975,8 +975,9 @@ export function buildPlant(id) {
   const glintGeo = new THREE.SphereGeometry(0.036, 10, 8);
   const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
-  // 몸이 가늘면 눈도 좁게 붙여야 옆으로 삐져나가지 않는다
-  const eyeGap = Math.min(0.175, radiusAt(eyeY) * 0.42);
+  // 몸이 가늘면 눈도 좁게 붙여야 옆으로 삐져나가지 않는다.
+  // 눈을 크게 키우면 코 쪽에서 붙으므로, face.eyeGap 으로 간격을 넓힐 수 있다.
+  const eyeGap = spec.face?.eyeGap ?? Math.min(0.175, radiusAt(eyeY) * 0.42);
 
   // 표정. 캐릭터마다 눈동자·눈썹을 조금씩 어긋내 개성을 준다.
   //   face.pupil : [[왼dx,왼dy],[오dx,오dy]]  검은자 이동 (사시·얼빠짐용)

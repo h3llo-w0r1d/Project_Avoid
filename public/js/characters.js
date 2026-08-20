@@ -26,8 +26,9 @@ export const CHARACTERS = [
     ],
     top: { kind: 'leaves', count: 5, length: 1.5, color: '#a9d477' },
     skin: 'fiber',
-    mouthScale: 1.25,                    // 입을 살짝 키운다
-    face: { eyeScale: [1.14, 1.14] }     // 두 눈을 살짝 키운다 (기본은 좌우 대칭)
+    mouthScale: 1.5,                             // 입을 큼직하게
+    // 두 눈을 큼직하게. 크게 키우면 코 쪽에서 붙으니 eyeGap 으로 간격을 넓힌다.
+    face: { eyeScale: [1.32, 1.32], eyeGap: 0.2 }
   },
   {
     // 왕만두라고라 — 만드라고라 + 만두. 둥글고 통통한 찐만두에, 위는
