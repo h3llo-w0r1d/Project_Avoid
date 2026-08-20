@@ -25,10 +25,7 @@ export const CHARACTERS = [
       [1.450, 0.00]
     ],
     top: { kind: 'leaves', count: 5, length: 1.5, color: '#a9d477' },
-    skin: 'fiber',
-    mouthScale: 1.5,                             // 입을 큼직하게
-    // 두 눈을 큼직하게. 크게 키우면 코 쪽에서 붙으니 eyeGap 으로 간격을 넓힌다.
-    face: { eyeScale: [1.32, 1.32], eyeGap: 0.2 }
+    skin: 'fiber'
   },
   {
     // 왕만두라고라 — 만드라고라 + 만두. 둥글고 통통한 찐만두에, 위는
@@ -85,10 +82,13 @@ export const CHARACTERS = [
     top: { kind: 'leaves', count: 3, length: 1.45, color: '#9fc26a', upright: 0.42 },
     skin: 'fiber',
     mouth: 'confused',   // 크게 벌린 삐뚤 의문 입
+    mouthScale: 1.3,     // 입 더 크게
     question: true,      // 머리 옆에 "?"
-    // 짝짝이 눈(왼 크게/오른 작게) + 사방 보는 눈동자 + 크게 어긋난 눈썹 = 어리둥절 못난이
+    // 짝짝이 눈(왼 크게/오른 작게) + 사방 보는 눈동자 + 크게 어긋난 눈썹 = 어리둥절 못난이.
+    // 눈을 더 키우고, 커진 눈이 붙지 않게 eyeGap 으로 간격을 넓힌다.
     face: {
-      eyeScale: [1.4, 0.7],
+      eyeScale: [1.6, 0.85],
+      eyeGap: 0.19,
       pupil: [[0.05, 0.07], [-0.05, -0.03]],
       brow: [0.22, -0.11]
     }
