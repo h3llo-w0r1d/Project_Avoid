@@ -168,35 +168,40 @@
 
   <!-- 시작 화면 -->
   <div id="title-screen" class="screen">
-    <!-- 배경: 은은하게 번쩍이는 붉은 전기(번개). 타이틀에서만, 카드 뒤는 어둡게(비네트). -->
+    <!-- 배경: 은은한 붉은 전기 무드. 타이틀에서만, 카드 뒤는 어둡게(비네트). -->
     <div id="title-backdrop" aria-hidden="true">
       <svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
         <defs>
-          <filter id="tbGlow" x="-30%" y="-30%" width="160%" height="160%">
-            <feGaussianBlur stdDeviation="4.5" result="b" />
+          <filter id="tbGlow" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="6" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
+          <radialGradient id="tbBlob" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#ff3a4e" stop-opacity="0.5" />
+            <stop offset="100%" stop-color="#ff3a4e" stop-opacity="0" />
+          </radialGradient>
         </defs>
-        <g filter="url(#tbGlow)" fill="none" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-          <!-- 붉은 번개 (왼쪽 메인) + 갈래 -->
-          <polyline stroke="#ff3a4e" points="90,50 250,210 175,285 340,430 255,505 410,665 480,770 430,860" />
-          <polyline stroke="#ff3a4e" points="340,430 415,360 470,395" />
-          <!-- 붉은 번개 (오른쪽) + 갈래 -->
-          <polyline stroke="#ff3a4e" points="1690,70 1540,240 1635,315 1485,475 1580,555 1440,715 1530,805" />
-          <polyline stroke="#ff3a4e" points="1485,475 1560,430" />
-          <!-- 붉은 번개 (아래, 전류 흐름) -->
-          <polyline class="tb-live" stroke="#ff5a4e" points="120,935 300,880 235,965 470,900 405,985 660,915 900,955 1160,905 1420,955 1700,910 1900,950" />
-          <!-- 시안 스파크 (보조) -->
-          <polyline stroke="#4fd6ff" opacity="0.7" points="1000,150 1130,205 1055,275 1220,320 1145,395 1330,435" />
-          <!-- 보라 스파크 (보조) -->
-          <polyline stroke="#9a6cff" opacity="0.65" points="60,540 210,595 135,660 305,705 235,775" />
+        <!-- 은은한 무드 글로우 (깊이감) -->
+        <ellipse cx="300" cy="230" rx="560" ry="440" fill="url(#tbBlob)" opacity="0.45" />
+        <ellipse cx="1650" cy="880" rx="600" ry="460" fill="url(#tbBlob)" opacity="0.38" />
+        <!-- 얇고 우아한 전기 필라멘트 -->
+        <g filter="url(#tbGlow)" fill="none" stroke-linecap="round">
+          <path stroke="#ff5566" stroke-width="1.6" opacity="0.5"
+                d="M-60,190 C 320,110 560,380 820,300 C 1080,220 1240,120 1520,250 C 1760,360 1900,300 2000,360" />
+          <path stroke="#ff5566" stroke-width="1.3" opacity="0.36"
+                d="M-40,790 C 300,730 520,890 820,810 C 1160,720 1360,650 1620,770 C 1840,870 1960,790 2000,830" />
+          <path stroke="#ff8090" stroke-width="1.1" opacity="0.3"
+                d="M360,-40 C 430,240 250,440 380,660 C 500,880 430,1000 470,1120" />
+          <path class="tb-live" stroke="#7fb4ff" stroke-width="1.1" opacity="0.24"
+                d="M1010,-30 C 1120,180 1360,300 1420,520 C 1470,700 1620,820 1660,1000" />
         </g>
-        <!-- 흩어진 스파크 점 -->
+        <!-- 부드러운 스파크 입자 -->
         <g filter="url(#tbGlow)">
-          <circle cx="480" cy="770" r="5" fill="#ff5a4e" /><circle cx="1530" cy="805" r="5" fill="#ff5a4e" />
-          <circle cx="1330" cy="435" r="4" fill="#4fd6ff" /><circle cx="235" cy="775" r="4" fill="#9a6cff" />
-          <circle cx="900" cy="955" r="4" fill="#ff5a4e" /><circle cx="1160" cy="905" r="3.5" fill="#ff8a96" />
-          <circle cx="660" cy="915" r="3.5" fill="#ff8a96" />
+          <circle cx="820" cy="300" r="3" fill="#ff8090" opacity="0.6" />
+          <circle cx="1520" cy="250" r="2.6" fill="#ff8090" opacity="0.5" />
+          <circle cx="470" cy="700" r="2.4" fill="#ff8090" opacity="0.45" />
+          <circle cx="1420" cy="520" r="2.2" fill="#9fc4ff" opacity="0.4" />
+          <circle cx="1160" cy="760" r="2.2" fill="#ff8090" opacity="0.36" />
         </g>
       </svg>
     </div>
