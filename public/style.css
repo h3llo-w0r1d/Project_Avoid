@@ -44,13 +44,13 @@ html, body {
   position: fixed;
   top: 0;
   left: 0;
-  /* 동적 뷰포트(dvh/dvw)로 항상 '지금 보이는 화면'에 딱 맞춘다. 주소창이
-     나타났다 사라져도 CSS 가 알아서 따라가므로 검은 여백이 안 생긴다.
-     구형 브라우저용으로 vh/vw 를 먼저 둔다(지원하면 아래 dvh/dvw 가 이긴다). */
+  /* '큰 뷰포트(lvh/lvw)'로 화면을 무조건 꽉 채운다. 주소창이 잠깐 보일 때는
+     그 아래로 살짝 넘칠 뿐(검은 여백이 생기는 것보다 낫다), 주소창이 사라지면
+     정확히 딱 맞는다. 구형 브라우저용 vh/vw 를 먼저 둔다(지원하면 lvh 가 이김). */
   width: 100vh;
   height: 100vw;
-  width: 100dvh;
-  height: 100dvw;
+  width: 100lvh;
+  height: 100lvw;
   transform-origin: 0 0;
   transform: rotate(-90deg) translate(-100%, 0);
   overflow: hidden;

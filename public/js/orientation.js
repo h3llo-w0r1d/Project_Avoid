@@ -13,7 +13,7 @@
 //
 // CSS 쪽 변환은 style.css 의 `:root.force-landscape body` 에 있다:
 //   transform-origin: 0 0; transform: rotate(-90deg) translate(-100%, 0);
-//   width: 100dvh; height: 100dvw;  (동적 뷰포트라 주소창 변화에도 딱 맞음)
+//   width: 100lvh; height: 100lvw;  (큰 뷰포트라 여백 없이 꽉 채움)
 // toLocal 의 식은 그 변환의 정확한 역변환이다. 둘을 함께 바꿔야 한다.
 
 const root = document.documentElement;
