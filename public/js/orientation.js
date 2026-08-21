@@ -13,7 +13,7 @@
 //
 // CSS 쪽 변환은 style.css 의 `:root.force-landscape body` 에 있다:
 //   transform-origin: 0 0; transform: rotate(-90deg) translate(-100%, 0);
-//   width: 100vh; height: 100vw;
+//   width: 100dvh; height: 100dvw;  (동적 뷰포트라 주소창 변화에도 딱 맞음)
 // toLocal 의 식은 그 변환의 정확한 역변환이다. 둘을 함께 바꿔야 한다.
 
 const root = document.documentElement;
@@ -34,15 +34,21 @@ export function isForced() {
   return root.classList.contains('force-landscape');
 }
 
-// 회전을 감안한 그리기 크기. 돌렸으면 폭·높이를 바꾼다.
+// 회전을 감안한 그리기 크기. 돌렸으면 body 의 '실제 크기'(CSS dvh/dvw 로
+// 화면에 맞춰진 값)를 읽는다. innerHeight 는 iOS 에서 주소창 때문에 어긋나므로
+// 쓰지 않는다. 회전한 body 는 폭=화면높이, 높이=화면폭 이 된다.
 export function view() {
-  if (isForced()) return { w: window.innerHeight, h: window.innerWidth };
+  if (isForced()) {
+    const b = document.body;
+    return { w: b.clientWidth, h: b.clientHeight };
+  }
   return { w: window.innerWidth, h: window.innerHeight };
 }
 
-// 화면 터치 좌표 → 회전된 화면의 로컬 좌표. (CSS 변환의 역)
+// 화면 터치 좌표 → 회전된 화면의 로컬 좌표. (CSS 변환의 정확한 역)
+// rotate(-90deg) translate(-100%,0) 의 역: (lx,ly) = (W - clientY, clientX), W=body 폭
 export function toLocal(clientX, clientY) {
-  if (isForced()) return { x: window.innerHeight - clientY, y: clientX };
+  if (isForced()) return { x: document.body.clientWidth - clientY, y: clientX };
   return { x: clientX, y: clientY };
 }
 
@@ -50,21 +56,7 @@ let applied = null;
 function apply() {
   const want = shouldForce();
   root.classList.toggle('force-landscape', want);
-
-  // iOS 는 CSS 의 100vh/100vw 가 실제 화면 크기와 어긋난다(주소창 영역 탓).
-  // 그래서 회전한 body 크기를 '실제 픽셀'로 직접 맞춘다. 폭·높이를 맞바꾼다.
-  // 이 값은 주소창이 나타났다 사라질 때(resize)마다 다시 맞춰야 한다.
-  const body = document.body;
-  if (body) {
-    if (want) {
-      body.style.width = window.innerHeight + 'px';
-      body.style.height = window.innerWidth + 'px';
-    } else if (applied) {
-      body.style.width = '';
-      body.style.height = '';
-    }
-  }
-
+  // 크기는 CSS(dvh/dvw)가 화면 변화에 맞춰 알아서 조절한다. JS 는 방향만 관리.
   if (want !== applied) {
     applied = want;
     // 방향이 바뀌었으니 게임이 카메라·캔버스를 다시 맞추게 한다.
