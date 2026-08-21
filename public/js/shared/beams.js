@@ -63,9 +63,10 @@ export class Beam {
     this.phase = 'idle';
   }
 
-  // spec: { path(u, out), duration, delay }
+  // spec: { path(u, out), duration, delay, warnPath?(k, out) }
   launch(spec) {
     this.path = spec.path;
+    this.warnPath = spec.warnPath || null;   // 예열 때만 쓰는 특수 모양(회전 빔의 와인드업)
     this.duration = spec.duration;
     this.delay = spec.delay || 0;
     this.cachedPreview = undefined;
@@ -97,9 +98,15 @@ export class Beam {
       // 경고 단계 — 아직 맞지 않는다. 어느 방향에서 오는지만 보여 준다.
       this.live = false;
       this.phase = 'warn';
-      // 진입 직전 위치는 대개 무대 밖이라, 무대에 처음 걸리는 지점을 미리 잡는다.
-      this.shape(this.previewU());
       this.progress = (this.t - this.delay) / BEAM.warnTime;
+      if (this.warnPath) {
+        // 회전 빔: 돌 방향으로 감았다 푸는 예비동작을 보여 준다.
+        this.warnPath(this.progress, this.seg);
+        this.onStage = clipToArena(this.seg);
+      } else {
+        // 진입 직전 위치는 대개 무대 밖이라, 무대에 처음 걸리는 지점을 미리 잡는다.
+        this.shape(this.previewU());
+      }
     } else {
       const u = (this.t - warnEnd) / this.duration;
       if (u >= 1) {
@@ -182,6 +189,12 @@ function sweep(mul, rand, delay = 0, angle = rand() * TWO_PI, count = 1) {
 }
 
 // 2) 회전 빔 — 중앙을 축으로 도는 팔. 중앙에 서 있으면 무조건 맞는다.
+//
+// 예열(노란색) 동안 팔이 돌 방향의 '반대'로 살짝 감겼다가, 발사되는 순간
+// 시작각으로 돌아오며 그쪽으로 확 풀린다(와인드업). 어느 쪽으로 돌지
+// 미리 읽게 해 준다. warnPath 는 예열 세그먼트만 바꾸므로 판정엔 영향이 없다.
+const WINDUP = 0.6;   // 감아 두는 각(rad). 클수록 예비동작이 큼
+
 function rotate(mul, rand, arms = 1) {
   const start = rand() * TWO_PI;
   const dir = rand() < 0.5 ? 1 : -1;
@@ -192,15 +205,26 @@ function rotate(mul, rand, arms = 1) {
   const specs = [];
   for (let i = 0; i < arms; i++) {
     const offset = start + (i / arms) * TWO_PI;
+    const armAt = (a, out) => {
+      out.ax = 0;
+      out.az = 0;
+      out.bx = Math.cos(a) * OUT;
+      out.bz = Math.sin(a) * OUT;
+    };
     specs.push({
       delay: 0,
       duration,
       path(u, out) {
-        const a = offset + dir * total * u;
-        out.ax = 0;
-        out.az = 0;
-        out.bx = Math.cos(a) * OUT;
-        out.bz = Math.sin(a) * OUT;
+        armAt(offset + dir * total * u, out);
+      },
+      // k: 예열 진행도 0→1.
+      // 앞부분(~0.45)은 돌 방향의 '반대'로 감고(뒤로 당김),
+      // 뒷부분은 시작각으로 풀며 그 방향으로 출발한다. k=1 에 정확히 시작각(offset)에
+      // 안착하므로 발사(live u=0)와 이어져 튀지 않는다.
+      warnPath(k, out) {
+        const wind = k < 0.45 ? k / 0.45 : 1 - (k - 0.45) / 0.55; // 0→1→0 삼각파
+        const eased = wind * wind * (3 - 2 * wind);               // smoothstep 로 매끈하게
+        armAt(offset - dir * WINDUP * eased, out);
       }
     });
   }
