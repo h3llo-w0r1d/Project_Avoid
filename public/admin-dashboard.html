@@ -185,8 +185,10 @@
   <div class="pager" id="play-pager"></div>
 
   <h2>방문 기록 <span class="dim" id="visit-count"></span></h2>
-  <p class="hint">게임 페이지를 연 요청을 시간순으로 남깁니다(디버깅용). 시간·IP·기기·봇여부가 나옵니다.
-    최근 것부터 쌓이며 오래되면 자동으로 밀려납니다. 필요 없으면 전체 비우기로 지웁니다.</p>
+  <p class="hint">게임 페이지를 연 요청을 시간순으로 남깁니다(디버깅용). 시간·IP·기기·봇여부에 더해,
+    <b>사람이면 접속 지역(국가·도시), 봇이면 어느 업체/스캐너인지</b>를 함께 보여 줍니다.
+    최근 것부터 쌓이며 오래되면 자동으로 밀려납니다. 필요 없으면 전체 비우기로 지웁니다.
+    <span class="dim">지역 정보 출처: GeoLite2 (MaxMind, maxmind.com) · 대략적인 추정치입니다.</span></p>
   <div class="tools">
     <span class="grow"></span>
     <button class="danger" id="visit-clear" type="button">전체 비우기</button>
@@ -489,13 +491,18 @@ async function drawVisits() {
     $('visit-count').textContent = total ? `${total}건` : '';
     $('visit-clear').style.display = total ? '' : 'none';
     if (!total) { $('visit-table').innerHTML = '<p class="empty">아직 방문 기록이 없습니다</p>'; $('visit-pager').innerHTML = ''; return; }
-    const body = rows.map((r) =>
-      `<tr><td class="dim">${stamp(r.at)}</td>
+    const body = rows.map((r) => {
+      const place = r.place
+        ? `<span style="color:${r.bot ? '#ff9aa6' : '#9ad0ff'}">${esc(r.place)}</span>`
+        : '<span class="dim">-</span>';
+      return `<tr><td class="dim">${stamp(r.at)}</td>
         <td class="num">${esc(r.ip ?? '')}</td>
         <td>${r.device === 'mobile' ? '폰' : 'PC'}</td>
-        <td>${r.bot ? '<span style="color:#ff9aa6">봇</span>' : '<span class="dim">사람</span>'}</td></tr>`).join('');
+        <td>${r.bot ? '<span style="color:#ff9aa6">봇</span>' : '<span class="dim">사람</span>'}</td>
+        <td>${place}</td></tr>`;
+    }).join('');
     $('visit-table').innerHTML =
-      `<table><thead><tr><th>시간</th><th>IP</th><th>기기</th><th>봇?</th></tr></thead><tbody>${body}</tbody></table>`;
+      `<table><thead><tr><th>시간</th><th>IP</th><th>기기</th><th>봇?</th><th>지역 · 정체</th></tr></thead><tbody>${body}</tbody></table>`;
     const pages = Math.max(1, Math.ceil(total / VISIT_PER));
     visitPage = Math.min(visitPage, pages - 1);
     pager('visit-pager', pages, visitPage, (p) => { visitPage = p; drawVisits(); });

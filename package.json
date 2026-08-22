@@ -15,6 +15,7 @@
   "dependencies": {
     "cookie-parser": "^1.4.7",
     "express": "^4.21.2",
+    "maxmind": "^4.3.29",
     "ws": "^8.21.2"
   },
   "devDependencies": {

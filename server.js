@@ -13,7 +13,8 @@ import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { isBot, isMobile } from './lib/bots.js';
-import { isDatacenterIp } from './lib/datacenter.js';
+import { isDatacenterIp, datacenterLabel } from './lib/datacenter.js';
+import { openGeo, lookupCity } from './lib/geo.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openVisitsStore } from './lib/visits.js';
@@ -31,6 +32,12 @@ const DATA_DIR = process.env.DATA_DIR || join(root, 'data');
 // 세 저장소가 데이터베이스 한 채를 나눠 쓴다. 파일을 따로 두면 한 판이
 // 끝날 때 세 파일을 각각 열고 닫아야 하고, 백업도 셋을 맞춰 떠야 한다.
 const db = await openDatabase(DATA_DIR);
+
+// IP→지역 오프라인 조회용 GeoLite2 DB. 없으면 방문 기록의 '지역'만 비고
+// 나머지는 그대로 뜬다. 경로는 GEO_DB 로 바꿀 수 있다.
+const GEO_DB = process.env.GEO_DB || join(DATA_DIR, 'geo', 'GeoLite2-City.mmdb');
+if (await openGeo(GEO_DB)) console.log('지역 DB 로드됨:', GEO_DB);
+else console.log('지역 DB 없음(방문 기록의 지역 표시는 비활성):', GEO_DB);
 
 // 예전 JSON 파일이 남아 있으면 한 번만 옮긴다.
 // 옮긴 원본은 .imported 로 이름만 바꿔 둔다 — 지우지 않는다.
@@ -521,10 +528,19 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
 });
 
 // 방문 기록(디버깅용). 게임 페이지를 연 요청을 시간순으로 준다.
+// 한 방문의 '정체' 한 줄. 봇이면 업체/스캐너 이름, 사람이면 국가·도시.
+function visitPlace(ip, bot) {
+  if (bot) return datacenterLabel(ip) || '봇';       // 라벨 없으면(UA로만 잡힌 봇) 그냥 '봇'
+  const g = lookupCity(ip);
+  if (!g) return '';                                 // 지역 DB 없거나 못 찾음
+  return [g.country, g.city].filter(Boolean).join(' ');
+}
+
 app.get('/api/admin/visits', requireAdmin, (req, res) => {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
   const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(visits.page(limit, offset));
+  const { rows, total } = visits.page(limit, offset);
+  res.json({ total, rows: rows.map((r) => ({ ...r, place: visitPlace(r.ip, r.bot) })) });
 });
 
 // 방문 기록 전체 비우기. 다른 기록과 같은 방식으로 확인 문구를 요구한다.
