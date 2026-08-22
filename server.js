@@ -13,8 +13,8 @@ import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { isBot, isMobile } from './lib/bots.js';
-import { isDatacenterIp, datacenterLabel } from './lib/datacenter.js';
-import { openGeo, lookupCity } from './lib/geo.js';
+import { isDatacenterIp, datacenterLabel, isCloudOrg, cloudNameFromOrg, shortOrg } from './lib/datacenter.js';
+import { openGeo, openAsn, lookupCity, asnOrg, countryCode } from './lib/geo.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openVisitsStore } from './lib/visits.js';
@@ -38,6 +38,42 @@ const db = await openDatabase(DATA_DIR);
 const GEO_DB = process.env.GEO_DB || join(DATA_DIR, 'geo', 'GeoLite2-City.mmdb');
 if (await openGeo(GEO_DB)) console.log('지역 DB 로드됨:', GEO_DB);
 else console.log('지역 DB 없음(방문 기록의 지역 표시는 비활성):', GEO_DB);
+
+// ASN(네트워크 소유 조직) DB. 있으면 클라우드/호스팅을 조직명으로 자동 판별해
+// 봇으로 거른다(CIDR 목록에 없어도). 없으면 예전처럼 CIDR 만으로 판단한다.
+const GEO_ASN = process.env.GEO_ASN || join(DATA_DIR, 'geo', 'GeoLite2-ASN.mmdb');
+if (await openAsn(GEO_ASN)) console.log('ASN DB 로드됨:', GEO_ASN);
+else console.log('ASN DB 없음(클라우드 자동판별은 CIDR 만 사용):', GEO_ASN);
+
+// 이 IP 가 '진짜 사람'이 아닌지(=집계에서 뺄지) 판단한다. 다음이면 봇으로 본다:
+//   1) 알려진 데이터센터 CIDR       2) ASN 조직이 클라우드/호스팅
+//   3) 국가가 한국이 아님 — 이 게임은 한국 대상이라 해외 접속은 사람으로 세지 않는다
+// GeoLite2 DB 가 없으면 2·3 은 자동으로 꺼지고 1(CIDR)만 쓴다(안전한 축소).
+function isNonHumanIp(ip) {
+  if (isDatacenterIp(ip)) return true;
+  if (isCloudOrg(asnOrg(ip))) return true;
+  const cc = countryCode(ip);
+  if (cc && cc !== 'KR') return true;
+  return false;
+}
+
+// UA 까지 함께 보는 판정(접속 시점용). 방문 기록의 옛 행 재계산에는 IP 판정만 쓴다.
+function isNonHuman(ip, ua) {
+  return isBot(ua) || isNonHumanIp(ip);
+}
+
+// 방문 한 줄의 '정체' 라벨. 봇이면 업체/스캐너 이름(또는 국가·조직), 사람이면 국가·지역.
+function visitPlace(ip, bot) {
+  if (bot) {
+    const pretty = datacenterLabel(ip) || cloudNameFromOrg(asnOrg(ip));
+    if (pretty) return pretty;
+    const g = lookupCity(ip);
+    const org = shortOrg(asnOrg(ip));
+    return [g?.country, org].filter(Boolean).join(' ') || '봇';
+  }
+  const g = lookupCity(ip);
+  return g ? [g.country, g.city].filter(Boolean).join(' ') : '';
+}
 
 // 예전 JSON 파일이 남아 있으면 한 번만 옮긴다.
 // 옮긴 원본은 .imported 로 이름만 바꿔 둔다 — 지우지 않는다.
@@ -143,9 +179,9 @@ app.get(['/', '/index.html'], (req, res, next) => {
   const ua = req.get('user-agent');
   const ip = clientIp(req);
   const mobile = isMobile(ua);
-  // 봇 판정: 자기소개(UA)가 봇이거나, IP 가 클라우드/데이터센터면 봇.
+  // 봇 판정: UA 가 봇이거나, IP 가 데이터센터/클라우드/호스팅이거나, 해외 접속이면 봇.
   // UA 를 진짜 브라우저로 위장한 봇도 클라우드에서 오면 여기서 걸린다.
-  const bot = isBot(ua) || isDatacenterIp(ip);
+  const bot = isNonHuman(ip, ua);
   if (!bot) stats.visit(mobile);
   // 방문 기록에는 봇도 남긴다 — 어떤 게 봇인지 눈으로 가려내려는 디버깅용.
   visits.add({ ip, device: mobile ? 'mobile' : 'pc', bot });
@@ -369,9 +405,9 @@ app.post('/api/presence', (req, res) => {
     return res.json({ ok: true });
   }
   // 봇(HeadlessChrome 등)은 JS 를 돌려 신호를 보내기도 한다. UA 위장 봇도
-  // 클라우드 IP 면 걸러, 접속자·순 방문자를 진짜 사람에 가깝게 한다.
+  // 클라우드/호스팅/해외 IP 면 걸러, 접속자·순 방문자를 진짜 사람에 가깝게 한다.
   const ua = req.get('user-agent');
-  if (!isBot(ua) && !isDatacenterIp(clientIp(req))) {
+  if (!isNonHuman(clientIp(req), ua)) {
     presence.beat(body.id);
     // 이 브라우저의 오늘 첫 신호면 순 방문자로 한 번 센다(중복은 stats 가 거른다).
     stats.uniqueVisit(body.id, isMobile(ua));
@@ -528,19 +564,17 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
 });
 
 // 방문 기록(디버깅용). 게임 페이지를 연 요청을 시간순으로 준다.
-// 한 방문의 '정체' 한 줄. 봇이면 업체/스캐너 이름, 사람이면 국가·도시.
-function visitPlace(ip, bot) {
-  if (bot) return datacenterLabel(ip) || '봇';       // 라벨 없으면(UA로만 잡힌 봇) 그냥 '봇'
-  const g = lookupCity(ip);
-  if (!g) return '';                                 // 지역 DB 없거나 못 찾음
-  return [g.country, g.city].filter(Boolean).join(' ');
-}
-
 app.get('/api/admin/visits', requireAdmin, (req, res) => {
   const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
   const offset = Math.max(0, Number(req.query.offset) || 0);
   const { rows, total } = visits.page(limit, offset);
-  res.json({ total, rows: rows.map((r) => ({ ...r, place: visitPlace(r.ip, r.bot) })) });
+  // 표시할 때 최신 규칙으로 봇 여부를 다시 계산한다. 그래야 예전에 '사람'으로
+  // 저장됐지만 지금은 클라우드/해외로 밝혀진 행도 봇으로 보인다.
+  const enriched = rows.map((r) => {
+    const bot = r.bot || isNonHumanIp(r.ip);
+    return { ...r, bot, place: visitPlace(r.ip, bot) };
+  });
+  res.json({ total, rows: enriched });
 });
 
 // 방문 기록 전체 비우기. 다른 기록과 같은 방식으로 확인 문구를 요구한다.
