@@ -792,7 +792,8 @@ function addPleat(root, ruler, spec, outlineMat, oW = 1) {
   return [];
 }
 
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat };
+// 'none' 은 머리 장식 없이 몸통만. (왕만두처럼 꼭지를 아예 없앨 때)
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
 
