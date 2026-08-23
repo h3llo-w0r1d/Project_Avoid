@@ -3,6 +3,7 @@ import { createWorld, fitCamera } from './scene.js';
 import { startOrientationManager } from './orientation.js';
 import { Player } from './player.js';
 import { Hazards } from './hazards.js';
+import { FloorHoles } from './floor-holes.js';
 import { Input } from './input.js';
 import { UI, api } from './ui.js';
 import { VersusUI } from './versus-ui.js';
@@ -58,6 +59,7 @@ rival.blob.visible = false;
 rival.halo.visible = false;
 
 const hazards = new Hazards(scene);
+const floorHoles = new FloorHoles(scene);   // 하드코어: 바닥이 사라졌다 나타난다
 const input = new Input();
 const net = new Net();
 
@@ -393,6 +395,7 @@ function startGame() {
   // 1) 1단 점프만 (하드코어) / 평소 2단.  2·3·6) 빔 난이도는 hazards 로.
   player.body.maxJumps = state.hardcore ? 1 : PLAYER.maxJumps;
   hazards.setMods(state.hardcore ? HARDCORE_MODS : null);
+  floorHoles.setActive(state.hardcore);   // 하드코어에서만 바닥이 사라진다
   state.paused = false;
   pause.hide();
   // 대전을 하다 왔을 수 있으니 대전 흔적을 지운다
@@ -455,6 +458,7 @@ function goHome() {
   audio.stopAmbient();
   audio.playMusic('homeMusic');
   versus.hide();
+  floorHoles.setActive(false);
   setArenaVisible(false);
   ui.showTitle();
 }
@@ -543,6 +547,7 @@ function showCoffee(score) {
 
 async function finishGame() {
   state.phase = 'over';
+  floorHoles.setActive(false);   // 바닥 구멍 정리
   audio.stopAmbient();
   // 판이 끝났으니 긴장을 푼다. 결과 화면은 첫 화면과 같은 곡으로.
   audio.playMusic('homeMusic');
@@ -832,10 +837,15 @@ function frame() {
 
     player.update(dt, input.poll());
     hazards.update(dt, state.elapsed);
+    if (state.hardcore) floorHoles.update(dt);
 
     if (hazards.hitTest(player)) {
       killPlayer('zap');
     } else if (player.body.droppedOff) {
+      killPlayer('fall');
+    } else if (state.hardcore && player.body.grounded
+               && floorHoles.isOpenAt(player.body.x, player.body.z)) {
+      // 사라진 바닥을 밟고 있으면 아래로 떨어진다
       killPlayer('fall');
     }
 
