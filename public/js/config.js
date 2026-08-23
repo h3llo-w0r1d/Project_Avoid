@@ -43,7 +43,7 @@ export const AVATAR = {
 export const BEAM = {
   y: 0.6,             // 전기선 높이 (바닥 기준)
   radius: 0.22,       // 굵기 — 충돌 판정에 그대로 쓰인다
-  warnTime: 0.85,     // 발사 전 경고 시간
+  warnTime: 0.95,     // 발사 전 경고 시간 (2026-08 소폭 완화: 0.85→0.95, 반응 여유↑)
 
   // 가로 훑기가 가끔 여러 줄로 몰려 나온다.
   //
@@ -93,10 +93,12 @@ export const BEAM = {
 //   - 후반(100·150초)에 봇이 3초쯤 죽는 건 원본도 같았다. 벽을 새로
 //     만든 게 아니라 봇이 후반에 갑자기 떨어지면 원래 그렇다.
 export const STAGES = [
+  // 2026-08 소폭 완화: 초반~중반의 동시 빔 수(maxLive)와 나오는 간격(interval)만
+  // 조금 되돌렸다. 속도·패턴·후반 강도는 그대로 둔다.
   { at: 0, name: 'STAGE 1', speed: 1.00, interval: 2.10, maxLive: 3, arms: 1, volley: 1, unlock: ['sweep'] },
-  { at: 10, name: 'STAGE 2', speed: 1.20, interval: 1.55, maxLive: 5, arms: 1, volley: 2, unlock: ['rotate'] },
-  { at: 24, name: 'STAGE 3', speed: 1.45, interval: 1.30, maxLive: 6, arms: 2, volley: 2, unlock: ['squeeze'] },
-  { at: 42, name: 'STAGE 4', speed: 1.70, interval: 1.10, maxLive: 7, arms: 2, volley: 3, unlock: ['cross'] },
+  { at: 10, name: 'STAGE 2', speed: 1.20, interval: 1.70, maxLive: 4, arms: 1, volley: 2, unlock: ['rotate'] },
+  { at: 24, name: 'STAGE 3', speed: 1.45, interval: 1.45, maxLive: 5, arms: 2, volley: 2, unlock: ['squeeze'] },
+  { at: 42, name: 'STAGE 4', speed: 1.70, interval: 1.25, maxLive: 7, arms: 2, volley: 3, unlock: ['cross'] },
   { at: 66, name: 'STAGE 5', speed: 1.95, interval: 1.00, maxLive: 7, arms: 2, volley: 3 },
   { at: 100, name: 'OVERLOAD', speed: 2.20, interval: 0.90, maxLive: 8, arms: 3, volley: 3 },
   { at: 140, name: 'OVERLOAD Ⅱ', speed: 2.45, interval: 0.80, maxLive: 8, arms: 3, volley: 3 }
