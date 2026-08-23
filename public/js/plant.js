@@ -104,12 +104,13 @@ function makeBodyTexture(spec, size = 512) {
   const g = cv.getContext('2d');
 
   // 아래로 갈수록 어둡게. 바닥에 가까운 쪽이 그늘지는 걸 흉내 낸다.
-  // bodyBottom 을 주면 아래쪽이 그 색으로 물든다(망고의 노랑→초록처럼).
+  // bodyTop / bodyBottom 을 주면 위·아래가 그 색으로 물든다
+  // (망고의 주황 어깨 → 노랑 → 초록 바닥처럼).
   const grd = g.createLinearGradient(0, 0, 0, size);
-  grd.addColorStop(0.00, shade(spec.body, 1.09));
-  grd.addColorStop(0.45, shade(spec.body, 1.0));
+  grd.addColorStop(0.00, spec.bodyTop ? shade(spec.bodyTop, 1.02) : shade(spec.body, 1.09));
+  grd.addColorStop(spec.bodyTop ? 0.32 : 0.45, shade(spec.body, 1.0));
   if (spec.bodyBottom) {
-    grd.addColorStop(0.68, shade(spec.body, 0.93));
+    grd.addColorStop(0.60, shade(spec.body, 0.96));
     grd.addColorStop(1.00, shade(spec.bodyBottom, 1.0));
   } else {
     grd.addColorStop(1.00, shade(spec.body, 0.70));
