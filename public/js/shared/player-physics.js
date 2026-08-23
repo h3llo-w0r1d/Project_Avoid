@@ -7,6 +7,9 @@ import { ARENA_RADIUS, PLAYER } from '../config.js';
 
 export class PlayerBody {
   constructor() {
+    // 점프 가능 횟수. 기본은 설정값(2단). 하드코어 모드에서 1 로 낮춰 1단만 쓴다.
+    // 인스턴스마다 따로 두므로 1v1(서버·상대)은 기본값 그대로다.
+    this.maxJumps = PLAYER.maxJumps;
     this.reset();
   }
 
@@ -17,7 +20,7 @@ export class PlayerBody {
     this.vx = 0;
     this.vy = 0;
     this.vz = 0;
-    this.jumpsLeft = PLAYER.maxJumps;
+    this.jumpsLeft = this.maxJumps;
     this.grounded = true;
     this.airTime = 0;
     this.fell = false;
@@ -62,7 +65,7 @@ export class PlayerBody {
     // 점프 — 지면을 막 벗어난 직후에도 1단 점프를 인정한다(코요테 타임)
     if (input.jump) {
       const canGroundJump = this.grounded || this.airTime < PLAYER.coyoteTime;
-      if (canGroundJump && this.jumpsLeft === PLAYER.maxJumps) {
+      if (canGroundJump && this.jumpsLeft === this.maxJumps) {
         this.vy = PLAYER.jumpSpeed;
         this.jumpsLeft--;
         this.grounded = false;
@@ -89,7 +92,7 @@ export class PlayerBody {
       this.vy = 0;
       this.grounded = true;
       this.airTime = 0;
-      this.jumpsLeft = PLAYER.maxJumps;
+      this.jumpsLeft = this.maxJumps;
       this.justLanded = wasAirborne;
     } else {
       this.grounded = false;

@@ -1660,3 +1660,29 @@ kbd {
   .screen { align-content: flex-start; }
   .logo { font-size: 42px; }
 }
+
+/* ── 하드코어 모드 토글 (타이틀) ─────────────────────────────── */
+.hc-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 12px; width: 100%; padding: 9px 14px;
+  border: 1px solid rgba(255, 90, 110, 0.32); border-radius: 12px;
+  background: rgba(255, 60, 80, 0.06); color: #ffb1bc;
+  font: inherit; font-weight: 700; letter-spacing: 0.2px;
+  cursor: pointer; transition: background .15s, border-color .15s, box-shadow .15s, color .15s;
+}
+.hc-toggle:hover { background: rgba(255, 60, 80, 0.12); }
+.hc-toggle .hc-state {
+  font-size: 0.78em; opacity: 0.8; padding: 1px 7px;
+  border: 1px solid currentColor; border-radius: 7px;
+}
+.hc-toggle.on {
+  border-color: #ff4d5e; color: #fff;
+  background: linear-gradient(180deg, rgba(255,70,90,0.28), rgba(255,50,70,0.16));
+  box-shadow: 0 0 18px rgba(255, 60, 80, 0.4), inset 0 0 12px rgba(255,80,100,0.18);
+}
+.hc-toggle.on .hc-state { opacity: 1; background: rgba(255,255,255,0.14); }
+.hc-hint {
+  margin: 6px 2px 0; text-align: center;
+  font-size: 12px; line-height: 1.4; color: #d79aa3;
+}
+.hc-hint .dim { opacity: 0.7; }

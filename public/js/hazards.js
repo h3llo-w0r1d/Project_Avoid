@@ -295,6 +295,9 @@ export class Hazards {
 
   get active() { return this.sim.active; }
 
+  // 솔로 난이도 조절(하드코어 모드). {} 또는 null 이면 기본 난이도로 돌아간다.
+  setMods(mods) { this.sim.mods = mods || {}; }
+
   reset(seed) {
     if (seed !== undefined) this.sim.seed = seed;
     this.sim.reset();

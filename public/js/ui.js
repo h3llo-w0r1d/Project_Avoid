@@ -7,6 +7,8 @@ const PER_PAGE = 10;
 const MAX_PAGES = 10;
 
 const BEST_KEY = 'voltline.best';
+const HC_KEY = 'voltline.best.hardcore';   // 하드코어 개인 최고기록
+const HC_ON_KEY = 'voltline.hardcore';     // 하드코어 토글 상태
 
 // 랭킹 종류. 줄 오른쪽에 무엇을 어떻게 보여 줄지까지 여기서 정한다.
 const BOARDS = {
@@ -65,6 +67,19 @@ export class UI {
     }
 
     this.best = Number(localStorage.getItem(BEST_KEY)) || 0;
+    this.bestHardcore = Number(localStorage.getItem(HC_KEY)) || 0;
+
+    // 하드코어 토글. 켜 두면 '혼자 하기'가 하드코어로 시작한다.
+    this.hardcore = localStorage.getItem(HC_ON_KEY) === '1';
+    this.el.hcToggle = $('hardcore-toggle');
+    if (this.el.hcToggle) {
+      this.#paintHardcore();
+      this.el.hcToggle.addEventListener('click', () => {
+        this.hardcore = !this.hardcore;
+        localStorage.setItem(HC_ON_KEY, this.hardcore ? '1' : '0');
+        this.#paintHardcore();
+      });
+    }
 
     $('start-btn').addEventListener('click', () => handlers.onStart());
     $('retry-btn').addEventListener('click', () => handlers.onStart());
@@ -241,7 +256,23 @@ export class UI {
     setTimeout(() => document.body.classList.remove('zapped'), 500);
   }
 
-  showGameOver(elapsed, cause) {
+  // 하드코어 토글 모양과 시작 버튼 문구를 상태에 맞춘다.
+  #paintHardcore() {
+    const on = this.hardcore;
+    if (this.el.hcToggle) {
+      this.el.hcToggle.classList.toggle('on', on);
+      this.el.hcToggle.setAttribute('aria-pressed', on ? 'true' : 'false');
+      const state = this.el.hcToggle.querySelector('.hc-state');
+      if (state) state.textContent = on ? 'ON' : 'OFF';
+    }
+    const start = $('start-btn');
+    if (start) start.textContent = on ? '🔥 하드코어 시작' : '혼자 하기';
+    document.body.classList.toggle('hardcore', on);
+  }
+
+  isHardcore() { return !!this.hardcore; }
+
+  showGameOver(elapsed, cause, hardcore = false) {
     this.el.hud.classList.add('hidden');
     this.el.touchUi.classList.add('hidden');
     this.el.over.classList.remove('hidden');
@@ -249,16 +280,20 @@ export class UI {
     this.#endPlaying();
     this.el.finalTime.textContent = elapsed.toFixed(2);
 
-    const isBest = elapsed > this.best;
+    // 하드코어 기록은 일반 최고기록과 따로 관리한다.
+    const prev = hardcore ? this.bestHardcore : this.best;
+    const isBest = elapsed > prev;
     if (isBest) {
-      this.best = elapsed;
-      localStorage.setItem(BEST_KEY, String(elapsed));
+      if (hardcore) { this.bestHardcore = elapsed; localStorage.setItem(HC_KEY, String(elapsed)); }
+      else { this.best = elapsed; localStorage.setItem(BEST_KEY, String(elapsed)); }
     }
+    const bestNow = hardcore ? this.bestHardcore : this.best;
 
     const causeText = cause === 'fall' ? '무대 밖으로 떨어졌습니다' : '전기선에 닿았습니다';
+    const tag = hardcore ? '🔥 하드코어 · ' : '';
     this.el.finalNote.textContent = isBest
-      ? `${causeText} · 개인 최고 기록 경신!`
-      : `${causeText} · 내 최고 ${this.best.toFixed(2)}초`;
+      ? `${tag}${causeText} · 개인 최고 기록 경신!`
+      : `${tag}${causeText} · 내 최고 ${bestNow.toFixed(2)}초`;
 
     this.el.submitState.textContent = '';
     this.el.submitState.classList.remove('error');

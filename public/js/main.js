@@ -16,7 +16,13 @@ import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable, PLAYABLE } fr
 import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
-import { ARENA_RADIUS, VOICE } from './config.js';
+import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
+
+// 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
+// 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
+const HARDCORE_MODS = { warnMul: 0.75, speedMul: 1.2, maxLiveAdd: 1, volleyAdd: 1 };
+const HARDCORE_BEST_KEY = 'voltline.best.hardcore';
+function hardcoreBest() { return Number(localStorage.getItem(HARDCORE_BEST_KEY)) || 0; }
 
 const canvas = document.getElementById('stage');
 const world = createWorld(canvas);
@@ -35,8 +41,13 @@ function savedCharacter() {
   return isPlayable(spec) && isUnlocked(spec, bestSeconds()) ? spec.id : DEFAULT_CHARACTER;
 }
 
+// 캐릭터 해금 기준. 일반·하드코어 중 더 오래 버틴 기록을 쓴다(하드코어로
+// 세운 기록도 해금에 쳐준다 — 더 어려운데 안 쳐주면 억울하니까).
 function bestSeconds() {
-  return Number(localStorage.getItem('voltline.best')) || 0;
+  return Math.max(
+    Number(localStorage.getItem('voltline.best')) || 0,
+    hardcoreBest()
+  );
 }
 
 const player = new Player(scene, { characterId: savedCharacter() });
@@ -377,6 +388,11 @@ function setArenaVisible(visible) {
 
 function startGame() {
   state.mode = 'solo';
+  // 하드코어 여부는 타이틀 토글에서 읽는다. 다시 시작해도 같은 모드로 이어진다.
+  state.hardcore = ui.isHardcore();
+  // 1) 1단 점프만 (하드코어) / 평소 2단.  2·3·6) 빔 난이도는 hazards 로.
+  player.body.maxJumps = state.hardcore ? 1 : PLAYER.maxJumps;
+  hazards.setMods(state.hardcore ? HARDCORE_MODS : null);
   state.paused = false;
   pause.hide();
   // 대전을 하다 왔을 수 있으니 대전 흔적을 지운다
@@ -543,7 +559,15 @@ async function finishGame() {
   // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다.
   if (prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
 
-  ui.showGameOver(score, state.cause);
+  ui.showGameOver(score, state.cause, state.hardcore);
+
+  // 하드코어는 아직 온라인 랭킹이 없다(다음 단계). 일반 랭킹에 섞으면
+  // 불공평하므로 올리지 않고, 로컬 최고기록(🔥)만 남긴다.
+  if (state.hardcore) {
+    ui.setSubmitState('🔥 하드코어 기록은 아직 나만 볼 수 있어요 (온라인 랭킹 준비 중)');
+    refreshLeaderboard();
+    return;
+  }
 
   // 1초도 못 버틴 기록은 랭킹을 어지럽히므로 올리지 않는다
   if (score < 1) {

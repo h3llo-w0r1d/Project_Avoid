@@ -69,6 +69,7 @@ export class Beam {
     this.spin = spec.spin || null;   // 회전 빔이면 {dir, cx, cz} — 예열 때 방향 화살표에 쓴다
     this.duration = spec.duration;
     this.delay = spec.delay || 0;
+    this.warnTime = BEAM.warnTime;   // 예열 길이. 하드코어에서 Hazards 가 짧게 덮어쓴다.
     this.cachedPreview = undefined;
     this.t = 0;
     this.dead = false;
@@ -88,7 +89,7 @@ export class Beam {
   update(dt) {
     this.t += dt;
 
-    const warnEnd = this.delay + BEAM.warnTime;
+    const warnEnd = this.delay + this.warnTime;
     if (this.t < this.delay) {
       this.onStage = false;
       return;
@@ -100,7 +101,7 @@ export class Beam {
       this.phase = 'warn';
       // 진입 직전 위치는 대개 무대 밖이라, 무대에 처음 걸리는 지점을 미리 잡는다.
       this.shape(this.previewU());
-      this.progress = (this.t - this.delay) / BEAM.warnTime;
+      this.progress = (this.t - this.delay) / this.warnTime;
     } else {
       const u = (this.t - warnEnd) / this.duration;
       if (u >= 1) {
@@ -267,8 +268,11 @@ export function makeRandom(seed) {
 
 export class Hazards {
   // seed 를 주면 재현 가능한 순서로 전기선이 나온다 (1v1 용).
-  constructor(seed) {
+  // mods: 솔로 난이도 조절 { warnMul, speedMul, maxLiveAdd, volleyAdd } (하드코어 모드).
+  //       없으면 기본값 — 1v1 은 항상 mods 없이 만들어 규칙이 서버와 똑같다.
+  constructor(seed, mods = {}) {
     this.seed = seed;
+    this.mods = mods || {};
     this.pool = [];
     this.active = [];
     this.reset();
@@ -311,13 +315,14 @@ export class Hazards {
     return lerp(cur[key], next[key], k);
   }
 
-  speedMul(elapsed) { return this.ramped(elapsed, 'speed'); }
+  speedMul(elapsed) { return this.ramped(elapsed, 'speed') * (this.mods.speedMul ?? 1); }
   spawnInterval(elapsed) { return this.ramped(elapsed, 'interval'); }
 
   // 이건 계단이다. 스테이지가 바뀌는 순간 확 달라지는 게 체감이 크다.
-  maxLive(elapsed) { return STAGES[this.stageIndex(elapsed)].maxLive; }
+  // 하드코어는 maxLiveAdd/volleyAdd 로 동시에 나오는 전기선을 늘린다.
+  maxLive(elapsed) { return STAGES[this.stageIndex(elapsed)].maxLive + (this.mods.maxLiveAdd ?? 0); }
   arms(elapsed) { return STAGES[this.stageIndex(elapsed)].arms; }
-  volley(elapsed) { return STAGES[this.stageIndex(elapsed)].volley ?? 1; }
+  volley(elapsed) { return (STAGES[this.stageIndex(elapsed)].volley ?? 1) + (this.mods.volleyAdd ?? 0); }
 
   // 이번 가로 훑기를 몇 줄로 낼지. 스테이지가 허용할 때만 가끔 여러 줄.
   volleyCount(elapsed) {
@@ -359,6 +364,8 @@ export class Hazards {
     for (const spec of specs) {
       const beam = this.take();
       beam.launch(spec);
+      // 하드코어: 예열(노란 경고) 시간을 짧게 — 반응 시간이 촉박해진다.
+      beam.warnTime = BEAM.warnTime * (this.mods.warnMul ?? 1);
       this.active.push(beam);
     }
     return kind;
