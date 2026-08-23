@@ -11,10 +11,10 @@ import * as THREE from 'three';
 import { ARENA_RADIUS } from './config.js';
 
 const SECTORS = 10;               // 바깥 링을 몇 조각으로 나눌지
-const R0 = 4.8;                   // 이 반경 안쪽은 항상 안전(도망 공간)
+const R0 = 2.4;                   // 이 반경 안쪽(가운데)만 항상 안전 — 구멍이 중심 근처까지 파고든다
 const R1 = ARENA_RADIUS;          // 가장자리까지가 사라질 수 있는 링
-const WARN_T = 1.15;              // 경고 시간 — 아직 밟아도 안전
-const OPEN_T = 2.2;               // 사라져 있는 시간 — 밟으면 낙사
+const WARN_T = 1.35;              // 경고 시간 — 아직 밟아도 안전(구멍이 커져 도망 시간 넉넉히)
+const OPEN_T = 3.6;               // 사라져 있는 시간 — 밟으면 낙사(더 오래 유지)
 const SPAWN_MIN = 2.6;            // 다음 구멍까지 최소 간격
 const SPAWN_MAX = 4.0;
 const MAX_ACTIVE = 2;             // 동시에 진행 중(경고+사라짐)인 타일 수 상한
