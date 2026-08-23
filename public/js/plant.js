@@ -422,8 +422,8 @@ function outlineGeometry(geo, thickness) {
 // 모듈 전체가 하나를 나눠 쓰면 안 된다. 캐릭터를 갈아 끼울 때
 // player.js 의 disposeTree() 가 옛 몸의 재질을 버리는데, 그게 공유물이면
 // 화면에 남아 있는 다른 캐릭터(1v1 이면 상대)의 테두리까지 같이 사라진다.
-const newOutlineMaterial = () => new THREE.MeshBasicMaterial({
-  color: COLOR.outline, side: THREE.BackSide
+const newOutlineMaterial = (color = COLOR.outline) => new THREE.MeshBasicMaterial({
+  color, side: THREE.BackSide
 });
 
 // 껍데기를 대상의 자식으로 넣는다. 그래야 숨쉬기처럼 크기가 변할 때
@@ -739,7 +739,7 @@ function addSprouts(root, ruler, spec) {
 
 // 만두 꼭지 — 반죽 주름들이 가운데 위로 오므라들어 만두를 여민 모양.
 // 잎 대신 이걸 얹으면 뿌리채소가 아니라 만두처럼 보인다.
-function addPleat(root, ruler, spec, outlineMat) {
+function addPleat(root, ruler, spec, outlineMat, oW = 1) {
   const color = spec.color ?? 0xf3e2bf;
   const mat = toon(color);
   const topY = ruler.top;
@@ -777,7 +777,7 @@ function addPleat(root, ruler, spec, outlineMat) {
     const fold = new THREE.Mesh(foldGeo, mat);
     fold.castShadow = true;
     pivot.add(fold);
-    addOutline(fold, 0.018, outlineMat);
+    addOutline(fold, 0.018 * oW, outlineMat);
     root.add(pivot);
   }
 
@@ -787,7 +787,7 @@ function addPleat(root, ruler, spec, outlineMat) {
   tip.position.y = topY + apexLift * 0.5;
   tip.castShadow = true;
   root.add(tip);
-  addOutline(tip, 0.018, outlineMat);
+  addOutline(tip, 0.018 * oW, outlineMat);
 
   return [];
 }
@@ -929,14 +929,17 @@ export function buildPlant(id) {
   const bendX = spec.bend ? makeBend(spec.bend, ruler.top) : null;
   if (bendX) bendGeometry(bodyGeo, bendX);
 
-  const outlineMat = newOutlineMaterial();
+  // outlineColor/outlineWidth 로 캐릭터마다 테두리 색·굵기를 바꿀 수 있다
+  // (예: 왕만두는 굵은 검은 선으로 스티커처럼).
+  const outlineMat = newOutlineMaterial(spec.outlineColor);
+  const oW = spec.outlineWidth ?? 1;
   const body = new THREE.Mesh(bodyGeo, new THREE.MeshToonMaterial({
     map: makeBodyTexture(spec), gradientMap: GRADIENT
   }));
   body.name = 'body';   // 히트박스와 견주어 보려고 이름을 달아 둔다
   body.castShadow = true;
   root.add(body);
-  addOutline(body, 0.03, outlineMat);
+  addOutline(body, 0.03 * oW, outlineMat);
 
   const skinMat = toon(spec.body);
 
@@ -959,7 +962,7 @@ export function buildPlant(id) {
     foot.position.set(0, -0.10, 0.07);
     foot.castShadow = true;
     pivot.add(foot);
-    addOutline(foot, 0.026, outlineMat);
+    addOutline(foot, 0.026 * oW, outlineMat);
 
     pivot.userData.dir = dir;
     root.add(pivot);
@@ -982,7 +985,7 @@ export function buildPlant(id) {
     arm.position.x = dir * 0.09 * long;
     arm.castShadow = true;
     pivot.add(arm);
-    addOutline(arm, 0.026, outlineMat);
+    addOutline(arm, 0.026 * oW, outlineMat);
 
     pivot.userData.dir = dir;
     // 선인장은 팔을 위로 들고 있다.
@@ -1124,7 +1127,7 @@ export function buildPlant(id) {
   }
 
   // ---- 머리 장식 ---------------------------------------------------------
-  const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat);
+  const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat, oW);
 
   // 몸통을 휘었으면, 장식도 각자 높이의 bendX 만큼 옆으로 밀어 휜 표면에
   // 그대로 얹는다. 몸통(이미 정점을 휘었다)만 빼고 전부 민다.

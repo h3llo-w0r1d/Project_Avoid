@@ -43,7 +43,9 @@ export const CHARACTERS = [
     ],
     // 빨갛고 큼직한 여민 주름 꼭지 (레퍼런스처럼 위로 봉긋)
     top: { kind: 'pleat', color: 0xd23a3a, apex: 0.34, foldLen: 1.5, count: 10 },
-    skin: 'grooves',         // 만두 주름 느낌
+    // 레퍼런스처럼 굵은 검은 테두리 + 무늬 없이 심플하게
+    outlineColor: 0x161616,
+    outlineWidth: 2.1,
     mouthScale: 1.25         // 기본 웃는 입을 크게 — 활짝 웃는 왕만두
   },
   {
