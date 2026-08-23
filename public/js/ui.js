@@ -17,6 +17,11 @@ const BOARDS = {
     value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
     mine: (me) => `내 최고 기록 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
   },
+  hardcore: {
+    empty: '아직 하드코어 기록이 없습니다',
+    value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
+    mine: (me) => `내 하드코어 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
+  },
   wins: {
     empty: '아직 대전 기록이 없습니다',
     value: (e) => `${e.wins}<em>승</em> <span class="dim">${e.losses}패</span>`,
@@ -410,8 +415,11 @@ export class UI {
 
 export const api = {
   // name 은 게스트의 순위를 찾기 위한 것. 로그인했으면 서버가 계정으로 찾는다.
-  async top(name) {
-    const query = name ? `?name=${encodeURIComponent(name)}` : '';
+  async top(name, mode = 'normal') {
+    const params = new URLSearchParams();
+    if (name) params.set('name', name);
+    if (mode === 'hardcore') params.set('mode', 'hardcore');
+    const query = params.toString() ? `?${params}` : '';
     const res = await fetch(`/api/scores${query}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
@@ -522,11 +530,11 @@ export const api = {
     return (await res.json()).ticket;
   },
 
-  async submit(name, time, ticket) {
+  async submit(name, time, ticket, mode = 'normal') {
     const res = await fetch('/api/scores', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, time, ticket })
+      body: JSON.stringify({ name, time, ticket, mode })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

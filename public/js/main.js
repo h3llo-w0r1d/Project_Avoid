@@ -561,18 +561,15 @@ async function finishGame() {
 
   ui.showGameOver(score, state.cause, state.hardcore);
 
-  // 하드코어는 아직 온라인 랭킹이 없다(다음 단계). 일반 랭킹에 섞으면
-  // 불공평하므로 올리지 않고, 로컬 최고기록(🔥)만 남긴다.
-  if (state.hardcore) {
-    ui.setSubmitState('🔥 하드코어 기록은 아직 나만 볼 수 있어요 (온라인 랭킹 준비 중)');
-    refreshLeaderboard();
-    return;
-  }
+  // 하드코어는 하드코어 랭킹으로, 일반은 일반 랭킹으로 따로 올린다.
+  const mode = state.hardcore ? 'hardcore' : 'normal';
+  const board = state.hardcore ? 'hardcore' : 'time';
+  const tag = state.hardcore ? '🔥 하드코어 ' : '';
 
   // 1초도 못 버틴 기록은 랭킹을 어지럽히므로 올리지 않는다
   if (score < 1) {
     ui.setSubmitState('1초 이상 버텨야 랭킹에 등록됩니다');
-    refreshLeaderboard();
+    refreshLeaderboard(board);
     return;
   }
 
@@ -580,12 +577,12 @@ async function finishGame() {
   try {
     const ticket = await state.ticket;
     // 로그인했으면 서버가 계정 닉네임을 쓴다. 여기서 보내는 이름은 게스트용.
-    const result = await api.submit(auth.displayName, score, ticket);
-    ui.setSubmitState(result.rank ? `전체 ${result.rank}위 등록!` : '기록이 등록되었습니다');
-    ui.renderLeaderboard(result, result.id, 'time');
+    const result = await api.submit(auth.displayName, score, ticket, mode);
+    ui.setSubmitState(result.rank ? `${tag}전체 ${result.rank}위 등록!` : `${tag}기록이 등록되었습니다`);
+    ui.renderLeaderboard(result, result.id, board);
   } catch (err) {
     ui.setSubmitState(`기록 등록 실패: ${err.message}`, true);
-    refreshLeaderboard();
+    refreshLeaderboard(board);
   }
 }
 
@@ -601,6 +598,10 @@ async function refreshLeaderboard(kind = 'time') {
   try {
     if (kind === 'time') {
       ui.renderLeaderboard(await api.top(auth.displayName), null, 'time');
+      return;
+    }
+    if (kind === 'hardcore') {
+      ui.renderLeaderboard(await api.top(auth.displayName, 'hardcore'), null, 'hardcore');
       return;
     }
     if (kind === 'hall') {

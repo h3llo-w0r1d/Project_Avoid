@@ -208,10 +208,10 @@ const TOP_N = 100;
 
 // 내 최고 기록이 몇 위인지. 로그인했으면 계정으로, 게스트면 이름으로 찾는다.
 // 100위 밖이면 목록에 안 나오므로 이 값으로 따로 알려 준다.
-function myBest(req) {
-  if (req.user) return scores.bestOf({ userId: req.user.id });
+function myBest(req, mode = 'normal') {
+  if (req.user) return scores.bestOf({ userId: req.user.id, mode });
   const name = typeof req.query.name === 'string' ? req.query.name : null;
-  return name ? scores.bestOf({ name }) : null;
+  return name ? scores.bestOf({ name, mode }) : null;
 }
 
 // 지금이 어느 시즌이고 언제 끝나는지. 화면 맨 위에 보여 준다.
@@ -224,7 +224,8 @@ app.get('/api/scores', async (req, res) => {
   // 달이 바뀌었으면 지난 시즌 기록을 명예의 전당으로 옮긴다.
   // 서버가 그 순간에 떠 있으리란 보장이 없어, 물어볼 때 확인한다.
   await scores.rollSeasons();
-  res.json({ top: scores.top(TOP_N), me: myBest(req), season: seasonInfo() });
+  const mode = req.query.mode === 'hardcore' ? 'hardcore' : 'normal';
+  res.json({ top: scores.top(TOP_N, mode), me: myBest(req, mode), season: seasonInfo() });
 });
 
 // 지난 시즌들의 상위권
@@ -325,6 +326,7 @@ app.post('/api/scores', async (req, res) => {
   lastPost.set(ip, now);
 
   const { name, time, ticket } = req.body ?? {};
+  const mode = req.body?.mode === 'hardcore' ? 'hardcore' : 'normal';
 
   const t = Number(time);
   // 상한 3600초 — 실수로든 조작으로든 말도 안 되는 값이 들어오는 걸 막는다.
@@ -359,15 +361,15 @@ app.post('/api/scores', async (req, res) => {
   try {
     await scores.rollSeasons();
     const seconds = Math.round(t * 100) / 100;
-    const entry = await scores.add(finalName, seconds, req.user?.id ?? null);
+    const entry = await scores.add(finalName, seconds, req.user?.id ?? null, mode);
     stats.runFinished(t);
     // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
     plays.add({ name: finalName, seconds, userId: req.user?.id ?? null });
     res.json({
       id: entry.id,
       rank: scores.rankOf(entry.id),
-      top: scores.top(TOP_N),
-      me: scores.bestOf(req.user ? { userId: req.user.id } : { name: finalName }),
+      top: scores.top(TOP_N, mode),
+      me: scores.bestOf(req.user ? { userId: req.user.id, mode } : { name: finalName, mode }),
       season: seasonInfo()
     });
   } catch (err) {
