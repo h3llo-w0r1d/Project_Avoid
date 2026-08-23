@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
 import { AVATAR, PLAYER } from './config.js';
 import { buildPlant } from './plant.js';
-import { DEFAULT_CHARACTER } from './characters.js';
+import { DEFAULT_CHARACTER, findCharacter } from './characters.js';
 
 // 캐릭터 겉모습을 만든다.
 // AVATAR.url 이 있으면 .glb 를 불러오고, 없거나 실패하면 만드라고라를 쓴다.
@@ -60,7 +60,9 @@ export function buildFallbackAvatar({ characterId = DEFAULT_CHARACTER } = {}) {
   const inner = buildPlant(characterId);
   const root = new THREE.Group();
   root.add(inner);
-  normalizeByBody(inner);
+  // sizeMul: 순수 겉보기 배율. 판정(고정 반경)엔 영향이 없고, '왕만두'처럼
+  // 더 커 보이게 하고 싶은 캐릭터만 살짝 키운다. 기본 1.
+  normalizeByBody(inner, findCharacter(characterId).sizeMul ?? 1);
 
   // 잎 흔들림·팔 젓기를 Player 가 이어서 호출할 수 있게 위로 올려 준다
   root.userData.animate = inner.userData.animate;
@@ -69,13 +71,13 @@ export function buildFallbackAvatar({ characterId = DEFAULT_CHARACTER } = {}) {
 
 // 몸통 폭을 기준으로 크기를 맞추고, 발바닥을 히트박스 바닥에 붙인다.
 // 키는 캐릭터마다 달라지는데, 머리 위로 삐져나가는 건 판정과 무관하다.
-function normalizeByBody(object) {
+function normalizeByBody(object, sizeMul = 1) {
   const body = object.getObjectByName('body');
   if (!body) return normalizeToPlayerBox(object, false);
 
   const bodyBox = new THREE.Box3().setFromObject(body);
   const width = Math.max(bodyBox.max.x - bodyBox.min.x, 1e-4);
-  object.scale.multiplyScalar(BODY_WIDTH / width);
+  object.scale.multiplyScalar((BODY_WIDTH * sizeMul) / width);
 
   const whole = new THREE.Box3().setFromObject(object);
   object.position.y -= whole.min.y + PLAYER.height / 2 - AVATAR.yOffset;

@@ -751,18 +751,20 @@ function addPleat(root, ruler, spec, outlineMat) {
   const bodyR = ruler.radiusAt(baseY);
   const ringR = Math.max(0.2, bodyR * 0.92);
 
-  // 짧고 통통한 반죽 주름 한 조각. 밑을 피벗에 두고 위로 뻗게 미리 올려 둔다.
+  // 반죽 주름 한 조각. foldLen 으로 크게(왕만두의 큼직한 주름) 만들 수 있다.
+  const fl = spec.foldLen ?? 1;
   const foldGeo = new THREE.SphereGeometry(0.13, 12, 10);
-  foldGeo.scale(0.72, 1.15, 0.55);
-  foldGeo.translate(0, 0.12, 0);
+  foldGeo.scale(0.72 * fl, 1.15 * fl, 0.55 * fl);
+  foldGeo.translate(0, 0.12 * fl, 0);
   foldGeo.computeVertexNormals();
 
-  // 주름들이 모여드는 꼭지. 낮게 잡아 뿔이 아니라 '낮게 여민 주름'이 되게 한다.
-  // 높으면 뿔·마늘종처럼 보이고, 너무 낮으면 밋밋한 혹이 된다. 그 중간.
-  const apex = new THREE.Vector3(0, topY + 0.07, 0);
+  // 주름들이 모여드는 꼭지. 기본은 낮게(여민 주름). spec.apex 를 키우면
+  // 레퍼런스처럼 위로 봉긋 솟은 큰 꼭지가 된다.
+  const apexLift = spec.apex ?? 0.07;
+  const apex = new THREE.Vector3(0, topY + apexLift, 0);
   const up = new THREE.Vector3(0, 1, 0);
 
-  const count = 9;
+  const count = spec.count ?? 9;
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + 0.2;
     const base = new THREE.Vector3(Math.cos(a) * ringR, baseY, Math.sin(a) * ringR);
@@ -779,10 +781,10 @@ function addPleat(root, ruler, spec, outlineMat) {
     root.add(pivot);
   }
 
-  // 여민 가운데 꼭지 — 넓고 낮게, 끝만 살짝 좁아지는 만두 오므림.
-  // 뿔처럼 솟지 않게 키를 낮게(0.12) 잡고 밑을 넓게(0.15) 둔다.
-  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.15, 0.12, 14), mat);
-  tip.position.y = topY + 0.04;
+  // 여민 가운데 꼭지. 기본은 넓고 낮게. apex 를 키우면 위로 봉긋 솟은 큰 꼭지.
+  const tipH = Math.max(0.12, apexLift * 0.8);
+  const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.06 * fl, 0.15 * fl, tipH, 14), mat);
+  tip.position.y = topY + apexLift * 0.5;
   tip.castShadow = true;
   root.add(tip);
   addOutline(tip, 0.018, outlineMat);
