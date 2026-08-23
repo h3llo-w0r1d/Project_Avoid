@@ -434,6 +434,26 @@ function addOutline(mesh, thickness, mat) {
   return shell;
 }
 
+// 회전체는 좌우대칭이라 옆으로 휜 실루엣을 못 낸다. 그래서 만든 뒤에 정점 x 를
+// 높이에 따라 밀어 살짝 휘게 한다(망고의 비대칭 곡선). 같은 bendX(y) 를 장식에도
+// 적용하면(아래 buildPlant) 데칼·잎·발이 휜 표면에 그대로 얹혀 어긋나지 않는다.
+// 위로 갈수록 크게 휘고, 배(가운데)는 반대로 살짝 볼록해 자연스러운 곡선을 만든다.
+function makeBend(amount, top) {
+  return (y) => {
+    const t = Math.max(0, Math.min(1, y / top));
+    return amount * (Math.pow(t, 1.6) - 0.28 * Math.sin(Math.PI * t));
+  };
+}
+
+function bendGeometry(geo, bendX) {
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    pos.setX(i, pos.getX(i) + bendX(pos.getY(i)));
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+}
+
 // 정점을 흔들어 매끈한 도형을 울퉁불퉁하게 만든다 (감자용)
 //
 // 난수를 정점마다 뽑으면 안 된다. 회전체는 한 바퀴 돌아 만나는 이음매에
@@ -903,6 +923,9 @@ export function buildPlant(id) {
     48
   );
   if (spec.lumpy) roughen(bodyGeo, spec.lumpy);
+  // 망고처럼 살짝 휘게. 아웃라인이 이 지오메트리를 복사하므로 반드시 먼저 휜다.
+  const bendX = spec.bend ? makeBend(spec.bend, ruler.top) : null;
+  if (bendX) bendGeometry(bodyGeo, bendX);
 
   const outlineMat = newOutlineMaterial();
   const body = new THREE.Mesh(bodyGeo, new THREE.MeshToonMaterial({
@@ -1100,6 +1123,15 @@ export function buildPlant(id) {
 
   // ---- 머리 장식 ---------------------------------------------------------
   const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat);
+
+  // 몸통을 휘었으면, 장식도 각자 높이의 bendX 만큼 옆으로 밀어 휜 표면에
+  // 그대로 얹는다. 몸통(이미 정점을 휘었다)만 빼고 전부 민다.
+  if (bendX) {
+    for (const child of root.children) {
+      if (child === body) continue;
+      child.position.x += bendX(child.position.y);
+    }
+  }
 
   // ---- 살아 있는 느낌 ---------------------------------------------------
   // Player 가 매 프레임 불러 준다. speed 는 현재 이동 속도.
