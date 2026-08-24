@@ -583,7 +583,11 @@ async function finishGame() {
     const ticket = await state.ticket;
     // 로그인했으면 서버가 계정 닉네임을 쓴다. 여기서 보내는 이름은 게스트용.
     const result = await api.submit(auth.displayName, score, ticket, mode);
-    ui.setSubmitState(result.rank ? `${tag}전체 ${result.rank}위 등록!` : `${tag}기록이 등록되었습니다`);
+    if (result.excluded) {
+      ui.setSubmitState('🛠 관리자 계정이라 집계에서 제외됩니다');
+    } else {
+      ui.setSubmitState(result.rank ? `${tag}전체 ${result.rank}위 등록!` : `${tag}기록이 등록되었습니다`);
+    }
     ui.renderLeaderboard(result, result.id, board);
   } catch (err) {
     ui.setSubmitState(`기록 등록 실패: ${err.message}`, true);

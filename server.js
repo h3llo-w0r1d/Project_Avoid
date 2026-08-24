@@ -182,9 +182,12 @@ app.get(['/', '/index.html'], (req, res, next) => {
   // 봇 판정: UA 가 봇이거나, IP 가 데이터센터/클라우드/호스팅이거나, 해외 접속이면 봇.
   // UA 를 진짜 브라우저로 위장한 봇도 클라우드에서 오면 여기서 걸린다.
   const bot = isNonHuman(ip, ua);
-  if (!bot) stats.visit(mobile);
-  // 방문 기록에는 봇도 남긴다 — 어떤 게 봇인지 눈으로 가려내려는 디버깅용.
-  visits.add({ ip, device: mobile ? 'mobile' : 'pc', bot });
+  // 관리자(나) 본인 접속은 집계·방문기록에서 아예 뺀다. 테스트로 숫자가 튀지 않게.
+  if (!isAdminUser(req.user)) {
+    if (!bot) stats.visit(mobile);
+    // 방문 기록에는 봇도 남긴다 — 어떤 게 봇인지 눈으로 가려내려는 디버깅용.
+    visits.add({ ip, device: mobile ? 'mobile' : 'pc', bot });
+  }
   next();
 });
 
@@ -313,7 +316,7 @@ const clientIp = (req) =>
 // 혼자 하기를 시작할 때 표를 하나 내준다. 기록을 올릴 때 이 표가 있어야
 // 하고, 표를 받은 뒤 실제로 흐른 시간보다 긴 기록은 거절된다.
 app.post('/api/run/start', (req, res) => {
-  stats.runStarted();
+  if (!isAdminUser(req.user)) stats.runStarted();   // 관리자 판은 판 수에 안 센다
   res.json({ ticket: runTickets.issue(clientIp(req), req.user?.id ?? null) });
 });
 
@@ -327,6 +330,12 @@ app.post('/api/scores', async (req, res) => {
 
   const { name, time, ticket } = req.body ?? {};
   const mode = req.body?.mode === 'hardcore' ? 'hardcore' : 'normal';
+
+  // 관리자(나) 본인 판은 전적·랭킹·판수·논시간 어디에도 안 남긴다.
+  // 게임오버 화면은 정상적으로 뜨게, 제외됐다는 표시만 돌려준다.
+  if (isAdminUser(req.user)) {
+    return res.json({ excluded: true, rank: null, top: scores.top(TOP_N, mode), me: null, season: seasonInfo() });
+  }
 
   const t = Number(time);
   // 상한 3600초 — 실수로든 조작으로든 말도 안 되는 값이 들어오는 걸 막는다.
@@ -409,7 +418,8 @@ app.post('/api/presence', (req, res) => {
   // 봇(HeadlessChrome 등)은 JS 를 돌려 신호를 보내기도 한다. UA 위장 봇도
   // 클라우드/호스팅/해외 IP 면 걸러, 접속자·순 방문자를 진짜 사람에 가깝게 한다.
   const ua = req.get('user-agent');
-  if (!isNonHuman(clientIp(req), ua)) {
+  // 관리자(나) 본인은 접속·순방문자 집계에서 뺀다.
+  if (!isNonHuman(clientIp(req), ua) && !isAdminUser(req.user)) {
     presence.beat(body.id);
     // 이 브라우저의 오늘 첫 신호면 순 방문자로 한 번 센다(중복은 stats 가 거른다).
     stats.uniqueVisit(body.id, isMobile(ua));
