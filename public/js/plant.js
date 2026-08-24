@@ -801,17 +801,17 @@ function addEars(root, ruler, spec, outlineMat, oW = 1) {
   const ringR = Math.max(0.16, ruler.radiusAt(baseY) * 0.66);
 
   const earGeo = new THREE.SphereGeometry(0.3, 16, 12);
-  earGeo.scale(0.6, 1.15, 0.34);   // 납작하고 길쭉한 귀
+  earGeo.scale(0.72, 0.92, 0.4);   // 크고 둥근 고라니 귀 (덜 뾰족)
   earGeo.computeVertexNormals();
   const innerGeo = new THREE.SphereGeometry(0.3, 14, 10);
-  innerGeo.scale(0.4, 0.82, 0.2);
+  innerGeo.scale(0.48, 0.64, 0.22);
   innerGeo.computeVertexNormals();
 
   for (const dir of [-1, 1]) {
     const pivot = new THREE.Group();
     pivot.position.set(dir * ringR, baseY + 0.02, 0.02);
-    pivot.rotation.z = -dir * 0.34;   // 바깥으로 살짝 벌림
-    pivot.rotation.x = -0.16;         // 뒤로 살짝 젖힘
+    pivot.rotation.z = -dir * 0.42;   // 바깥으로 더 벌림
+    pivot.rotation.x = -0.12;         // 뒤로 살짝 젖힘
 
     const ear = new THREE.Mesh(earGeo, outer);
     ear.position.y = 0.3;
@@ -828,24 +828,25 @@ function addEars(root, ruler, spec, outlineMat, oW = 1) {
   return [];
 }
 
-// 고라니 송곳니 — 입 아래로 뻗은 흰 엄니 한 쌍 (고라니의 상징).
+// 고라니 송곳니 — 입에서 아래로 뻗은 흰 엄니 한 쌍 (고라니의 상징).
+// 뿌리(위)는 굵고 끝(아래)은 뾰족하게. 입 바로 밑, 얼굴 앞으로 붙인다.
 function addFangs(root, ruler, outlineMat, oW = 1) {
-  const white = toon(0xf4efe2);
-  const fangGeo = new THREE.CylinderGeometry(0.01, 0.05, 0.32, 10);
-  fangGeo.translate(0, -0.16, 0);   // 위끝을 피벗에 두고 아래로 뻗게
+  const white = toon(0xf7f2e8);
+  const fangGeo = new THREE.CylinderGeometry(0.05, 0.006, 0.42, 10); // 위 굵고 아래 뾰족
+  fangGeo.translate(0, -0.21, 0);   // 뿌리를 피벗에, 아래로 뻗게
   fangGeo.computeVertexNormals();
 
-  const y = ruler.at(0.34);
+  const yTop = ruler.at(0.405);     // 입(0.42) 바로 아래에서 시작
   for (const dir of [-1, 1]) {
-    const x = dir * 0.085;
+    const x = dir * 0.072;
     const pivot = new THREE.Group();
-    pivot.position.set(x, y, ruler.surfaceZ(x, y) + 0.02);
-    pivot.rotation.z = dir * 0.13;   // 살짝 바깥으로 벌어짐
-    pivot.rotation.x = 0.28;         // 앞으로 살짝 기욺
+    pivot.position.set(x, yTop, ruler.surfaceZ(x, yTop) + 0.07);  // 얼굴 앞으로 확실히 튀어나오게
+    pivot.rotation.z = dir * 0.17;   // 아래로 갈수록 바깥으로 벌어짐
+    pivot.rotation.x = 0.14;         // 앞으로 살짝
     const fang = new THREE.Mesh(fangGeo, white);
     fang.castShadow = true;
     pivot.add(fang);
-    addOutline(fang, 0.012 * oW, outlineMat);
+    addOutline(fang, 0.014 * oW, outlineMat);
     root.add(pivot);
   }
 }
