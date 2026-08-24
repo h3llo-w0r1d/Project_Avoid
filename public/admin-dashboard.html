@@ -221,10 +221,14 @@ const say = (msg, err = false) => {
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// 논 시간을 "2h 10m" / "30m" 형식으로. (1h30m 같은 식이 2.1시간보다 읽기 쉽다)
 const spellTime = (sec) => {
-  if (sec < 60) return `${sec}<em>초</em>`;
-  if (sec < 3600) return `${Math.round(sec / 60)}<em>분</em>`;
-  return `${(sec / 3600).toFixed(1)}<em>시간</em>`;
+  sec = Math.max(0, Math.round(sec));
+  let h = Math.floor(sec / 3600);
+  let m = Math.round((sec % 3600) / 60);
+  if (m === 60) { h += 1; m = 0; }          // 반올림으로 60분이 되면 시간으로 올린다
+  if (h > 0) return m > 0 ? `${h}<em>h</em> ${m}<em>m</em>` : `${h}<em>h</em>`;
+  return `${m}<em>m</em>`;
 };
 const when = (at) => { const d = new Date(at); return `${d.getMonth() + 1}/${d.getDate()}`; };
 const p2 = (n) => String(n).padStart(2, '0');
