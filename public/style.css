@@ -1705,7 +1705,7 @@ kbd {
 /* ── 공지 배너 (타이틀 상단, 관리자가 쓴 한 줄 공지) ───────────────── */
 #notice-banner {
   position: fixed;
-  top: calc(60px + env(safe-area-inset-top));
+  top: calc(80px + env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
   max-width: min(760px, 92vw);
