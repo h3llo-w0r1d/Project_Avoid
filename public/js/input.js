@@ -60,14 +60,15 @@ export class Input {
 
     const RANGE = 46; // 최대 기울기 픽셀
 
+    // 조이스틱은 CSS 로 고정된 자리(왼쪽 아래, JUMP 와 같은 높이)에 늘 있다.
+    // 처음 누른 지점을 중립으로 삼아, 거기서 민 만큼만 손잡이를 기울인다(상대 조작).
+    // base 를 터치 지점으로 옮기지 않으므로 위쪽을 눌러도 조이스틱이 떠오르지 않는다.
     const start = (e) => {
       const t = e.changedTouches[0];
       const p = toLocal(t.clientX, t.clientY);
       this.touch.id = t.identifier;
       this.touch.x = p.x;
       this.touch.y = p.y;
-      base.style.left = `${p.x}px`;
-      base.style.top = `${p.y}px`;
       base.classList.add('on');
       knob.style.transform = 'translate(0,0)';
       e.preventDefault();
@@ -108,6 +109,7 @@ export class Input {
         this.touch.dx = 0;
         this.touch.dy = 0;
         base.classList.remove('on');
+        knob.style.transform = 'translate(0,0)';   // 손잡이 가운데로 복귀
       }
     };
 

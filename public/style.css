@@ -1604,19 +1604,22 @@ kbd {
 #stick-zone { left: 0; width: 50%; }
 #jump-zone { right: 0; width: 50%; }
 
+/* 고정 조이스틱 — 늘 왼쪽 아래(JUMP 와 같은 높이)에 있다. JS 가 위치를
+   옮기지 않는다. bottom 23px + 반지름 59 = 중심 82px 로 JUMP 중심과 맞춘다. */
 #stick-base {
   position: absolute;
+  left: max(40px, env(safe-area-inset-left));
+  bottom: max(23px, env(safe-area-inset-bottom));
   width: 118px;
   height: 118px;
-  margin: -59px 0 0 -59px;
-  border: 2px solid rgba(120, 170, 255, 0.3);
+  border: 2px solid rgba(120, 170, 255, 0.32);
   border-radius: 50%;
-  background: rgba(10, 14, 30, 0.35);
-  opacity: 0;
-  transition: opacity 0.15s;
+  background: rgba(10, 14, 30, 0.32);
+  opacity: 0.85;
+  transition: opacity 0.15s, border-color 0.15s;
 }
 
-#stick-base.on { opacity: 1; }
+#stick-base.on { opacity: 1; border-color: rgba(120, 170, 255, 0.6); }
 
 #stick-knob {
   position: absolute;
