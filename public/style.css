@@ -1701,3 +1701,27 @@ kbd {
   font-size: 12px; line-height: 1.4; color: #d79aa3;
 }
 .hc-hint .dim { opacity: 0.7; }
+
+/* ── 공지 배너 (타이틀 상단, 관리자가 쓴 한 줄 공지) ───────────────── */
+#notice-banner {
+  position: fixed;
+  top: calc(60px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(760px, 92vw);
+  padding: 10px 22px;
+  border: 1px solid rgba(255, 120, 140, 0.6);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 74, 94, 0.24), rgba(210, 40, 60, 0.18));
+  color: #ffe6ea;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+  z-index: 34;
+  box-shadow: 0 6px 22px rgba(255, 60, 80, 0.22), 0 6px 20px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+}
+#notice-banner::before { content: "📢 "; opacity: 0.9; }
+/* 공지 작성 모달의 버튼 묶음 오른쪽 정렬 */
+#notice-modal .board-write-row > div { display: flex; gap: 8px; }

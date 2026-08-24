@@ -498,6 +498,27 @@ app.get('/api/admin/me', (req, res) => {
   res.json({ admin: isAdminUser(req.user) });
 });
 
+// ── 공지 ────────────────────────────────────────────────────────────
+// 타이틀 상단에 뜨는 한 줄 공지. 파일 하나에 담아 두고, 관리자만 고친다.
+const NOTICE_FILE = join(DATA_DIR, 'notice.txt');
+let noticeText = '';
+try { noticeText = (await readFile(NOTICE_FILE, 'utf8')).trim(); } catch { noticeText = ''; }
+
+app.get('/api/notice', (req, res) => res.json({ text: noticeText }));
+
+app.post('/api/admin/notice', requireAdmin, async (req, res) => {
+  // 한 줄로 정리하고 길이를 제한한다(줄바꿈은 공백으로).
+  const text = String(req.body?.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  noticeText = text;
+  try {
+    await writeFile(NOTICE_FILE, text, 'utf8');
+  } catch (err) {
+    console.error('공지 저장 실패:', err);
+    return res.status(500).json({ error: '공지를 저장하지 못했습니다.' });
+  }
+  res.json({ ok: true, text });
+});
+
 // 관리 창을 한 번에 채운다
 app.get('/api/admin/overview', requireAdmin, (req, res) => {
   res.json({

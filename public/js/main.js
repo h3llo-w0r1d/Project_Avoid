@@ -144,8 +144,59 @@ profile.onRename = async (name) => {
 // (실제 삭제는 서버가 막는다.)
 let isAdmin = false;
 api.amIAdmin()
-  .then((yes) => { isAdmin = yes; })
+  .then((yes) => { isAdmin = yes; if (yes) setupNoticeAdmin(); })
   .catch(() => { isAdmin = false; });
+
+// ── 공지 ────────────────────────────────────────────────
+// 관리자가 쓴 한 줄 공지를 타이틀 상단 배너에 띄운다.
+let noticeText = '';
+const noticeBanner = document.getElementById('notice-banner');
+
+function renderNotice() {
+  const show = noticeText && state.phase === 'title';
+  if (noticeBanner) {
+    noticeBanner.textContent = noticeText;
+    noticeBanner.classList.toggle('hidden', !show);
+  }
+}
+
+api.notice().then((t) => { noticeText = t; renderNotice(); }).catch(() => {});
+
+// 관리자에게만 상단바 📢 버튼과 공지 편집 창을 켜 준다.
+function setupNoticeAdmin() {
+  const btn = document.getElementById('notice-btn');
+  const modal = document.getElementById('notice-modal');
+  const input = document.getElementById('notice-input');
+  const count = document.getElementById('notice-count');
+  const errEl = document.getElementById('notice-error');
+  if (!btn || !modal) return;
+
+  btn.classList.remove('hidden');
+  const close = () => modal.classList.add('hidden');
+  const open = () => {
+    input.value = noticeText;
+    count.textContent = `${input.value.length} / 200`;
+    errEl.textContent = '';
+    modal.classList.remove('hidden');
+    input.focus();
+  };
+  const save = async (text) => {
+    try {
+      noticeText = await api.saveNotice(text);
+      renderNotice();
+      close();
+    } catch (e) {
+      errEl.textContent = e.message;
+    }
+  };
+
+  btn.addEventListener('click', open);
+  document.getElementById('notice-close').addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+  input.addEventListener('input', () => { count.textContent = `${input.value.length} / 200`; });
+  document.getElementById('notice-save').addEventListener('click', () => save(input.value));
+  document.getElementById('notice-clear').addEventListener('click', () => save(''));
+}
 
 // 자유 게시판. 게스트는 이름을 같이 보내고, 로그인했으면 서버가 계정 닉네임을 쓴다.
 const board = new BoardUI({
@@ -416,6 +467,7 @@ function startGame() {
   setArenaVisible(true);
   hazards.reset();
   state.phase = 'playing';
+  renderNotice();   // 플레이 중엔 공지 배너를 숨긴다
   state.elapsed = 0;
   state.deathTimer = 0;
   state.cause = 'zap';
@@ -461,6 +513,7 @@ function goHome() {
   floorHoles.setActive(false);
   setArenaVisible(false);
   ui.showTitle();
+  renderNotice();
 }
 
 function killPlayer(cause) {
@@ -677,6 +730,7 @@ function leaveVersus() {
   versus.hide();
   setArenaVisible(false);
   ui.showTitle();
+  renderNotice();
 }
 
 function hideRival() {
