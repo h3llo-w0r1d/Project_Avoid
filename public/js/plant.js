@@ -793,7 +793,76 @@ function addPleat(root, ruler, spec, outlineMat, oW = 1) {
 }
 
 // 'none' 은 머리 장식 없이 몸통만. (왕만두처럼 꼭지를 아예 없앨 때)
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, none: () => [] };
+// 고라니 귀 — 크고 둥근 귀 한 쌍. 잎 대신 머리 위 양옆에 쫑긋 선다.
+function addEars(root, ruler, spec, outlineMat, oW = 1) {
+  const outer = toon(spec.color ?? 0xa5673a);
+  const inner = toon(spec.inner ?? 0xecd2ab);
+  const baseY = ruler.at(0.9);
+  const ringR = Math.max(0.16, ruler.radiusAt(baseY) * 0.66);
+
+  const earGeo = new THREE.SphereGeometry(0.3, 16, 12);
+  earGeo.scale(0.6, 1.15, 0.34);   // 납작하고 길쭉한 귀
+  earGeo.computeVertexNormals();
+  const innerGeo = new THREE.SphereGeometry(0.3, 14, 10);
+  innerGeo.scale(0.4, 0.82, 0.2);
+  innerGeo.computeVertexNormals();
+
+  for (const dir of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(dir * ringR, baseY + 0.02, 0.02);
+    pivot.rotation.z = -dir * 0.34;   // 바깥으로 살짝 벌림
+    pivot.rotation.x = -0.16;         // 뒤로 살짝 젖힘
+
+    const ear = new THREE.Mesh(earGeo, outer);
+    ear.position.y = 0.3;
+    ear.castShadow = true;
+    pivot.add(ear);
+    addOutline(ear, 0.02 * oW, outlineMat);
+
+    const inr = new THREE.Mesh(innerGeo, inner);
+    inr.position.set(0, 0.3, 0.085);
+    pivot.add(inr);
+
+    root.add(pivot);
+  }
+  return [];
+}
+
+// 고라니 송곳니 — 입 아래로 뻗은 흰 엄니 한 쌍 (고라니의 상징).
+function addFangs(root, ruler, outlineMat, oW = 1) {
+  const white = toon(0xf4efe2);
+  const fangGeo = new THREE.CylinderGeometry(0.01, 0.05, 0.32, 10);
+  fangGeo.translate(0, -0.16, 0);   // 위끝을 피벗에 두고 아래로 뻗게
+  fangGeo.computeVertexNormals();
+
+  const y = ruler.at(0.34);
+  for (const dir of [-1, 1]) {
+    const x = dir * 0.085;
+    const pivot = new THREE.Group();
+    pivot.position.set(x, y, ruler.surfaceZ(x, y) + 0.02);
+    pivot.rotation.z = dir * 0.13;   // 살짝 바깥으로 벌어짐
+    pivot.rotation.x = 0.28;         // 앞으로 살짝 기욺
+    const fang = new THREE.Mesh(fangGeo, white);
+    fang.castShadow = true;
+    pivot.add(fang);
+    addOutline(fang, 0.012 * oW, outlineMat);
+    root.add(pivot);
+  }
+}
+
+// 검은 코 — 얼굴 가운데. 눈과 입 사이에 붙는다.
+function addNose(root, ruler, color, outlineMat, oW = 1) {
+  const y = ruler.at(0.49);
+  const geo = new THREE.SphereGeometry(0.09, 16, 12);
+  geo.scale(1.25, 0.85, 0.9);
+  geo.computeVertexNormals();
+  const nose = new THREE.Mesh(geo, toon(color));
+  nose.position.set(0, y, ruler.surfaceZ(0, y) + 0.04);
+  root.add(nose);
+  addOutline(nose, 0.012 * oW, outlineMat);
+}
+
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
 
@@ -1115,6 +1184,8 @@ export function buildPlant(id) {
   if (spec.shades) addShades(root, ruler, eyeY, eyeGap, outlineMat);
   if (spec.hold === 'gun') addGun(root, ruler, outlineMat);
   if (spec.cigarette) addCigarette(root, ruler, outlineMat);
+  if (spec.fangs) addFangs(root, ruler, outlineMat, oW);
+  if (spec.nose) addNose(root, ruler, spec.nose, outlineMat, oW);
 
   // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
   if (spec.question) {
