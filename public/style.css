@@ -563,8 +563,15 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .board-del:hover { color: #fff; background: var(--volt); border-color: transparent; }
 .board-body { font-size: 14px; line-height: 1.6; color: #d3ddf5; word-break: break-word; }
 
-/* 목록 카드: 통째로 눌러 상세로 들어간다 */
-.board-post-link { cursor: pointer; border-radius: 10px; transition: background 0.12s ease; }
+/* 목록 카드: 통째로 눌러 상세로 들어간다. hover 하이라이트는 양옆으로만
+   살짝 넓게(음수 margin 만큼 밖으로, 같은 만큼 padding 으로 글자는 제자리). */
+.board-post-link {
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.12s ease;
+  margin-inline: -10px;
+  padding-inline: 12px;
+}
 .board-post-link:hover { background: rgba(120, 170, 255, 0.06); }
 
 /* 댓글 수(말풍선). '답글' 텍스트 버튼을 대신한다. */
@@ -576,9 +583,9 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .board-cmt-ico { font-size: 14px; }
 
 /* ── 상세 화면 ── */
-.board-detail { margin-top: 6px; }
+.board-detail { margin-top: 16px; }
 .board-back {
-  width: auto; margin: 0 0 12px; padding: 5px 12px;
+  width: auto; margin: 0 0 18px; padding: 5px 12px;
   font-size: 13px; font-weight: 700; color: var(--muted);
   background: rgba(255, 255, 255, 0.05); border: 1px solid var(--stroke); border-radius: 8px;
 }
