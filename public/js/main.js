@@ -573,8 +573,8 @@ function showLoginUnlock(count) {
       overlay.classList.remove('show');
       setTimeout(() => { overlay.remove(); resolve(); }, 260);
     };
-    const timer = setTimeout(done, 2600);
-    overlay.addEventListener('click', () => { clearTimeout(timer); done(); });
+    // 자동으로 넘기지 않는다 — 눌러야 넘어간다(안내 문구를 읽을 시간을 준다)
+    overlay.addEventListener('click', done);
   });
 }
 

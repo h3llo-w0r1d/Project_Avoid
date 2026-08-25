@@ -817,6 +817,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .unlock-lockface {
   width: 200px;
   height: 200px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
