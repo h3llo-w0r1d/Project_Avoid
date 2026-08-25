@@ -130,8 +130,41 @@ export class ProfileUI {
     }
   }
 
+  // 화면 가운데 뜨는 입력창. 브라우저 기본 prompt() 는 창 맨 위에 떠서
+  // 어색하다. 확인하면 입력값, 취소/바깥클릭/Esc 면 null 로 resolve.
+  centerPrompt(label, initial = '') {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal';
+      overlay.style.zIndex = '60';   // 프로필(45) 위에
+      overlay.innerHTML = `
+        <div class="modal-card panel" style="max-width:340px">
+          <div class="modal-head"><h2>닉네임 바꾸기</h2></div>
+          <label class="field"><span>${label}</span>
+            <input class="cp-input" type="text" maxlength="10" autocomplete="off" /></label>
+          <div class="board-write-row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+            <button type="button" class="ghost small cp-cancel">취소</button>
+            <button type="button" class="primary small cp-ok">확인</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      const input = overlay.querySelector('.cp-input');
+      input.value = initial;
+      const done = (val) => { overlay.remove(); resolve(val); };
+      overlay.querySelector('.cp-ok').addEventListener('click', () => done(input.value));
+      overlay.querySelector('.cp-cancel').addEventListener('click', () => done(null));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) done(null); });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); done(input.value); }
+        if (e.key === 'Escape') { e.preventDefault(); done(null); }
+      });
+      // 창이 뜨면 바로 입력·전체선택
+      setTimeout(() => { input.focus(); input.select(); }, 0);
+    });
+  }
+
   async askRename(current) {
-    const next = prompt('새 닉네임 (10자 이내)', current);
+    const next = await this.centerPrompt('새 닉네임 (10자 이내)', current);
     if (next === null) return;                 // 취소
     const name = next.trim();
     if (!name || name === current) return;
