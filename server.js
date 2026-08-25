@@ -274,13 +274,21 @@ app.get('/api/profile', (req, res) => {
   if (!name) return res.status(400).json({ error: '이름이 필요합니다.' });
 
   const user = users.byNickname(name);
-  const best = scores.bestOf({ name });
+  const best = scores.bestOf({ name, mode: 'normal' });
+  const hard = scores.bestOf({ name, mode: 'hardcore' });
+  // 판수는 두 모드의 제출된 판을 더한다(각 모드 한 줄, runs 에 누적).
+  const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
+  // 111초 커피 이벤트를 넘긴 적이 있는가(어느 모드든).
+  const coffee = (best && best.time >= 111) || (hard && hard.time >= 111);
 
   const profile = {
     name: user?.nickname ?? name,
     account: !!user,
     season: seasonInfo(),
-    best: best ? { time: best.time, rank: best.rank } : null
+    best: best ? { time: best.time, rank: best.rank } : null,
+    hardcore: hard ? { time: hard.time, rank: hard.rank } : null,
+    plays,
+    coffee: !!coffee
   };
 
   if (user) {

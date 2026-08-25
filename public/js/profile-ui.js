@@ -65,7 +65,20 @@ export class ProfileUI {
       parts.push(`<div class="stat-row">
         ${ProfileUI.stat('최고 기록', `${p.best.time.toFixed(2)}<em>초</em>`)}
         ${ProfileUI.stat('순위', `${p.best.rank}<em>위</em>`)}
+        ${ProfileUI.stat('플레이', `${p.plays ?? 0}<em>판</em>`)}
       </div>`);
+      // 하드코어 기록이 있으면 한 줄 더.
+      if (p.hardcore) {
+        parts.push(`<p class="profile-total">🔥 하드코어 최고 ` +
+          `${p.hardcore.time.toFixed(2)}초 · ${ProfileUI.rankText(p.hardcore.rank)}</p>`);
+      }
+      // 111초를 넘긴 적 있으면 커피 클럽 뱃지.
+      if (p.coffee) {
+        parts.push('<p class="profile-badge">☕ 111초 클럽</p>');
+      }
+    } else if (p.plays > 0) {
+      // 기록은 시즌 밖으로 밀렸지만 플레이한 적은 있는 경우
+      parts.push(`<p class="profile-empty">이번 시즌 순위권 기록은 없지만 ${p.plays}판 플레이했습니다</p>`);
     } else {
       parts.push('<p class="profile-empty">이번 시즌 기록이 없습니다</p>');
     }
