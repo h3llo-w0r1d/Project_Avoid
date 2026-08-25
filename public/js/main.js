@@ -73,6 +73,22 @@ function syncCharacterForAuth() {
   if (characters.open$) characters.draw();
 }
 
+// 로그인 상태가 정해질 때 부르는 훅. 계정이면 서버 기록을 정답으로 삼아
+// 로컬 최고기록을 맞춘 뒤(한 계정당 한 번), 캐릭터 해금을 다시 맞춘다.
+// 남의 기기에서 대신 플레이해 부풀려진 로컬값을 서버 기준으로 되돌린다.
+let syncedBestFor = null;
+async function onAuthChange() {
+  if (!auth.signedIn) { syncedBestFor = null; }
+  else if (syncedBestFor !== auth.displayName) {
+    syncedBestFor = auth.displayName;
+    try {
+      const p = await api.profile(auth.displayName);
+      ui.setBest(p.best ? p.best.time : 0, p.hardcore ? p.hardcore.time : 0);
+    } catch { /* 못 불러오면 로컬 유지 */ }
+  }
+  syncCharacterForAuth();
+}
+
 const player = new Player(scene, { characterId: savedCharacter() });
 // 상대는 발밑 링 색으로 구분한다. 캐릭터는 상대가 고른 걸 그대로 보여 준다.
 const rival = new Player(scene, { haloColor: 0xc07dff });
@@ -118,8 +134,8 @@ const auth = new Auth({
   // 닉네임 정하는 화면이 뜨는 동안은 타이틀을 가린다
   onSetupOpen: () => ui.hideAllScreens(),
   onSetupDone: () => ui.showTitle(),
-  // 로그인 상태가 정해지거나 바뀔 때마다 캐릭터 사용 권한을 다시 맞춘다
-  onChange: () => syncCharacterForAuth()
+  // 로그인 상태가 정해지거나 바뀔 때: 서버 기록으로 로컬을 맞추고 해금 재정렬
+  onChange: () => onAuthChange()
 });
 
 const pause = new PauseUI({

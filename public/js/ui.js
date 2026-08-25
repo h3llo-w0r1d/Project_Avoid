@@ -195,6 +195,16 @@ export class UI {
     this.onRankOpen?.(kind);
   }
 
+  // 로그인 계정은 서버 기록이 진짜다. 로그인하면 이 값으로 로컬 최고기록을
+  // 맞춘다(남의 기기에서 대신 플레이해 부풀려진 로컬값을 되돌린다).
+  setBest(normal, hardcore) {
+    this.best = Number(normal) || 0;
+    this.bestHardcore = Number(hardcore) || 0;
+    localStorage.setItem(BEST_KEY, String(this.best));
+    localStorage.setItem(HC_KEY, String(this.bestHardcore));
+    this.el.bestInline.textContent = this.best ? `내 최고 ${this.best.toFixed(2)}초` : '';
+  }
+
   // 온라인 화면으로 넘어갈 때처럼, 내가 관리하는 화면을 전부 내린다
   hideAllScreens() {
     this.el.title.classList.add('hidden');
