@@ -543,9 +543,13 @@ function pager(id, pages, cur, go) {
     b.textContent = label; b.disabled = dis; if (on) b.classList.add('on');
     b.addEventListener('click', () => go(p)); return b;
   };
-  el.appendChild(mk('‹', Math.max(0, cur - 1), cur === 0));
-  for (let i = 0; i < pages; i++) el.appendChild(mk(String(i + 1), i, false, i === cur));
-  el.appendChild(mk('›', Math.min(pages - 1, cur + 1), cur === pages - 1));
+  // 한 번에 10개 페이지만 보여 준다. ‹ › 는 10개 단위로 앞뒤 묶음으로 넘어간다.
+  const SIZE = 10;
+  const start = Math.floor(cur / SIZE) * SIZE;      // 지금 묶음의 첫 페이지(0-index)
+  const end = Math.min(start + SIZE, pages);
+  el.appendChild(mk('‹', Math.max(0, start - SIZE), start === 0));           // 이전 10개
+  for (let i = start; i < end; i++) el.appendChild(mk(String(i + 1), i, false, i === cur));
+  el.appendChild(mk('›', Math.min(pages - 1, start + SIZE), end >= pages));  // 다음 10개
 }
 
 // 이용 현황 기록만 비운다. 랭킹·플레이 기록은 그대로 둔다.
