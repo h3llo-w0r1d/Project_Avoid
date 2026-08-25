@@ -57,6 +57,7 @@ function bestSeconds() {
 // 만 불리므로 참조에 문제가 없다.)
 function canUnlock(spec) {
   if (!spec) return false;
+  if (isAdmin) return true;                     // 관리자는 전부 해금(기록이 집계 제외라 0으로 잡힘)
   if (spec.unlockAt === 0) return true;         // 기본 캐릭터는 누구나
   return auth.signedIn && isUnlocked(spec, bestSeconds());
 }
@@ -78,8 +79,11 @@ function syncCharacterForAuth() {
 // 남의 기기에서 대신 플레이해 부풀려진 로컬값을 서버 기준으로 되돌린다.
 let syncedBestFor = null;
 async function onAuthChange() {
+  // 관리자 여부를 먼저 확정한다. 관리자는 기록이 집계에서 빠져 서버 최고가
+  // 0 이라, 동기화하면 로컬 기록·해금이 다 지워진다 — 그래서 건너뛴다.
+  const admin = await adminReady.catch(() => false);
   if (!auth.signedIn) { syncedBestFor = null; }
-  else if (syncedBestFor !== auth.displayName) {
+  else if (!admin && syncedBestFor !== auth.displayName) {
     syncedBestFor = auth.displayName;
     try {
       const p = await api.profile(auth.displayName);
@@ -183,9 +187,19 @@ profile.onRename = async (name) => {
 // 여기서는 게시판에서 관리자에게만 삭제 버튼을 보여 줄지 정하는 데만 쓴다.
 // (실제 삭제는 서버가 막는다.)
 let isAdmin = false;
-api.amIAdmin()
-  .then((yes) => { isAdmin = yes; if (yes) setupNoticeAdmin(); })
-  .catch(() => { isAdmin = false; });
+// 관리자 확인은 한 번만 하고 그 결과(약속)를 재사용한다. onAuthChange 가
+// 서버 기록 동기화 전에 관리자 여부를 기다리는 데도 쓴다.
+const adminReady = api.amIAdmin()
+  .then((yes) => {
+    isAdmin = yes;
+    if (yes) {
+      setupNoticeAdmin();
+      // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
+      syncCharacterForAuth();
+    }
+    return yes;
+  })
+  .catch(() => { isAdmin = false; return false; });
 
 // ── 공지 ────────────────────────────────────────────────
 // 관리자가 쓴 한 줄 공지를 타이틀 상단 배너에 띄운다.
