@@ -543,7 +543,9 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 /* 게시판은 답글까지 보여 줘야 해서 다른 창보다 넓고 높게 잡는다. */
 #board-modal .modal-card { width: min(680px, 100%); max-height: 88vh; }
 
-.board-list { list-style: none; margin-top: 6px; max-height: 60vh; overflow-y: auto; }
+/* 좌우 안쪽 여백을 둬서, 카드 hover 하이라이트가 이 여백 안에서 양옆으로
+   살짝 넓어질 수 있게 한다. 목록 밖으로 넘치지 않아 가로 스크롤이 안 생긴다. */
+.board-list { list-style: none; margin-top: 6px; max-height: 60vh; overflow-y: auto; padding-inline: 8px; }
 .board-empty { color: var(--muted); text-align: center; padding: 26px; font-size: 14px; }
 
 .board-post {
@@ -569,8 +571,8 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   cursor: pointer;
   border-radius: 10px;
   transition: background 0.12s ease;
-  margin-inline: -10px;
-  padding-inline: 12px;
+  margin-inline: -8px;    /* 목록의 안쪽 여백(8px)만큼만 밖으로 — 넘치지 않는다 */
+  padding-inline: 8px;
 }
 .board-post-link:hover { background: rgba(120, 170, 255, 0.06); }
 
