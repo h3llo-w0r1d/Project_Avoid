@@ -85,25 +85,114 @@ export class BoardUI {
     }
     this.el.list.innerHTML = '';
     for (const p of this.posts) {
+      // 원글 하나 = 글 + 답글 접기·펼치기 + 답글 목록
       const li = document.createElement('li');
       li.className = 'board-post';
-      // 본문은 escape 한 뒤 개행만 <br> 로. 순서를 바꾸면 태그가 살아난다.
-      const bodyHtml = esc(p.body).replace(/\n/g, '<br>');
-      li.innerHTML = `
-        <div class="board-post-head">
-          <span class="board-name${p.member ? ' member' : ''}">${esc(p.name)}</span>
-          <span class="board-time">${ago(p.at)}</span>
-        </div>
-        <div class="board-body">${bodyHtml}</div>`;
-      if (admin) {
-        const del = document.createElement('button');
-        del.type = 'button';
-        del.className = 'board-del';
-        del.textContent = '삭제';
-        del.addEventListener('click', () => this.remove(p.id));
-        li.querySelector('.board-post-head').appendChild(del);
+      li.appendChild(this.postHead(p, admin));
+      li.appendChild(this.postBody(p));
+
+      // 답글 달기 줄. 누르면 이 글 밑에 입력칸이 열린다.
+      const replies = p.replies ?? [];
+      const actions = document.createElement('div');
+      actions.className = 'board-actions';
+      const replyBtn = document.createElement('button');
+      replyBtn.type = 'button';
+      replyBtn.className = 'board-reply-btn';
+      replyBtn.textContent = replies.length ? `답글 ${replies.length}` : '답글';
+      actions.appendChild(replyBtn);
+      li.appendChild(actions);
+
+      // 답글 입력칸(처음엔 숨김)
+      const form = this.replyForm(p.id);
+      li.appendChild(form);
+      replyBtn.addEventListener('click', () => {
+        const open = form.classList.toggle('open');
+        if (open) form.querySelector('textarea').focus();
+      });
+
+      // 답글 목록
+      if (replies.length) {
+        const ul = document.createElement('ul');
+        ul.className = 'board-replies';
+        for (const r of replies) {
+          const rli = document.createElement('li');
+          rli.className = 'board-reply';
+          rli.appendChild(this.postHead(r, admin));
+          rli.appendChild(this.postBody(r));
+          ul.appendChild(rli);
+        }
+        li.appendChild(ul);
       }
+
       this.el.list.appendChild(li);
+    }
+  }
+
+  // 글 머리(이름·시간·삭제). 원글·답글 공용.
+  postHead(p, admin) {
+    const head = document.createElement('div');
+    head.className = 'board-post-head';
+    head.innerHTML =
+      `<span class="board-name${p.member ? ' member' : ''}">${esc(p.name)}</span>` +
+      `<span class="board-time">${ago(p.at)}</span>`;
+    if (admin) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'board-del';
+      del.textContent = '삭제';
+      del.addEventListener('click', () => this.remove(p.id));
+      head.appendChild(del);
+    }
+    return head;
+  }
+
+  postBody(p) {
+    const body = document.createElement('div');
+    body.className = 'board-body';
+    // 본문은 escape 한 뒤 개행만 <br> 로. 순서를 바꾸면 태그가 살아난다.
+    body.innerHTML = esc(p.body).replace(/\n/g, '<br>');
+    return body;
+  }
+
+  // 원글 밑에 붙는 답글 입력칸. 접힌 상태로 만들고, 답글 버튼이 펼친다.
+  replyForm(parentId) {
+    const form = document.createElement('div');
+    form.className = 'board-reply-form';
+    const ta = document.createElement('textarea');
+    ta.maxLength = 200;
+    ta.rows = 2;
+    ta.placeholder = '답글을 남겨 보세요 (200자)';
+    const row = document.createElement('div');
+    row.className = 'board-write-row';
+    const err = document.createElement('em');
+    err.className = 'field-error';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'primary small';
+    btn.textContent = '답글';
+    row.appendChild(err);
+    row.appendChild(btn);
+    form.appendChild(ta);
+    form.appendChild(row);
+
+    const send = () => this.submitReply(parentId, ta, err, btn);
+    btn.addEventListener('click', send);
+    ta.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+    });
+    return form;
+  }
+
+  async submitReply(parentId, textarea, errEl, btn) {
+    const body = textarea.value.trim();
+    if (!body) { errEl.textContent = '내용을 입력해 주세요.'; return; }
+    btn.disabled = true;
+    try {
+      const posts = await this.h.post(body, parentId);
+      this.render(posts);
+    } catch (err) {
+      errEl.textContent = err.message;
+      btn.disabled = false;
     }
   }
 }

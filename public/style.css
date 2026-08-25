@@ -457,7 +457,10 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .board-count { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .primary.small { width: auto; margin: 0; padding: 8px 18px; font-size: 14px; }
 
-.board-list { list-style: none; margin-top: 6px; max-height: 46vh; overflow-y: auto; }
+/* 게시판은 답글까지 보여 줘야 해서 다른 창보다 넓고 높게 잡는다. */
+#board-modal .modal-card { width: min(680px, 100%); max-height: 88vh; }
+
+.board-list { list-style: none; margin-top: 6px; max-height: 60vh; overflow-y: auto; }
 .board-empty { color: var(--muted); text-align: center; padding: 26px; font-size: 14px; }
 
 .board-post {
@@ -476,6 +479,34 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 }
 .board-del:hover { color: #fff; background: var(--volt); border-color: transparent; }
 .board-body { font-size: 14px; line-height: 1.6; color: #d3ddf5; word-break: break-word; }
+
+/* 답글 달기 줄 */
+.board-actions { margin-top: 6px; }
+.board-reply-btn {
+  width: auto; margin: 0; padding: 3px 10px;
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  background: transparent; border: 1px solid var(--stroke); border-radius: 6px;
+}
+.board-reply-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* 답글 입력칸: 기본은 접힘, .open 일 때 펼침 */
+.board-reply-form { display: none; margin-top: 8px; }
+.board-reply-form.open { display: block; }
+.board-reply-form textarea {
+  width: 100%; resize: vertical; min-height: 40px; padding: 8px 10px;
+  font: inherit; font-size: 13px; color: var(--text);
+  background: rgba(0, 0, 0, 0.25); border: 1px solid var(--stroke); border-radius: 8px;
+}
+.board-reply-form .board-write-row { margin-top: 6px; }
+
+/* 답글 목록: 원글 아래로 한 단 들여쓰고 왼쪽에 세로 선 */
+.board-replies {
+  list-style: none; margin: 10px 0 0; padding-left: 14px;
+  border-left: 2px solid rgba(120, 170, 255, 0.18);
+}
+.board-reply { padding: 8px 2px; }
+.board-reply + .board-reply { border-top: 1px solid rgba(120, 170, 255, 0.10); }
+.board-reply .board-body { font-size: 13px; }
 
 /* 관리 창에서 전체 대시보드로 가는 링크 */
 .admin-full-link {

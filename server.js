@@ -446,9 +446,15 @@ app.post('/api/board', (req, res) => {
   const checked = checkMessage(req.body?.body);
   if (!checked.ok) return res.status(400).json({ error: checked.reason });
 
+  // 답글이면 다는 대상(원글)이 실제로 있어야 한다. 답글에 답글은 원글로 붙는다.
+  const parentId = typeof req.body?.parentId === 'string' ? req.body.parentId : null;
+  if (parentId && !board.canReplyTo(parentId)) {
+    return res.status(400).json({ error: '답글을 달 글을 찾지 못했습니다.' });
+  }
+
   lastPostBoard.set(ip, now);
   try {
-    board.add({ name: who.name, body: checked.text, userId: req.user?.id ?? null });
+    board.add({ name: who.name, body: checked.text, userId: req.user?.id ?? null, parentId });
     res.json({ posts: board.latest(50) });
   } catch (err) {
     console.error('게시글 저장 실패:', err);

@@ -225,7 +225,7 @@ function setupNoticeAdmin() {
 // 자유 게시판. 게스트는 이름을 같이 보내고, 로그인했으면 서버가 계정 닉네임을 쓴다.
 const board = new BoardUI({
   list: () => api.boardList(),
-  post: (body) => api.boardPost(body, auth.signedIn ? undefined : auth.displayName),
+  post: (body, parentId) => api.boardPost(body, auth.signedIn ? undefined : auth.displayName, parentId),
   remove: (id) => api.boardRemove(id),
   isAdmin: () => isAdmin
 });

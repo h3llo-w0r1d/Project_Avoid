@@ -488,10 +488,11 @@ export const api = {
   },
 
   // 게스트면 이름을 같이 보낸다. 로그인했으면 서버가 계정 닉네임을 쓴다.
-  async boardPost(body, guestName) {
+  // parentId 가 있으면 그 원글에 대한 답글로 올린다.
+  async boardPost(body, guestName, parentId) {
     const res = await fetch('/api/board', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body, name: guestName })
+      body: JSON.stringify({ body, name: guestName, parentId })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
