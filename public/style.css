@@ -226,6 +226,20 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-left: 20px;   /* 왼쪽 빨간 선 자리 */
+}
+/* 메뉴 왼쪽을 따라 흐르는 붉은 전기선(게임 테마). 위아래로 부드럽게 사라진다. */
+#side-menu::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg,
+    transparent 0%, #ff3a4e 14%, #ff5566 50%, #ff3a4e 86%, transparent 100%);
+  box-shadow: 0 0 14px rgba(255, 58, 78, 0.55);
 }
 #side-menu button {
   display: flex;
