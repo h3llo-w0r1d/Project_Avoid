@@ -115,7 +115,7 @@ export class CharacterUI {
     const locked = PLAYABLE.filter((c) => !usable(c));
 
     this.el.hint.textContent = !signedIn
-      ? '게스트는 기본 캐릭터만 써요 · 🔒 로그인하면 캐릭터를 해금할 수 있어요'
+      ? '🔒 로그인하면 캐릭터를 해금할 수 있어요'
       : (locked.length
           ? `기록을 세우면 하나씩 열립니다 · 내 최고 ${best.toFixed(1)}초`
           : `내 최고 ${best.toFixed(1)}초`);
