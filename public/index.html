@@ -311,6 +311,16 @@
         <a href="/terms" target="_blank" rel="noopener">이용약관</a>
       </div>
     </div>
+
+    <!-- 왼쪽 메뉴. 상단바에 흩어져 있던 랭킹·캐릭터·커뮤니티·프로필을 여기 모은다.
+         버튼은 상단바의 진짜 버튼(숨김)을 대신 눌러 준다(data-forward).
+         타이틀 화면 안에 있어 게임이 시작되면 함께 사라진다. -->
+    <nav id="side-menu" aria-label="메뉴">
+      <button type="button" data-forward="rank-btn"><span class="sm-ico">🏆</span><span class="sm-label">랭킹</span></button>
+      <button type="button" data-forward="char-btn"><span class="sm-ico">🌱</span><span class="sm-label">캐릭터</span></button>
+      <button type="button" data-forward="board-btn"><span class="sm-ico">💬</span><span class="sm-label">커뮤니티</span></button>
+      <button type="button" data-forward="profile-btn"><span class="sm-ico">👤</span><span class="sm-label">프로필</span></button>
+    </nav>
   </div>
 
   <!-- 첫 로그인 뒤 닉네임 정하기 -->

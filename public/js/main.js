@@ -230,6 +230,12 @@ const board = new BoardUI({
   isAdmin: () => isAdmin
 });
 
+// 왼쪽 메뉴 버튼은 상단바의 진짜 버튼(숨김)을 대신 눌러 준다. 각 창의
+// 열기 로직은 그대로 두고, 여는 입구만 왼쪽으로 옮긴 셈이다.
+for (const btn of document.querySelectorAll('#side-menu [data-forward]')) {
+  btn.addEventListener('click', () => document.getElementById(btn.dataset.forward)?.click());
+}
+
 const characters = new CharacterUI({
   bestSeconds,
   selected: () => player.characterId,
