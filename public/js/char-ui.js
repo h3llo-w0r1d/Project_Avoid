@@ -109,15 +109,20 @@ export class CharacterUI {
   draw() {
     const best = this.h.bestSeconds();
     const chosen = this.h.selected();
-    const locked = PLAYABLE.filter((c) => !isUnlocked(c, best));
+    // 게스트는 기본 캐릭터만. 해금은 로그인해야 된다(canUse 가 그걸 반영).
+    const signedIn = this.h.signedIn ? this.h.signedIn() : true;
+    const usable = (c) => (this.h.canUse ? this.h.canUse(c) : isUnlocked(c, best));
+    const locked = PLAYABLE.filter((c) => !usable(c));
 
-    this.el.hint.textContent = locked.length
-      ? `기록을 세우면 하나씩 열립니다 · 내 최고 ${best.toFixed(1)}초`
-      : `내 최고 ${best.toFixed(1)}초`;
+    this.el.hint.textContent = !signedIn
+      ? '게스트는 기본 캐릭터만 써요 · 🔒 로그인하면 캐릭터를 해금할 수 있어요'
+      : (locked.length
+          ? `기록을 세우면 하나씩 열립니다 · 내 최고 ${best.toFixed(1)}초`
+          : `내 최고 ${best.toFixed(1)}초`);
 
     this.el.grid.innerHTML = '';
     for (const c of PLAYABLE) {
-      const unlocked = isUnlocked(c, best);
+      const unlocked = usable(c);
 
       const card = document.createElement('button');
       card.type = 'button';
@@ -156,7 +161,8 @@ export class CharacterUI {
 
         const note = document.createElement('span');
         note.className = 'char-note goal';
-        note.textContent = `${c.unlockAt}초 달성 시`;
+        // 게스트에게는 "로그인 후 해금", 로그인 유저에게는 "N초 달성 시".
+        note.textContent = (!signedIn && c.unlockAt > 0) ? '로그인 후 해금' : `${c.unlockAt}초 달성 시`;
         card.appendChild(note);
 
         const lock = document.createElement('span');

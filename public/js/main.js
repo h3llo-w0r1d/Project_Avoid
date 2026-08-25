@@ -51,6 +51,28 @@ function bestSeconds() {
   );
 }
 
+// 캐릭터를 실제로 쓸 수 있는가. 해금 조건(기록)을 넘어, 로그인까지 봐야 한다.
+// 게스트는 기본 캐릭터만 쓸 수 있다 — 해금은 로그인의 특전으로 남겨,
+// 로그인할 이유를 만든다. (auth 는 아래에서 선언되지만 이 함수는 실행 시점에
+// 만 불리므로 참조에 문제가 없다.)
+function canUnlock(spec) {
+  if (!spec) return false;
+  if (spec.unlockAt === 0) return true;         // 기본 캐릭터는 누구나
+  return auth.signedIn && isUnlocked(spec, bestSeconds());
+}
+
+// 로그인 상태가 바뀌면(로그아웃/게스트 전환) 지금 쓰는 캐릭터가 아직 유효한지
+// 다시 본다. 게스트가 되며 못 쓰게 된 캐릭터는 기본으로 되돌린다.
+function syncCharacterForAuth() {
+  if (!canUnlock(findCharacter(player.characterId))) {
+    localStorage.setItem(CHAR_KEY, DEFAULT_CHARACTER);
+    player.setCharacter(DEFAULT_CHARACTER);
+    characters.paintButton(DEFAULT_CHARACTER);
+    net.send({ type: 'character', id: DEFAULT_CHARACTER });
+  }
+  if (characters.open$) characters.draw();
+}
+
 const player = new Player(scene, { characterId: savedCharacter() });
 // 상대는 발밑 링 색으로 구분한다. 캐릭터는 상대가 고른 걸 그대로 보여 준다.
 const rival = new Player(scene, { haloColor: 0xc07dff });
@@ -95,7 +117,9 @@ const ui = new UI({
 const auth = new Auth({
   // 닉네임 정하는 화면이 뜨는 동안은 타이틀을 가린다
   onSetupOpen: () => ui.hideAllScreens(),
-  onSetupDone: () => ui.showTitle()
+  onSetupDone: () => ui.showTitle(),
+  // 로그인 상태가 정해지거나 바뀔 때마다 캐릭터 사용 권한을 다시 맞춘다
+  onChange: () => syncCharacterForAuth()
 });
 
 const pause = new PauseUI({
@@ -209,6 +233,8 @@ const board = new BoardUI({
 const characters = new CharacterUI({
   bestSeconds,
   selected: () => player.characterId,
+  canUse: (spec) => canUnlock(spec),
+  signedIn: () => auth.signedIn,
   onSelect: (id) => {
     localStorage.setItem(CHAR_KEY, id);
     player.setCharacter(id);
@@ -529,6 +555,29 @@ function killPlayer(cause) {
   }
 }
 
+// 게스트가 해금 조건을 넘겼을 때. 캐릭터를 공개하지 않고(그건 로그인 특전),
+// 로그인하면 바로 쓸 수 있다는 안내만 띄운다. "차별점" 을 여기서 만든다.
+function showLoginUnlock(count) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">🔒 새 캐릭터 조건 달성!</div>' +
+      '<div class="unlock-lockface">🔒</div>' +
+      '<div class="unlock-name">캐릭터 ' + count + '종 대기 중</div>' +
+      '<div class="unlock-hint">로그인하면 바로 사용할 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const done = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    const timer = setTimeout(done, 2600);
+    overlay.addEventListener('click', () => { clearTimeout(timer); done(); });
+  });
+}
+
 // 새로 열린 캐릭터를 가운데에 크게 보여 준다. 여러 개면 하나씩 차례로.
 // 클릭하면 건너뛴다. 애니메이션이 끝나면(또는 건너뛰면) resolve 된다.
 function showUnlock(list) {
@@ -612,7 +661,11 @@ async function finishGame() {
   const freshUnlocks = PLAYABLE.filter(
     (c) => c.unlockAt > 0 && prevBest < c.unlockAt && c.unlockAt <= score
   );
-  if (freshUnlocks.length) await showUnlock(freshUnlocks);
+  if (freshUnlocks.length) {
+    // 로그인 유저에게는 해금 연출을, 게스트에게는 로그인 유도 안내를 띄운다.
+    if (auth.signedIn) await showUnlock(freshUnlocks);
+    else await showLoginUnlock(freshUnlocks.length);
+  }
 
   // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다.
   if (prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
