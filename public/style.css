@@ -219,8 +219,8 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
    시작되면 타이틀과 함께 사라진다. 위치는 화면 기준(fixed)으로 고정. */
 #side-menu {
   position: fixed;
-  left: max(28px, env(safe-area-inset-left));
-  top: 50%;
+  left: max(120px, env(safe-area-inset-left));
+  top: 54%;
   transform: translateY(-50%);
   z-index: 12;
   display: flex;
