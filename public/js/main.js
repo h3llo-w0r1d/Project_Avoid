@@ -116,11 +116,15 @@ rival.halo.visible = false;
 
 const hazards = new Hazards(scene);
 const floorHoles = new FloorHoles(scene);   // 하드코어: 바닥이 사라졌다 나타난다
-// 맵의 코인. 먹으면 지갑에 쌓이고, HUD 숫자를 갱신한다. 캐릭터 창이 열려
-// 있으면(코인으로 살 수 있게 됐을 수 있으니) 다시 그린다.
+// 이번 판에 먹은 코인 수(판 끝나고 게스트 안내에 쓴다). startGame 에서 0으로.
+let runCoins = 0;
+// 맵의 코인. 로그인 유저만 실제로 지갑에 쌓인다 — 게스트는 먹는 느낌(소리·사라짐)
+// 만 주고 쌓지 않는다(로그인 유도). 캐릭터 창이 열려 있으면 다시 그린다.
 const coins = new Coins(scene, () => {
-  wallet.add(1);
+  runCoins++;
   audio.coin?.();
+  if (!auth.signedIn) return;        // 게스트는 안 쌓인다
+  wallet.add(1);
   renderCoinHud();
   if (characters.open$) characters.draw();
 });
@@ -649,6 +653,7 @@ function startGame() {
   setArenaVisible(true);
   hazards.reset();
   coins.setActive(true);   // 맵에 코인이 뜨기 시작한다(솔로 전용)
+  runCoins = 0;
   renderCoinHud();
   state.phase = 'playing';
   renderNotice();   // 플레이 중엔 공지 배너를 숨긴다
@@ -738,6 +743,28 @@ function showLoginUnlock(count) {
   });
 }
 
+// 게스트가 판 중에 코인을 먹었을 때. 게스트는 코인이 안 쌓이므로, 로그인하면
+// 코인 시스템을 쓸 수 있다고 안내한다(로그인 유도).
+function showCoinLogin(count) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">🪙 코인 ' + count + '개 획득!</div>' +
+      '<div class="unlock-lockface">🪙</div>' +
+      '<div class="unlock-name">게스트는 코인이 쌓이지 않아요</div>' +
+      '<div class="unlock-hint">로그인하면 코인이 모여 캐릭터를 해금할 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const done = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    overlay.addEventListener('click', done);
+  });
+}
+
 // 새로 열린 캐릭터를 가운데에 크게 보여 준다. 여러 개면 하나씩 차례로.
 // 클릭하면 건너뛴다. 애니메이션이 끝나면(또는 건너뛰면) resolve 된다.
 function showUnlock(list) {
@@ -821,11 +848,15 @@ async function finishGame() {
   const freshUnlocks = PLAYABLE.filter(
     (c) => c.unlockAt > 0 && prevBest < c.unlockAt && c.unlockAt <= score
   );
+  let guestNagged = false;   // 게스트에게 로그인 유도를 이미 한 번 띄웠는가
   if (freshUnlocks.length) {
     // 로그인 유저에게는 해금 연출을, 게스트에게는 로그인 유도 안내를 띄운다.
     if (auth.signedIn) await showUnlock(freshUnlocks);
-    else await showLoginUnlock(freshUnlocks.length);
+    else { await showLoginUnlock(freshUnlocks.length); guestNagged = true; }
   }
+
+  // 게스트가 판 중에 코인을 먹었으면(그리고 위 안내를 안 띄웠으면) 코인 안내.
+  if (!auth.signedIn && runCoins > 0 && !guestNagged) await showCoinLogin(runCoins);
 
   // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다.
   if (prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
