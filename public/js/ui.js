@@ -458,6 +458,22 @@ export const api = {
     return data.text ?? '';
   },
 
+  async patchNotes() {
+    const res = await fetch('/api/patchnotes');
+    return res.ok ? (await res.json()).text ?? '' : '';
+  },
+
+  async savePatchNotes(text) {
+    const res = await fetch('/api/admin/patchnotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.text ?? '';
+  },
+
   // ---- 관리 (관리자 계정으로 로그인했을 때만 통한다) ----
 
   async amIAdmin() {

@@ -223,6 +223,7 @@ const adminReady = api.amIAdmin()
     isAdmin = yes;
     if (yes) {
       setupNoticeAdmin();
+      patch.enableAdmin();   // 패치노트 편집 버튼(✏️) 켜기
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
       syncCharacterForAuth();
     }
@@ -301,25 +302,86 @@ for (const btn of document.querySelectorAll('#side-menu [data-forward]')) {
   btn.addEventListener('click', () => document.getElementById(btn.dataset.forward)?.click());
 }
 
-// 패치노트 창. 데이터(patch-notes.js)를 날짜별로 그려 준다. 내용은 우리가
-// 적어 둔 정적 목록이라 escape 없이 넣어도 되지만, 습관대로 감싸 준다.
-(() => {
+// 패치노트 창. 서버에 저장된 텍스트를 날짜별로 파싱해 보여 준다. 관리자는
+// ✏️ 로 직접 고친다(공지처럼 서버 저장). 서버가 비어 있으면 코드에 넣어 둔
+// 기본 목록(patch-notes.js)을 대신 쓴다.
+const patch = (() => {
   const modal = document.getElementById('patch-modal');
   const list = document.getElementById('patch-list');
-  if (!modal || !list) return;
+  const editModal = document.getElementById('patch-edit-modal');
+  const editBtn = document.getElementById('patch-edit-btn');
+  const input = document.getElementById('patch-input');
+  const count = document.getElementById('patch-count');
+  const errEl = document.getElementById('patch-error');
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const close = () => modal.classList.add('hidden');
-  document.getElementById('patch-btn').addEventListener('click', () => {
-    list.innerHTML = PATCH_NOTES.map((n) => `
-      <li class="patch-entry">
-        <div class="patch-date">${esc(n.date)}</div>
-        <ul class="patch-items">${n.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
-      </li>`).join('') || '<li class="board-empty">아직 기록이 없습니다.</li>';
+
+  // 기본 목록(코드) → 편집용 텍스트. 서버가 비었을 때 시작점으로 쓴다.
+  const defaultText = PATCH_NOTES
+    .map((n) => `${n.date}\n${n.items.map((i) => `- ${i}`).join('\n')}`).join('\n\n');
+
+  let text = '';   // 서버 원문(비면 기본을 쓴다)
+
+  // 텍스트 → [{date, items}]. 날짜 줄 + '- 항목' 줄. 빈 줄은 무시.
+  function parse(t) {
+    const entries = [];
+    let cur = null;
+    for (const raw of String(t).split('\n')) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (/^[-•]/.test(line)) {
+        if (!cur) { cur = { date: '', items: [] }; entries.push(cur); }
+        cur.items.push(line.replace(/^[-•]\s*/, ''));
+      } else {
+        cur = { date: line, items: [] };
+        entries.push(cur);
+      }
+    }
+    return entries;
+  }
+
+  function render() {
+    const entries = parse(text || defaultText);
+    list.innerHTML = entries.length
+      ? entries.map((n) => `
+          <li class="patch-entry">
+            ${n.date ? `<div class="patch-date">${esc(n.date)}</div>` : ''}
+            <ul class="patch-items">${n.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+          </li>`).join('')
+      : '<li class="board-empty">아직 기록이 없습니다.</li>';
+  }
+
+  async function open() {
+    render();                       // 우선 지금 값으로 그려 두고
     modal.classList.remove('hidden');
-  });
+    try { text = await api.patchNotes(); render(); } catch { /* 실패하면 기존값 유지 */ }
+  }
+  const close = () => modal.classList.add('hidden');
+  document.getElementById('patch-btn').addEventListener('click', open);
   document.getElementById('patch-close').addEventListener('click', close);
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+  // ── 편집(관리자) ──
+  const closeEdit = () => editModal.classList.add('hidden');
+  editBtn.addEventListener('click', () => {
+    input.value = text || defaultText;   // 비었으면 기본을 시작점으로
+    count.textContent = `${input.value.length} / 6000`;
+    errEl.textContent = '';
+    editModal.classList.remove('hidden');
+    input.focus();
+  });
+  input.addEventListener('input', () => { count.textContent = `${input.value.length} / 6000`; });
+  document.getElementById('patch-edit-close').addEventListener('click', closeEdit);
+  editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEdit(); });
+  document.getElementById('patch-save').addEventListener('click', async () => {
+    try {
+      text = await api.savePatchNotes(input.value);
+      render();
+      closeEdit();
+    } catch (e) { errEl.textContent = e.message; }
+  });
+
+  return { enableAdmin() { editBtn.classList.remove('hidden'); } };
 })();
 
 const characters = new CharacterUI({

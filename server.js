@@ -533,6 +533,28 @@ app.post('/api/admin/notice', requireAdmin, async (req, res) => {
   res.json({ ok: true, text });
 });
 
+// ── 패치노트 ────────────────────────────────────────────────────────
+// 날짜별 업데이트 기록. 여러 줄 텍스트를 파일 하나에 담고 관리자만 고친다.
+// (형식 파싱은 화면에서 한다 — 날짜 줄 + '- 항목' 줄.)
+const PATCHNOTES_FILE = join(DATA_DIR, 'patchnotes.txt');
+let patchNotesText = '';
+try { patchNotesText = await readFile(PATCHNOTES_FILE, 'utf8'); } catch { patchNotesText = ''; }
+
+app.get('/api/patchnotes', (req, res) => res.json({ text: patchNotesText }));
+
+app.post('/api/admin/patchnotes', requireAdmin, async (req, res) => {
+  // 줄바꿈은 살리고 길이만 제한한다.
+  const text = String(req.body?.text ?? '').slice(0, 6000);
+  patchNotesText = text;
+  try {
+    await writeFile(PATCHNOTES_FILE, text, 'utf8');
+  } catch (err) {
+    console.error('패치노트 저장 실패:', err);
+    return res.status(500).json({ error: '패치노트를 저장하지 못했습니다.' });
+  }
+  res.json({ ok: true, text });
+});
+
 // 관리 창을 한 번에 채운다
 app.get('/api/admin/overview', requireAdmin, (req, res) => {
   res.json({

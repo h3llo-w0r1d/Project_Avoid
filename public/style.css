@@ -566,6 +566,12 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .patch-items li::before {
   content: '•'; position: absolute; left: 3px; color: var(--accent);
 }
+.patch-input {
+  width: 100%; margin-top: 12px; resize: vertical; min-height: 200px;
+  padding: 12px 14px; font: inherit; font-size: 14px; line-height: 1.6;
+  color: var(--text); background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--stroke); border-radius: 10px;
+}
 
 /* ---------- 게시판 ---------- */
 .board-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
