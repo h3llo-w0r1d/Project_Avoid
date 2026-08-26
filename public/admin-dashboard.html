@@ -513,14 +513,24 @@ async function drawMatches() {
         <td>${result}</td>
         <td>${loser}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
-        <td>${r.mode === 'room' ? '방 코드' : '무작위'}</td></tr>`;
+        <td>${r.mode === 'room' ? '방 코드' : '무작위'}</td>
+        <td><button class="act" data-del="${r.id}">삭제</button></td></tr>`;
     }).join('');
     $('match-table').innerHTML =
-      `<table><thead><tr><th>시간</th><th>승자</th><th>상대(패자)</th><th>버틴 시간</th><th>매칭</th></tr></thead><tbody>${body}</tbody></table>`;
+      `<table><thead><tr><th>시간</th><th>승자</th><th>상대(패자)</th><th>버틴 시간</th><th>매칭</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    for (const b of $('match-table').querySelectorAll('[data-del]')) {
+      b.addEventListener('click', () => delMatch(b.dataset.del));
+    }
     const pages = Math.max(1, Math.ceil(total / MATCH_PER));
     matchPage = Math.min(matchPage, pages - 1);
     pager('match-pager', pages, matchPage, (p) => { matchPage = p; drawMatches(); });
   } catch (e) { $('match-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+async function delMatch(id) {
+  if (!confirm('이 대전 기록 한 판을 지웁니다.')) return;
+  try { await api(`/api/admin/matches/${encodeURIComponent(id)}`, { method: 'DELETE' }); say('지웠습니다.'); drawMatches(); }
+  catch (e) { say(e.message, true); }
 }
 
 async function drawVisits() {

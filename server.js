@@ -589,6 +589,12 @@ app.get('/api/admin/matches/recent', requireAdmin, (req, res) => {
   res.json(matchLog.page(limit, offset));
 });
 
+// 대전 기록 한 판 삭제.
+app.delete('/api/admin/matches/:id', requireAdmin, (req, res) => {
+  if (!matchLog.remove(req.params.id)) return res.status(404).json({ error: '이미 없는 기록입니다.' });
+  res.json({ ok: true });
+});
+
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.
 app.post('/api/admin/users/:id/reset', requireAdmin, async (req, res) => {
   try {
