@@ -560,6 +560,13 @@ app.get('/api/admin/matches', requireAdmin, (req, res) => {
   res.json({ name: user.nickname, ...matchLog.historyOf(id) });
 });
 
+// 전체 1v1 대전 기록(로그인·게스트 모두). 시간순, 쪽 단위.
+app.get('/api/admin/matches/recent', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(matchLog.page(limit, offset));
+});
+
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.
 app.post('/api/admin/users/:id/reset', requireAdmin, async (req, res) => {
   try {

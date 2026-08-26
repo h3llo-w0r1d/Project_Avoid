@@ -184,6 +184,12 @@
   <div class="wrap" id="play-table"></div>
   <div class="pager" id="play-pager"></div>
 
+  <h2>1v1 대전 기록 <span class="dim" id="match-count"></span></h2>
+  <p class="hint">끝난 1:1 대전을 시간순으로 남깁니다. <b>로그인 유저·게스트 모두</b> 나옵니다.
+    승자·패자·버틴 시간과, 무작위 매칭(queue)인지 방 코드(room)인지 함께 보여 줍니다.</p>
+  <div class="wrap" id="match-table"></div>
+  <div class="pager" id="match-pager"></div>
+
   <h2>방문 기록 <span class="dim" id="visit-count"></span></h2>
   <p class="hint">게임 페이지를 연 요청을 시간순으로 남깁니다(디버깅용). 시간·IP·기기·봇여부에 더해,
     <b>사람이면 접속 지역(국가·도시), 봇이면 어느 업체/스캐너인지</b>를 함께 보여 줍니다.
@@ -248,7 +254,7 @@ async function load() {
     $('meta').textContent = `${data.season.name} · 지금 접속 ${data.present ?? 0}명` +
       (versus ? ` (1v1 ${versus}명)` : '');
     say('');
-    drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawVisits();
+    drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawVisits();
   } catch (e) { say(e.message, true); }
 }
 
@@ -486,6 +492,36 @@ async function drawPlays() {
    플레이 기록처럼 서버가 페이지 단위로 준다. 시간순, 최근이 위. */
 const VISIT_PER = 25;
 let visitPage = 0;
+
+const MATCH_PER = 20;
+let matchPage = 0;
+async function drawMatches() {
+  try {
+    const { rows, total } = await api(`/api/admin/matches/recent?limit=${MATCH_PER}&offset=${matchPage * MATCH_PER}`);
+    $('match-count').textContent = total ? `${total}판` : '';
+    if (!total) { $('match-table').innerHTML = '<p class="empty">아직 대전 기록이 없습니다</p>'; $('match-pager').innerHTML = ''; return; }
+    // 게스트는 이름 옆에 표시, 로그인 유저는 파란 이름.
+    const who = (name, guest) => guest
+      ? `${esc(name)} <span class="dim">(게스트)</span>`
+      : `<span style="color:#9ad0ff">${esc(name)}</span>`;
+    const body = rows.map((r) => {
+      const result = r.draw ? '<span class="dim">무승부</span>' : who(r.winnerName, r.winnerGuest);
+      const loser = r.draw
+        ? `${who(r.winnerName, r.winnerGuest)} · ${who(r.loserName, r.loserGuest)}`
+        : who(r.loserName, r.loserGuest);
+      return `<tr><td class="dim">${stamp(r.at)}</td>
+        <td>${result}</td>
+        <td>${loser}</td>
+        <td class="num">${r.seconds.toFixed(2)}초</td>
+        <td>${r.mode === 'room' ? '방 코드' : '무작위'}</td></tr>`;
+    }).join('');
+    $('match-table').innerHTML =
+      `<table><thead><tr><th>시간</th><th>승자</th><th>상대(패자)</th><th>버틴 시간</th><th>매칭</th></tr></thead><tbody>${body}</tbody></table>`;
+    const pages = Math.max(1, Math.ceil(total / MATCH_PER));
+    matchPage = Math.min(matchPage, pages - 1);
+    pager('match-pager', pages, matchPage, (p) => { matchPage = p; drawMatches(); });
+  } catch (e) { $('match-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
 
 async function drawVisits() {
   try {
