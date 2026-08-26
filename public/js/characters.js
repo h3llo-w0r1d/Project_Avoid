@@ -135,6 +135,25 @@ export const CHARACTERS = [
     nose: 0x241c17           // 검은 코
   },
   {
+    // 반드라고라 — 코인 해금 전용. 만드라고라를 딱 세로로 반 잘라 한쪽만
+    // 남긴 모습(half). 시간으론 안 열리고 맵에서 모은 코인으로만 산다.
+    id: 'half',
+    name: '반드라고라',
+    unlockAt: Infinity,      // 시간으론 절대 안 열린다 — 오직 코인으로만
+    coinCost: 50,            // 코인 50개로 해금
+    half: true,              // 몸을 세로로 반 잘라 오른쪽만 남긴다
+    previewZoom: 1.18,
+    body: 0xf2e6cd,          // 만드라고라와 같은 색
+    profile: [               // 만드라고라 몸매 그대로
+      [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
+      [0.220, 0.56], [0.380, 0.575], [0.560, 0.56], [0.760, 0.51],
+      [0.960, 0.44], [1.140, 0.34], [1.300, 0.21], [1.410, 0.09],
+      [1.450, 0.00]
+    ],
+    top: { kind: 'leaves', count: 5, length: 1.5, color: '#a9d477' },
+    skin: 'fiber'
+  },
+  {
     id: 'carrot',
     wip: true,
     name: '당근',
@@ -229,7 +248,10 @@ export function findCharacter(id) {
 
 export const isPlayable = (spec) => !!spec && !spec.wip;
 
-// 최고 기록으로 열린 캐릭터인지
+// 코인으로 사는 캐릭터인가(coinCost 가 있으면 시간 대신 코인으로 해금).
+export const isCoinChar = (spec) => Number(spec?.coinCost) > 0;
+
+// 최고 기록으로 열린 캐릭터인지 (코인 캐릭터는 unlockAt 이 Infinity 라 늘 false)
 export function isUnlocked(spec, bestSeconds) {
   return (bestSeconds ?? 0) >= spec.unlockAt;
 }

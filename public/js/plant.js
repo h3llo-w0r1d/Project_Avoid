@@ -990,10 +990,17 @@ export function buildPlant(id) {
   const { at, radiusAt, surfaceZ, decalZ } = ruler;
   const root = new THREE.Group();
 
+  // 반드라고라: 몸을 세로로 반 잘라(오른쪽 x≥0 만) 남긴다. 팔·발·눈·볼도
+  // 한쪽만 붙이고, 잘린 단면은 아래에서 납작한 뚜껑으로 막는다.
+  const half = !!spec.half;
+  const DIRS = half ? [1] : [-1, 1];   // 좌우로 붙이는 부위(반쪽이면 오른쪽만)
+
   // ---- 몸통 -------------------------------------------------------------
+  // half 면 반 바퀴(phi 0→π)만 돌려 x≥0 쪽 반쪽만 만든다. phi=0 은 앞(+Z),
+  // π/2 는 오른쪽(+X), π 는 뒤(-Z) — 그 사이가 전부 x≥0 이라 딱 세로 절단이 된다.
   const bodyGeo = new THREE.LatheGeometry(
     spec.profile.map(([y, r]) => new THREE.Vector2(r, y)),
-    48
+    48, 0, half ? Math.PI : Math.PI * 2
   );
   if (spec.lumpy) roughen(bodyGeo, spec.lumpy);
   // 망고처럼 살짝 휘게. 아웃라인이 이 지오메트리를 복사하므로 반드시 먼저 휜다.
@@ -1012,6 +1019,28 @@ export function buildPlant(id) {
   root.add(body);
   addOutline(body, 0.03 * oW, outlineMat);
 
+  // 잘린 단면(x=0 평면)을 납작한 뚜껑으로 막는다. 안 막으면 속이 뻥 뚫려 보인다.
+  // 단면 윤곽 = 옆모습을 앞(z=+r)으로 올라갔다 뒤(z=-r)로 내려오는 대칭 도형.
+  if (half) {
+    const shape = new THREE.Shape();
+    const pts = [];
+    for (const [y, r] of spec.profile) pts.push([r, y]);           // 앞쪽 가장자리
+    for (let i = spec.profile.length - 1; i >= 0; i--) {
+      const [y, r] = spec.profile[i]; pts.push([-r, y]);           // 뒤쪽 가장자리
+    }
+    shape.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) shape.lineTo(pts[i][0], pts[i][1]);
+    const capGeo2 = new THREE.ShapeGeometry(shape);
+    const innerColor = new THREE.Color(spec.body).multiplyScalar(0.82);  // 속살은 조금 어둡게
+    const cap = new THREE.Mesh(capGeo2, new THREE.MeshToonMaterial({
+      color: innerColor, gradientMap: GRADIENT, side: THREE.DoubleSide
+    }));
+    cap.rotation.y = Math.PI / 2;   // 그림 평면(XY)을 x=0 단면(ZY)으로 세운다
+    cap.name = 'cut';
+    root.add(cap);
+    addOutline(cap, 0.02 * oW, outlineMat);
+  }
+
   const skinMat = toon(spec.body);
 
   // ---- 발 — 앞으로 살짝 나온 콩알 두 개 ----------------------------------
@@ -1025,7 +1054,7 @@ export function buildPlant(id) {
 
   const hipX = Math.max(0.15, radiusAt(at(0.1)) * 0.42);
   const feet = [];
-  for (const dir of [-1, 1]) {
+  for (const dir of DIRS) {
     const pivot = new THREE.Group();
     pivot.position.set(dir * hipX, 0.02, 0.02);
 
@@ -1048,7 +1077,7 @@ export function buildPlant(id) {
   armGeo.computeVertexNormals();
 
   const arms = [];
-  for (const dir of [-1, 1]) {
+  for (const dir of DIRS) {
     const pivot = new THREE.Group();
     pivot.position.set(dir * radiusAt(armY) * 0.82, armY, 0);
 
@@ -1109,7 +1138,7 @@ export function buildPlant(id) {
     layer(glintGeo, 0.38, 0.036)    // 반사광
   ];
 
-  for (const dir of [-1, 1]) {
+  for (const dir of DIRS) {
     const x = dir * eyeGap;
     const z = surfaceZ(x, eyeY);
     const depth = (i) => {
@@ -1172,7 +1201,7 @@ export function buildPlant(id) {
   // 실루엣 밖으로 삐져나가 허공에 분홍 얼룩이 뜬다.
   const blushY = at(0.49);
   const blushGap = Math.min(0.34, radiusAt(blushY) * 0.6);
-  for (const dir of [-1, 1]) {
+  for (const dir of DIRS) {
     const x = dir * blushGap;
     const blush = new THREE.Mesh(blushGeo, blushMat);
     blush.position.set(x, blushY, decalZ(x, blushY));

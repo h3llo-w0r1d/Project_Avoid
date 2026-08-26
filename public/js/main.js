@@ -4,6 +4,8 @@ import { startOrientationManager } from './orientation.js';
 import { Player } from './player.js';
 import { Hazards } from './hazards.js';
 import { FloorHoles } from './floor-holes.js';
+import { Coins } from './coins.js';
+import { wallet } from './wallet.js';
 import { Input } from './input.js';
 import { UI, api } from './ui.js';
 import { VersusUI } from './versus-ui.js';
@@ -13,7 +15,7 @@ import { CharacterUI } from './char-ui.js';
 import { ProfileUI } from './profile-ui.js';
 import { BoardUI } from './board-ui.js';
 import { VoiceUI } from './voice-ui.js';
-import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable, PLAYABLE } from './characters.js';
+import { DEFAULT_CHARACTER, findCharacter, isUnlocked, isPlayable, isCoinChar, PLAYABLE } from './characters.js';
 import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
@@ -59,7 +61,18 @@ function canUnlock(spec) {
   if (!spec) return false;
   if (isAdmin) return true;                     // 관리자는 전부 해금(기록이 집계 제외라 0으로 잡힘)
   if (spec.unlockAt === 0) return true;         // 기본 캐릭터는 누구나
+  if (isCoinChar(spec)) return wallet.isOwned(spec.id);  // 코인 캐릭터는 산 적 있으면
   return auth.signedIn && isUnlocked(spec, bestSeconds());
+}
+
+// 코인으로 캐릭터를 산다. 코인이 모자라거나 코인 캐릭터가 아니면 false.
+// 성공하면 소유 목록에 넣고 코인을 깎는다.
+function buyCharacter(spec) {
+  if (!spec || !isCoinChar(spec) || wallet.isOwned(spec.id)) return false;
+  if (!wallet.spend(spec.coinCost)) return false;
+  wallet.markOwned(spec.id);
+  renderCoinHud();
+  return true;
 }
 
 // 로그인 상태가 바뀌면(로그아웃/게스트 전환) 지금 쓰는 캐릭터가 아직 유효한지
@@ -102,8 +115,22 @@ rival.halo.visible = false;
 
 const hazards = new Hazards(scene);
 const floorHoles = new FloorHoles(scene);   // 하드코어: 바닥이 사라졌다 나타난다
+// 맵의 코인. 먹으면 지갑에 쌓이고, HUD 숫자를 갱신한다. 캐릭터 창이 열려
+// 있으면(코인으로 살 수 있게 됐을 수 있으니) 다시 그린다.
+const coins = new Coins(scene, () => {
+  wallet.add(1);
+  audio.coin?.();
+  renderCoinHud();
+  if (characters.open$) characters.draw();
+});
 const input = new Input();
 const net = new Net();
+
+// 게임 중 HUD 의 코인 개수.
+const coinHudEl = document.getElementById('coin-count');
+function renderCoinHud() {
+  if (coinHudEl) coinHudEl.textContent = String(wallet.coins());
+}
 
 const state = {
   mode: 'solo',     // solo | versus
@@ -136,8 +163,8 @@ const ui = new UI({
 
 const auth = new Auth({
   // 닉네임 정하는 화면이 뜨는 동안은 타이틀을 가린다
-  onSetupOpen: () => ui.hideAllScreens(),
-  onSetupDone: () => ui.showTitle(),
+  onSetupOpen: () => { ui.hideAllScreens(); renderNotice(); },
+  onSetupDone: () => { ui.showTitle(); renderNotice(); },
   // 로그인 상태가 정해지거나 바뀔 때: 서버 기록으로 로컬을 맞추고 해금 재정렬
   onChange: () => onAuthChange()
 });
@@ -207,7 +234,11 @@ let noticeText = '';
 const noticeBanner = document.getElementById('notice-banner');
 
 function renderNotice() {
-  const show = noticeText && state.phase === 'title';
+  // 첫 화면이 실제로 보일 때만 띄운다. phase 만 보면 1v1 매치메이킹 중(phase 는
+  // 아직 title 인데 화면은 대전 메뉴)엔 배너가 게임 위에 그대로 남는다.
+  const titleScreen = document.getElementById('title-screen');
+  const titleShown = titleScreen && !titleScreen.classList.contains('hidden');
+  const show = noticeText && titleShown;
   if (noticeBanner) {
     noticeBanner.textContent = noticeText;
     noticeBanner.classList.toggle('hidden', !show);
@@ -271,6 +302,8 @@ const characters = new CharacterUI({
   selected: () => player.characterId,
   canUse: (spec) => canUnlock(spec),
   signedIn: () => auth.signedIn,
+  coins: () => wallet.coins(),        // 지금 가진 코인(상점 표시용)
+  buy: (spec) => buyCharacter(spec),  // 코인으로 캐릭터 사기. 성공하면 true
   onSelect: (id) => {
     localStorage.setItem(CHAR_KEY, id);
     player.setCharacter(id);
@@ -528,6 +561,8 @@ function startGame() {
   player.reset();
   setArenaVisible(true);
   hazards.reset();
+  coins.setActive(true);   // 맵에 코인이 뜨기 시작한다(솔로 전용)
+  renderCoinHud();
   state.phase = 'playing';
   renderNotice();   // 플레이 중엔 공지 배너를 숨긴다
   state.elapsed = 0;
@@ -573,6 +608,7 @@ function goHome() {
   audio.playMusic('homeMusic');
   versus.hide();
   floorHoles.setActive(false);
+  coins.setActive(false);
   setArenaVisible(false);
   ui.showTitle();
   renderNotice();
@@ -581,6 +617,7 @@ function goHome() {
 function killPlayer(cause) {
   state.phase = 'dying';
   state.cause = cause;
+  coins.setActive(false);   // 죽으면 남은 코인 정리·수집 중단
   state.deathTimer = cause === 'fall' ? 0.35 : 0.75;
   input.enabled = false;
   if (cause === 'zap') {
@@ -776,6 +813,7 @@ async function openVersus() {
   audio.unlock();
 
   ui.hideAllScreens();
+  renderNotice();   // 첫 화면을 벗어났으니 공지 배너를 내린다(대전 중 남는 버그 방지)
   versus.showMenu();
 
   if (net.connected) return;
@@ -873,6 +911,7 @@ net.on('match-over', (msg) => endVersusMatch(msg));
 function beginVersusMatch(msg) {
   state.mode = 'versus';
   state.phase = 'countdown';
+  coins.setActive(false);   // 대전에는 코인이 뜨지 않는다(솔로 전용)
   state.elapsed = 0;
   state.serverTime = 0;
   state.serverAt = performance.now() / 1000;
@@ -985,6 +1024,7 @@ function frame() {
     player.update(dt, input.poll());
     hazards.update(dt, state.elapsed);
     if (state.hardcore) floorHoles.update(dt);
+    coins.update(dt, player.body.x, player.body.z);   // 코인 회전·수집 판정
 
     if (hazards.hitTest(player)) {
       killPlayer('zap');

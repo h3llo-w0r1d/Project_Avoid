@@ -4,7 +4,7 @@
 // 그림 파일을 따로 두지 않아도 되고, 캐릭터를 고치면 미리보기도 같이 바뀐다.
 
 import * as THREE from 'three';
-import { PLAYABLE, isUnlocked, findCharacter } from './characters.js';
+import { PLAYABLE, isUnlocked, isCoinChar, findCharacter } from './characters.js';
 import { buildFallbackAvatar } from './avatar.js';
 
 const $ = (id) => document.getElementById(id);
@@ -114,22 +114,30 @@ export class CharacterUI {
     const usable = (c) => (this.h.canUse ? this.h.canUse(c) : isUnlocked(c, best));
     const locked = PLAYABLE.filter((c) => !usable(c));
 
-    this.el.hint.textContent = !signedIn
+    // 코인 잔액도 같이 보여 준다(코인 상점 캐릭터가 있으니).
+    const coins = this.h.coins ? this.h.coins() : 0;
+    const coinTag = ` · 🪙 ${coins} 보유`;
+    this.el.hint.textContent = (!signedIn
       ? '🔒 로그인하면 캐릭터를 해금할 수 있어요'
       : (locked.length
           ? `기록을 세우면 하나씩 열립니다 · 내 최고 ${best.toFixed(1)}초`
-          : `내 최고 ${best.toFixed(1)}초`);
+          : `내 최고 ${best.toFixed(1)}초`)) + coinTag;
 
     this.el.grid.innerHTML = '';
     for (const c of PLAYABLE) {
       const unlocked = usable(c);
+      // 코인으로 사는(아직 안 산) 캐릭터인가 — 상점 카드로 공개한다.
+      const shop = !unlocked && isCoinChar(c);
+      const affordable = shop && coins >= c.coinCost;
 
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'char-card';
-      card.classList.toggle('locked', !unlocked);
+      card.classList.toggle('locked', !unlocked && !shop);
+      card.classList.toggle('shop', shop);
       card.classList.toggle('chosen', c.id === chosen);
-      card.disabled = !unlocked;
+      // 잠긴 캐릭터는 못 누른다. 상점 카드는 코인이 충분할 때만 누를 수 있다.
+      card.disabled = shop ? !affordable : !unlocked;
 
       if (unlocked) {
         const img = document.createElement('img');
@@ -146,6 +154,23 @@ export class CharacterUI {
         note.className = 'char-note';
         note.textContent = c.id === chosen ? '사용 중' : '';
         card.appendChild(note);
+      } else if (shop) {
+        // 코인 상점 캐릭터: 모습·이름을 공개하고 가격표를 붙인다. 코인이
+        // 충분하면 눌러서 바로 산다(사면 자동으로 사용 캐릭터가 된다).
+        const img = document.createElement('img');
+        img.src = this.preview(c.id);
+        img.alt = c.name;
+        card.appendChild(img);
+
+        const name = document.createElement('span');
+        name.className = 'char-name';
+        name.textContent = c.name;
+        card.appendChild(name);
+
+        const price = document.createElement('span');
+        price.className = 'char-note price';
+        price.textContent = affordable ? `🪙 ${c.coinCost} 해금` : `🪙 ${c.coinCost} 필요`;
+        card.appendChild(price);
       } else {
         // 잠긴 캐릭터는 모습도 이름도 숨긴다. "???" 와 해금 조건만 보여
         // 궁금증을 남긴다. (preview 를 부르지 않아 렌더로도 새어 나가지 않는다.)
@@ -172,9 +197,12 @@ export class CharacterUI {
       }
 
       card.addEventListener('click', () => {
-        if (!unlocked) return;
-        this.h.onSelect(c.id);
-        this.draw();
+        if (unlocked) { this.h.onSelect(c.id); this.draw(); return; }
+        // 상점 카드: 코인으로 사고(성공하면) 바로 그 캐릭터를 쓴다.
+        if (shop && affordable && this.h.buy?.(c)) {
+          this.h.onSelect(c.id);
+          this.draw();
+        }
       });
 
       this.el.grid.appendChild(card);

@@ -378,6 +378,15 @@ export class Audio {
     });
   }
 
+  // 코인 먹는 소리 — 밝고 짧은 2음 위로 튐(고전 코인 느낌).
+  coin() {
+    this.cue('coin', () => {
+      const at = this.now;
+      this.tone({ type: 'square', from: 988, peak: 0.14, attack: 0.004, decay: 0.09, at });
+      this.tone({ type: 'square', from: 1319, peak: 0.13, attack: 0.004, decay: 0.16, at: at + 0.06 });
+    });
+  }
+
   // ---------------------------------------------------------------- 배경음악
   //
   // 화면마다 다른 곡을 튼다. 첫 화면과 게임 중이 다르다.
