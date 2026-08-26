@@ -234,11 +234,13 @@ let noticeText = '';
 const noticeBanner = document.getElementById('notice-banner');
 
 function renderNotice() {
-  // 첫 화면이 실제로 보일 때만 띄운다. phase 만 보면 1v1 매치메이킹 중(phase 는
-  // 아직 title 인데 화면은 대전 메뉴)엔 배너가 게임 위에 그대로 남는다.
+  // 첫 화면에 머무를 때만 띄운다. 두 조건을 모두 본다:
+  //  - phase 가 title (혼자하기·대전을 시작하면 playing/countdown 으로 바뀐다)
+  //  - title-screen 이 실제로 화면에 떠 있음 (1v1 매치메이킹은 phase 는 아직
+  //    title 이지만 화면은 대전 메뉴라, 이 조건이 있어야 배너가 안 남는다)
   const titleScreen = document.getElementById('title-screen');
   const titleShown = titleScreen && !titleScreen.classList.contains('hidden');
-  const show = noticeText && titleShown;
+  const show = noticeText && state.phase === 'title' && titleShown;
   if (noticeBanner) {
     noticeBanner.textContent = noticeText;
     noticeBanner.classList.toggle('hidden', !show);
