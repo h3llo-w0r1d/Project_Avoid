@@ -1079,6 +1079,37 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   #title-screen .legal-links { margin-top: 8px; }
 }
 
+/* 강제가로(세로로 든 아이폰): 위 landscape 미디어쿼리는 기기가 물리적으로
+   세로라 안 먹는다. 그래서 회전 뒤 실제로는 납작한 가로인데 타이틀이 1단으로
+   길게 늘어져 잘린다. 같은 2단 컴팩트 레이아웃을 강제가로에도 그대로 준다. */
+:root.force-landscape .screen { padding: 76px 16px 10px; gap: 10px; align-items: flex-start; }
+/* 강제가로에선 공지 배너를 가로(긴 쪽=90vh) 기준으로 넓혀 한 줄로 만들고 위에
+   바짝 붙인다. 위 .screen 패딩을 늘려 패널이 배너와 안 겹치게 내려 준다. */
+:root.force-landscape #notice-banner {
+  top: calc(60px + env(safe-area-inset-top));
+  max-width: min(780px, 90vh);
+  padding: 7px 20px;
+  font-size: 13px;
+}
+:root.force-landscape #title-screen .panel {
+  width: min(760px, 100%);
+  padding: 14px 18px;
+  border-radius: 14px;
+  column-count: 2;
+  column-gap: 20px;
+}
+:root.force-landscape #title-screen .panel > * { break-inside: avoid; }
+:root.force-landscape #title-screen .logo { font-size: 30px; column-span: all; }
+:root.force-landscape #title-screen .tagline { margin-top: 5px; font-size: 12px; line-height: 1.4; }
+:root.force-landscape #title-screen button { margin-top: 8px; padding: 10px; font-size: 14px; border-radius: 10px; }
+:root.force-landscape #title-screen .field { margin-top: 10px; }
+:root.force-landscape #title-screen .account-row { margin-top: 4px; }
+:root.force-landscape #title-screen .bottom-row { margin-top: 10px; padding-top: 10px; gap: 8px; flex-direction: column; }
+:root.force-landscape #title-screen .controls div { font-size: 11px; }
+:root.force-landscape #title-screen .voice-panel { width: 100%; padding: 8px; }
+:root.force-landscape #title-screen .install-btn { margin-top: 8px; padding: 9px; font-size: 13px; }
+:root.force-landscape #title-screen .legal-links { margin-top: 8px; }
+
 .field { display: block; margin-top: 22px; }
 
 .field span {
