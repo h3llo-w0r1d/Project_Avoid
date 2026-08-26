@@ -504,7 +504,7 @@ function scatterInstances(geo, mat, placements) {
 // ---------------------------------------------------------------- 머리 장식
 
 // 사방으로 퍼지는 잎. 흔들리는 것들을 배열로 돌려준다.
-function addLeaves(root, ruler, spec) {
+function addLeaves(root, ruler, spec, _outlineMat, _oW, half = false) {
   const { count = 5, length = 1.5, color, upright: baseUpright = 0.72 } = spec;
   const mat = leafMaterial(color);
 
@@ -517,7 +517,11 @@ function addLeaves(root, ruler, spec) {
     // three.js 기본 순서 'XYZ' 는 Y 를 먼저 적용해서, 방향과 무관하게
     // 전부 같은 쪽으로 기울어져 버린다.
     pivot.rotation.order = 'YXZ';
-    pivot.rotation.y = (i / count) * Math.PI * 2 + 0.4;
+    // 반쪽(반드라고라)이면 잎도 남은 쪽(+x)에만. 그쪽은 rotation.y 가 (π,2π)
+    // 구간이라, 그 안에서만 고르게 편다. 아니면 평소대로 사방으로.
+    pivot.rotation.y = half
+      ? Math.PI + ((i + 0.5) / count) * Math.PI
+      : (i / count) * Math.PI * 2 + 0.4;
 
     // upright = 0 이면 바닥에 눕고, π/2 면 수직으로 선다
     const upright = baseUpright + (i % 2) * 0.28;
@@ -1185,8 +1189,18 @@ export function buildPlant(id) {
   // 입 (기본은 웃는 입, spec.mouth 로 표정을, spec.mouthScale 로 크기를 바꾼다)
   const mouthY = at(0.42);
   const ms = spec.mouthScale ?? 1;
+  const mouthGeo = new THREE.PlaneGeometry(0.44 * ms, 0.44 * ms);
+  // 반쪽이면 입도 절단선(x=0)에서 딱 자른다. 왼쪽 정점을 x=0·uv 0.5 로 접어
+  // 오른쪽 절반(입 텍스처의 오른쪽 반)만 남긴다.
+  if (half) {
+    const pos = mouthGeo.attributes.position, uv = mouthGeo.attributes.uv;
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getX(i) < 0) { pos.setX(i, 0); uv.setX(i, 0.5); }
+    }
+    pos.needsUpdate = true; uv.needsUpdate = true;
+  }
   const mouth = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.44 * ms, 0.44 * ms),
+    mouthGeo,
     new THREE.MeshBasicMaterial({ map: makeMouthTexture(spec.mouth), transparent: true })
   );
   mouth.position.set(0, mouthY, decalZ(0, mouthY));
@@ -1229,7 +1243,7 @@ export function buildPlant(id) {
   }
 
   // ---- 머리 장식 ---------------------------------------------------------
-  const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat, oW);
+  const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat, oW, half);
 
   // 몸통을 휘었으면, 장식도 각자 높이의 bendX 만큼 옆으로 밀어 휜 표면에
   // 그대로 얹는다. 몸통(이미 정점을 휘었다)만 빼고 전부 민다.
