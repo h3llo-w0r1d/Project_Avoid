@@ -98,23 +98,27 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
-/* 게임 중 모은 코인 개수 — 타이머 아래 금빛 알약. */
-#coin-hud {
+/* 모은 코인 — 우측 상단, 소리 버튼 왼쪽의 금빛 알약. 상단 버튼과 키를 맞춘다. */
+#coin-wallet {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 8px;
-  padding: 4px 12px;
-  font-size: 15px;
+  height: 46px;
+  padding: 0 14px;
+  font-size: 16px;
   font-weight: 800;
   color: #ffe6a0;
   background: rgba(255, 176, 60, 0.14);
   border: 1px solid rgba(255, 176, 60, 0.4);
-  border-radius: 999px;
+  border-radius: 12px;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 10px rgba(255, 176, 60, 0.4);
+  user-select: none;
 }
-#coin-hud .coin-ico { font-size: 14px; }
+#coin-wallet .coin-ico { font-size: 15px; }
+@media (max-width: 480px) {
+  #coin-wallet { height: 40px; padding: 0 10px; font-size: 14px; }
+}
 
 /* 가로로 든 폰: 화면이 위아래로 납작해서 큰 타이머가 무대 한가운데를 가린다.
    높이 기준으로 작게 줄이고 상단 바 바로 아래로 바짝 올린다. (세로·PC 는 그대로.)

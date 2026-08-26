@@ -126,11 +126,12 @@ const coins = new Coins(scene, () => {
 const input = new Input();
 const net = new Net();
 
-// 게임 중 HUD 의 코인 개수.
+// 우측 상단(소리 버튼 왼쪽)에 늘 떠 있는 코인 개수. 먹거나 살 때 갱신한다.
 const coinHudEl = document.getElementById('coin-count');
 function renderCoinHud() {
   if (coinHudEl) coinHudEl.textContent = String(wallet.coins());
 }
+renderCoinHud();   // 처음 켤 때 지금까지 모은 코인을 바로 보여 준다
 
 const state = {
   mode: 'solo',     // solo | versus
