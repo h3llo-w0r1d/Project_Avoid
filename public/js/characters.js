@@ -142,6 +142,10 @@ export const CHARACTERS = [
     unlockAt: Infinity,      // 시간으론 절대 안 열린다 — 오직 코인으로만
     coinCost: 50,            // 코인 50개로 해금
     half: true,              // 몸을 세로로 반 잘라 오른쪽만 남긴다
+    // 반쪽이라 폭이 좁아 normalizeByBody 가 폭 기준으로 크게 키운다.
+    // 다른 캐릭터와 비슷한 크기가 되도록 겉보기만 줄인다(판정과 무관).
+    // (미리보기 카메라는 크기에 맞춰 자동으로 당기므로 previewZoom 은 그대로 둔다.)
+    sizeMul: 0.45,
     previewZoom: 1.18,
     body: 0xf2e6cd,          // 만드라고라와 같은 색
     profile: [               // 만드라고라 몸매 그대로
