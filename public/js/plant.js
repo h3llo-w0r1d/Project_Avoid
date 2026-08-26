@@ -201,6 +201,45 @@ function makeBodyTexture(spec, size = 512) {
     }
   }
 
+  // 금속 광택(spec.shine). 텍스처는 몸을 한 바퀴 감싸는데 정면(카메라 쪽)은
+  // u≈0(양 끝)이라, 반사 하이라이트를 그쪽(왼끝·오른끝)에 몰아 '더하기(lighter)'
+  // 로 얹는다. 큰 sheen + 밝은 글린트 + 작은 스파클로 금·동전처럼 번쩍이게.
+  if (spec.shine) {
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    // 몸을 감싼 텍스처라 왼끝/오른끝이 정면에서 이어진다. 양쪽에 그려 준다.
+    const near = [size * 0.13, size * 0.13 - size, size * 0.87];   // 정면(오른뺨쪽)
+    for (const cx of near) {
+      // 세로 sheen 띠
+      const band = g.createLinearGradient(cx - size * 0.14, 0, cx + size * 0.14, 0);
+      band.addColorStop(0.0, 'rgba(255,255,255,0)');
+      band.addColorStop(0.5, 'rgba(255,250,215,0.6)');
+      band.addColorStop(1.0, 'rgba(255,255,255,0)');
+      g.fillStyle = band;
+      g.fillRect(cx - size * 0.14, 0, size * 0.28, size);
+      // 위쪽 큰 글린트
+      const glint = g.createRadialGradient(cx, size * 0.3, 0, cx, size * 0.3, size * 0.17);
+      glint.addColorStop(0.0, 'rgba(255,255,255,0.95)');
+      glint.addColorStop(0.5, 'rgba(255,252,225,0.45)');
+      glint.addColorStop(1.0, 'rgba(255,255,255,0)');
+      g.fillStyle = glint;
+      g.beginPath();
+      g.ellipse(cx, size * 0.3, size * 0.09, size * 0.16, 0, 0, Math.PI * 2);
+      g.fill();
+      // 작은 스파클 점 두 개(톡톡 튀는 반짝)
+      for (const [sx, sy, sr] of [[cx + size * 0.02, size * 0.16, 0.02], [cx - size * 0.03, size * 0.5, 0.014]]) {
+        const sp = g.createRadialGradient(sx, sy, 0, sx, sy, size * sr * 2.4);
+        sp.addColorStop(0, 'rgba(255,255,255,0.95)');
+        sp.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = sp;
+        g.beginPath();
+        g.arc(sx, sy, size * sr * 2.4, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+    g.restore();
+  }
+
   return textureFrom(cv, { wrap: true });
 }
 
