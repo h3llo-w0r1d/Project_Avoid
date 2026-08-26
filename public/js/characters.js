@@ -175,6 +175,27 @@ export const CHARACTERS = [
     skin: 'fiber'
   },
   {
+    // 골드라고라 — 온몸이 금빛으로 반짝이는 코인 부자. 위로 갈수록 밝아지는
+    // 금속 광택 그라데이션. 시간으론 안 열리고 코인 100개로만 산다.
+    id: 'gold',
+    name: '골드라고라',
+    unlockAt: Infinity,
+    coinCost: 100,
+    previewZoom: 1.18,
+    body: 0xffcf3f,          // 금색
+    bodyTop: 0xfff3b8,       // 위는 밝은 하이라이트(금속 광택)
+    bodyBottom: 0xbf850c,    // 아래는 짙은 금
+    outlineColor: 0x6e4a0c,  // 진한 금빛 테두리로 또렷하게
+    profile: [               // 만드라고라 몸매 그대로
+      [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
+      [0.220, 0.56], [0.380, 0.575], [0.560, 0.56], [0.760, 0.51],
+      [0.960, 0.44], [1.140, 0.34], [1.300, 0.21], [1.410, 0.09],
+      [1.450, 0.00]
+    ],
+    top: { kind: 'leaves', count: 5, length: 1.5, color: '#e6c34a' }, // 금빛 잎
+    skin: 'grooves'
+  },
+  {
     id: 'carrot',
     wip: true,
     name: '당근',
