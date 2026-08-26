@@ -19,6 +19,23 @@ const R_MIN = 1.6;               // 스폰 반경 범위 — 중앙·가장자�
 const R_MAX = ARENA_RADIUS - 1.4;
 const CLEAR_OF_PLAYER = 2.2;     // 플레이어 코앞엔 안 띄운다(즉시 먹힘 방지)
 
+// 코인 뒤에 깔 부드러운 금빛 후광. 어두운 무대에서도 코인이 눈에 띄고
+// 반짝여 보이게 한다(가운데 밝고 밖으로 사라지는 원).
+function makeGlowTexture() {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const g = cv.getContext('2d');
+  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0.0, 'rgba(255,244,190,0.95)');
+  grad.addColorStop(0.35, 'rgba(255,205,80,0.6)');
+  grad.addColorStop(1.0, 'rgba(255,205,80,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.needsUpdate = true;
+  return tex;
+}
+
 export class Coins {
   constructor(scene, onCollect) {
     this.onCollect = onCollect;   // (개수) => void
@@ -29,12 +46,20 @@ export class Coins {
     // 금화 한 장: 납작한 원기둥을 세워, Y축으로 돌면 반짝이며 도는 코인처럼 보인다.
     this.geo = new THREE.CylinderGeometry(0.32, 0.32, 0.07, 24);
     this.geo.rotateX(Math.PI / 2);   // 원기둥 축을 Z로 눕혀 동전 면이 옆을 보게
+    // 밝고 자체발광이 강한 금색. 무대 조명이 약해도 어둡지 않게 스스로 빛난다.
     this.mat = new THREE.MeshStandardMaterial({
-      color: 0xffcf3f, metalness: 0.75, roughness: 0.3,
-      emissive: 0x6b4a00, emissiveIntensity: 0.5
+      color: 0xffe25a, metalness: 0.55, roughness: 0.22,
+      emissive: 0xffc23a, emissiveIntensity: 1.15
     });
 
-    this.coins = [];   // { mesh, x, z, t, phase }
+    // 코인 뒤 후광(가산 혼합). 모든 코인이 공유하고, 크기만 각자 반짝이게 흔든다.
+    this.glowTex = makeGlowTexture();
+    this.glowMat = new THREE.SpriteMaterial({
+      map: this.glowTex, color: 0xffd24a, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9
+    });
+
+    this.coins = [];   // { mesh, glow, x, z, t, phase }
     this.active = false;
     this.spawnTimer = 1.5;
   }
@@ -63,8 +88,17 @@ export class Coins {
     const mesh = new THREE.Mesh(this.geo, this.mat);
     mesh.position.set(x, Y, z);
     mesh.renderOrder = 3;
+
+    // 후광 스프라이트는 코인 자식으로 붙여 같이 움직인다. 스프라이트는 늘
+    // 카메라를 보므로 코인이 돌아도 후광은 정면으로 반짝인다.
+    const glow = new THREE.Sprite(this.glowMat);
+    glow.scale.set(1.3, 1.3, 1);
+    glow.position.set(0, 0, -0.02);   // 코인 살짝 뒤
+    glow.renderOrder = 2;
+    mesh.add(glow);
+
     this.group.add(mesh);
-    this.coins.push({ mesh, x, z, t: 0, phase: 'live' });
+    this.coins.push({ mesh, glow, x, z, t: 0, phase: 'live' });
   }
 
   // 매 프레임. 플레이어 위치를 받아 수집을 판정한다.
@@ -84,6 +118,9 @@ export class Coins {
       // 빙글 돌며 위아래로 살짝 둥실.
       c.mesh.rotation.y += dt * 3.2;
       c.mesh.position.y = Y + Math.sin(now * 2.5 + i) * 0.12;
+      // 후광이 커졌다 작아지며 반짝인다(코인마다 위상 어긋내기).
+      const tw = 1.15 + Math.sin(now * 6 + i * 1.7) * 0.22;
+      c.glow.scale.set(1.3 * tw, 1.3 * tw, 1);
 
       // 먹었나 — 수평 거리만.
       if (Math.hypot(c.x - px, c.z - pz) <= COLLECT_R) {
