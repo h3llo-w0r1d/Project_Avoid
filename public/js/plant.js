@@ -504,7 +504,7 @@ function scatterInstances(geo, mat, placements) {
 // ---------------------------------------------------------------- 머리 장식
 
 // 사방으로 퍼지는 잎. 흔들리는 것들을 배열로 돌려준다.
-function addLeaves(root, ruler, spec, _outlineMat, _oW, half = false) {
+function addLeaves(root, ruler, spec, _outlineMat, _oW, halfSide = null) {
   const { count = 5, length = 1.5, color, upright: baseUpright = 0.72 } = spec;
   const mat = leafMaterial(color);
 
@@ -517,10 +517,11 @@ function addLeaves(root, ruler, spec, _outlineMat, _oW, half = false) {
     // three.js 기본 순서 'XYZ' 는 Y 를 먼저 적용해서, 방향과 무관하게
     // 전부 같은 쪽으로 기울어져 버린다.
     pivot.rotation.order = 'YXZ';
-    // 반쪽(반드라고라)이면 잎도 남은 쪽(+x)에만. 그쪽은 rotation.y 가 (π,2π)
-    // 구간이라, 그 안에서만 고르게 편다. 아니면 평소대로 사방으로.
-    pivot.rotation.y = half
-      ? Math.PI + ((i + 0.5) / count) * Math.PI
+    // 반쪽이면 잎도 남은 쪽에만. 오른쪽(+x)은 rotation.y ∈(π,2π), 왼쪽(-x)은
+    // (0,π) 구간이라 그 안에서만 고르게 편다. 아니면 평소대로 사방으로.
+    const spread = ((i + 0.5) / count) * Math.PI;
+    pivot.rotation.y = halfSide === 'right' ? Math.PI + spread
+      : halfSide === 'left' ? spread
       : (i / count) * Math.PI * 2 + 0.4;
 
     // upright = 0 이면 바닥에 눕고, π/2 면 수직으로 선다
@@ -994,17 +995,20 @@ export function buildPlant(id) {
   const { at, radiusAt, surfaceZ, decalZ } = ruler;
   const root = new THREE.Group();
 
-  // 반드라고라: 몸을 세로로 반 잘라(오른쪽 x≥0 만) 남긴다. 팔·발·눈·볼도
-  // 한쪽만 붙이고, 잘린 단면은 아래에서 납작한 뚜껑으로 막는다.
+  // 우드라고라/좌드라고라: 몸을 세로로 반 잘라 한쪽만 남긴다. 팔·발·눈·볼도
+  // 그쪽만 붙이고, 잘린 단면은 아래에서 납작한 뚜껑으로 막는다.
+  //   half: true|'right' → 오른쪽(x≥0),  half: 'left' → 왼쪽(x≤0)
   const half = !!spec.half;
-  const DIRS = half ? [1] : [-1, 1];   // 좌우로 붙이는 부위(반쪽이면 오른쪽만)
+  const leftHalf = spec.half === 'left';
+  const halfSide = half ? (leftHalf ? 'left' : 'right') : null;
+  const DIRS = half ? [leftHalf ? -1 : 1] : [-1, 1];   // 붙이는 쪽(남은 반쪽)
 
   // ---- 몸통 -------------------------------------------------------------
-  // half 면 반 바퀴(phi 0→π)만 돌려 x≥0 쪽 반쪽만 만든다. phi=0 은 앞(+Z),
-  // π/2 는 오른쪽(+X), π 는 뒤(-Z) — 그 사이가 전부 x≥0 이라 딱 세로 절단이 된다.
+  // 반 바퀴만 돌려 한쪽 반만 만든다. phi=0 은 앞(+Z), π/2 는 오른(+X), π 는 뒤(-Z),
+  // 3π/2 는 왼(-X). 오른쪽은 phi 0→π(x≥0), 왼쪽은 phi π→2π(x≤0).
   const bodyGeo = new THREE.LatheGeometry(
     spec.profile.map(([y, r]) => new THREE.Vector2(r, y)),
-    48, 0, half ? Math.PI : Math.PI * 2
+    48, leftHalf ? Math.PI : 0, half ? Math.PI : Math.PI * 2
   );
   if (spec.lumpy) roughen(bodyGeo, spec.lumpy);
   // 망고처럼 살짝 휘게. 아웃라인이 이 지오메트리를 복사하므로 반드시 먼저 휜다.
@@ -1190,12 +1194,14 @@ export function buildPlant(id) {
   const mouthY = at(0.42);
   const ms = spec.mouthScale ?? 1;
   const mouthGeo = new THREE.PlaneGeometry(0.44 * ms, 0.44 * ms);
-  // 반쪽이면 입도 절단선(x=0)에서 딱 자른다. 왼쪽 정점을 x=0·uv 0.5 로 접어
-  // 오른쪽 절반(입 텍스처의 오른쪽 반)만 남긴다.
+  // 반쪽이면 입도 절단선(x=0)에서 딱 자른다. 남은 쪽 반대편 정점을 x=0·uv 0.5
+  // 로 접어, 남은 쪽 절반(입 텍스처의 그쪽 반)만 남긴다.
   if (half) {
     const pos = mouthGeo.attributes.position, uv = mouthGeo.attributes.uv;
     for (let i = 0; i < pos.count; i++) {
-      if (pos.getX(i) < 0) { pos.setX(i, 0); uv.setX(i, 0.5); }
+      const x = pos.getX(i);
+      // 오른쪽만 남길 땐 x<0 을, 왼쪽만 남길 땐 x>0 을 절단선으로 접는다.
+      if (leftHalf ? x > 0 : x < 0) { pos.setX(i, 0); uv.setX(i, 0.5); }
     }
     pos.needsUpdate = true; uv.needsUpdate = true;
   }
@@ -1243,7 +1249,7 @@ export function buildPlant(id) {
   }
 
   // ---- 머리 장식 ---------------------------------------------------------
-  const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat, oW, half);
+  const swaying = (TOPS[spec.top.kind] ?? addLeaves)(root, ruler, spec.top, outlineMat, oW, halfSide);
 
   // 몸통을 휘었으면, 장식도 각자 높이의 bendX 만큼 옆으로 밀어 휜 표면에
   // 그대로 얹는다. 몸통(이미 정점을 휘었다)만 빼고 전부 민다.
