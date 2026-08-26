@@ -9,10 +9,10 @@
 import * as THREE from 'three';
 import { ARENA_RADIUS } from './config.js';
 
-const SPAWN_MIN = 3.5;            // 다음 코인까지 최소 간격(초)
-const SPAWN_MAX = 6.0;
-const MAX_ON_FIELD = 3;          // 동시에 떠 있는 코인 수 상한
-const LIFETIME = 11;             // 안 먹으면 사라지는 시간(초)
+const SPAWN_MIN = 7.0;            // 다음 코인까지 최소 간격(초) — 너무 자주 안 나오게 늘림
+const SPAWN_MAX = 12.0;
+const MAX_ON_FIELD = 2;          // 동시에 떠 있는 코인 수 상한
+const LIFETIME = 12;             // 안 먹으면 사라지는 시간(초)
 const COLLECT_R = 0.95;          // 수집 반경(수평 거리)
 const Y = 0.7;                   // 떠 있는 높이(플레이어 몸통쯤)
 const R_MIN = 1.6;               // 스폰 반경 범위 — 중앙·가장자리 너무 붙지 않게
