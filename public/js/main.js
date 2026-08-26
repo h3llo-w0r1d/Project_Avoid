@@ -6,6 +6,7 @@ import { Hazards } from './hazards.js';
 import { FloorHoles } from './floor-holes.js';
 import { Coins } from './coins.js';
 import { wallet } from './wallet.js';
+import { PATCH_NOTES } from './patch-notes.js';
 import { Input } from './input.js';
 import { UI, api } from './ui.js';
 import { VersusUI } from './versus-ui.js';
@@ -299,6 +300,27 @@ const board = new BoardUI({
 for (const btn of document.querySelectorAll('#side-menu [data-forward]')) {
   btn.addEventListener('click', () => document.getElementById(btn.dataset.forward)?.click());
 }
+
+// 패치노트 창. 데이터(patch-notes.js)를 날짜별로 그려 준다. 내용은 우리가
+// 적어 둔 정적 목록이라 escape 없이 넣어도 되지만, 습관대로 감싸 준다.
+(() => {
+  const modal = document.getElementById('patch-modal');
+  const list = document.getElementById('patch-list');
+  if (!modal || !list) return;
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const close = () => modal.classList.add('hidden');
+  document.getElementById('patch-btn').addEventListener('click', () => {
+    list.innerHTML = PATCH_NOTES.map((n) => `
+      <li class="patch-entry">
+        <div class="patch-date">${esc(n.date)}</div>
+        <ul class="patch-items">${n.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+      </li>`).join('') || '<li class="board-empty">아직 기록이 없습니다.</li>';
+    modal.classList.remove('hidden');
+  });
+  document.getElementById('patch-close').addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+})();
 
 const characters = new CharacterUI({
   bestSeconds,

@@ -149,6 +149,18 @@
     </div>
   </div>
 
+  <!-- 패치노트 (왼쪽 메뉴 📝) -->
+  <div id="patch-modal" class="modal hidden">
+    <div class="modal-card panel">
+      <div class="modal-head">
+        <h2>패치노트</h2>
+        <button id="patch-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+      </div>
+      <p class="board-hint">업데이트 기록입니다. 최신 소식이 맨 위에 있어요.</p>
+      <ol id="patch-list" class="patch-list"></ol>
+    </div>
+  </div>
+
   <!-- 프로필 (사람 버튼, 또는 랭킹에서 이름을 누르면 열린다) -->
   <div id="profile-modal" class="modal hidden">
     <div class="modal-card panel">
@@ -321,6 +333,7 @@
       <button type="button" data-forward="char-btn"><span class="sm-ico">🌱</span><span class="sm-label">캐릭터</span></button>
       <button type="button" data-forward="rank-btn"><span class="sm-ico">🏆</span><span class="sm-label">랭킹</span></button>
       <button type="button" data-forward="board-btn"><span class="sm-ico">💬</span><span class="sm-label">커뮤니티</span></button>
+      <button type="button" id="patch-btn"><span class="sm-ico">📝</span><span class="sm-label">패치노트</span></button>
     </nav>
   </div>
 
