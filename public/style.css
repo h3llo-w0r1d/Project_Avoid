@@ -145,6 +145,14 @@ html, body {
 :root.force-landscape #stage-label { margin-top: 1px; font-size: 11px; letter-spacing: 0.18em; }
 :root.force-landscape #best-inline { margin-top: 1px; font-size: 11px; }
 
+/* 강제 가로에선 화면이 90° 돌아 세로·가로 축이 뒤바뀐다. vh(높이) 로 잡은
+   크기는 회전 뒤엔 '긴 쪽'을 재게 돼 카드가 화면 밖으로 넘쳐 잘린다.
+   회전 화면의 '세로 높이' 는 원래 세로폭(=100vw)이므로 vh 를 vw 로 바꾼다. */
+:root.force-landscape .modal { padding: 14px; }
+:root.force-landscape .modal-card { max-height: 86vw; }
+:root.force-landscape #board-modal .modal-card { max-height: 90vw; }
+:root.force-landscape .board-list { max-height: 58vw; }
+
 /* 감전 순간 화면 플래시 */
 body.zapped::after {
   content: "";
