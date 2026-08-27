@@ -330,7 +330,32 @@ const patch = (() => {
 
   let text = '';   // 서버 원문(비면 기본을 쓴다)
 
-  // 텍스트 → [{date, items}]. 날짜 줄 + '- 항목' 줄. 빈 줄은 무시.
+  // 이름 색 → 실제 색. 안전하게 화이트리스트로만 허용한다(임의 CSS 주입 방지).
+  const COLOR_NAMES = {
+    빨강: '#ff5566', 빨간: '#ff5566', red: '#ff5566',
+    주황: '#ff9f43', orange: '#ff9f43',
+    노랑: '#ffd54a', yellow: '#ffd54a',
+    초록: '#57d18a', 녹색: '#57d18a', green: '#57d18a',
+    파랑: '#4f8bff', 파란: '#4f8bff', blue: '#4f8bff',
+    하늘: '#4fd6ff', cyan: '#4fd6ff',
+    보라: '#b57bff', purple: '#b57bff',
+    분홍: '#ff7eb6', pink: '#ff7eb6',
+    회색: '#9aa4bf', gray: '#9aa4bf', grey: '#9aa4bf',
+    흰색: '#ffffff', white: '#ffffff'
+  };
+
+  // 줄 앞의 [색] 을 뽑아 { color, text } 로 나눈다. 색이 아니면 원문 그대로.
+  function pickColor(s) {
+    const m = s.match(/^\[([^\]]{1,12})\]\s*(.*)$/);
+    if (!m) return { color: null, text: s };
+    const key = m[1].trim();
+    let color = null;
+    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(key)) color = key;         // 직접 hex
+    else color = COLOR_NAMES[key] || COLOR_NAMES[key.toLowerCase()] || null;  // 이름
+    return color ? { color, text: m[2] } : { color: null, text: s };
+  }
+
+  // 텍스트 → [{date, items:[{text,color}]}]. 날짜 줄 + '- 항목' 줄. 빈 줄은 무시.
   function parse(t) {
     const entries = [];
     let cur = null;
@@ -339,7 +364,7 @@ const patch = (() => {
       if (!line) continue;
       if (/^[-•]/.test(line)) {
         if (!cur) { cur = { date: '', items: [] }; entries.push(cur); }
-        cur.items.push(line.replace(/^[-•]\s*/, ''));
+        cur.items.push(pickColor(line.replace(/^[-•]\s*/, '')));
       } else {
         cur = { date: line, items: [] };
         entries.push(cur);
@@ -350,11 +375,13 @@ const patch = (() => {
 
   function render() {
     const entries = parse(text || defaultText);
+    // color 는 hex 또는 화이트리스트 값이라 style 에 넣어도 안전하다.
+    const item = (i) => `<li${i.color ? ` style="color:${i.color}"` : ''}>${esc(i.text)}</li>`;
     list.innerHTML = entries.length
       ? entries.map((n) => `
           <li class="patch-entry">
             ${n.date ? `<div class="patch-date">${esc(n.date)}</div>` : ''}
-            <ul class="patch-items">${n.items.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>
+            <ul class="patch-items">${n.items.map(item).join('')}</ul>
           </li>`).join('')
       : '<li class="board-empty">아직 기록이 없습니다.</li>';
   }
