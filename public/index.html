@@ -67,7 +67,6 @@
   <header id="top-bar">
     <div class="brand">Avoid<span>Arc</span></div>
     <div id="corner-buttons">
-      <button id="admin-msg-btn" class="hidden" type="button" aria-label="메시지" title="유저 메시지(관리자)">💬<span id="admin-msg-badge" class="corner-badge hidden">0</span></button>
       <button id="admin-coin-btn" class="hidden" type="button" aria-label="코인 지급" title="코인 지급(관리자)">💰</button>
       <button id="notice-btn" class="hidden" type="button" aria-label="공지 작성" title="공지 작성(관리자)">📢</button>
       <button id="board-btn" type="button" aria-label="게시판" title="게시판">💬</button>
@@ -148,42 +147,6 @@
       </div>
       <ol id="board-list" class="board-list"><li class="board-empty">불러오는 중…</li></ol>
       <div id="board-detail" class="board-detail hidden"></div>
-    </div>
-  </div>
-
-  <!-- 유저용 관리자 메시지 위젯 (우측 하단, 로그인 시) -->
-  <div id="msg-widget" class="hidden">
-    <div id="msg-panel" class="hidden">
-      <div class="msg-head"><span>👑 관리자와 대화</span><button id="msg-close" type="button" aria-label="닫기">✕</button></div>
-      <ol id="msg-thread" class="msg-thread"></ol>
-      <div class="msg-input-row">
-        <input id="msg-input" type="text" maxlength="500" placeholder="메시지를 입력하세요" autocomplete="off" />
-        <button id="msg-send" type="button">보내기</button>
-      </div>
-    </div>
-    <button id="msg-toggle" type="button" aria-label="관리자 메시지">💬<span id="msg-badge" class="corner-badge hidden">0</span></button>
-  </div>
-
-  <!-- 유저 메시지 (관리자 전용, 상단바 💬) -->
-  <div id="admin-msgs-modal" class="modal hidden">
-    <div class="modal-card panel">
-      <div class="modal-head">
-        <button id="admin-msgs-back" class="icon-btn hidden" type="button" aria-label="목록으로">←</button>
-        <h2 id="admin-msgs-title">유저 메시지</h2>
-        <button id="admin-msgs-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
-      </div>
-      <div id="admin-msgs-listview">
-        <p class="board-hint">답장한 유저가 위에 뜹니다. 검색해서 아무 계정에게나 먼저 말을 걸 수도 있어요.</p>
-        <input id="admin-msgs-search" type="text" placeholder="닉네임 검색(새 대화)" autocomplete="off" />
-        <ol id="admin-msgs-inbox" class="acgrant-list"><li class="board-empty">불러오는 중…</li></ol>
-      </div>
-      <div id="admin-msgs-chatview" class="hidden">
-        <ol id="admin-msgs-thread" class="msg-thread admin"></ol>
-        <div class="msg-input-row">
-          <input id="admin-msgs-input" type="text" maxlength="500" placeholder="메시지 입력" autocomplete="off" />
-          <button id="admin-msgs-send" type="button" class="primary small">보내기</button>
-        </div>
-      </div>
     </div>
   </div>
 

@@ -123,8 +123,6 @@ async function onAuthChange() {
       }
     } catch { /* 무시 */ }
   }
-  // 관리자 메시지 위젯은 로그인 유저(관리자 제외)에게만.
-  msgWidget.setActive(auth.signedIn && !admin);
   syncCharacterForAuth();
 }
 let claimedCoinsFor = null;
@@ -252,7 +250,6 @@ const adminReady = api.amIAdmin()
       setupNoticeAdmin();
       patch.enableAdmin();   // 패치노트 편집 버튼(✏️) 켜기
       adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기
-      adminMsgs.enableAdmin();    // 유저 메시지 버튼(💬) 켜기
       renderCoinHud();       // 코인 표시를 ∞ 로
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
       syncCharacterForAuth();
@@ -596,139 +593,6 @@ const adminCoins = (() => {
   search.addEventListener('input', render);
 
   return { enableAdmin() { btn.classList.remove('hidden'); } };
-})();
-
-// ── 유저용 관리자 메시지 위젯(우측 하단) ───────────────────
-const escMsg = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-const msgWidget = (() => {
-  const widget = document.getElementById('msg-widget');
-  if (!widget) return { setActive() {} };
-  const toggle = document.getElementById('msg-toggle');
-  const panel = document.getElementById('msg-panel');
-  const badge = document.getElementById('msg-badge');
-  const threadEl = document.getElementById('msg-thread');
-  const input = document.getElementById('msg-input');
-  let msgs = [], unread = 0, opened = false, pollTimer = null;
-
-  const renderThread = () => {
-    threadEl.innerHTML = msgs.length
-      ? msgs.map((m) => `<li class="msg ${m.sender === 'admin' ? 'from-admin' : 'from-me'}"><span class="msg-bubble">${escMsg(m.text)}</span></li>`).join('')
-      : '<li class="msg-empty">궁금한 점이나 하고 싶은 말을 남겨보세요! 관리자가 답해줍니다 🙂</li>';
-    threadEl.scrollTop = threadEl.scrollHeight;
-  };
-  const renderBadge = () => { badge.textContent = unread; badge.classList.toggle('hidden', unread <= 0); };
-
-  async function refresh() {
-    try { const d = await api.myMessages(); msgs = d.messages; unread = d.unread; renderBadge(); if (opened) renderThread(); } catch { /* 무시 */ }
-  }
-  function openPanel() {
-    opened = true; panel.classList.remove('hidden'); renderThread();
-    if (unread > 0) { unread = 0; renderBadge(); api.seenMyMessages(); }
-    input.focus();
-  }
-  function closePanel() { opened = false; panel.classList.add('hidden'); }
-  async function send() {
-    const t = input.value.trim(); if (!t) return;
-    input.value = '';
-    try { msgs = await api.sendMyMessage(t); renderThread(); } catch { /* 무시 */ }
-  }
-  toggle.addEventListener('click', () => (opened ? closePanel() : openPanel()));
-  document.getElementById('msg-close').addEventListener('click', closePanel);
-  document.getElementById('msg-send').addEventListener('click', send);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } });
-
-  return {
-    // 로그인(관리자 제외)일 때만 위젯을 켜고 10초마다 새 메시지를 확인한다.
-    setActive(on) {
-      widget.classList.toggle('hidden', !on);
-      if (on) { refresh(); if (!pollTimer) pollTimer = setInterval(refresh, 10000); }
-      else { closePanel(); if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } msgs = []; unread = 0; renderBadge(); }
-    }
-  };
-})();
-
-// ── 유저 메시지(관리자) ────────────────────────────────────
-const adminMsgs = (() => {
-  const modal = document.getElementById('admin-msgs-modal');
-  if (!modal) return { enableAdmin() {} };
-  const btn = document.getElementById('admin-msg-btn');
-  const cornerBadge = document.getElementById('admin-msg-badge');
-  const listView = document.getElementById('admin-msgs-listview');
-  const chatView = document.getElementById('admin-msgs-chatview');
-  const inboxEl = document.getElementById('admin-msgs-inbox');
-  const search = document.getElementById('admin-msgs-search');
-  const threadEl = document.getElementById('admin-msgs-thread');
-  const input = document.getElementById('admin-msgs-input');
-  const backBtn = document.getElementById('admin-msgs-back');
-  const title = document.getElementById('admin-msgs-title');
-  let inbox = [], accounts = [], curUser = null;
-
-  const updateBadge = () => {
-    const n = inbox.reduce((s, r) => s + (r.unread || 0), 0);
-    cornerBadge.textContent = n; cornerBadge.classList.toggle('hidden', n <= 0);
-  };
-  function renderList() {
-    const qy = search.value.trim().toLowerCase();
-    const rows = qy
-      ? accounts.filter((a) => a.nickname.toLowerCase().includes(qy))
-          .map((a) => ({ userId: a.id, nickname: a.nickname, unread: 0, lastText: '' }))
-      : inbox;
-    inboxEl.innerHTML = rows.length
-      ? rows.map((r) => `<li class="acgrant" data-id="${escMsg(r.userId)}" data-name="${escMsg(r.nickname)}">
-          <span class="acgrant-name">${escMsg(r.nickname)}${r.unread ? ` <span class="acgrant-pending">새 ${r.unread}</span>` : ''}</span>
-          <span class="acgrant-go">${r.lastText ? escMsg(r.lastText.slice(0, 18)) : '대화 걸기'} ▸</span></li>`).join('')
-      : '<li class="board-empty">대화가 없습니다. 검색해서 말을 걸어보세요.</li>';
-    for (const li of inboxEl.querySelectorAll('.acgrant')) {
-      li.addEventListener('click', () => openChat(li.dataset.id, li.dataset.name));
-    }
-  }
-  function showList() {
-    curUser = null; chatView.classList.add('hidden'); listView.classList.remove('hidden');
-    backBtn.classList.add('hidden'); title.textContent = '유저 메시지'; renderList();
-  }
-  function renderThread(list) {
-    threadEl.innerHTML = list.length
-      ? list.map((m) => `<li class="msg ${m.sender === 'admin' ? 'from-me' : 'from-user'}"><span class="msg-bubble">${escMsg(m.text)}</span></li>`).join('')
-      : '<li class="msg-empty">첫 메시지를 보내보세요.</li>';
-    threadEl.scrollTop = threadEl.scrollHeight;
-  }
-  async function openChat(id, name) {
-    curUser = id; listView.classList.add('hidden'); chatView.classList.remove('hidden');
-    backBtn.classList.remove('hidden'); title.textContent = name;
-    threadEl.innerHTML = '<li class="msg-empty">불러오는 중…</li>';
-    try { renderThread((await api.adminConversation(id)).messages); } catch { /* 무시 */ }
-    try { inbox = await api.adminInbox(); updateBadge(); } catch { /* 무시 */ }
-    input.focus();
-  }
-  async function open() {
-    modal.classList.remove('hidden'); search.value = '';
-    inboxEl.innerHTML = '<li class="board-empty">불러오는 중…</li>';
-    try { [inbox, accounts] = await Promise.all([api.adminInbox(), api.adminAccounts()]); } catch { /* 무시 */ }
-    showList(); updateBadge();
-  }
-  const close = () => modal.classList.add('hidden');
-  async function sendMsg() {
-    const t = input.value.trim(); if (!t || !curUser) return;
-    input.value = '';
-    try { renderThread(await api.adminSendMessage(curUser, t)); } catch { /* 무시 */ }
-  }
-  async function pollBadge() {
-    try { inbox = await api.adminInbox(); updateBadge(); if (!modal.classList.contains('hidden') && !curUser) renderList(); } catch { /* 무시 */ }
-  }
-
-  btn.addEventListener('click', open);
-  document.getElementById('admin-msgs-close').addEventListener('click', close);
-  backBtn.addEventListener('click', showList);
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  search.addEventListener('input', renderList);
-  document.getElementById('admin-msgs-send').addEventListener('click', sendMsg);
-  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); sendMsg(); } });
-
-  return {
-    enableAdmin() { btn.classList.remove('hidden'); pollBadge(); setInterval(pollBadge, 12000); }
-  };
 })();
 
 // ── 코인 룰렛 ──────────────────────────────────────────────
