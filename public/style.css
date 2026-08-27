@@ -792,12 +792,19 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .board-name { font-weight: 700; font-size: 14px; color: var(--text); }
 .board-name.member { color: var(--accent); }      /* 로그인 유저는 파란 이름 */
 .board-time { font-size: 12px; color: var(--muted); }
+/* 관리자 버튼 묶음(수정·삭제)은 머리 오른쪽 끝으로 민다. */
+.board-tools { margin-left: auto; display: inline-flex; gap: 6px; flex: none; }
+.board-edit,
 .board-del {
-  width: auto; margin: 0 0 0 auto; padding: 3px 9px;
+  width: auto; margin: 0; padding: 3px 9px;
   font-size: 11px; font-weight: 700; color: var(--muted);
   background: rgba(255, 255, 255, 0.06); border: 1px solid var(--stroke); border-radius: 6px;
 }
+.board-edit:hover { color: #fff; background: var(--accent); border-color: transparent; }
 .board-del:hover { color: #fff; background: var(--volt); border-color: transparent; }
+
+/* 입력칸 아래 버튼 묶음(취소·남기기/수정 저장) */
+.board-write-btns { display: inline-flex; gap: 8px; }
 .board-body { font-size: 14px; line-height: 1.6; color: #d3ddf5; word-break: break-word; }
 
 /* 목록 카드: 통째로 눌러 상세로 들어간다. hover 하이라이트는 양옆으로만

@@ -548,6 +548,17 @@ export const api = {
     return data.posts;
   },
 
+  // 게시글 본문 수정(관리자). 패치노트를 다듬는 데 쓴다.
+  async boardEdit(id, body) {
+    const res = await fetch(`/api/admin/board/${encodeURIComponent(id)}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+    return data.posts;
+  },
+
   async adminClearUsage() {
     const res = await fetch('/api/admin/usage/clear', {
       method: 'POST',

@@ -76,6 +76,7 @@ export class BoardUI {
       tabs: $('board-tabs'),
       cat: $('board-cat'), colors: $('board-colors'),
       input: $('board-input'), send: $('board-send'),
+      editCancel: $('board-edit-cancel'),
       count: $('board-count'), error: $('board-error'),
       list: $('board-list'), detail: $('board-detail')
     };
@@ -83,6 +84,7 @@ export class BoardUI {
     this.el.write = this.el.modal.querySelector('.board-write');
     this.posts = [];
     this.openId = null;      // 상세로 열려 있는 글 id (없으면 목록)
+    this.editingId = null;   // 수정 중인 글 id (없으면 새 글 쓰기)
     this.tab = 'patch';      // 지금 보고 있는 칸 (기본: 패치노트)
     this.patchReady = false; // 관리자 선택지(패치노트)를 넣었는지
 
@@ -90,6 +92,7 @@ export class BoardUI {
     $('board-close').addEventListener('click', () => this.close());
     this.el.modal.addEventListener('click', (e) => { if (e.target === this.el.modal) this.close(); });
     this.el.send.addEventListener('click', () => this.submit());
+    this.el.editCancel.addEventListener('click', () => this.exitEdit());
     this.el.input.addEventListener('input', () => {
       this.el.count.textContent = `${[...this.el.input.value].length} / ${this.el.input.maxLength}`;
       this.el.error.textContent = '';
@@ -119,7 +122,7 @@ export class BoardUI {
     catch { this.el.list.innerHTML = '<li class="board-empty">불러오지 못했습니다.</li>'; }
   }
 
-  close() { this.el.modal.classList.add('hidden'); this.showList(); }
+  close() { this.el.modal.classList.add('hidden'); this.exitEdit(); this.showList(); }
 
   // 관리자면 쓰기 칸에 '패치노트' 선택지를 한 번만 추가한다.
   ensurePatchOption() {
@@ -137,11 +140,14 @@ export class BoardUI {
     for (const b of this.el.tabs.querySelectorAll('button')) {
       b.classList.toggle('current', b.dataset.cat === cat);
     }
-    // 보고 있는 칸으로 바로 쓰게 기본 선택을 맞춘다(쓸 수 있는 칸일 때만).
-    if ([...this.el.cat.options].some((o) => o.value === cat)) {
-      this.el.cat.value = cat;
+    // 수정 중이면 쓰기 칸(입력·칸 선택)은 건드리지 않는다.
+    if (!this.editingId) {
+      // 보고 있는 칸으로 바로 쓰게 기본 선택을 맞춘다(쓸 수 있는 칸일 때만).
+      if ([...this.el.cat.options].some((o) => o.value === cat)) {
+        this.el.cat.value = cat;
+      }
+      this.syncWriteMode();
     }
-    this.syncWriteMode();
     this.showList();
     this.render(this.posts);
   }
@@ -181,24 +187,56 @@ export class BoardUI {
     this.el.detail.scrollTop = 0;
   }
 
-  // ── 새 원글 올리기(목록 상단 입력칸) ───────────────────
+  // ── 새 원글 올리기 / 수정 저장(목록 상단 입력칸) ─────────
   async submit() {
     const body = this.el.input.value.trim();
     if (!body) { this.el.error.textContent = '내용을 입력해 주세요.'; return; }
     this.el.send.disabled = true;
     try {
-      const posts = await this.h.post(body, null, this.el.cat.value);
-      this.el.input.value = '';
-      this.syncWriteMode();
+      let posts, targetTab;
+      if (this.editingId) {
+        posts = await this.h.edit(this.editingId, body);
+      } else {
+        posts = await this.h.post(body, null, this.el.cat.value);
+        targetTab = this.el.cat.value;   // 방금 쓴 칸으로 탭을 옮겨 보이게
+      }
       this.el.error.textContent = '';
-      // 방금 쓴 칸으로 탭을 옮겨 바로 보이게 한다.
-      this.setTab(this.el.cat.value);
+      this.exitEdit();                    // 입력칸·버튼 라벨을 원래대로
+      if (targetTab) this.setTab(targetTab);
       this.render(posts);
     } catch (err) {
       this.el.error.textContent = err.message;
     } finally {
       this.el.send.disabled = false;
     }
+  }
+
+  // 관리자: 글을 상단 입력칸으로 불러와 본문을 고친다. 칸·작성자·시각은 그대로.
+  enterEdit(post) {
+    this.editingId = post.id;
+    this.showList();                      // 상세에서 눌렀을 수 있으니 목록 화면으로
+    const cat = post.category || 'chat';
+    if ([...this.el.cat.options].some((o) => o.value === cat)) this.el.cat.value = cat;
+    this.el.cat.disabled = true;          // 수정은 칸을 바꾸지 않는다
+    this.syncWriteMode();                 // 그 칸에 맞는 색 팔레트·길이 제한
+    this.el.input.value = post.body;
+    this.el.count.textContent = `${[...post.body].length} / ${this.el.input.maxLength}`;
+    this.el.send.textContent = '수정 저장';
+    this.el.editCancel.classList.remove('hidden');
+    this.el.error.textContent = '';
+    this.el.write.scrollIntoView({ block: 'nearest' });
+    this.el.input.focus();
+  }
+
+  // 수정 모드 해제(취소·저장 후·창 닫기).
+  exitEdit() {
+    if (!this.editingId) return;
+    this.editingId = null;
+    this.el.cat.disabled = false;
+    this.el.input.value = '';
+    this.el.send.textContent = '남기기';
+    this.el.editCancel.classList.add('hidden');
+    this.syncWriteMode();
   }
 
   async remove(id) {
@@ -307,13 +345,25 @@ export class BoardUI {
       `<span class="board-name${p.member ? ' member' : ''}">${esc(p.name)}</span>` +
       `<span class="board-time">${ago(p.at)}</span>`;
     if (admin) {
+      const tools = document.createElement('span');
+      tools.className = 'board-tools';
+      // 수정 버튼은 원글에만(withBadge 로 원글 여부를 안다). 댓글은 지우기만.
+      if (withBadge) {
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'board-edit';
+        edit.textContent = '수정';
+        edit.addEventListener('click', (e) => { e.stopPropagation(); this.enterEdit(p); });
+        tools.appendChild(edit);
+      }
       const del = document.createElement('button');
       del.type = 'button';
       del.className = 'board-del';
       del.textContent = '삭제';
-      // 목록 카드는 눌러서 상세로 가므로, 삭제 클릭이 상세를 열지 않게 막는다.
+      // 목록 카드는 눌러서 상세로 가므로, 버튼 클릭이 상세를 열지 않게 막는다.
       del.addEventListener('click', (e) => { e.stopPropagation(); this.remove(p.id); });
-      head.appendChild(del);
+      tools.appendChild(del);
+      head.appendChild(tools);
     }
     return head;
   }

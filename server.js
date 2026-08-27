@@ -751,10 +751,29 @@ app.post('/api/admin/plays/clear', requireAdmin, (req, res) => {
 app.delete('/api/admin/board/:id', requireAdmin, (req, res) => {
   try {
     if (!board.remove(req.params.id)) return res.status(404).json({ error: '이미 없는 글입니다.' });
-    res.json({ ok: true, posts: board.latest(50) });
+    res.json({ ok: true, posts: board.latest(100) });
   } catch (err) {
     console.error('게시글 삭제 실패:', err);
     res.status(500).json({ error: '삭제에 실패했습니다.' });
+  }
+});
+
+// 게시글 수정(관리자). 본문만 고친다(패치노트를 다듬는 데 쓴다). 작성자·시각·칸은
+// 그대로 둔다. 칸에 맞는 길이 제한으로 내용 검사를 한 번 더 한다.
+app.patch('/api/admin/board/:id', requireAdmin, (req, res) => {
+  const category = board.categoryOf(req.params.id);
+  if (category === undefined) return res.status(404).json({ error: '이미 없는 글입니다.' });
+
+  const maxLen = category === 'patch' ? 6000 : 200;
+  const checked = checkMessage(req.body?.body, maxLen);
+  if (!checked.ok) return res.status(400).json({ error: checked.reason });
+
+  try {
+    if (!board.edit(req.params.id, checked.text)) return res.status(404).json({ error: '이미 없는 글입니다.' });
+    res.json({ ok: true, posts: board.latest(100) });
+  } catch (err) {
+    console.error('게시글 수정 실패:', err);
+    res.status(500).json({ error: '수정에 실패했습니다.' });
   }
 });
 

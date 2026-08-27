@@ -158,7 +158,10 @@
           placeholder="자유롭게 남겨 보세요 (200자)"></textarea>
         <div class="board-write-row">
           <span id="board-count" class="board-count">0 / 200</span>
-          <button id="board-send" class="primary small" type="button">남기기</button>
+          <div class="board-write-btns">
+            <button id="board-edit-cancel" class="ghost small hidden" type="button">취소</button>
+            <button id="board-send" class="primary small" type="button">남기기</button>
+          </div>
         </div>
         <em id="board-error" class="field-error"></em>
       </div>

@@ -326,6 +326,7 @@ const board = new BoardUI({
   post: (body, parentId, category) =>
     api.boardPost(body, auth.signedIn ? undefined : auth.displayName, parentId, category),
   remove: (id) => api.boardRemove(id),
+  edit: (id, body) => api.boardEdit(id, body),
   isAdmin: () => isAdmin
 });
 
