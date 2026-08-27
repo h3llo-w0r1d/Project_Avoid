@@ -516,17 +516,21 @@ const patch = (() => {
   const coinsEl = document.getElementById('roul-coins');
 
   const COST = 10;                       // 한 번 돌리는 값
-  // 6칸: 꽝×2, 5×2, 10×1, 50×1. 이웃끼리 안 겹치게 섞어 둔다.
+  // 7칸: 꽝×2, 5×2, 10×1, 20×1, 50×1. 이웃끼리 안 겹치게 섞어 둔다.
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '5', coins: 5, color: '#57d18a' },
     { label: '10', coins: 10, color: '#4fd6ff' },
     { label: '꽝', coins: 0, color: '#474d5e' },
+    { label: '20', coins: 20, color: '#ff9f43' },
     { label: '5', coins: 5, color: '#57d18a' },
     { label: '50', coins: 50, color: '#ffcf3f' }
   ];
-  // 보상별 확률(합 100). 50코인은 드문 대박.
-  const WEIGHTS = [{ coins: 0, p: 30 }, { coins: 5, p: 40 }, { coins: 10, p: 22 }, { coins: 50, p: 8 }];
+  // 보상별 확률(합 100). 값이 클수록 드물게. 50코인은 대박.
+  const WEIGHTS = [
+    { coins: 0, p: 33 }, { coins: 5, p: 35 }, { coins: 10, p: 15 },
+    { coins: 20, p: 11 }, { coins: 50, p: 6 }
+  ];
   const N = SEG.length, ARC = 360 / N;
 
   // 원판은 SVG 부채꼴로 그린다. conic-gradient 은 0°·180°(위·아래)에서 이음새
