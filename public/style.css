@@ -752,7 +752,15 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .primary.small { width: auto; margin: 0; padding: 8px 18px; font-size: 14px; }
 
 /* 게시판은 답글까지 보여 줘야 해서 다른 창보다 넓고 높게 잡는다. */
-#board-modal .modal-card { width: min(680px, 100%); max-height: 88vh; }
+/* 카드 자체는 스크롤하지 않는다(overflow hidden). 대신 헤더·탭·쓰기칸은
+   위에 고정하고, 글 목록(또는 상세)만 남은 공간에서 스크롤한다. 이렇게
+   해야 내용이 길어져도 위쪽 탭이 스크롤에 밀려 잘리지 않는다. */
+#board-modal .modal-card { width: min(680px, 100%); max-height: 88vh; overflow: hidden; }
+#board-modal .modal-head,
+#board-modal .board-tabs,
+#board-modal .board-write { flex: none; }
+#board-modal .board-list,
+#board-modal .board-detail { flex: 1 1 auto; min-height: 0; max-height: none; }
 
 /* 좌우 안쪽 여백을 둬서, 카드 hover 하이라이트가 이 여백 안에서 양옆으로
    살짝 넓어질 수 있게 한다. 목록 밖으로 넘치지 않아 가로 스크롤이 안 생긴다. */
@@ -812,7 +820,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .board-cmt-ico { font-size: 14px; }
 
 /* ── 상세 화면 ── */
-.board-detail { margin-top: 16px; }
+.board-detail { margin-top: 16px; overflow-y: auto; padding-inline: 2px; }
 .board-back {
   width: auto; margin: 0 0 18px; padding: 5px 12px;
   font-size: 13px; font-weight: 700; color: var(--muted);
