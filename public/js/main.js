@@ -39,10 +39,14 @@ const CHAR_KEY = 'avoidarc.character';
 function savedCharacter() {
   const id = localStorage.getItem(CHAR_KEY) ?? DEFAULT_CHARACTER;
   const spec = findCharacter(id);
-  // 저장해 둔 캐릭터가 아직 안 열렸거나(기록을 지웠다면), 다듬는 중으로
-  // 내려간 캐릭터면 기본으로 되돌린다. 전에 골라 둔 사람이 그대로 쓰고
-  // 있으면 "화면에서 없앴는데 계속 보인다" 가 된다.
-  return isPlayable(spec) && isUnlocked(spec, bestSeconds()) ? spec.id : DEFAULT_CHARACTER;
+  if (!isPlayable(spec)) return DEFAULT_CHARACTER;   // 다듬는 중으로 내려간 캐릭터
+  // 한 번 고른 건 나갔다 와도 유지한다. 기본 캐릭터, 코인으로 산 캐릭터,
+  // 또는 시간(기록)으로 열린 캐릭터면 그대로 둔다. (로그인 게이팅은 auth 가
+  // 정해진 뒤 syncCharacterForAuth 가 다시 맞춘다.) 아니면 기본으로.
+  if (spec.unlockAt === 0 || wallet.isOwned(spec.id) || isUnlocked(spec, bestSeconds())) {
+    return spec.id;
+  }
+  return DEFAULT_CHARACTER;
 }
 
 // 캐릭터 해금 기준. 일반·하드코어 중 더 오래 버틴 기록을 쓴다(하드코어로
