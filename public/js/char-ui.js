@@ -196,16 +196,41 @@ export class CharacterUI {
         card.appendChild(lock);
       }
 
-      card.addEventListener('click', () => {
+      card.addEventListener('click', async () => {
         if (unlocked) { this.h.onSelect(c.id); this.draw(); return; }
-        // 상점 카드: 코인으로 사고(성공하면) 바로 그 캐릭터를 쓴다.
-        if (shop && affordable && this.h.buy?.(c)) {
-          this.h.onSelect(c.id);
-          this.draw();
+        // 상점 카드: 한 번 더 확인한 뒤 코인으로 사고(성공하면) 바로 쓴다.
+        if (shop && affordable) {
+          const ok = await this.confirmBuy(c);
+          if (ok && this.h.buy?.(c)) {
+            this.h.onSelect(c.id);
+            this.draw();
+          }
         }
       });
 
       this.el.grid.appendChild(card);
     }
+  }
+
+  // 코인으로 살 때 한 번 더 묻는 확인창(화면 가운데). 확인=true, 취소=false.
+  confirmBuy(spec) {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'modal buy-confirm';
+      overlay.innerHTML = `
+        <div class="modal-card panel">
+          <div class="buy-ico">🪙</div>
+          <p class="buy-msg"><b>${spec.name}</b> 을(를)<br><b class="buy-cost">${spec.coinCost} 코인</b> 으로 구매할까요?</p>
+          <div class="buy-row">
+            <button type="button" class="ghost small buy-cancel">취소</button>
+            <button type="button" class="primary small buy-ok">확인</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+      const done = (v) => { overlay.remove(); resolve(v); };
+      overlay.querySelector('.buy-ok').addEventListener('click', () => done(true));
+      overlay.querySelector('.buy-cancel').addEventListener('click', () => done(false));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) done(false); });
+    });
   }
 }

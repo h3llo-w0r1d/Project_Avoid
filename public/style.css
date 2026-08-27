@@ -1369,6 +1369,15 @@ kbd {
 .char-name.mystery { color: var(--muted); letter-spacing: 2px; }
 .char-note.goal { color: #ffc06a; font-weight: 700; }
 
+/* 코인 구매 확인창 (캐릭터 창 위에 뜬다) */
+.modal.buy-confirm { z-index: 60; }
+.buy-confirm .modal-card { width: min(330px, 100%); text-align: center; padding: 26px 26px 22px; }
+.buy-ico { font-size: 44px; line-height: 1; filter: drop-shadow(0 0 14px rgba(255, 176, 60, 0.5)); }
+.buy-msg { margin-top: 12px; font-size: 16px; line-height: 1.6; color: var(--text); }
+.buy-msg .buy-cost { color: #ffcf6a; }
+.buy-row { display: flex; gap: 10px; margin-top: 20px; }
+.buy-row button { flex: 1; margin: 0; }
+
 /* 코인 상점 카드 — 모습을 공개하고 금빛 가격표를 붙인다. 코인이 충분하면
    눌러서 산다(활성), 모자라면 살짝 흐리게(비활성). */
 .char-card.shop { border-color: rgba(255, 176, 60, 0.5); background: rgba(255, 176, 60, 0.07); }
