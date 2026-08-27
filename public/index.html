@@ -149,6 +149,24 @@
     </div>
   </div>
 
+  <!-- 코인 룰렛 (왼쪽 메뉴 🎰) -->
+  <div id="roulette-modal" class="modal hidden">
+    <div class="modal-card panel">
+      <div class="modal-head">
+        <h2>코인 룰렛</h2>
+        <button id="roulette-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+      </div>
+      <p class="board-hint">🪙 <b id="roul-cost">10</b> 코인으로 돌려서 랜덤 보상! · 보유 🪙 <b id="roul-coins">0</b></p>
+      <div class="roulette-wrap">
+        <div class="roulette-pointer"></div>
+        <div class="roulette-wheel" id="roulette-wheel"></div>
+        <div class="roulette-hub">🎰</div>
+      </div>
+      <div id="roulette-result" class="roulette-result"></div>
+      <button id="roulette-spin" class="primary" type="button">돌리기 (🪙 10)</button>
+    </div>
+  </div>
+
   <!-- 패치노트 (왼쪽 메뉴 📝) -->
   <div id="patch-modal" class="modal hidden">
     <div class="modal-card panel">
@@ -354,6 +372,7 @@
     <nav id="side-menu" aria-label="메뉴">
       <button type="button" data-forward="profile-btn"><span class="sm-ico">👤</span><span class="sm-label">프로필</span></button>
       <button type="button" data-forward="char-btn"><span class="sm-ico">🌱</span><span class="sm-label">캐릭터</span></button>
+      <button type="button" id="roulette-btn"><span class="sm-ico">🎰</span><span class="sm-label">룰렛</span></button>
       <button type="button" data-forward="rank-btn"><span class="sm-ico">🏆</span><span class="sm-label">랭킹</span></button>
       <button type="button" data-forward="board-btn"><span class="sm-ico">💬</span><span class="sm-label">커뮤니티</span></button>
       <button type="button" id="patch-btn"><span class="sm-ico">📝</span><span class="sm-label">패치노트</span></button>

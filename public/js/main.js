@@ -504,6 +504,106 @@ const patch = (() => {
   return { enableAdmin() { editBtn.classList.remove('hidden'); } };
 })();
 
+// ── 코인 룰렛 ──────────────────────────────────────────────
+// 코인을 걸고 돌려 랜덤 보상. 칸은 6개(같은 크기)지만 확률은 WEIGHTS 로 따로
+// 준다(50코인은 드물게). 코인은 로컬 지갑이라 결과도 여기서 정한다(경쟁 아님).
+(() => {
+  const modal = document.getElementById('roulette-modal');
+  if (!modal) return;
+  const wheel = document.getElementById('roulette-wheel');
+  const spinBtn = document.getElementById('roulette-spin');
+  const resultEl = document.getElementById('roulette-result');
+  const coinsEl = document.getElementById('roul-coins');
+
+  const COST = 10;                       // 한 번 돌리는 값
+  // 6칸: 꽝×2, 5×2, 10×1, 50×1. 이웃끼리 안 겹치게 섞어 둔다.
+  const SEG = [
+    { label: '꽝', coins: 0, color: '#474d5e' },
+    { label: '5', coins: 5, color: '#57d18a' },
+    { label: '10', coins: 10, color: '#4fd6ff' },
+    { label: '꽝', coins: 0, color: '#474d5e' },
+    { label: '5', coins: 5, color: '#57d18a' },
+    { label: '50', coins: 50, color: '#ffcf3f' }
+  ];
+  // 보상별 확률(합 100). 50코인은 드문 대박.
+  const WEIGHTS = [{ coins: 0, p: 30 }, { coins: 5, p: 40 }, { coins: 10, p: 22 }, { coins: 50, p: 8 }];
+  const N = SEG.length, ARC = 360 / N;
+
+  // 휠 색(conic) + 칸 라벨(반지름 방향)
+  wheel.style.background =
+    `conic-gradient(${SEG.map((s, i) => `${s.color} ${i * ARC}deg ${(i + 1) * ARC}deg`).join(',')})`;
+  wheel.innerHTML = SEG.map((s, i) => {
+    const a = i * ARC + ARC / 2;
+    const txt = s.coins ? `🪙${s.label}` : '꽝';
+    return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(-74px)">${txt}</span>`;
+  }).join('');
+
+  let spinning = false;
+  let rotation = 0;
+
+  const refresh = () => {
+    coinsEl.textContent = isAdmin ? '∞' : String(wallet.coins());
+    spinBtn.disabled = spinning || (!isAdmin && wallet.coins() < COST);
+  };
+
+  // 보상 하나 뽑기 → { idx(멈출 칸), coins }
+  function pick() {
+    let r = Math.random() * WEIGHTS.reduce((s, w) => s + w.p, 0);
+    let coins = 0;
+    for (const w of WEIGHTS) { if (r < w.p) { coins = w.coins; break; } r -= w.p; }
+    const idxs = SEG.map((s, i) => (s.coins === coins ? i : -1)).filter((i) => i >= 0);
+    return { idx: idxs[(Math.random() * idxs.length) | 0], coins };
+  }
+
+  function spin() {
+    if (spinning) return;
+    if (!isAdmin && wallet.coins() < COST) {
+      resultEl.textContent = '코인이 부족해요';
+      resultEl.className = 'roulette-result lose';
+      return;
+    }
+    if (!isAdmin) { wallet.spend(COST); renderCoinHud(); }
+    spinning = true;
+    resultEl.textContent = '';
+    resultEl.className = 'roulette-result';
+    refresh();
+
+    const { idx, coins } = pick();
+    // idx 칸 중심이 위(포인터)로 오게. 칸 중심각(시계방향, top 기준) = idx*ARC+ARC/2
+    const center = idx * ARC + ARC / 2;
+    const desiredMod = (360 - center) % 360;                 // 그 칸을 위로 보내는 회전각
+    const currentMod = ((rotation % 360) + 360) % 360;
+    const jitter = (Math.random() - 0.5) * (ARC * 0.5);       // 칸 안에서 살짝 랜덤
+    rotation += 5 * 360 + ((desiredMod - currentMod + 360) % 360) + jitter;
+    wheel.style.transition = 'transform 4s cubic-bezier(0.16, 0.84, 0.28, 1)';
+    wheel.style.transform = `rotate(${rotation}deg)`;
+
+    setTimeout(() => {
+      spinning = false;
+      if (coins > 0) wallet.add(coins);
+      renderCoinHud();
+      if (characters.open$) characters.draw();   // 코인 늘어 상점 살 수 있게 됐을 수도
+      if (coins === 0) {
+        resultEl.textContent = '꽝! 다음 기회에…';
+        resultEl.className = 'roulette-result lose';
+      } else {
+        resultEl.textContent = `🪙 ${coins}코인 당첨!`;
+        resultEl.className = 'roulette-result win' + (coins >= 50 ? ' jackpot' : '');
+        audio.coin?.();
+        if (coins >= 50) audio.stageUp?.();
+      }
+      refresh();
+    }, 4100);
+  }
+
+  const open = () => { resultEl.textContent = ''; resultEl.className = 'roulette-result'; refresh(); modal.classList.remove('hidden'); };
+  const close = () => modal.classList.add('hidden');
+  document.getElementById('roulette-btn').addEventListener('click', open);
+  document.getElementById('roulette-close').addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+  spinBtn.addEventListener('click', spin);
+})();
+
 const characters = new CharacterUI({
   bestSeconds,
   selected: () => player.characterId,
