@@ -67,6 +67,7 @@
   <header id="top-bar">
     <div class="brand">Avoid<span>Arc</span></div>
     <div id="corner-buttons">
+      <button id="admin-coin-btn" class="hidden" type="button" aria-label="코인 지급" title="코인 지급(관리자)">💰</button>
       <button id="notice-btn" class="hidden" type="button" aria-label="공지 작성" title="공지 작성(관리자)">📢</button>
       <button id="board-btn" type="button" aria-label="게시판" title="게시판">💬</button>
       <button id="profile-btn" type="button" aria-label="내 프로필" title="내 프로필">👤</button>
@@ -146,6 +147,19 @@
       </div>
       <ol id="board-list" class="board-list"><li class="board-empty">불러오는 중…</li></ol>
       <div id="board-detail" class="board-detail hidden"></div>
+    </div>
+  </div>
+
+  <!-- 코인 지급 (관리자 전용, 상단바 💰) -->
+  <div id="admin-coins-modal" class="modal hidden">
+    <div class="modal-card panel">
+      <div class="modal-head">
+        <h2>코인 지급</h2>
+        <button id="admin-coins-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+      </div>
+      <p class="board-hint">계정을 눌러 코인을 지급합니다. 받는 사람이 <b>다음에 접속할 때 자동으로</b> 코인이 들어갑니다.</p>
+      <input id="admin-coins-search" type="text" placeholder="닉네임 검색" autocomplete="off" />
+      <ol id="admin-coins-list" class="acgrant-list"><li class="board-empty">불러오는 중…</li></ol>
     </div>
   </div>
 

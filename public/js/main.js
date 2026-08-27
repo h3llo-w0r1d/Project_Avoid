@@ -110,8 +110,22 @@ async function onAuthChange() {
       ui.setBest(p.best ? p.best.time : 0, p.hardcore ? p.hardcore.time : 0);
     } catch { /* 못 불러오면 로컬 유지 */ }
   }
+  // 관리자가 준 코인이 대기 중이면 받아 지갑에 넣는다(한 계정당 한 번).
+  if (auth.signedIn && claimedCoinsFor !== auth.displayName) {
+    claimedCoinsFor = auth.displayName;
+    try {
+      const got = await api.claimCoins();
+      if (got > 0) {
+        wallet.add(got);
+        renderCoinHud();
+        if (characters.open$) characters.draw();
+        showCoinGift(got);
+      }
+    } catch { /* 무시 */ }
+  }
   syncCharacterForAuth();
 }
+let claimedCoinsFor = null;
 
 const player = new Player(scene, { characterId: savedCharacter() });
 // 상대는 발밑 링 색으로 구분한다. 캐릭터는 상대가 고른 걸 그대로 보여 준다.
@@ -235,6 +249,7 @@ const adminReady = api.amIAdmin()
     if (yes) {
       setupNoticeAdmin();
       patch.enableAdmin();   // 패치노트 편집 버튼(✏️) 켜기
+      adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기
       renderCoinHud();       // 코인 표시를 ∞ 로
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
       syncCharacterForAuth();
@@ -502,6 +517,82 @@ const patch = (() => {
   }, 10_000);
 
   return { enableAdmin() { editBtn.classList.remove('hidden'); } };
+})();
+
+// ── 코인 지급(관리자) ──────────────────────────────────────
+// 계정 목록을 보여 주고, 누르면 그 계정에 코인을 지급한다(대기에 쌓임 →
+// 그 사람 다음 접속 때 자동 수령). 상단바 💰 버튼으로 연다.
+const adminCoins = (() => {
+  const modal = document.getElementById('admin-coins-modal');
+  if (!modal) return { enableAdmin() {} };
+  const list = document.getElementById('admin-coins-list');
+  const search = document.getElementById('admin-coins-search');
+  const btn = document.getElementById('admin-coin-btn');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let accounts = [];
+
+  function render() {
+    const q = search.value.trim().toLowerCase();
+    const rows = accounts.filter((a) => a.nickname.toLowerCase().includes(q));
+    list.innerHTML = rows.length
+      ? rows.map((a) => `<li class="acgrant" data-id="${esc(a.id)}" data-name="${esc(a.nickname)}">
+          <span class="acgrant-name">${esc(a.nickname)}</span>
+          ${a.pending ? `<span class="acgrant-pending">대기 🪙${a.pending}</span>` : ''}
+          <span class="acgrant-go">지급 ▸</span></li>`).join('')
+      : '<li class="board-empty">계정이 없습니다.</li>';
+    for (const li of list.querySelectorAll('.acgrant')) {
+      li.addEventListener('click', () => askGrant(li.dataset.id, li.dataset.name));
+    }
+  }
+
+  async function open() {
+    modal.classList.remove('hidden');
+    search.value = '';
+    list.innerHTML = '<li class="board-empty">불러오는 중…</li>';
+    try { accounts = await api.adminAccounts(); render(); }
+    catch { list.innerHTML = '<li class="board-empty">불러오지 못했습니다.</li>'; }
+  }
+  const close = () => modal.classList.add('hidden');
+
+  // 지급 금액을 묻는 가운데 작은 창.
+  function askGrant(id, name) {
+    const dlg = document.createElement('div');
+    dlg.className = 'modal buy-confirm';
+    dlg.innerHTML = `<div class="modal-card panel">
+        <div class="buy-ico">💰</div>
+        <p class="buy-msg"><b>${esc(name)}</b> 에게 줄 코인 수</p>
+        <input class="ac-amt" type="number" min="1" max="100000" value="20" inputmode="numeric" />
+        <div class="buy-row">
+          <button type="button" class="ghost small ac-cancel">취소</button>
+          <button type="button" class="primary small ac-ok">지급</button>
+        </div>
+        <em class="ac-err field-error"></em></div>`;
+    document.body.appendChild(dlg);
+    const amt = dlg.querySelector('.ac-amt');
+    const errEl = dlg.querySelector('.ac-err');
+    const closeDlg = () => dlg.remove();
+    setTimeout(() => { amt.focus(); amt.select(); }, 0);
+    dlg.querySelector('.ac-cancel').addEventListener('click', closeDlg);
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) closeDlg(); });
+    dlg.querySelector('.ac-ok').addEventListener('click', async () => {
+      const n = Math.floor(Number(amt.value) || 0);
+      if (n < 1) { errEl.textContent = '1 이상 입력하세요.'; return; }
+      try {
+        const pending = await api.grantCoins(id, n);
+        const a = accounts.find((x) => x.id === id); if (a) a.pending = pending;
+        render();
+        closeDlg();
+      } catch (e) { errEl.textContent = e.message; }
+    });
+  }
+
+  btn.addEventListener('click', open);
+  document.getElementById('admin-coins-close').addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+  search.addEventListener('input', render);
+
+  return { enableAdmin() { btn.classList.remove('hidden'); } };
 })();
 
 // ── 코인 룰렛 ──────────────────────────────────────────────
@@ -987,6 +1078,27 @@ function showCoinLost(count) {
       '<div class="unlock-lockface">⏱️</div>' +
       '<div class="unlock-name">10초 안에 끝났어요</div>' +
       '<div class="unlock-hint">10초 넘게 버텨야 코인이 쌓여요 · 화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const done = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    overlay.addEventListener('click', done);
+  });
+}
+
+// 관리자가 준 코인을 받았을 때 띄우는 선물 안내.
+function showCoinGift(count) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">🎁 선물 도착!</div>' +
+      '<div class="unlock-lockface">🪙</div>' +
+      '<div class="unlock-name">코인 ' + count + '개를 받았어요</div>' +
+      '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const done = () => {

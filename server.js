@@ -18,6 +18,7 @@ import { openGeo, openAsn, asnOrg, countryCode } from './lib/geo.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPurchasesStore } from './lib/purchases.js';
+import { openCoinGrants } from './lib/coingrants.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
@@ -116,6 +117,7 @@ const board = openBoardStore(db);
 // 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
 const plays = openPlaysStore(db);
 const purchases = openPurchasesStore(db);   // 코인으로 캐릭터 산 기록
+const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 대기
 
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
 const presence = openPresence();
@@ -608,6 +610,31 @@ app.get('/api/admin/purchases', requireAdmin, (req, res) => {
 app.delete('/api/admin/purchases/:id', requireAdmin, (req, res) => {
   if (!purchases.remove(req.params.id)) return res.status(404).json({ error: '이미 없는 기록입니다.' });
   res.json({ ok: true });
+});
+
+// 코인 지급용 계정 목록(닉네임 있는 계정만). 대기 중인 지급도 함께 보여 준다.
+app.get('/api/admin/accounts', requireAdmin, (req, res) => {
+  const pend = coinGrants.pendingMap();
+  const rows = users.listAccounts()
+    .filter((u) => u.nickname)
+    .map((u) => ({ id: u.id, nickname: u.nickname, pending: pend.get(u.id) ?? 0 }));
+  res.json({ rows });
+});
+
+// 특정 계정에 코인 지급(대기에 쌓는다). 그 사람 다음 접속 때 받아 간다.
+app.post('/api/admin/coins/grant', requireAdmin, (req, res) => {
+  const userId = String(req.body?.userId ?? '');
+  const amount = Math.floor(Number(req.body?.amount) || 0);
+  if (!users.byId(userId)) return res.status(404).json({ error: '없는 계정입니다.' });
+  if (amount < 1 || amount > 100000) return res.status(400).json({ error: '1~100000 사이로 정해 주세요.' });
+  const pending = coinGrants.grant(userId, amount);
+  res.json({ ok: true, pending });
+});
+
+// (로그인한 사람) 대기 중인 코인을 받아 간다. 받으면 대기는 0이 된다.
+app.post('/api/me/coins/claim', (req, res) => {
+  if (!req.user) return res.json({ amount: 0 });
+  res.json({ amount: coinGrants.claim(req.user.id) });
 });
 
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.

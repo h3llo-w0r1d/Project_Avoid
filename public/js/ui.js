@@ -458,6 +458,30 @@ export const api = {
     return data.text ?? '';
   },
 
+  // 관리자: 코인 지급용 계정 목록.
+  async adminAccounts() {
+    const res = await fetch('/api/admin/accounts');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).rows;
+  },
+
+  // 관리자: 계정에 코인 지급(대기에 쌓임).
+  async grantCoins(userId, amount) {
+    const res = await fetch('/api/admin/coins/grant', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, amount })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.pending;
+  },
+
+  // 로그인한 내가 대기 중인 코인을 받아 온다(있으면 개수, 없으면 0).
+  async claimCoins() {
+    const res = await fetch('/api/me/coins/claim', { method: 'POST' });
+    return res.ok ? (await res.json()).amount ?? 0 : 0;
+  },
+
   // 코인으로 캐릭터를 샀다고 서버에 남긴다(관리자 참고용). 실패해도 조용히 넘어간다.
   recordPurchase(character, charName, cost, guestName) {
     fetch('/api/purchase', {
