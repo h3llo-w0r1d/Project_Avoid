@@ -69,7 +69,7 @@
     <div id="corner-buttons">
       <button id="admin-coin-btn" class="hidden" type="button" aria-label="코인 지급" title="코인 지급(관리자)">💰</button>
       <button id="notice-btn" class="hidden" type="button" aria-label="공지 작성" title="공지 작성(관리자)">📢</button>
-      <button id="board-btn" type="button" aria-label="게시판" title="게시판">💬</button>
+      <button id="board-btn" type="button" aria-label="커뮤니티" title="커뮤니티">💬</button>
       <button id="profile-btn" type="button" aria-label="내 프로필" title="내 프로필">👤</button>
       <button id="char-btn" type="button" aria-label="캐릭터 고르기" title="캐릭터">🌱</button>
       <button id="rank-btn" type="button" aria-label="전체 랭킹 보기" title="전체 랭킹">🏆</button>
@@ -128,15 +128,33 @@
 
   <!-- 관리 화면은 별도 페이지 /admin 하나로 통합했다. 게임 안 관리 창은 없앴다. -->
 
-  <!-- 게시판 (말풍선 버튼) -->
+  <!-- 커뮤니티 (말풍선 버튼) -->
   <div id="board-modal" class="modal hidden">
-    <div class="modal-card panel">
+    <div class="modal-card panel community">
       <div class="modal-head">
-        <h2>게시판</h2>
+        <h2>커뮤니티</h2>
         <button id="board-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
       </div>
-      <p class="board-hint">한 줄 남기고 가세요. 서로 존중해 주세요 🙂</p>
+      <!-- 칸(카테고리) 탭. 눌러서 그 칸 글만 본다. -->
+      <nav id="board-tabs" class="board-tabs">
+        <button type="button" data-cat="all" class="current">전체</button>
+        <button type="button" data-cat="patch">📢 패치노트</button>
+        <button type="button" data-cat="chat">💬 잡담</button>
+        <button type="button" data-cat="bug">🐞 버그 제보</button>
+        <button type="button" data-cat="qna">❓ Q&amp;A</button>
+      </nav>
       <div class="board-write">
+        <div class="board-write-top">
+          <label class="board-cat-label">칸
+            <select id="board-cat" class="board-cat-select">
+              <option value="chat">💬 잡담</option>
+              <option value="bug">🐞 버그 제보</option>
+              <option value="qna">❓ Q&amp;A</option>
+            </select>
+          </label>
+        </div>
+        <!-- 패치노트(운영자)만: 선택 글자에 색을 입히는 팔레트 -->
+        <div id="board-colors" class="patch-colors hidden"></div>
         <textarea id="board-input" maxlength="200" rows="2"
           placeholder="자유롭게 남겨 보세요 (200자)"></textarea>
         <div class="board-write-row">
@@ -177,41 +195,6 @@
       </div>
       <div id="roulette-result" class="roulette-result"></div>
       <button id="roulette-spin" class="primary" type="button">돌리기 (🪙 10)</button>
-    </div>
-  </div>
-
-  <!-- 패치노트 (왼쪽 메뉴 📝) -->
-  <div id="patch-modal" class="modal hidden">
-    <div class="modal-card panel">
-      <div class="modal-head">
-        <h2>패치노트</h2>
-        <button id="patch-edit-btn" class="icon-btn hidden" type="button" aria-label="패치노트 편집" title="편집(관리자)">✏️</button>
-        <button id="patch-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
-      </div>
-      <p class="board-hint">업데이트 기록입니다. 최신 소식이 맨 위에 있어요.</p>
-      <ol id="patch-list" class="patch-list"></ol>
-    </div>
-  </div>
-
-  <!-- 패치노트 편집 (관리자 전용) -->
-  <div id="patch-edit-modal" class="modal hidden">
-    <div class="modal-card panel">
-      <div class="modal-head">
-        <h2>패치노트 편집</h2>
-        <button id="patch-edit-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
-      </div>
-      <p class="board-hint">날짜 줄 아래에 <b>- 내용</b> 을 적으세요. 빈 줄로 날짜를 구분합니다.<br>
-        <b>글씨 색:</b> 색을 넣을 글자를 드래그로 선택한 뒤 아래 색을 누르세요. 아래 미리보기로 바로 확인돼요.</p>
-      <div id="patch-colors" class="patch-colors"></div>
-      <textarea id="patch-input" class="patch-input" rows="10" spellcheck="false"
-        placeholder="2026-08-28&#10;- 새 기능 추가&#10;- 버그 수정&#10;&#10;2026-08-27&#10;- ..."></textarea>
-      <div class="board-write-row" style="margin-top:10px">
-        <span id="patch-count" class="board-count">0 / 6000</span>
-        <button id="patch-save" class="primary small" type="button">저장</button>
-      </div>
-      <em id="patch-error" class="field-error"></em>
-      <div class="patch-preview-label">미리보기</div>
-      <ol id="patch-preview" class="patch-list patch-preview"></ol>
     </div>
   </div>
 
@@ -388,7 +371,6 @@
       <button type="button" id="roulette-btn"><span class="sm-ico">🎰</span><span class="sm-label">룰렛</span></button>
       <button type="button" data-forward="rank-btn"><span class="sm-ico">🏆</span><span class="sm-label">랭킹</span></button>
       <button type="button" data-forward="board-btn"><span class="sm-ico">💬</span><span class="sm-label">커뮤니티</span></button>
-      <button type="button" id="patch-btn"><span class="sm-ico">📝</span><span class="sm-label">패치노트</span></button>
     </nav>
   </div>
 

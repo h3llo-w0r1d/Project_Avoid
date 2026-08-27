@@ -15,7 +15,7 @@ import { openStatsStore } from './lib/stats.js';
 import { isBot, isMobile } from './lib/bots.js';
 import { isDatacenterIp, isCloudOrg } from './lib/datacenter.js';
 import { openGeo, openAsn, asnOrg, countryCode } from './lib/geo.js';
-import { openBoardStore } from './lib/board.js';
+import { openBoardStore, CATEGORIES, ADMIN_CATEGORIES } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPurchasesStore } from './lib/purchases.js';
 import { openCoinGrants } from './lib/coingrants.js';
@@ -419,7 +419,7 @@ app.post('/api/presence', (req, res) => {
 });
 
 app.get('/api/board', (req, res) => {
-  res.json({ posts: board.latest(50) });
+  res.json({ posts: board.latest(100) });
 });
 
 app.post('/api/board', (req, res) => {
@@ -433,20 +433,32 @@ app.post('/api/board', (req, res) => {
   const who = posterName(req, req.body?.name);
   if (who.error) return res.status(400).json({ error: who.error });
 
-  // 내용 검사(욕설·길이·빈 글). 통과하면 다듬어진 text 를 그대로 저장한다.
-  const checked = checkMessage(req.body?.body);
-  if (!checked.ok) return res.status(400).json({ error: checked.reason });
-
   // 답글이면 다는 대상(원글)이 실제로 있어야 한다. 답글에 답글은 원글로 붙는다.
   const parentId = typeof req.body?.parentId === 'string' ? req.body.parentId : null;
   if (parentId && !board.canReplyTo(parentId)) {
     return res.status(400).json({ error: '답글을 달 글을 찾지 못했습니다.' });
   }
 
+  // 원글의 칸(카테고리). 답글은 칸이 없다. 패치노트 칸은 관리자만.
+  const isAdmin = isAdminUser(req.user) || tokenMatches(req.get('x-admin-token'));
+  let category = null;
+  if (!parentId) {
+    category = CATEGORIES.includes(req.body?.category) ? req.body.category : 'chat';
+    if (ADMIN_CATEGORIES.has(category) && !isAdmin) {
+      return res.status(403).json({ error: '이 칸에는 운영자만 글을 쓸 수 있습니다.' });
+    }
+  }
+
+  // 내용 검사(욕설·길이·빈 글). 통과하면 다듬어진 text 를 그대로 저장한다.
+  // 패치노트(운영자)는 길게 쓸 수 있게 길이 제한을 크게 둔다.
+  const maxLen = category === 'patch' ? 6000 : 200;
+  const checked = checkMessage(req.body?.body, maxLen);
+  if (!checked.ok) return res.status(400).json({ error: checked.reason });
+
   lastPostBoard.set(ip, now);
   try {
-    board.add({ name: who.name, body: checked.text, userId: req.user?.id ?? null, parentId });
-    res.json({ posts: board.latest(50) });
+    board.add({ name: who.name, body: checked.text, userId: req.user?.id ?? null, parentId, category });
+    res.json({ posts: board.latest(100) });
   } catch (err) {
     console.error('게시글 저장 실패:', err);
     res.status(500).json({ error: '글을 저장하지 못했습니다.' });
@@ -544,6 +556,34 @@ app.post('/api/admin/notice', requireAdmin, async (req, res) => {
 const PATCHNOTES_FILE = join(DATA_DIR, 'patchnotes.txt');
 let patchNotesText = '';
 try { patchNotesText = await readFile(PATCHNOTES_FILE, 'utf8'); } catch { patchNotesText = ''; }
+
+// 패치노트를 커뮤니티(patch 칸)로 합쳤다. 예전 patchnotes.txt 에 쌓인 기록이
+// 있고 아직 옮긴 적 없으면, 날짜별로 한 글씩 만들어 이관한다(한 번만).
+// 각 글은 '운영자'가 쓴 것으로 두고, 날짜를 글 시각으로 삼아 순서를 지킨다.
+try {
+  if (patchNotesText.trim() && !board.hasCategory('patch')) {
+    const entries = [];
+    let cur = null;
+    for (const raw of patchNotesText.split('\n')) {
+      const line = raw.trim();
+      if (!line) continue;
+      if (/^[-•]/.test(line)) {
+        if (!cur) { cur = { date: '', items: [] }; entries.push(cur); }
+        cur.items.push(line.replace(/^[-•]\s*/, '').trim());
+      } else {
+        cur = { date: line, items: [] };
+        entries.push(cur);
+      }
+    }
+    for (const e of entries) {
+      if (!e.items.length) continue;
+      const ts = Date.parse(`${e.date}T12:00:00+09:00`);
+      const body = (e.date ? `${e.date}\n` : '') + e.items.map((i) => `• ${i}`).join('\n');
+      board.add({ name: '운영자', body, userId: 'system', category: 'patch', at: Number.isNaN(ts) ? Date.now() : ts });
+    }
+    console.log(`패치노트 ${entries.length}건을 커뮤니티로 이관했습니다.`);
+  }
+} catch (err) { console.error('패치노트 이관 실패:', err); }
 
 app.get('/api/patchnotes', (req, res) => res.json({ text: patchNotesText }));
 

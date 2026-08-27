@@ -15,6 +15,9 @@ export const MAX_LENGTH = 10;
 export const GUEST_PATTERN = /^Guest\d{4,8}$/;
 
 const CONTROL_CHARS = new RegExp('[\\u0000-\\u001F\\u007F]', 'g');
+// 메시지용: 탭·개행(\t \n \r)은 남기고 나머지 제어문자만 지운다. 개행은
+// checkMessage 아래에서 따로 정리한다(줄바꿈 도배 방지 등).
+const MSG_CONTROL = new RegExp('[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F\\u007F]', 'g');
 
 // 한글(자모 포함)과 알파벳
 const LETTER = /[a-zᄀ-ᇿ㄰-㆏가-힣]/;
@@ -140,7 +143,7 @@ export const MAX_MESSAGE = 200;
  */
 export function checkMessage(raw, maxLen = MAX_MESSAGE) {
   const text = String(raw ?? '')
-    .replace(CONTROL_CHARS, '')      // 제어문자 제거 (개행은 아래에서 따로 둔다)
+    .replace(MSG_CONTROL, '')        // 제어문자 제거 (개행·탭은 아래에서 따로 둔다)
     .replace(/\r\n?/g, '\n')
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{3,}/g, '\n\n')       // 개행 도배 방지

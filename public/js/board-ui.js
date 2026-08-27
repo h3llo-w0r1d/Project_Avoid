@@ -1,10 +1,13 @@
-// 자유 게시판 창.
+// 커뮤니티 창.
 //
 // 서버가 신원·욕설·길이·도배를 막지만, 화면에 그릴 때 반드시 escape 한다.
 // 남이 쓴 글을 그대로 innerHTML 에 넣으면 <script> 가 실행된다.
 //
+// 칸(카테고리) 탭으로 글을 나눠 본다: 전체·패치노트·잡담·버그 제보·Q&A.
+// 패치노트 칸은 운영자만 쓴다(서버가 막고, 여기선 관리자에게만 선택지를 준다).
+//
 // 두 화면을 오간다.
-//  - 목록: 글 카드들. 카드를 누르면 상세로 들어간다. 카드에는 💬 댓글 수만.
+//  - 목록: 글 카드들. 카드를 누르면 상세로 들어간다. 카드에는 칸 뱃지 + 💬 댓글 수.
 //  - 상세: 글 하나를 크게 + 그 밑에 댓글 목록과 댓글 입력칸.
 // 댓글(답글)은 한 단계만 — 상세에서만 달 수 있고 원글에 붙는다.
 
@@ -12,6 +15,48 @@ const $ = (id) => document.getElementById(id);
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// 칸 정보: 이름·아이콘·뱃지 색 클래스.
+const CATS = {
+  patch: { label: '패치노트', icon: '📢', cls: 'cat-patch' },
+  chat: { label: '잡담', icon: '💬', cls: 'cat-chat' },
+  bug: { label: '버그 제보', icon: '🐞', cls: 'cat-bug' },
+  qna: { label: 'Q&A', icon: '❓', cls: 'cat-qna' }
+};
+
+// 이름 색 → 실제 색(화이트리스트). 임의 CSS 주입을 막는다.
+const COLOR_NAMES = {
+  빨강: '#ff5566', 빨간: '#ff5566', red: '#ff5566',
+  주황: '#ff9f43', orange: '#ff9f43',
+  노랑: '#ffd54a', yellow: '#ffd54a',
+  초록: '#57d18a', 녹색: '#57d18a', green: '#57d18a',
+  파랑: '#4f8bff', 파란: '#4f8bff', blue: '#4f8bff',
+  하늘: '#4fd6ff', cyan: '#4fd6ff',
+  보라: '#b57bff', purple: '#b57bff',
+  분홍: '#ff7eb6', pink: '#ff7eb6',
+  회색: '#9aa4bf', gray: '#9aa4bf', grey: '#9aa4bf',
+  흰색: '#ffffff', white: '#ffffff'
+};
+const toColor = (key) =>
+  /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(key)
+    ? key : (COLOR_NAMES[key] || COLOR_NAMES[key.toLowerCase()] || null);
+
+// 문장 속 {색|부분} 을 그 색 span 으로. 색이 아니면 토큰을 글자 그대로 둔다.
+// 나머지는 전부 escape 하고 개행만 <br>.
+function colorize(s) {
+  const re = /\{(#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g;
+  let out = '', last = 0, m;
+  const put = (t) => esc(t).replace(/\n/g, '<br>');
+  while ((m = re.exec(s))) {
+    out += put(s.slice(last, m.index));
+    const color = toColor(m[1]);
+    out += color ? `<span style="color:${color}">${put(m[2])}</span>` : put(m[0]);
+    last = m.index + m[0].length;
+  }
+  return out + put(s.slice(last));
+}
+
+const PALETTE = ['빨강', '주황', '노랑', '초록', '파랑', '하늘', '보라', '분홍', '회색'];
 
 // 언제 올렸는지 사람이 읽기 좋게. 방금·N분 전·N시간 전·날짜.
 function ago(at) {
@@ -28,33 +73,46 @@ export class BoardUI {
     this.h = handlers;       // { list, post, remove, isAdmin }
     this.el = {
       modal: $('board-modal'), btn: $('board-btn'),
+      tabs: $('board-tabs'),
+      cat: $('board-cat'), colors: $('board-colors'),
       input: $('board-input'), send: $('board-send'),
       count: $('board-count'), error: $('board-error'),
       list: $('board-list'), detail: $('board-detail')
     };
     // 목록 화면에서만 보이는 것들(상세로 들어가면 감춘다)
-    this.el.hint = this.el.modal.querySelector('.board-hint');
     this.el.write = this.el.modal.querySelector('.board-write');
     this.posts = [];
     this.openId = null;      // 상세로 열려 있는 글 id (없으면 목록)
+    this.tab = 'all';        // 지금 보고 있는 칸 (all = 전체)
+    this.patchReady = false; // 관리자 선택지(패치노트)를 넣었는지
 
     this.el.btn.addEventListener('click', () => this.open());
     $('board-close').addEventListener('click', () => this.close());
     this.el.modal.addEventListener('click', (e) => { if (e.target === this.el.modal) this.close(); });
     this.el.send.addEventListener('click', () => this.submit());
     this.el.input.addEventListener('input', () => {
-      this.el.count.textContent = `${[...this.el.input.value].length} / 200`;
+      this.el.count.textContent = `${[...this.el.input.value].length} / ${this.el.input.maxLength}`;
       this.el.error.textContent = '';
     });
     // Ctrl+Enter 로도 보낸다
     this.el.input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this.submit(); }
     });
+
+    // 탭 누르면 그 칸으로 거른다. 쓰기 칸의 기본 선택도 맞춘다.
+    for (const b of this.el.tabs.querySelectorAll('button')) {
+      b.addEventListener('click', () => this.setTab(b.dataset.cat));
+    }
+    // 쓰기 칸을 바꾸면 색 팔레트·글자수 제한을 그에 맞춘다.
+    this.el.cat.addEventListener('change', () => this.syncWriteMode());
+
+    this.buildPalette();
   }
 
   async open() {
     this.el.modal.classList.remove('hidden');
     this.el.error.textContent = '';
+    this.ensurePatchOption();
     this.showList();
     this.el.list.innerHTML = '<li class="board-empty">불러오는 중…</li>';
     try { this.render(await this.h.list()); }
@@ -63,11 +121,49 @@ export class BoardUI {
 
   close() { this.el.modal.classList.add('hidden'); this.showList(); }
 
+  // 관리자면 쓰기 칸에 '패치노트' 선택지를 한 번만 추가한다.
+  ensurePatchOption() {
+    if (this.patchReady || !this.h.isAdmin()) return;
+    const opt = document.createElement('option');
+    opt.value = 'patch';
+    opt.textContent = '📢 패치노트';
+    this.el.cat.insertBefore(opt, this.el.cat.firstChild);
+    this.patchReady = true;
+  }
+
+  // ── 탭(칸) ───────────────────────────────────────────
+  setTab(cat) {
+    this.tab = cat;
+    for (const b of this.el.tabs.querySelectorAll('button')) {
+      b.classList.toggle('current', b.dataset.cat === cat);
+    }
+    // 특정 칸을 보고 있으면 그 칸으로 바로 쓰게 기본 선택을 맞춘다.
+    if (cat !== 'all' && [...this.el.cat.options].some((o) => o.value === cat)) {
+      this.el.cat.value = cat;
+    } else if (cat === 'all') {
+      this.el.cat.value = 'chat';
+    }
+    this.syncWriteMode();
+    this.showList();
+    this.render(this.posts);
+  }
+
+  // 쓰기 칸이 패치노트면 색 팔레트를 보이고 길이 제한을 늘린다.
+  syncWriteMode() {
+    const isPatch = this.el.cat.value === 'patch';
+    this.el.colors.classList.toggle('hidden', !isPatch);
+    this.el.input.maxLength = isPatch ? 6000 : 200;
+    this.el.input.placeholder = isPatch
+      ? '패치노트를 적으세요. 글자를 선택하고 색을 눌러 색을 입힐 수 있어요.'
+      : '자유롭게 남겨 보세요 (200자)';
+    this.el.count.textContent = `${[...this.el.input.value].length} / ${this.el.input.maxLength}`;
+  }
+
   // ── 화면 전환 ─────────────────────────────────────────
   showList() {
     this.openId = null;
     this.el.detail.classList.add('hidden');
-    this.el.hint.classList.remove('hidden');
+    this.el.tabs.classList.remove('hidden');
     this.el.write.classList.remove('hidden');
     this.el.list.classList.remove('hidden');
   }
@@ -79,7 +175,7 @@ export class BoardUI {
 
   openDetail(id) {
     this.openId = id;
-    this.el.hint.classList.add('hidden');
+    this.el.tabs.classList.add('hidden');
     this.el.write.classList.add('hidden');
     this.el.list.classList.add('hidden');
     this.el.detail.classList.remove('hidden');
@@ -93,10 +189,12 @@ export class BoardUI {
     if (!body) { this.el.error.textContent = '내용을 입력해 주세요.'; return; }
     this.el.send.disabled = true;
     try {
-      const posts = await this.h.post(body);
+      const posts = await this.h.post(body, null, this.el.cat.value);
       this.el.input.value = '';
-      this.el.count.textContent = '0 / 200';
+      this.syncWriteMode();
       this.el.error.textContent = '';
+      // 방금 쓴 칸으로 탭을 옮겨 바로 보이게 한다.
+      this.setTab(this.el.cat.value);
       this.render(posts);
     } catch (err) {
       this.el.error.textContent = err.message;
@@ -117,19 +215,26 @@ export class BoardUI {
     // 상세를 보고 있으면 그쪽을 갱신한다(댓글을 달고 돌아온 경우 등)
     if (this.openId) { this.renderDetail(); return; }
 
-    if (this.posts.length === 0) {
-      this.el.list.innerHTML = '<li class="board-empty">아직 글이 없습니다. 첫 글을 남겨 보세요!</li>';
+    const shown = this.tab === 'all'
+      ? this.posts
+      : this.posts.filter((p) => (p.category || 'chat') === this.tab);
+
+    if (shown.length === 0) {
+      this.el.list.innerHTML = `<li class="board-empty">${
+        this.tab === 'all' ? '아직 글이 없습니다. 첫 글을 남겨 보세요!' : '이 칸에는 아직 글이 없습니다.'
+      }</li>`;
       return;
     }
     const admin = this.h.isAdmin();
     this.el.list.innerHTML = '';
-    for (const p of this.posts) {
+    for (const p of shown) {
+      const cat = CATS[p.category] || CATS.chat;
       const li = document.createElement('li');
-      li.className = 'board-post board-post-link';
-      li.appendChild(this.postHead(p, admin));
+      li.className = `board-post board-post-link ${cat.cls}`;
+      li.appendChild(this.postHead(p, admin, true));
       li.appendChild(this.postBody(p));
 
-      // 댓글 수(말풍선). 답글 텍스트 버튼 대신 이 아이콘을 쓴다.
+      // 댓글 수(말풍선).
       const meta = document.createElement('div');
       meta.className = 'board-actions';
       meta.innerHTML = `<span class="board-cmt"><span class="board-cmt-ico">💬</span> ${(p.replies?.length ?? 0)}</span>`;
@@ -146,6 +251,7 @@ export class BoardUI {
     if (!p) { this.backToList(); return; }   // 지워졌으면 목록으로
     const admin = this.h.isAdmin();
     const replies = p.replies ?? [];
+    const cat = CATS[p.category] || CATS.chat;
     const d = this.el.detail;
     d.innerHTML = '';
 
@@ -157,8 +263,8 @@ export class BoardUI {
     d.appendChild(back);
 
     const art = document.createElement('article');
-    art.className = 'board-detail-post';
-    art.appendChild(this.postHead(p, admin));
+    art.className = `board-detail-post ${cat.cls}`;
+    art.appendChild(this.postHead(p, admin, true));
     art.appendChild(this.postBody(p));
     const actions = document.createElement('div');
     actions.className = 'board-detail-actions';
@@ -184,7 +290,7 @@ export class BoardUI {
       for (const r of replies) {
         const li = document.createElement('li');
         li.className = 'board-comment';
-        li.appendChild(this.postHead(r, admin));
+        li.appendChild(this.postHead(r, admin, false));
         li.appendChild(this.postBody(r));
         ul.appendChild(li);
       }
@@ -196,11 +302,14 @@ export class BoardUI {
   }
 
   // ── 공용 조각 ────────────────────────────────────────
-  // 글 머리(이름·시간·삭제). 원글·댓글 공용.
-  postHead(p, admin) {
+  // 글 머리(칸 뱃지·이름·시간·삭제). withBadge 면 칸 뱃지를 붙인다(원글만).
+  postHead(p, admin, withBadge) {
     const head = document.createElement('div');
     head.className = 'board-post-head';
-    head.innerHTML =
+    const cat = CATS[p.category];
+    const badge = (withBadge && cat)
+      ? `<span class="board-cat-badge ${cat.cls}">${cat.icon} ${esc(cat.label)}</span>` : '';
+    head.innerHTML = badge +
       `<span class="board-name${p.member ? ' member' : ''}">${esc(p.name)}</span>` +
       `<span class="board-time">${ago(p.at)}</span>`;
     if (admin) {
@@ -218,9 +327,42 @@ export class BoardUI {
   postBody(p) {
     const body = document.createElement('div');
     body.className = 'board-body';
-    // 본문은 escape 한 뒤 개행만 <br> 로. 순서를 바꾸면 태그가 살아난다.
-    body.innerHTML = esc(p.body).replace(/\n/g, '<br>');
+    // 본문은 colorize 가 escape 하고 {색|글자}만 색 span 으로, 개행은 <br> 로.
+    body.innerHTML = colorize(p.body);
     return body;
+  }
+
+  // 색 팔레트(패치노트 쓸 때만 보인다). 선택한 글자에 {색|..} 을 씌운다.
+  buildPalette() {
+    const bar = this.el.colors;
+    if (!bar || bar.dataset.built) return;
+    bar.dataset.built = '1';
+    const make = (name, bg, text) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'patch-swatch'; b.title = name || '색 지우기';
+      if (bg) b.style.background = bg; else { b.classList.add('clear'); b.textContent = text; }
+      b.addEventListener('mousedown', (e) => { e.preventDefault(); this.applyColor(name); });
+      bar.appendChild(b);
+    };
+    for (const name of PALETTE) make(name, COLOR_NAMES[name]);
+    make(null, null, '기본');
+  }
+
+  // 선택 안의 기존 색 토큰을 벗긴다(중첩 방지).
+  applyColor(name) {
+    const input = this.el.input;
+    const a = input.selectionStart, b = input.selectionEnd;
+    if (a === b) return;                       // 선택한 게 없으면 아무것도 안 함
+    const strip = (s) => s.replace(/\{(?:#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g, '$1');
+    const before = input.value.slice(0, a);
+    const sel = strip(input.value.slice(a, b));
+    const after = input.value.slice(b);
+    input.value = before + (name ? `{${name}|${sel}}` : sel) + after;
+    const innerStart = before.length + (name ? `{${name}|`.length : 0);
+    input.focus();
+    input.selectionStart = innerStart;
+    input.selectionEnd = innerStart + sel.length;
+    this.el.count.textContent = `${[...input.value].length} / ${input.maxLength}`;
   }
 
   // 상세 하단 댓글 입력칸.

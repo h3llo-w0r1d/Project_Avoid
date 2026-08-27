@@ -490,22 +490,6 @@ export const api = {
     }).catch(() => {});
   },
 
-  async patchNotes() {
-    const res = await fetch('/api/patchnotes');
-    return res.ok ? (await res.json()).text ?? '' : '';
-  },
-
-  async savePatchNotes(text) {
-    const res = await fetch('/api/admin/patchnotes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    return data.text ?? '';
-  },
-
   // ---- 관리 (관리자 계정으로 로그인했을 때만 통한다) ----
 
   async amIAdmin() {
@@ -546,11 +530,11 @@ export const api = {
   },
 
   // 게스트면 이름을 같이 보낸다. 로그인했으면 서버가 계정 닉네임을 쓴다.
-  // parentId 가 있으면 그 원글에 대한 답글로 올린다.
-  async boardPost(body, guestName, parentId) {
+  // parentId 가 있으면 그 원글에 대한 답글로 올린다. category 는 원글의 칸.
+  async boardPost(body, guestName, parentId, category) {
     const res = await fetch('/api/board', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ body, name: guestName, parentId })
+      body: JSON.stringify({ body, name: guestName, parentId, category })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);

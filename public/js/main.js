@@ -6,7 +6,6 @@ import { Hazards } from './hazards.js';
 import { FloorHoles } from './floor-holes.js';
 import { Coins } from './coins.js';
 import { wallet } from './wallet.js';
-import { PATCH_NOTES } from './patch-notes.js';
 import { Input } from './input.js';
 import { UI, api } from './ui.js';
 import { VersusUI } from './versus-ui.js';
@@ -248,7 +247,6 @@ const adminReady = api.amIAdmin()
     isAdmin = yes;
     if (yes) {
       setupNoticeAdmin();
-      patch.enableAdmin();   // 패치노트 편집 버튼(✏️) 켜기
       adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기
       renderCoinHud();       // 코인 표시를 ∞ 로
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
@@ -325,7 +323,8 @@ function setupNoticeAdmin() {
 // 자유 게시판. 게스트는 이름을 같이 보내고, 로그인했으면 서버가 계정 닉네임을 쓴다.
 const board = new BoardUI({
   list: () => api.boardList(),
-  post: (body, parentId) => api.boardPost(body, auth.signedIn ? undefined : auth.displayName, parentId),
+  post: (body, parentId, category) =>
+    api.boardPost(body, auth.signedIn ? undefined : auth.displayName, parentId, category),
   remove: (id) => api.boardRemove(id),
   isAdmin: () => isAdmin
 });
@@ -335,189 +334,6 @@ const board = new BoardUI({
 for (const btn of document.querySelectorAll('#side-menu [data-forward]')) {
   btn.addEventListener('click', () => document.getElementById(btn.dataset.forward)?.click());
 }
-
-// 패치노트 창. 서버에 저장된 텍스트를 날짜별로 파싱해 보여 준다. 관리자는
-// ✏️ 로 직접 고친다(공지처럼 서버 저장). 서버가 비어 있으면 코드에 넣어 둔
-// 기본 목록(patch-notes.js)을 대신 쓴다.
-const patch = (() => {
-  const modal = document.getElementById('patch-modal');
-  const list = document.getElementById('patch-list');
-  const editModal = document.getElementById('patch-edit-modal');
-  const editBtn = document.getElementById('patch-edit-btn');
-  const input = document.getElementById('patch-input');
-  const count = document.getElementById('patch-count');
-  const errEl = document.getElementById('patch-error');
-  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-
-  // 기본 목록(코드) → 편집용 텍스트. 서버가 비었을 때 시작점으로 쓴다.
-  const defaultText = PATCH_NOTES
-    .map((n) => `${n.date}\n${n.items.map((i) => `- ${i}`).join('\n')}`).join('\n\n');
-
-  let text = '';   // 서버 원문(비면 기본을 쓴다)
-
-  // 이름 색 → 실제 색. 안전하게 화이트리스트로만 허용한다(임의 CSS 주입 방지).
-  const COLOR_NAMES = {
-    빨강: '#ff5566', 빨간: '#ff5566', red: '#ff5566',
-    주황: '#ff9f43', orange: '#ff9f43',
-    노랑: '#ffd54a', yellow: '#ffd54a',
-    초록: '#57d18a', 녹색: '#57d18a', green: '#57d18a',
-    파랑: '#4f8bff', 파란: '#4f8bff', blue: '#4f8bff',
-    하늘: '#4fd6ff', cyan: '#4fd6ff',
-    보라: '#b57bff', purple: '#b57bff',
-    분홍: '#ff7eb6', pink: '#ff7eb6',
-    회색: '#9aa4bf', gray: '#9aa4bf', grey: '#9aa4bf',
-    흰색: '#ffffff', white: '#ffffff'
-  };
-
-  // 이름/hex → 실제 색(화이트리스트). 아니면 null.
-  const toColor = (key) =>
-    /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(key)
-      ? key : (COLOR_NAMES[key] || COLOR_NAMES[key.toLowerCase()] || null);
-
-  // 줄 앞의 [색] 을 뽑아 { color, text } 로 나눈다(줄 전체 색). 색이 아니면 원문 그대로.
-  function pickColor(s) {
-    const m = s.match(/^\[([^\]]{1,12})\]\s*(.*)$/);
-    if (!m) return { color: null, text: s };
-    const color = toColor(m[1].trim());
-    return color ? { color, text: m[2] } : { color: null, text: s };
-  }
-
-  // 문장 속 {색|부분} 을 그 색 span 으로. 색이 아니면 토큰을 글자 그대로 둔다.
-  function colorizeInline(s) {
-    const re = /\{(#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g;
-    let out = '', last = 0, m;
-    while ((m = re.exec(s))) {
-      out += esc(s.slice(last, m.index));
-      const color = toColor(m[1]);
-      out += color ? `<span style="color:${color}">${esc(m[2])}</span>` : esc(m[0]);
-      last = m.index + m[0].length;
-    }
-    return out + esc(s.slice(last));
-  }
-
-  // 텍스트 → [{date, items:[{text,color}]}]. 날짜 줄 + '- 항목' 줄. 빈 줄은 무시.
-  function parse(t) {
-    const entries = [];
-    let cur = null;
-    for (const raw of String(t).split('\n')) {
-      const line = raw.trim();
-      if (!line) continue;
-      if (/^[-•]/.test(line)) {
-        if (!cur) { cur = { date: '', items: [] }; entries.push(cur); }
-        cur.items.push(pickColor(line.replace(/^[-•]\s*/, '')));
-      } else {
-        cur = { date: line, items: [] };
-        entries.push(cur);
-      }
-    }
-    return entries;
-  }
-
-  // 텍스트 → 화면 HTML. 실제 목록과 편집 미리보기가 같이 쓴다.
-  function entriesHtml(t) {
-    const entries = parse(t);
-    // 줄 전체 색은 style 로(검증된 값), 부분 색은 colorizeInline 이 span 으로.
-    const item = (i) => `<li${i.color ? ` style="color:${i.color}"` : ''}>${colorizeInline(i.text)}</li>`;
-    return entries.length
-      ? entries.map((n) => `
-          <li class="patch-entry">
-            ${n.date ? `<div class="patch-date">${esc(n.date)}</div>` : ''}
-            <ul class="patch-items">${n.items.map(item).join('')}</ul>
-          </li>`).join('')
-      : '<li class="board-empty">아직 기록이 없습니다.</li>';
-  }
-
-  function render() { list.innerHTML = entriesHtml(text || defaultText); }
-
-  async function open() {
-    render();                       // 우선 지금 값으로 그려 두고
-    modal.classList.remove('hidden');
-    try { text = await api.patchNotes(); render(); } catch { /* 실패하면 기존값 유지 */ }
-  }
-  const close = () => modal.classList.add('hidden');
-  document.getElementById('patch-btn').addEventListener('click', open);
-  document.getElementById('patch-close').addEventListener('click', close);
-  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-
-  // ── 편집(관리자) ──
-  const preview = document.getElementById('patch-preview');
-  const colorsBar = document.getElementById('patch-colors');
-  const closeEdit = () => editModal.classList.add('hidden');
-
-  const updatePreview = () => {
-    count.textContent = `${input.value.length} / 6000`;
-    if (preview) preview.innerHTML = entriesHtml(input.value || defaultText);
-  };
-
-  // 선택 안의 기존 색 토큰을 벗긴다(중첩 방지).
-  const stripTokens = (s) => s.replace(/\{(?:#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g, '$1');
-
-  // 선택한 글자에 색을 입힌다. name 이 없으면(기본) 색만 지운다.
-  function applyColor(name) {
-    const a = input.selectionStart, b = input.selectionEnd;
-    if (a === b) return;                       // 선택한 게 없으면 아무것도 안 함
-    const before = input.value.slice(0, a);
-    const sel = stripTokens(input.value.slice(a, b));
-    const after = input.value.slice(b);
-    const wrapped = name ? `{${name}|${sel}}` : sel;
-    input.value = before + wrapped + after;
-    const innerStart = before.length + (name ? `{${name}|`.length : 0);
-    input.focus();
-    input.selectionStart = innerStart;
-    input.selectionEnd = innerStart + sel.length;
-    updatePreview();
-  }
-
-  // 색 팔레트 버튼(한 번만 만든다). mousedown 에서 처리해 선택이 풀리기 전에 잡는다.
-  const PALETTE = ['빨강', '주황', '노랑', '초록', '파랑', '하늘', '보라', '분홍', '회색'];
-  if (colorsBar && !colorsBar.dataset.built) {
-    colorsBar.dataset.built = '1';
-    for (const name of PALETTE) {
-      const b = document.createElement('button');
-      b.type = 'button'; b.className = 'patch-swatch'; b.title = name;
-      b.style.background = COLOR_NAMES[name];
-      b.addEventListener('mousedown', (e) => { e.preventDefault(); applyColor(name); });
-      colorsBar.appendChild(b);
-    }
-    const clr = document.createElement('button');
-    clr.type = 'button'; clr.className = 'patch-swatch clear'; clr.textContent = '기본'; clr.title = '색 지우기';
-    clr.addEventListener('mousedown', (e) => { e.preventDefault(); applyColor(null); });
-    colorsBar.appendChild(clr);
-  }
-
-  editBtn.addEventListener('click', () => {
-    input.value = text || defaultText;   // 비었으면 기본을 시작점으로
-    errEl.textContent = '';
-    editModal.classList.remove('hidden');
-    updatePreview();
-    input.focus();
-  });
-  input.addEventListener('input', updatePreview);
-  document.getElementById('patch-edit-close').addEventListener('click', closeEdit);
-  editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEdit(); });
-  document.getElementById('patch-save').addEventListener('click', async () => {
-    try {
-      text = await api.savePatchNotes(input.value);
-      render();
-      closeEdit();
-    } catch (e) { errEl.textContent = e.message; }
-  });
-
-  // 패치노트도 10초마다 다시 받아와, 바뀌었으면 캐시를 갱신한다. 창이 열려
-  // 있으면 그 자리에서 다시 그린다(닫혀 있으면 다음에 열 때 최신으로 뜬다).
-  setInterval(async () => {
-    try {
-      const t = await api.patchNotes();
-      if (t !== text) {
-        text = t;
-        if (!modal.classList.contains('hidden')) render();
-      }
-    } catch { /* 실패는 무시 */ }
-  }, 10_000);
-
-  return { enableAdmin() { editBtn.classList.remove('hidden'); } };
-})();
 
 // ── 코인 지급(관리자) ──────────────────────────────────────
 // 계정 목록을 보여 주고, 누르면 그 계정에 코인을 지급한다(대기에 쌓임 →
