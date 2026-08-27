@@ -529,14 +529,25 @@ const patch = (() => {
   const WEIGHTS = [{ coins: 0, p: 30 }, { coins: 5, p: 40 }, { coins: 10, p: 22 }, { coins: 50, p: 8 }];
   const N = SEG.length, ARC = 360 / N;
 
-  // 휠 색(conic) + 칸 라벨(반지름 방향)
-  wheel.style.background =
-    `conic-gradient(${SEG.map((s, i) => `${s.color} ${i * ARC}deg ${(i + 1) * ARC}deg`).join(',')})`;
-  wheel.innerHTML = SEG.map((s, i) => {
-    const a = i * ARC + ARC / 2;
-    const txt = s.coins ? `🪙${s.label}` : '꽝';
-    return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(-104px)">${txt}</span>`;
+  // 원판은 SVG 부채꼴로 그린다. conic-gradient 은 0°·180°(위·아래)에서 이음새
+  // 띠가 보여서 색이 달라 보인다 — SVG 조각은 그런 이음새가 없다.
+  const pt = (deg) => {
+    const r = deg * Math.PI / 180;
+    return [(50 + 50 * Math.sin(r)).toFixed(3), (50 - 50 * Math.cos(r)).toFixed(3)];
+  };
+  const wedges = SEG.map((s, i) => {
+    const [x0, y0] = pt(i * ARC);
+    const [x1, y1] = pt((i + 1) * ARC);
+    return `<path d="M50,50 L${x0},${y0} A50,50 0 0 1 ${x1},${y1} Z" fill="${s.color}"/>`;
   }).join('');
+  wheel.style.background = 'none';
+  wheel.innerHTML =
+    `<svg class="roulette-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${wedges}</svg>` +
+    SEG.map((s, i) => {
+      const a = i * ARC + ARC / 2;
+      const txt = s.coins ? `🪙${s.label}` : '꽝';
+      return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(-104px)">${txt}</span>`;
+    }).join('');
 
   let spinning = false;
   let rotation = 0;
