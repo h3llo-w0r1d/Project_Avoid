@@ -344,15 +344,30 @@ const patch = (() => {
     흰색: '#ffffff', white: '#ffffff'
   };
 
-  // 줄 앞의 [색] 을 뽑아 { color, text } 로 나눈다. 색이 아니면 원문 그대로.
+  // 이름/hex → 실제 색(화이트리스트). 아니면 null.
+  const toColor = (key) =>
+    /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(key)
+      ? key : (COLOR_NAMES[key] || COLOR_NAMES[key.toLowerCase()] || null);
+
+  // 줄 앞의 [색] 을 뽑아 { color, text } 로 나눈다(줄 전체 색). 색이 아니면 원문 그대로.
   function pickColor(s) {
     const m = s.match(/^\[([^\]]{1,12})\]\s*(.*)$/);
     if (!m) return { color: null, text: s };
-    const key = m[1].trim();
-    let color = null;
-    if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(key)) color = key;         // 직접 hex
-    else color = COLOR_NAMES[key] || COLOR_NAMES[key.toLowerCase()] || null;  // 이름
+    const color = toColor(m[1].trim());
     return color ? { color, text: m[2] } : { color: null, text: s };
+  }
+
+  // 문장 속 {색|부분} 을 그 색 span 으로. 색이 아니면 토큰을 글자 그대로 둔다.
+  function colorizeInline(s) {
+    const re = /\{(#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g;
+    let out = '', last = 0, m;
+    while ((m = re.exec(s))) {
+      out += esc(s.slice(last, m.index));
+      const color = toColor(m[1]);
+      out += color ? `<span style="color:${color}">${esc(m[2])}</span>` : esc(m[0]);
+      last = m.index + m[0].length;
+    }
+    return out + esc(s.slice(last));
   }
 
   // 텍스트 → [{date, items:[{text,color}]}]. 날짜 줄 + '- 항목' 줄. 빈 줄은 무시.
@@ -373,11 +388,12 @@ const patch = (() => {
     return entries;
   }
 
-  function render() {
-    const entries = parse(text || defaultText);
-    // color 는 hex 또는 화이트리스트 값이라 style 에 넣어도 안전하다.
-    const item = (i) => `<li${i.color ? ` style="color:${i.color}"` : ''}>${esc(i.text)}</li>`;
-    list.innerHTML = entries.length
+  // 텍스트 → 화면 HTML. 실제 목록과 편집 미리보기가 같이 쓴다.
+  function entriesHtml(t) {
+    const entries = parse(t);
+    // 줄 전체 색은 style 로(검증된 값), 부분 색은 colorizeInline 이 span 으로.
+    const item = (i) => `<li${i.color ? ` style="color:${i.color}"` : ''}>${colorizeInline(i.text)}</li>`;
+    return entries.length
       ? entries.map((n) => `
           <li class="patch-entry">
             ${n.date ? `<div class="patch-date">${esc(n.date)}</div>` : ''}
@@ -385,6 +401,8 @@ const patch = (() => {
           </li>`).join('')
       : '<li class="board-empty">아직 기록이 없습니다.</li>';
   }
+
+  function render() { list.innerHTML = entriesHtml(text || defaultText); }
 
   async function open() {
     render();                       // 우선 지금 값으로 그려 두고
@@ -397,15 +415,59 @@ const patch = (() => {
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
 
   // ── 편집(관리자) ──
+  const preview = document.getElementById('patch-preview');
+  const colorsBar = document.getElementById('patch-colors');
   const closeEdit = () => editModal.classList.add('hidden');
+
+  const updatePreview = () => {
+    count.textContent = `${input.value.length} / 6000`;
+    if (preview) preview.innerHTML = entriesHtml(input.value || defaultText);
+  };
+
+  // 선택 안의 기존 색 토큰을 벗긴다(중첩 방지).
+  const stripTokens = (s) => s.replace(/\{(?:#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g, '$1');
+
+  // 선택한 글자에 색을 입힌다. name 이 없으면(기본) 색만 지운다.
+  function applyColor(name) {
+    const a = input.selectionStart, b = input.selectionEnd;
+    if (a === b) return;                       // 선택한 게 없으면 아무것도 안 함
+    const before = input.value.slice(0, a);
+    const sel = stripTokens(input.value.slice(a, b));
+    const after = input.value.slice(b);
+    const wrapped = name ? `{${name}|${sel}}` : sel;
+    input.value = before + wrapped + after;
+    const innerStart = before.length + (name ? `{${name}|`.length : 0);
+    input.focus();
+    input.selectionStart = innerStart;
+    input.selectionEnd = innerStart + sel.length;
+    updatePreview();
+  }
+
+  // 색 팔레트 버튼(한 번만 만든다). mousedown 에서 처리해 선택이 풀리기 전에 잡는다.
+  const PALETTE = ['빨강', '주황', '노랑', '초록', '파랑', '하늘', '보라', '분홍', '회색'];
+  if (colorsBar && !colorsBar.dataset.built) {
+    colorsBar.dataset.built = '1';
+    for (const name of PALETTE) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'patch-swatch'; b.title = name;
+      b.style.background = COLOR_NAMES[name];
+      b.addEventListener('mousedown', (e) => { e.preventDefault(); applyColor(name); });
+      colorsBar.appendChild(b);
+    }
+    const clr = document.createElement('button');
+    clr.type = 'button'; clr.className = 'patch-swatch clear'; clr.textContent = '기본'; clr.title = '색 지우기';
+    clr.addEventListener('mousedown', (e) => { e.preventDefault(); applyColor(null); });
+    colorsBar.appendChild(clr);
+  }
+
   editBtn.addEventListener('click', () => {
     input.value = text || defaultText;   // 비었으면 기본을 시작점으로
-    count.textContent = `${input.value.length} / 6000`;
     errEl.textContent = '';
     editModal.classList.remove('hidden');
+    updatePreview();
     input.focus();
   });
-  input.addEventListener('input', () => { count.textContent = `${input.value.length} / 6000`; });
+  input.addEventListener('input', updatePreview);
   document.getElementById('patch-edit-close').addEventListener('click', closeEdit);
   editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEdit(); });
   document.getElementById('patch-save').addEventListener('click', async () => {
