@@ -116,17 +116,14 @@ rival.halo.visible = false;
 
 const hazards = new Hazards(scene);
 const floorHoles = new FloorHoles(scene);   // 하드코어: 바닥이 사라졌다 나타난다
-// 이번 판에 먹은 코인 수(판 끝나고 게스트 안내에 쓴다). startGame 에서 0으로.
+// 이번 판에 먹은 코인 수. 판 중엔 지갑에 바로 넣지 않고 여기 모아 뒀다가,
+// 판이 끝날 때 정산한다(10초 넘게 버텨야 인정 — 먹고 바로 죽는 악용 방지).
+// startGame 에서 0으로.
 let runCoins = 0;
-// 맵의 코인. 로그인 유저만 실제로 지갑에 쌓인다 — 게스트는 먹는 느낌(소리·사라짐)
-// 만 주고 쌓지 않는다(로그인 유도). 캐릭터 창이 열려 있으면 다시 그린다.
+// 맵의 코인. 먹으면 소리·사라짐 효과만 주고, 실제 적립은 finishGame 에서.
 const coins = new Coins(scene, () => {
   runCoins++;
   audio.coin?.();
-  if (!auth.signedIn) return;        // 게스트는 안 쌓인다
-  wallet.add(1);
-  renderCoinHud();
-  if (characters.open$) characters.draw();
 });
 const input = new Input();
 const net = new Net();
@@ -748,6 +745,27 @@ function showLoginUnlock(count) {
   });
 }
 
+// 10초 안에 죽어 코인이 무효가 됐을 때. 먹고 바로 죽는 파밍을 막는다.
+function showCoinLost(count) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">🪙 코인 ' + count + '개 무효</div>' +
+      '<div class="unlock-lockface">⏱️</div>' +
+      '<div class="unlock-name">10초 안에 끝났어요</div>' +
+      '<div class="unlock-hint">10초 넘게 버텨야 코인이 쌓여요 · 화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const done = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    overlay.addEventListener('click', done);
+  });
+}
+
 // 게스트가 판 중에 코인을 먹었을 때. 게스트는 코인이 안 쌓이므로, 로그인하면
 // 코인 시스템을 쓸 수 있다고 안내한다(로그인 유도).
 function showCoinLogin(count) {
@@ -813,6 +831,9 @@ function showUnlock(list) {
 // 커피 이벤트 기준 초.
 const COFFEE_SECONDS = 111;
 
+// 이 초 이상 버텨야 그 판에 먹은 코인을 인정한다(먹고 바로 죽는 파밍 방지).
+const MIN_COIN_SECONDS = 10;
+
 // 커피 이벤트 창. 캡처해서 인스타 DM 을 보내야 하므로 자동으로 사라지지 않고,
 // '확인' 을 누르거나 바깥을 눌러야 닫힌다.
 function showCoffee(score) {
@@ -860,8 +881,19 @@ async function finishGame() {
     else { await showLoginUnlock(freshUnlocks.length); guestNagged = true; }
   }
 
-  // 게스트가 판 중에 코인을 먹었으면(그리고 위 안내를 안 띄웠으면) 코인 안내.
-  if (!auth.signedIn && runCoins > 0 && !guestNagged) await showCoinLogin(runCoins);
+  // 코인 정산. 먹고 바로 죽는 파밍을 막으려고, 10초 넘게 버틴 판만 인정한다.
+  if (runCoins > 0) {
+    if (!auth.signedIn) {
+      // 게스트는 원래 안 쌓인다 — 위 안내를 안 띄웠으면 로그인 유도.
+      if (!guestNagged) await showCoinLogin(runCoins);
+    } else if (score >= MIN_COIN_SECONDS) {
+      wallet.add(runCoins);          // 10초 넘김 → 지갑에 적립
+      renderCoinHud();
+      if (characters.open$) characters.draw();
+    } else {
+      await showCoinLost(runCoins);  // 10초 못 버팀 → 무효 안내
+    }
+  }
 
   // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다.
   if (prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
