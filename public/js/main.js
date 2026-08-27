@@ -131,10 +131,15 @@ const coins = new Coins(scene, () => {
 const input = new Input();
 const net = new Net();
 
+// 관리자(개발자) 여부. 아래 api.amIAdmin() 로 확정되며, canUnlock·코인표시 등
+// 여러 곳에서 본다. 초기 렌더보다 먼저 선언해 둔다(TDZ 방지).
+let isAdmin = false;
+
 // 우측 상단(소리 버튼 왼쪽)에 늘 떠 있는 코인 개수. 먹거나 살 때 갱신한다.
+// 관리자(개발자)는 코인이 무한이라 ∞ 로 보여 준다.
 const coinHudEl = document.getElementById('coin-count');
 function renderCoinHud() {
-  if (coinHudEl) coinHudEl.textContent = String(wallet.coins());
+  if (coinHudEl) coinHudEl.textContent = isAdmin ? '∞' : String(wallet.coins());
 }
 renderCoinHud();   // 처음 켤 때 지금까지 모은 코인을 바로 보여 준다
 
@@ -218,8 +223,7 @@ profile.onRename = async (name) => {
 
 // 관리는 별도 페이지 /admin 하나로 한다. 게임 안 관리 창은 없앴다.
 // 여기서는 게시판에서 관리자에게만 삭제 버튼을 보여 줄지 정하는 데만 쓴다.
-// (실제 삭제는 서버가 막는다.)
-let isAdmin = false;
+// (실제 삭제는 서버가 막는다.) isAdmin 은 위에서 선언했다.
 // 관리자 확인은 한 번만 하고 그 결과(약속)를 재사용한다. onAuthChange 가
 // 서버 기록 동기화 전에 관리자 여부를 기다리는 데도 쓴다.
 const adminReady = api.amIAdmin()
@@ -228,6 +232,7 @@ const adminReady = api.amIAdmin()
     if (yes) {
       setupNoticeAdmin();
       patch.enableAdmin();   // 패치노트 편집 버튼(✏️) 켜기
+      renderCoinHud();       // 코인 표시를 ∞ 로
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
       syncCharacterForAuth();
     }
