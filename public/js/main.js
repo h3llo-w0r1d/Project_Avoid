@@ -263,6 +263,13 @@ function renderNotice() {
 }
 
 api.notice().then((t) => { noticeText = t; renderNotice(); }).catch(() => {});
+// 새로고침 없이도 바뀐 공지가 반영되게 10초마다 다시 받아온다. 응답은
+// 서버가 들고 있는 문자열 한 줄이라 가볍다. 바뀐 게 있을 때만 다시 그린다.
+setInterval(() => {
+  api.notice().then((t) => {
+    if (t !== noticeText) { noticeText = t; renderNotice(); }
+  }).catch(() => {});
+}, 10_000);
 
 // 관리자에게만 상단바 📢 버튼과 공지 편집 창을 켜 준다.
 function setupNoticeAdmin() {
@@ -481,6 +488,18 @@ const patch = (() => {
       closeEdit();
     } catch (e) { errEl.textContent = e.message; }
   });
+
+  // 패치노트도 10초마다 다시 받아와, 바뀌었으면 캐시를 갱신한다. 창이 열려
+  // 있으면 그 자리에서 다시 그린다(닫혀 있으면 다음에 열 때 최신으로 뜬다).
+  setInterval(async () => {
+    try {
+      const t = await api.patchNotes();
+      if (t !== text) {
+        text = t;
+        if (!modal.classList.contains('hidden')) render();
+      }
+    } catch { /* 실패는 무시 */ }
+  }, 10_000);
 
   return { enableAdmin() { editBtn.classList.remove('hidden'); } };
 })();
