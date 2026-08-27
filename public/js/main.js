@@ -545,12 +545,14 @@ const patch = (() => {
     return `<path d="M50,50 L${x0},${y0} A50,50 0 0 1 ${x1},${y1} Z" fill="${s.color}"/>`;
   }).join('');
   wheel.style.background = 'none';
+  // preserveAspectRatio 를 유지(meet)로 둬, 칸이 눌려도 원이 타원으로 안 늘어난다.
+  // 라벨 거리는 휠 크기(--wheel)에 비례시켜 크기가 바뀌어도 자리가 맞게.
   wheel.innerHTML =
-    `<svg class="roulette-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${wedges}</svg>` +
+    `<svg class="roulette-svg" viewBox="0 0 100 100" aria-hidden="true">${wedges}</svg>` +
     SEG.map((s, i) => {
       const a = i * ARC + ARC / 2;
       const txt = s.coins ? `🪙${s.label}` : '꽝';
-      return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(-104px)">${txt}</span>`;
+      return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
     }).join('');
 
   let spinning = false;

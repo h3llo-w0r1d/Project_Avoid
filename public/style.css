@@ -597,8 +597,16 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 /* ---------- 코인 룰렛 ---------- */
 #roulette-modal .modal-card { width: min(430px, 100%); text-align: center; }
 .roulette-wrap {
-  position: relative; width: 300px; height: 300px; max-width: 100%; margin: 20px auto 8px;
+  --wheel: 300px;
+  position: relative; width: var(--wheel); height: var(--wheel);
+  margin: 20px auto 8px; flex: none;   /* 카드가 짧아도 세로로 안 눌리게(타원 방지) */
 }
+/* 강제가로(아이폰): 회전 화면은 높이가 짧아 휠을 줄이고 여백도 좁힌다. */
+:root.force-landscape #roulette-modal .modal-card { padding: 14px 18px; }
+:root.force-landscape .roulette-wrap { --wheel: 168px; margin: 6px auto 2px; }
+:root.force-landscape #roulette-modal .board-hint { margin-top: 2px; font-size: 12px; }
+:root.force-landscape .roulette-result { min-height: 18px; margin: 3px 0; font-size: 15px; }
+:root.force-landscape #roulette-spin { margin-top: 4px; padding: 10px; }
 .roulette-wheel {
   position: absolute; inset: 6px; border-radius: 50%; overflow: hidden;
   border: 6px solid rgba(255, 255, 255, 0.16);
