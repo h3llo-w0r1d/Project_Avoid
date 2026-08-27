@@ -535,7 +535,7 @@ const patch = (() => {
   wheel.innerHTML = SEG.map((s, i) => {
     const a = i * ARC + ARC / 2;
     const txt = s.coins ? `🪙${s.label}` : '꽝';
-    return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(-74px)">${txt}</span>`;
+    return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(-104px)">${txt}</span>`;
   }).join('');
 
   let spinning = false;
