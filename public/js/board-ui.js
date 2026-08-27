@@ -3,7 +3,7 @@
 // 서버가 신원·욕설·길이·도배를 막지만, 화면에 그릴 때 반드시 escape 한다.
 // 남이 쓴 글을 그대로 innerHTML 에 넣으면 <script> 가 실행된다.
 //
-// 칸(카테고리) 탭으로 글을 나눠 본다: 전체·패치노트·잡담·버그 제보·Q&A.
+// 칸(카테고리) 탭으로 글을 나눠 본다: 패치노트·잡담·버그 제보·Q&A.
 // 패치노트 칸은 운영자만 쓴다(서버가 막고, 여기선 관리자에게만 선택지를 준다).
 //
 // 두 화면을 오간다.
@@ -83,7 +83,7 @@ export class BoardUI {
     this.el.write = this.el.modal.querySelector('.board-write');
     this.posts = [];
     this.openId = null;      // 상세로 열려 있는 글 id (없으면 목록)
-    this.tab = 'all';        // 지금 보고 있는 칸 (all = 전체)
+    this.tab = 'patch';      // 지금 보고 있는 칸 (기본: 패치노트)
     this.patchReady = false; // 관리자 선택지(패치노트)를 넣었는지
 
     this.el.btn.addEventListener('click', () => this.open());
@@ -137,11 +137,9 @@ export class BoardUI {
     for (const b of this.el.tabs.querySelectorAll('button')) {
       b.classList.toggle('current', b.dataset.cat === cat);
     }
-    // 특정 칸을 보고 있으면 그 칸으로 바로 쓰게 기본 선택을 맞춘다.
-    if (cat !== 'all' && [...this.el.cat.options].some((o) => o.value === cat)) {
+    // 보고 있는 칸으로 바로 쓰게 기본 선택을 맞춘다(쓸 수 있는 칸일 때만).
+    if ([...this.el.cat.options].some((o) => o.value === cat)) {
       this.el.cat.value = cat;
-    } else if (cat === 'all') {
-      this.el.cat.value = 'chat';
     }
     this.syncWriteMode();
     this.showList();
@@ -215,14 +213,10 @@ export class BoardUI {
     // 상세를 보고 있으면 그쪽을 갱신한다(댓글을 달고 돌아온 경우 등)
     if (this.openId) { this.renderDetail(); return; }
 
-    const shown = this.tab === 'all'
-      ? this.posts
-      : this.posts.filter((p) => (p.category || 'chat') === this.tab);
+    const shown = this.posts.filter((p) => (p.category || 'chat') === this.tab);
 
     if (shown.length === 0) {
-      this.el.list.innerHTML = `<li class="board-empty">${
-        this.tab === 'all' ? '아직 글이 없습니다. 첫 글을 남겨 보세요!' : '이 칸에는 아직 글이 없습니다.'
-      }</li>`;
+      this.el.list.innerHTML = '<li class="board-empty">이 칸에는 아직 글이 없습니다.</li>';
       return;
     }
     const admin = this.h.isAdmin();
