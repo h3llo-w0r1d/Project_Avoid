@@ -19,6 +19,7 @@ import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPurchasesStore } from './lib/purchases.js';
 import { openCoinGrants } from './lib/coingrants.js';
+import { openMessages } from './lib/messages.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
@@ -118,6 +119,7 @@ const board = openBoardStore(db);
 const plays = openPlaysStore(db);
 const purchases = openPurchasesStore(db);   // 코인으로 캐릭터 산 기록
 const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 대기
+const messages = openMessages(db);           // 관리자 ↔ 유저 1:1 메시지
 
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
 const presence = openPresence();
@@ -635,6 +637,57 @@ app.post('/api/admin/coins/grant', requireAdmin, (req, res) => {
 app.post('/api/me/coins/claim', (req, res) => {
   if (!req.user) return res.json({ amount: 0 });
   res.json({ amount: coinGrants.claim(req.user.id) });
+});
+
+// ── 관리자 ↔ 유저 메시지 ─────────────────────────────────
+const cleanMsg = (v) => String(v ?? '').replace(/\s+$/g, '').slice(0, 500).trim();
+
+// (로그인한 사람) 내 대화 + 안 읽은 관리자 메시지 수. 폴링으로 부른다.
+app.get('/api/me/messages', (req, res) => {
+  if (!req.user) return res.json({ messages: [], unread: 0 });
+  res.json({ messages: messages.forUser(req.user.id), unread: messages.unreadForUser(req.user.id) });
+});
+
+// 유저가 관리자 메시지를 읽음 처리(위젯을 열 때).
+app.post('/api/me/messages/seen', (req, res) => {
+  if (req.user) messages.markUserSeen(req.user.id);
+  res.json({ ok: true });
+});
+
+// 유저가 관리자에게 답장.
+app.post('/api/me/messages', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  const text = cleanMsg(req.body?.text);
+  if (!text) return res.status(400).json({ error: '내용을 입력해 주세요.' });
+  messages.add({ userId: req.user.id, sender: 'user', text });
+  res.json({ ok: true, messages: messages.forUser(req.user.id) });
+});
+
+// 관리자: 대화 목록(누가 보냈는지). 닉네임을 붙여 준다.
+app.get('/api/admin/messages/inbox', requireAdmin, (req, res) => {
+  const rows = messages.inbox().map((r) => ({
+    ...r, nickname: users.byId(r.userId)?.nickname ?? '(탈퇴)'
+  }));
+  res.json({ rows });
+});
+
+// 관리자: 한 계정과의 대화. 읽으면 그 유저 메시지를 읽음 처리.
+app.get('/api/admin/messages', requireAdmin, (req, res) => {
+  const id = String(req.query.user ?? '');
+  const user = users.byId(id);
+  if (!user) return res.status(404).json({ error: '없는 계정입니다.' });
+  messages.markAdminSeen(id);
+  res.json({ name: user.nickname, messages: messages.forUser(id) });
+});
+
+// 관리자: 계정에 메시지 보내기.
+app.post('/api/admin/messages', requireAdmin, (req, res) => {
+  const userId = String(req.body?.userId ?? '');
+  const text = cleanMsg(req.body?.text);
+  if (!users.byId(userId)) return res.status(404).json({ error: '없는 계정입니다.' });
+  if (!text) return res.status(400).json({ error: '내용을 입력해 주세요.' });
+  messages.add({ userId, sender: 'admin', text });
+  res.json({ ok: true, messages: messages.forUser(userId) });
 });
 
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.

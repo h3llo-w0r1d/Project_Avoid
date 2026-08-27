@@ -482,6 +482,39 @@ export const api = {
     return res.ok ? (await res.json()).amount ?? 0 : 0;
   },
 
+  // ── 관리자↔유저 메시지 ──
+  async myMessages() {
+    const res = await fetch('/api/me/messages');
+    return res.ok ? res.json() : { messages: [], unread: 0 };
+  },
+  async seenMyMessages() { fetch('/api/me/messages/seen', { method: 'POST' }).catch(() => {}); },
+  async sendMyMessage(text) {
+    const res = await fetch('/api/me/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.messages;
+  },
+  async adminInbox() {
+    const res = await fetch('/api/admin/messages/inbox');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).rows;
+  },
+  async adminConversation(userId) {
+    const res = await fetch(`/api/admin/messages?user=${encodeURIComponent(userId)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  async adminSendMessage(userId, text) {
+    const res = await fetch('/api/admin/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, text })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.messages;
+  },
+
   // 코인으로 캐릭터를 샀다고 서버에 남긴다(관리자 참고용). 실패해도 조용히 넘어간다.
   recordPurchase(character, charName, cost, guestName) {
     fetch('/api/purchase', {
