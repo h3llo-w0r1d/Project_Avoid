@@ -788,7 +788,12 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .board-detail-post.cat-bug,
 .board-detail-post.cat-qna { border-left: 3px solid var(--cat); padding-left: 12px; }
 
-.board-post-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+/* 패치노트 카드: 뱃지·작성자·시간 줄 없이 '날짜(제목) + 내용'만 보인다.
+   수정·삭제 버튼(관리자)은 우상단에 겹쳐 놓아 날짜 줄을 밀지 않는다. */
+.patch-card { position: relative; }
+.patch-card > .patch-date { margin-top: 2px; }
+.patch-card > .board-tools { position: absolute; top: 10px; right: 4px; }
+.board-detail-post.patch-card > .board-tools { top: 0; right: 0; }
 .board-name { font-weight: 700; font-size: 14px; color: var(--text); }
 .board-name.member { color: var(--accent); }      /* 로그인 유저는 파란 이름 */
 .board-time { font-size: 12px; color: var(--muted); }

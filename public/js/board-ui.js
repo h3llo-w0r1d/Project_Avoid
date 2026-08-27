@@ -263,8 +263,13 @@ export class BoardUI {
       const cat = CATS[p.category] || CATS.chat;
       const li = document.createElement('li');
       li.className = `board-post board-post-link ${cat.cls}`;
-      li.appendChild(this.postHead(p, admin, true));
-      li.appendChild(this.postBody(p));
+      if (p.category === 'patch') {
+        li.classList.add('patch-card');
+        this.fillPatchCard(li, p, admin);
+      } else {
+        li.appendChild(this.postHead(p, admin, true));
+        li.appendChild(this.postBody(p));
+      }
 
       // 댓글 수(말풍선).
       const meta = document.createElement('div');
@@ -296,8 +301,13 @@ export class BoardUI {
 
     const art = document.createElement('article');
     art.className = `board-detail-post ${cat.cls}`;
-    art.appendChild(this.postHead(p, admin, true));
-    art.appendChild(this.postBody(p));
+    if (p.category === 'patch') {
+      art.classList.add('patch-card');
+      this.fillPatchCard(art, p, admin);
+    } else {
+      art.appendChild(this.postHead(p, admin, true));
+      art.appendChild(this.postBody(p));
+    }
     const actions = document.createElement('div');
     actions.className = 'board-detail-actions';
     actions.innerHTML = `<span class="board-cmt"><span class="board-cmt-ico">💬</span> ${replies.length}</span>`;
@@ -334,7 +344,29 @@ export class BoardUI {
   }
 
   // ── 공용 조각 ────────────────────────────────────────
-  // 글 머리(칸 뱃지·이름·시간·삭제). withBadge 면 칸 뱃지를 붙인다(원글만).
+  // 관리자 버튼 묶음(수정·삭제). withEdit 면 수정도 붙인다(원글만).
+  adminTools(p, withEdit) {
+    const tools = document.createElement('span');
+    tools.className = 'board-tools';
+    if (withEdit) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'board-edit';
+      edit.textContent = '수정';
+      edit.addEventListener('click', (e) => { e.stopPropagation(); this.enterEdit(p); });
+      tools.appendChild(edit);
+    }
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'board-del';
+    del.textContent = '삭제';
+    // 목록 카드는 눌러서 상세로 가므로, 버튼 클릭이 상세를 열지 않게 막는다.
+    del.addEventListener('click', (e) => { e.stopPropagation(); this.remove(p.id); });
+    tools.appendChild(del);
+    return tools;
+  }
+
+  // 글 머리(칸 뱃지·이름·시간·수정·삭제). withBadge 면 칸 뱃지를 붙인다(원글만).
   postHead(p, admin, withBadge) {
     const head = document.createElement('div');
     head.className = 'board-post-head';
@@ -344,27 +376,7 @@ export class BoardUI {
     head.innerHTML = badge +
       `<span class="board-name${p.member ? ' member' : ''}">${esc(p.name)}</span>` +
       `<span class="board-time">${ago(p.at)}</span>`;
-    if (admin) {
-      const tools = document.createElement('span');
-      tools.className = 'board-tools';
-      // 수정 버튼은 원글에만(withBadge 로 원글 여부를 안다). 댓글은 지우기만.
-      if (withBadge) {
-        const edit = document.createElement('button');
-        edit.type = 'button';
-        edit.className = 'board-edit';
-        edit.textContent = '수정';
-        edit.addEventListener('click', (e) => { e.stopPropagation(); this.enterEdit(p); });
-        tools.appendChild(edit);
-      }
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'board-del';
-      del.textContent = '삭제';
-      // 목록 카드는 눌러서 상세로 가므로, 버튼 클릭이 상세를 열지 않게 막는다.
-      del.addEventListener('click', (e) => { e.stopPropagation(); this.remove(p.id); });
-      tools.appendChild(del);
-      head.appendChild(tools);
-    }
+    if (admin) head.appendChild(this.adminTools(p, withBadge));
     return head;
   }
 
@@ -374,6 +386,27 @@ export class BoardUI {
     // 본문은 colorize 가 escape 하고 {색|글자}만 색 span 으로, 개행은 <br> 로.
     body.innerHTML = colorize(p.body);
     return body;
+  }
+
+  // 패치노트 카드 속을 채운다. 뱃지·작성자·시간 줄은 빼고, 본문 첫 줄을
+  // 날짜 제목으로 크게, 나머지를 내용으로 보여 준다. 관리자 버튼은 우상단.
+  fillPatchCard(container, p, admin) {
+    if (admin) container.appendChild(this.adminTools(p, true));
+    const nl = p.body.indexOf('\n');
+    const dateLine = nl === -1 ? p.body : p.body.slice(0, nl);
+    const rest = nl === -1 ? '' : p.body.slice(nl + 1);
+
+    const date = document.createElement('div');
+    date.className = 'patch-date';
+    date.innerHTML = colorize(dateLine);
+    container.appendChild(date);
+
+    if (rest.trim()) {
+      const body = document.createElement('div');
+      body.className = 'board-body';
+      body.innerHTML = colorize(rest);
+      container.appendChild(body);
+    }
   }
 
   // 색 팔레트(패치노트 쓸 때만 보인다). 선택한 글자에 {색|..} 을 씌운다.
