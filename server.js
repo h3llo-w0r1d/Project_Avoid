@@ -13,11 +13,11 @@ import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
 import { openStatsStore } from './lib/stats.js';
 import { isBot, isMobile } from './lib/bots.js';
-import { isDatacenterIp, datacenterLabel, isCloudOrg, cloudNameFromOrg, shortOrg } from './lib/datacenter.js';
-import { openGeo, openAsn, lookupCity, asnOrg, countryCode } from './lib/geo.js';
+import { isDatacenterIp, isCloudOrg } from './lib/datacenter.js';
+import { openGeo, openAsn, asnOrg, countryCode } from './lib/geo.js';
 import { openBoardStore } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
-import { openVisitsStore } from './lib/visits.js';
+import { openPurchasesStore } from './lib/purchases.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
@@ -60,19 +60,6 @@ function isNonHumanIp(ip) {
 // UA 까지 함께 보는 판정(접속 시점용). 방문 기록의 옛 행 재계산에는 IP 판정만 쓴다.
 function isNonHuman(ip, ua) {
   return isBot(ua) || isNonHumanIp(ip);
-}
-
-// 방문 한 줄의 '정체' 라벨. 봇이면 업체/스캐너 이름(또는 국가·조직), 사람이면 국가·지역.
-function visitPlace(ip, bot) {
-  if (bot) {
-    const pretty = datacenterLabel(ip) || cloudNameFromOrg(asnOrg(ip));
-    if (pretty) return pretty;
-    const g = lookupCity(ip);
-    const org = shortOrg(asnOrg(ip));
-    return [g?.country, org].filter(Boolean).join(' ') || '봇';
-  }
-  const g = lookupCity(ip);
-  return g ? [g.country, g.city].filter(Boolean).join(' ') : '';
 }
 
 // 예전 JSON 파일이 남아 있으면 한 번만 옮긴다.
@@ -128,9 +115,7 @@ const board = openBoardStore(db);
 
 // 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
 const plays = openPlaysStore(db);
-
-// 방문 기록(디버깅용). 게임 페이지를 연 요청을 IP·기기·봇여부와 함께 쌓는다.
-const visits = openVisitsStore(db);
+const purchases = openPurchasesStore(db);   // 코인으로 캐릭터 산 기록
 
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
 const presence = openPresence();
@@ -182,12 +167,8 @@ app.get(['/', '/index.html'], (req, res, next) => {
   // 봇 판정: UA 가 봇이거나, IP 가 데이터센터/클라우드/호스팅이거나, 해외 접속이면 봇.
   // UA 를 진짜 브라우저로 위장한 봇도 클라우드에서 오면 여기서 걸린다.
   const bot = isNonHuman(ip, ua);
-  // 관리자(나) 본인 접속은 집계·방문기록에서 아예 뺀다. 테스트로 숫자가 튀지 않게.
-  if (!isAdminUser(req.user)) {
-    if (!bot) stats.visit(mobile);
-    // 방문 기록에는 봇도 남긴다 — 어떤 게 봇인지 눈으로 가려내려는 디버깅용.
-    visits.add({ ip, device: mobile ? 'mobile' : 'pc', bot });
-  }
+  // 관리자(나) 본인 접속은 집계에서 아예 뺀다. 테스트로 숫자가 튀지 않게.
+  if (!isAdminUser(req.user) && !bot) stats.visit(mobile);
   next();
 });
 
@@ -470,6 +451,28 @@ app.post('/api/board', (req, res) => {
   }
 });
 
+// 코인으로 캐릭터를 샀을 때 남긴다(참고용 로그 — 코인 처리는 브라우저에서).
+// 이름은 로그인한 사람은 서버 닉네임으로 덮어써 사칭을 막는다. 관리자는 코인이
+// 무한이라 '구매'가 아니므로 남기지 않는다.
+app.post('/api/purchase', (req, res) => {
+  if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
+  const who = posterName(req, req.body?.name);
+  if (who.error) return res.status(400).json({ error: who.error });
+
+  const character = String(req.body?.character ?? '').slice(0, 40);
+  const charName = String(req.body?.charName ?? '').slice(0, 40);
+  const cost = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.cost) || 0)));
+  if (!character) return res.status(400).json({ error: '캐릭터가 필요합니다.' });
+
+  try {
+    purchases.add({ name: who.name, userId: req.user?.id ?? null, character, charName, cost });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('구매 기록 저장 실패:', err);
+    res.status(500).json({ error: '기록에 실패했습니다.' });
+  }
+});
+
 // ---------------------------------------------------------------- 관리
 
 // 관리자를 가리는 방법이 둘이다.
@@ -595,6 +598,18 @@ app.delete('/api/admin/matches/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// 코인으로 캐릭터 산 기록. 시간순 한 쪽씩.
+app.get('/api/admin/purchases', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(purchases.page(limit, offset));
+});
+
+app.delete('/api/admin/purchases/:id', requireAdmin, (req, res) => {
+  if (!purchases.remove(req.params.id)) return res.status(404).json({ error: '이미 없는 기록입니다.' });
+  res.json({ ok: true });
+});
+
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.
 app.post('/api/admin/users/:id/reset', requireAdmin, async (req, res) => {
   try {
@@ -641,33 +656,6 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
     res.json({ ok: true, left: scores.size });
   } catch (err) {
     console.error('기록 삭제 실패:', err);
-    res.status(500).json({ error: '삭제에 실패했습니다.' });
-  }
-});
-
-// 방문 기록(디버깅용). 게임 페이지를 연 요청을 시간순으로 준다.
-app.get('/api/admin/visits', requireAdmin, (req, res) => {
-  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
-  const offset = Math.max(0, Number(req.query.offset) || 0);
-  const { rows, total } = visits.page(limit, offset);
-  // 표시할 때 최신 규칙으로 봇 여부를 다시 계산한다. 그래야 예전에 '사람'으로
-  // 저장됐지만 지금은 클라우드/해외로 밝혀진 행도 봇으로 보인다.
-  const enriched = rows.map((r) => {
-    const bot = r.bot || isNonHumanIp(r.ip);
-    return { ...r, bot, place: visitPlace(r.ip, bot) };
-  });
-  res.json({ total, rows: enriched });
-});
-
-// 방문 기록 전체 비우기. 다른 기록과 같은 방식으로 확인 문구를 요구한다.
-app.post('/api/admin/visits/clear', requireAdmin, (req, res) => {
-  if (req.body?.confirm !== 'DELETE ALL') {
-    return res.status(400).json({ error: '확인 문구가 필요합니다.' });
-  }
-  try {
-    res.json({ ok: true, removed: visits.clear() });
-  } catch (err) {
-    console.error('방문 기록 삭제 실패:', err);
     res.status(500).json({ error: '삭제에 실패했습니다.' });
   }
 });

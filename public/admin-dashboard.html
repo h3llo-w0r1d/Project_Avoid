@@ -190,17 +190,11 @@
   <div class="wrap" id="match-table"></div>
   <div class="pager" id="match-pager"></div>
 
-  <h2>방문 기록 <span class="dim" id="visit-count"></span></h2>
-  <p class="hint">게임 페이지를 연 요청을 시간순으로 남깁니다(디버깅용). 시간·IP·기기·봇여부에 더해,
-    <b>사람이면 접속 지역(국가·도시), 봇이면 어느 업체/스캐너인지</b>를 함께 보여 줍니다.
-    최근 것부터 쌓이며 오래되면 자동으로 밀려납니다. 필요 없으면 전체 비우기로 지웁니다.
-    <span class="dim">지역 정보 출처: GeoLite2 (MaxMind, maxmind.com) · 대략적인 추정치입니다.</span></p>
-  <div class="tools">
-    <span class="grow"></span>
-    <button class="danger" id="visit-clear" type="button">전체 비우기</button>
-  </div>
-  <div class="wrap" id="visit-table"></div>
-  <div class="pager" id="visit-pager"></div>
+  <h2>캐릭터 구매 기록 <span class="dim" id="buy-count"></span></h2>
+  <p class="hint">코인으로 캐릭터를 산 기록을 시간순으로 남깁니다. 누가·무엇을·몇 코인에 샀는지.
+    <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
+  <div class="wrap" id="buy-table"></div>
+  <div class="pager" id="buy-pager"></div>
 </main>
 
 <script type="module">
@@ -254,7 +248,7 @@ async function load() {
     $('meta').textContent = `${data.season.name} · 지금 접속 ${data.present ?? 0}명` +
       (versus ? ` (1v1 ${versus}명)` : '');
     say('');
-    drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawVisits();
+    drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawPurchases();
   } catch (e) { say(e.message, true); }
 }
 
@@ -488,11 +482,6 @@ async function drawPlays() {
   } catch (e) { $('play-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
-/* ---- 방문 기록 (앱 DB) ----
-   플레이 기록처럼 서버가 페이지 단위로 준다. 시간순, 최근이 위. */
-const VISIT_PER = 25;
-let visitPage = 0;
-
 const MATCH_PER = 20;
 let matchPage = 0;
 async function drawMatches() {
@@ -533,40 +522,36 @@ async function delMatch(id) {
   catch (e) { say(e.message, true); }
 }
 
-async function drawVisits() {
+const BUY_PER = 20;
+let buyPage = 0;
+async function drawPurchases() {
   try {
-    const { rows, total } = await api(`/api/admin/visits?limit=${VISIT_PER}&offset=${visitPage * VISIT_PER}`);
-    $('visit-count').textContent = total ? `${total}건` : '';
-    $('visit-clear').style.display = total ? '' : 'none';
-    if (!total) { $('visit-table').innerHTML = '<p class="empty">아직 방문 기록이 없습니다</p>'; $('visit-pager').innerHTML = ''; return; }
+    const { rows, total } = await api(`/api/admin/purchases?limit=${BUY_PER}&offset=${buyPage * BUY_PER}`);
+    $('buy-count').textContent = total ? `${total}건` : '';
+    if (!total) { $('buy-table').innerHTML = '<p class="empty">아직 구매 기록이 없습니다</p>'; $('buy-pager').innerHTML = ''; return; }
     const body = rows.map((r) => {
-      const place = r.place
-        ? `<span style="color:${r.bot ? '#ff9aa6' : '#9ad0ff'}">${esc(r.place)}</span>`
-        : '<span class="dim">-</span>';
+      const who = r.member ? `<span style="color:#9ad0ff">${esc(r.name)}</span>` : `${esc(r.name)} <span class="dim">(게스트)</span>`;
       return `<tr><td class="dim">${stamp(r.at)}</td>
-        <td class="num">${esc(r.ip ?? '')}</td>
-        <td>${r.device === 'mobile' ? '폰' : 'PC'}</td>
-        <td>${r.bot ? '<span style="color:#ff9aa6">봇</span>' : '<span class="dim">사람</span>'}</td>
-        <td>${place}</td></tr>`;
+        <td>${who}</td>
+        <td>${esc(r.charName || r.character)}</td>
+        <td class="num">🪙 ${r.cost}</td>
+        <td><button class="act" data-del="${r.id}">삭제</button></td></tr>`;
     }).join('');
-    $('visit-table').innerHTML =
-      `<table><thead><tr><th>시간</th><th>IP</th><th>기기</th><th>봇?</th><th>지역 · 정체</th></tr></thead><tbody>${body}</tbody></table>`;
-    const pages = Math.max(1, Math.ceil(total / VISIT_PER));
-    visitPage = Math.min(visitPage, pages - 1);
-    pager('visit-pager', pages, visitPage, (p) => { visitPage = p; drawVisits(); });
-  } catch (e) { $('visit-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+    $('buy-table').innerHTML =
+      `<table><thead><tr><th>시간</th><th>구매자</th><th>캐릭터</th><th>가격</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    for (const b of $('buy-table').querySelectorAll('[data-del]')) {
+      b.addEventListener('click', () => delPurchase(b.dataset.del));
+    }
+    const pages = Math.max(1, Math.ceil(total / BUY_PER));
+    buyPage = Math.min(buyPage, pages - 1);
+    pager('buy-pager', pages, buyPage, (p) => { buyPage = p; drawPurchases(); });
+  } catch (e) { $('buy-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
-async function clearVisits() {
-  if (!confirm('방문 기록을 모두 지웁니다. 되돌릴 수 없습니다.')) return;
-  if (prompt('정말 지우려면 DELETE ALL 을 입력하세요.') !== 'DELETE ALL') { say('취소했습니다.'); return; }
-  try {
-    const r = await api('/api/admin/visits/clear', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirm: 'DELETE ALL' })
-    });
-    say(`방문 기록 ${r.removed}건을 지웠습니다.`); visitPage = 0; drawVisits();
-  } catch (e) { say(e.message, true); }
+async function delPurchase(id) {
+  if (!confirm('이 구매 기록을 지웁니다.')) return;
+  try { await api(`/api/admin/purchases/${encodeURIComponent(id)}`, { method: 'DELETE' }); say('지웠습니다.'); drawPurchases(); }
+  catch (e) { say(e.message, true); }
 }
 
 async function clearPlays() {
@@ -617,7 +602,6 @@ $('score-search').addEventListener('input', (e) => { query.score = e.target.valu
 $('score-clear').addEventListener('click', clearScores);
 $('play-clear').addEventListener('click', clearPlays);
 $('usage-clear').addEventListener('click', clearUsage);
-$('visit-clear').addEventListener('click', clearVisits);
 $('usage-seg').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-view]'); if (!b) return;
   usageView = b.dataset.view;

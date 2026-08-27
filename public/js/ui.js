@@ -458,6 +458,14 @@ export const api = {
     return data.text ?? '';
   },
 
+  // 코인으로 캐릭터를 샀다고 서버에 남긴다(관리자 참고용). 실패해도 조용히 넘어간다.
+  recordPurchase(character, charName, cost, guestName) {
+    fetch('/api/purchase', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ character, charName, cost, name: guestName })
+    }).catch(() => {});
+  },
+
   async patchNotes() {
     const res = await fetch('/api/patchnotes');
     return res.ok ? (await res.json()).text ?? '' : '';

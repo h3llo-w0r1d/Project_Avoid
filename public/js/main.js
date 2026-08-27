@@ -73,6 +73,8 @@ function buyCharacter(spec) {
   if (!wallet.spend(spec.coinCost)) return false;
   wallet.markOwned(spec.id);
   renderCoinHud();
+  // 관리자 참고용으로 서버에 '누가 뭘 샀다' 를 남긴다(코인 처리 자체는 로컬).
+  api.recordPurchase(spec.id, spec.name, spec.coinCost, auth.signedIn ? undefined : auth.displayName);
   return true;
 }
 
