@@ -952,8 +952,9 @@ function addFangs(root, ruler, outlineMat, oW = 1) {
 function addNose(root, ruler, color, outlineMat, oW = 1, face = null) {
   const y = ruler.at(face?.noseY ?? 0.49);
   const s = face?.noseScale ?? 1;
+  const flat = face?.noseFlat ?? 1;   // 1보다 작으면 세로로 납작해진다
   const geo = new THREE.SphereGeometry(0.09 * s, 16, 12);
-  geo.scale(1.25, 0.85, 0.9);
+  geo.scale(1.25, 0.85 * flat, 0.9);
   geo.computeVertexNormals();
   const nose = new THREE.Mesh(geo, toon(color));
   nose.position.set(0, y, ruler.surfaceZ(0, y) + 0.04);
