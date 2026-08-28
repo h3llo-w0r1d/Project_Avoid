@@ -305,12 +305,13 @@ export const CHARACTERS = [
     mouth: 'cute',           // 코 아래 작은 ω 입(선만) — 귀엽게
     mouthScale: 1.0,
     face: {
-      eye: 0x000000, sclera: 0x000000,   // 흰자 없이 동그란 새까만 눈
-      eyeScale: [1.0, 1.0],              // 동그랗고 적당한 크기
-      eyeGap: 0.2,                       // 눈 사이 넉넉히(강아지처럼)
+      eye: 0x000000, sclera: 0x000000,   // 흰자 없이 새까만 눈
+      eyeScale: [0.55, 0.55],            // 작은 검은 점 두 개(사진처럼)
+      eyeGap: 0.19,                      // 눈 사이 간격
       mouthY: 0.47,                      // 입을 코 바로 밑으로
-      blush: false,                      // 빨간 볼터치 제거(전체 하양 + 눈·입만 검정)
-      glint: false                       // 눈 흰 반사광 제거 → 새까만 통짜 눈
+      blush: false,                      // 빨간 볼터치 제거(전체 하양)
+      glint: false,                      // 눈 흰 반사광 제거 → 새까만 통짜 눈
+      brows: false                       // 눈썹 제거(눈 주변까지 검게 보이던 원인)
     },
     sizeMul: 1.2             // 몸이 작아 보여 키운다(겉보기만)
   },

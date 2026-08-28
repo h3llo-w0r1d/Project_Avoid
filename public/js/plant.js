@@ -1522,12 +1522,15 @@ export function buildPlant(id) {
 
     // 눈썹. 눈만 있으면 표정이 없어 인형처럼 보인다.
     // face.browAngle 로 기울기를 키우면(예: 2.5) 안쪽이 처져 성난 표정이 된다.
-    const browRaise = face?.brow?.[eyeIndex(dir)] ?? 0;
-    const browY = eyeY + 0.2 + browRaise;
-    const brow = new THREE.Mesh(browGeo, ringMat);
-    brow.position.set(x, browY, surfaceZ(x, browY) * 0.86);
-    brow.rotation.z = dir * 0.2 * (face?.browAngle ?? 1);
-    root.add(brow);
+    // face.brows:false 면 눈썹을 아예 뺀다(강아지처럼 눈만 동그란 얼굴).
+    if (face?.brows !== false) {
+      const browRaise = face?.brow?.[eyeIndex(dir)] ?? 0;
+      const browY = eyeY + 0.2 + browRaise;
+      const brow = new THREE.Mesh(browGeo, ringMat);
+      brow.position.set(x, browY, surfaceZ(x, browY) * 0.86);
+      brow.rotation.z = dir * 0.2 * (face?.browAngle ?? 1);
+      root.add(brow);
+    }
   }
 
   // 입 (기본은 웃는 입, spec.mouth 로 표정을, spec.mouthScale 로 크기를 바꾼다)
