@@ -308,6 +308,7 @@ export const CHARACTERS = [
       eye: 0x000000, sclera: 0x000000,   // 흰자 없이 새까만 눈
       eyeScale: [0.42, 0.42],            // 더 작은 검은 점 두 개
       eyeAspect: 1.0,                    // 완전 동그라미(세로로 안 늘어남)
+      eyeBulge: 1.4,                     // 앞뒤로도 통통 → 어느 각도든 동그란 눈
       eyeGap: 0.26,                      // 눈 사이 간격 넓게
       eyeY: 0.60,                        // 눈을 더 위로
       mouthY: 0.23,                      // 입을 더더 아래로

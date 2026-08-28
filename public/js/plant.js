@@ -1492,15 +1492,18 @@ export function buildPlant(id) {
 
     // face.eyeAspect 로 세로 비율을 바꾼다(1.2=살짝 세로로, 1.0=완전 동그라미).
     const aspect = face?.eyeAspect ?? 1.2;
+    // face.eyeBulge 로 앞뒤 두께를 키운다. 기본 눈은 납작한 원반이라 비스듬히
+    // 보면 타원으로 보인다. 1보다 키우면 공처럼 통통해 어느 각도든 동그랗다.
+    const bulge = face?.eyeBulge ?? 1;
 
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.set(x, eyeY, depth(0));
-    ring.scale.set(es, aspect * es, 0.30);
+    ring.scale.set(es, aspect * es, 0.30 * bulge);
     root.add(ring);
 
     const sclera = new THREE.Mesh(scleraGeo, scleraMat);
     sclera.position.set(x, eyeY, depth(1));
-    sclera.scale.set(es, aspect * es, 0.32);
+    sclera.scale.set(es, aspect * es, 0.32 * bulge);
     root.add(sclera);
 
     // 검은자를 살짝 위로 올리면 아래쪽에 흰자가 더 보여 순해 보인다.
@@ -1508,7 +1511,7 @@ export function buildPlant(id) {
     const ps = face?.pupil?.[eyeIndex(dir)] ?? [0, 0];
     const pupil = new THREE.Mesh(pupilGeo, pupilMat);
     pupil.position.set(x + ps[0], eyeY + 0.026 + ps[1], depth(2));
-    pupil.scale.set(es, Math.min(aspect, 1.1) * es, 0.32);
+    pupil.scale.set(es, Math.min(aspect, 1.1) * es, 0.32 * bulge);
     root.add(pupil);
 
     // 반사광(생기 있는 눈). face.glint:false 면 뺀다 → 죽은 듯 음산한 눈.
