@@ -2082,8 +2082,10 @@ kbd {
   border-radius: 999px;
   background: linear-gradient(90deg, rgba(79, 139, 255, 0.55), var(--accent));
 }
-/* 1위 막대는 금색으로 강조(어느 쪽이든 medal-1 이 있는 줄만) */
+/* 1~3위 막대는 메달색(금·은·동)으로 강조. 어느 쪽이든 그 메달이 있는 줄만. */
 .board li:has(.medal-1) .rbar-fill { background: linear-gradient(90deg, #f0b429, #ffe08a); }
+.board li:has(.medal-2) .rbar-fill { background: linear-gradient(90deg, #b3bfd1, #e6ecf5); }
+.board li:has(.medal-3) .rbar-fill { background: linear-gradient(90deg, #cf8b4e, #f0c08a); }
 .board .me .rbar-fill { background: linear-gradient(90deg, var(--accent), #8fd0ff); }
 
 .board .secs {
