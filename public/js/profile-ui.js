@@ -12,7 +12,8 @@ export class ProfileUI {
       modal: $('profile-modal'),
       btn: $('profile-btn'),
       name: $('profile-name'),
-      body: $('profile-body')
+      body: $('profile-body'),
+      replayBtn: $('profile-replay')   // 관리자 전용 '다시보기' (기록 있을 때만)
     };
 
     this.el.btn.addEventListener('click', () => this.openMine?.());
@@ -20,10 +21,15 @@ export class ProfileUI {
     this.el.modal.addEventListener('click', (e) => {
       if (e.target === this.el.modal) this.close();
     });
+    this.el.replayBtn?.addEventListener('click', () => {
+      if (this.replayId) this.onReplay?.(this.replayId);
+    });
 
     this.openMine = null;   // main.js 가 채운다
     this.onRename = null;   // main.js 가 채운다. 없으면 바꾸기 버튼을 안 만든다.
+    this.onReplay = null;   // main.js 가 채운다(관리자만). 최고기록 다시보기.
     this.me = null;         // 지금 로그인한 사람의 닉네임 (게스트면 null)
+    this.replayId = null;   // 지금 프로필의 최고기록 점수 id (다시보기 대상)
   }
 
   get isOpen() { return !this.el.modal.classList.contains('hidden'); }
@@ -34,6 +40,8 @@ export class ProfileUI {
     this.el.modal.classList.remove('hidden');
     this.el.name.textContent = name;
     this.el.body.innerHTML = '<p class="profile-empty">불러오는 중…</p>';
+    this.replayId = null;
+    this.el.replayBtn?.classList.add('hidden');
   }
 
   error(msg) {
@@ -56,6 +64,11 @@ export class ProfileUI {
 
   draw(p) {
     this.el.name.textContent = p.name;
+
+    // 다시보기 버튼: 관리자에게만, 그 최고기록의 리플레이가 있을 때만 뜬다.
+    // (서버가 관리자에게만 best.id·best.replay 를 내려준다.)
+    this.replayId = p.best?.replay ? p.best.id : null;
+    this.el.replayBtn?.classList.toggle('hidden', !this.replayId);
 
     const parts = [];
 

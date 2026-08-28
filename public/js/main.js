@@ -27,6 +27,41 @@ const HARDCORE_MODS = { warnMul: 0.75, speedMul: 1.2, maxLiveAdd: 1, volleyAdd: 
 const HARDCORE_BEST_KEY = 'voltline.best.hardcore';
 function hardcoreBest() { return Number(localStorage.getItem(HARDCORE_BEST_KEY)) || 0; }
 
+// ── 다시보기 기록 ──────────────────────────────────────────
+// 판을 (seed + 프레임별 dt·입력)으로 남긴다. 시뮬(shared/beams·player-physics)이
+// 순수 함수라, 같은 값을 다시 먹이면 전기선·플레이어가 그대로 재현된다.
+// 최고 기록일 때만 서버로 올리고, 관리자만 프로필에서 본다.
+const REC_CAP = 18000;     // 안전 상한(약 5분). 넘으면 그만 기록한다.
+let rec = null;            // 기록 중이면 { seed, mode, dt[], x[], y[], j[] }
+
+// 기록 → base64. 프레임마다 float 4개(dt, x, y, jump)로 촘촘히 담는다.
+function encodeReplay(r) {
+  const n = r.dt.length;
+  const buf = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) {
+    buf[i * 4] = r.dt[i]; buf[i * 4 + 1] = r.x[i];
+    buf[i * 4 + 2] = r.y[i]; buf[i * 4 + 3] = r.j[i];
+  }
+  const bytes = new Uint8Array(buf.buffer);
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(s);
+}
+
+// base64 → { dt, x, y, j, n } (재생용)
+function decodeReplay(b64) {
+  const s = atob(b64);
+  const bytes = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) bytes[i] = s.charCodeAt(i);
+  const f = new Float32Array(bytes.buffer);
+  const n = f.length >> 2;
+  const dt = new Array(n), x = new Array(n), y = new Array(n), j = new Array(n);
+  for (let i = 0; i < n; i++) { dt[i] = f[i * 4]; x[i] = f[i * 4 + 1]; y[i] = f[i * 4 + 2]; j[i] = f[i * 4 + 3]; }
+  return { dt, x, y, j, n };
+}
+
 const canvas = document.getElementById('stage');
 const world = createWorld(canvas);
 const { renderer, scene, camera } = world;
@@ -236,6 +271,8 @@ profile.onRename = async (name) => {
   // 이름이 바뀌었으니 랭킹도 다시 받는다. 안 그러면 옛 이름이 남는다.
   refreshLeaderboard();
 };
+// 관리자 전용: 프로필의 최고기록 다시보기.
+profile.onReplay = (scoreId) => watchReplay(scoreId);
 
 // 관리는 별도 페이지 /admin 하나로 한다. 게임 안 관리 창은 없앴다.
 // 여기서는 게시판에서 관리자에게만 삭제 버튼을 보여 줄지 정하는 데만 쓴다.
@@ -792,9 +829,15 @@ function startGame() {
   // 실패해도 여기서 터뜨리지 않는다. 그러면 판이 시작조차 안 된다.
   state.ticket = api.startRun().catch(() => null);
 
+  // 다시보기용: 이번 판의 씨앗을 정해 전기선을 그 씨앗으로 돌리고,
+  // 프레임 입력을 기록하기 시작한다(하드코어는 바닥구멍이 아직 비결정이라 제외).
+  const seed = (Math.random() * 2 ** 31) | 0;
+  rec = state.hardcore ? null
+    : { seed, mode: 'normal', dt: [], x: [], y: [], j: [] };
+
   player.reset();
   setArenaVisible(true);
-  hazards.reset();
+  hazards.reset(seed);
   coins.setActive(true);   // 맵에 코인이 뜨기 시작한다(솔로 전용)
   runCoins = 0;
   renderCoinHud();
@@ -847,6 +890,97 @@ function goHome() {
   setArenaVisible(false);
   ui.showTitle();
   renderNotice();
+}
+
+// ── 다시보기 재생 ──────────────────────────────────────────
+// 기록(seed + 프레임)을 실제 무대에서 다시 돌려 보여 준다. 입력을 새로 받지
+// 않고 기록된 값을 그대로 시뮬에 먹인다 → 그때 그 판이 눈앞에 재현된다.
+const replayBar = (() => {
+  const el = document.createElement('div');
+  el.id = 'replay-bar';
+  el.className = 'hidden';
+  el.innerHTML =
+    '<span class="replay-tag">▶ 다시보기</span> <span id="replay-who"></span>' +
+    '<button id="replay-exit" type="button">나가기</button>';
+  document.body.appendChild(el);
+  el.querySelector('#replay-exit').addEventListener('click', () => endReplay());
+  const who = el.querySelector('#replay-who');
+  return {
+    show(data) { who.textContent = `${data.name ?? ''} · ${Number(data.time).toFixed(2)}초`; el.classList.remove('hidden'); },
+    hide() { el.classList.add('hidden'); }
+  };
+})();
+
+function startReplay(data) {
+  const frames = decodeReplay(data.frames);
+  versus.hide(); hideRival(); pause.hide(); profile.close?.();
+  state.paused = false;
+  state.mode = 'replay';
+  state.hardcore = data.mode === 'hardcore';
+  player.body.maxJumps = state.hardcore ? 1 : PLAYER.maxJumps;
+  hazards.setMods(state.hardcore ? HARDCORE_MODS : null);
+  floorHoles.setActive(false);   // v1: 일반 모드만
+  coins.setActive(false);        // 재생엔 코인 없음
+  input.enabled = false;
+  audio.startAmbient?.();
+
+  player.reset();
+  setArenaVisible(true);
+  hazards.reset(data.seed);
+  state.replay = { f: frames, i: 0, n: frames.n, consumed: 0, clock: 0, sim: 0, dead: false, deathTimer: 0 };
+  state.elapsed = 0;
+  state.cause = 'zap';
+  ui.showGame();
+  ui.updateHud(0);
+  replayBar.show(data);
+}
+
+function stepReplay(dt) {
+  const rp = state.replay;
+  if (!rp) return;
+
+  if (rp.dead) {
+    hazards.update(dt, rp.sim);   // 죽는 연출 동안에도 전기선은 움직인다
+    playDeathAnim(dt);
+    rp.deathTimer -= dt;
+    if (rp.deathTimer <= 0) endReplay();
+    return;
+  }
+
+  rp.clock += dt;
+  // 실제 시간에 맞춰(1배속) 기록된 프레임을 소비한다. 한 프레임에 너무 많이
+  // 따라잡지 않게 상한을 둔다(탭 복귀 등으로 clock 이 튀는 경우).
+  let guard = 0;
+  while (rp.i < rp.n && rp.consumed < rp.clock && guard++ < 240) {
+    const i = rp.i++;
+    const fdt = rp.f.dt[i];
+    rp.consumed += fdt;
+    rp.sim += fdt;
+    player.update(fdt, { move: { x: rp.f.x[i], y: rp.f.y[i] }, jumpPressed: rp.f.j[i] > 0.5 });
+    hazards.update(fdt, rp.sim);
+    if (hazards.hitTest(player)) { rp.dead = true; state.cause = 'zap'; break; }
+    if (player.body.droppedOff) { rp.dead = true; state.cause = 'fall'; break; }
+  }
+  if (rp.dead) rp.deathTimer = 1.4;
+  ui.updateHud(rp.sim);
+  if (rp.i >= rp.n && !rp.dead) endReplay();   // 사망 미검출로 끝까지 재생됨
+}
+
+function endReplay() {
+  state.replay = null;
+  replayBar.hide();
+  state.mode = 'solo';
+  goHome();
+}
+
+// 프로필의 '다시보기' 버튼이 부른다. 서버에서 기록을 받아 재생한다.
+async function watchReplay(scoreId) {
+  try {
+    const data = await api.getReplay(scoreId);
+    startReplay(data);
+  } catch (err) {
+    alert('다시보기를 불러오지 못했습니다: ' + (err?.message ?? ''));
+  }
 }
 
 function killPlayer(cause) {
@@ -1085,6 +1219,19 @@ async function finishGame() {
       ui.setSubmitState(result.rank ? `${tag}전체 ${result.rank}위 등록!` : `${tag}기록이 등록되었습니다`);
     }
     ui.renderLeaderboard(result, result.id, board);
+
+    // 이 판이 그 사람의 최고 기록이면 다시보기를 서버에 올린다(관리자만 봄).
+    // rec 은 일반 모드에서만 만들어지고, 최고 기록일 때만(me.time 과 일치) 올린다.
+    if (!result.excluded && result.id && rec && rec.dt.length > 30) {
+      const rounded = Math.round(score * 100) / 100;
+      if (result.me && Math.abs(result.me.time - rounded) < 0.005) {
+        api.saveReplay({
+          scoreId: result.id, seed: rec.seed, mode: rec.mode,
+          time: rounded, frames: rec.dt.length, data: encodeReplay(rec),
+          name: auth.signedIn ? undefined : auth.displayName
+        }).catch(() => {});
+      }
+    }
   } catch (err) {
     ui.setSubmitState(`기록 등록 실패: ${err.message}`, true);
     refreshLeaderboard(board);
@@ -1328,6 +1475,12 @@ function frame() {
     return;
   }
 
+  if (state.mode === 'replay') {
+    stepReplay(dt);
+    renderer.render(scene, camera);
+    return;
+  }
+
   // 일시정지 — 시간도 전기선도 멈춘다. 화면은 계속 그려서
   // 뒤로 무대가 보이게 둔다.
   if (state.paused) {
@@ -1338,7 +1491,13 @@ function frame() {
   if (state.phase === 'playing') {
     state.elapsed += dt;
 
-    player.update(dt, input.poll());
+    // 입력은 한 번만 읽어(기록과 시뮬이 같은 값을 쓰게), 다시보기용으로 남긴다.
+    const control = input.poll();
+    if (rec && rec.dt.length < REC_CAP) {
+      rec.dt.push(dt); rec.x.push(control.move.x);
+      rec.y.push(control.move.y); rec.j.push(control.jumpPressed ? 1 : 0);
+    }
+    player.update(dt, control);
     hazards.update(dt, state.elapsed);
     if (state.hardcore) floorHoles.update(dt);
     coins.update(dt, player.body.x, player.body.z);   // 코인 회전·수집 판정

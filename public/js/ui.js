@@ -618,5 +618,24 @@ export const api = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     return data;
+  },
+
+  // 다시보기 기록을 올린다(최고 기록일 때만 호출). 실패해도 조용히 넘어간다.
+  async saveReplay(payload) {
+    const res = await fetch('/api/replay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json().catch(() => ({}));
+  },
+
+  // 다시보기 기록을 받아온다(관리자 전용). { seed, mode, time, name, frames }
+  async getReplay(scoreId) {
+    const res = await fetch(`/api/admin/replay/${encodeURIComponent(scoreId)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
   }
 };

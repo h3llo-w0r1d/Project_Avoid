@@ -19,6 +19,8 @@ import { openBoardStore, CATEGORIES, ADMIN_CATEGORIES } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPurchasesStore } from './lib/purchases.js';
 import { openSpinsStore } from './lib/spins.js';
+import { openReplaysStore } from './lib/replays.js';
+import { gzipSync, gunzipSync } from 'node:zlib';
 import { openCoinGrants } from './lib/coingrants.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
@@ -119,6 +121,7 @@ const board = openBoardStore(db);
 const plays = openPlaysStore(db);
 const purchases = openPurchasesStore(db);   // 코인으로 캐릭터 산 기록
 const spins = openSpinsStore(db);           // 코인 룰렛 돌린 기록
+const replays = openReplaysStore(db);       // 최고기록 다시보기(입력 기록)
 const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 대기
 
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
@@ -129,7 +132,11 @@ const app = express();
 // 무엇으로 만들었는지 알려 줄 이유가 없다. 알려 주면 그 버전에 알려진
 // 약점을 골라 찔러 보기 쉬워진다.
 app.disable('x-powered-by');
-app.use(express.json({ limit: '4kb' }));
+// 본문은 기본 4kb 로 작게 막는다(도배·과대 요청 방지). 다만 다시보기 기록은
+// 입력 배열이라 커질 수 있어 그 경로에만 넉넉한 한도를 준다.
+const jsonSmall = express.json({ limit: '4kb' });
+const jsonBig = express.json({ limit: '2mb' });
+app.use((req, res, next) => (req.path === '/api/replay' ? jsonBig : jsonSmall)(req, res, next));
 app.use(cookieParser());
 
 // 로그인 라우트를 먼저 붙인다. 여기서 req.user 를 채워 줘야
@@ -266,12 +273,16 @@ app.get('/api/profile', (req, res) => {
   // 111초 커피 이벤트를 넘긴 적이 있는가(어느 모드든).
   const coffee = (best && best.time >= 111) || (hard && hard.time >= 111);
 
+  // 관리자에게만 최고기록의 점수 id 와 다시보기 유무를 함께 준다(다시보기 버튼용).
+  const admin = isAdminUser(req.user);
+  const bestExtra = (b) => (admin && b) ? { id: b.id, replay: replays.has(b.id) } : {};
+
   const profile = {
     name: user?.nickname ?? name,
     account: !!user,
     season: seasonInfo(),
-    best: best ? { time: best.time, rank: best.rank } : null,
-    hardcore: hard ? { time: hard.time, rank: hard.rank } : null,
+    best: best ? { time: best.time, rank: best.rank, ...bestExtra(best) } : null,
+    hardcore: hard ? { time: hard.time, rank: hard.rank, ...bestExtra(hard) } : null,
     plays,
     coffee: !!coffee
   };
@@ -377,6 +388,60 @@ app.post('/api/scores', async (req, res) => {
   } catch (err) {
     console.error('기록 저장 실패:', err);
     res.status(500).json({ error: '서버에 기록을 저장하지 못했습니다.' });
+  }
+});
+
+// ── 다시보기 ────────────────────────────────────────────────────────
+// 최고 기록 한 판의 입력을 담아 둔다. 게임 시뮬이 순수 함수라 seed+입력만
+// 있으면 그 판이 그대로 재현된다. 자기 최고 기록에만 매달 수 있고(사칭 방지),
+// 보는 건 관리자만.
+const REPLAY_MAX_BYTES = 1_000_000;   // 입력 버퍼 원본 상한(정상 최장판의 3배 여유)
+
+app.post('/api/replay', (req, res) => {
+  const { scoreId, seed, mode, time, frames, data, name } = req.body ?? {};
+  const row = typeof scoreId === 'string' ? scores.rowById(scoreId) : null;
+  if (!row) return res.status(400).json({ error: '기록을 찾을 수 없습니다.' });
+
+  // 이 점수 줄이 올리는 사람 것인지 확인한다(남의 기록에 못 매달게).
+  if (row.user_id) {
+    if (!req.user || req.user.id !== row.user_id) {
+      return res.status(403).json({ error: '자기 기록만 올릴 수 있습니다.' });
+    }
+  } else if (!req.user) {
+    if (String(name ?? '') !== row.name) {
+      return res.status(403).json({ error: '자기 기록만 올릴 수 있습니다.' });
+    }
+  } else {
+    return res.status(403).json({ error: '자기 기록만 올릴 수 있습니다.' });
+  }
+
+  // 지금 그 줄의 기록과 시간이 맞아야 한다(옛 판을 매달지 못하게).
+  const t = Number(time);
+  if (!Number.isFinite(t) || Math.abs(t - row.time) > 0.02) {
+    return res.status(400).json({ error: '기록 시간이 맞지 않습니다.' });
+  }
+  const seedInt = Number(seed);
+  if (!Number.isInteger(seedInt)) return res.status(400).json({ error: 'seed 가 올바르지 않습니다.' });
+  const rowMode = row.mode ?? 'normal';
+  if (mode !== rowMode) return res.status(400).json({ error: '모드가 맞지 않습니다.' });
+
+  let raw;
+  try { raw = Buffer.from(String(data ?? ''), 'base64'); }
+  catch { return res.status(400).json({ error: '기록 데이터가 올바르지 않습니다.' }); }
+  if (raw.length === 0 || raw.length > REPLAY_MAX_BYTES) {
+    return res.status(400).json({ error: '기록 데이터 크기가 올바르지 않습니다.' });
+  }
+
+  try {
+    const gz = gzipSync(raw);
+    replays.put({
+      scoreId, name: row.name, userId: row.user_id ?? null, mode: rowMode,
+      time: row.time, seed: seedInt, frames: Math.max(0, Math.floor(Number(frames) || 0)), gz
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('다시보기 저장 실패:', err);
+    res.status(500).json({ error: '다시보기를 저장하지 못했습니다.' });
   }
 });
 
@@ -686,6 +751,22 @@ app.delete('/api/admin/spins/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// 다시보기 한 판을 받아온다(관리자). gzip 을 풀어 base64 로 돌려준다.
+app.get('/api/admin/replay/:scoreId', requireAdmin, (req, res) => {
+  const row = replays.get(req.params.scoreId);
+  if (!row) return res.status(404).json({ error: '다시보기가 없습니다.' });
+  try {
+    const raw = gunzipSync(row.gz);
+    res.json({
+      name: row.name, mode: row.mode, time: row.time, seed: row.seed,
+      frames: row.frames, data: raw.toString('base64')
+    });
+  } catch (err) {
+    console.error('다시보기 읽기 실패:', err);
+    res.status(500).json({ error: '다시보기를 읽지 못했습니다.' });
+  }
+});
+
 // 코인 지급용 계정 목록(닉네임 있는 계정만). 대기 중인 지급도 함께 보여 준다.
 app.get('/api/admin/accounts', requireAdmin, (req, res) => {
   const pend = coinGrants.pendingMap();
@@ -754,6 +835,7 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
   try {
     const removed = await scores.remove(req.params.id);
     if (!removed) return res.status(404).json({ error: '이미 없는 기록입니다.' });
+    replays.remove(req.params.id);   // 기록을 지우면 그 다시보기도 함께 지운다
     res.json({ ok: true, left: scores.size });
   } catch (err) {
     console.error('기록 삭제 실패:', err);
