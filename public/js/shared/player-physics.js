@@ -107,8 +107,12 @@ export class PlayerBody {
   get headY() { return this.y + PLAYER.height; }
 
   // 무대 밖으로 떨어졌는지 (판정용)
+  //  1) 가장자리를 넘어(반지름+0.6 밖) 살짝만 떨어져도 낙사, 그리고
+  //  2) 어느 쪽이든 충분히 깊이(-4 아래) 떨어지면 무조건 낙사.
+  // 2) 가 없으면 가장자리에 딱 붙어 수직으로 떨어질 때(반지름을 안 넘김)
+  //    계속 살아 있는 것으로 잘못 인식된다.
   get droppedOff() {
-    return Math.hypot(this.x, this.z) > ARENA_RADIUS + 0.6 && this.y < -1;
+    return (Math.hypot(this.x, this.z) > ARENA_RADIUS + 0.6 && this.y < -1) || this.y < -4;
   }
 }
 
