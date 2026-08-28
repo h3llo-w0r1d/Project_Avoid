@@ -100,11 +100,12 @@
         <h2>공지 작성</h2>
         <button id="notice-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
       </div>
-      <p class="board-hint">타이틀 화면 상단에 뜹니다. 비우고 저장하면 공지가 사라집니다.</p>
-      <textarea id="notice-input" maxlength="200" rows="2"
-        placeholder="예) 8/25 22시 업데이트 예정 · 새 캐릭터 고라니라고라 추가!"></textarea>
+      <p class="board-hint"><b>한 줄에 하나씩</b> 적으면 그만큼 공지가 됩니다. 여러 개면
+        타이틀 상단에 <b>10초마다 번갈아</b> 뜹니다. 비우고 저장하면 사라집니다.</p>
+      <textarea id="notice-input" maxlength="2600" rows="6"
+        placeholder="예) 8/28 음성인식점프 기능 추가!&#10;새 캐릭터 만드라고라(흑화) 출시&#10;룰렛은 이제 게임 시간으로 돌려요"></textarea>
       <div class="board-write-row">
-        <span id="notice-count" class="board-count">0 / 200</span>
+        <span id="notice-count" class="board-count">공지 0개</span>
         <div>
           <button id="notice-clear" class="ghost small" type="button">비우기</button>
           <button id="notice-save" class="primary small" type="button">저장</button>

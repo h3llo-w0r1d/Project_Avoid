@@ -481,9 +481,10 @@ export const api = {
   },
 
   // 공지 — 누구나 읽고, 관리자만 저장한다.
-  async notice() {
+  // 공지 목록(줄마다 하나). 여러 개면 화면에서 번갈아 뜬다.
+  async notices() {
     const res = await fetch('/api/notice');
-    return res.ok ? (await res.json()).text ?? '' : '';
+    return res.ok ? ((await res.json()).notices ?? []) : [];
   },
 
   async saveNotice(text) {
@@ -494,7 +495,7 @@ export const api = {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    return data.text ?? '';
+    return data.notices ?? [];
   },
 
   // 관리자: 코인 지급용 계정 목록.

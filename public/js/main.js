@@ -366,7 +366,8 @@ const adminReady = api.amIAdmin()
 
 // ── 공지 ────────────────────────────────────────────────
 // 관리자가 쓴 한 줄 공지를 타이틀 상단 배너에 띄운다.
-let noticeText = '';
+let notices = [];          // 공지 목록(줄마다 하나)
+let noticeIndex = 0;       // 지금 보여 주는 공지 번호(여러 개면 번갈아)
 const noticeBanner = document.getElementById('notice-banner');
 
 function renderNotice() {
@@ -376,19 +377,23 @@ function renderNotice() {
   //    title 이지만 화면은 대전 메뉴라, 이 조건이 있어야 배너가 안 남는다)
   const titleScreen = document.getElementById('title-screen');
   const titleShown = titleScreen && !titleScreen.classList.contains('hidden');
-  const show = noticeText && state.phase === 'title' && titleShown;
+  const text = notices[noticeIndex] ?? '';
+  const show = text && state.phase === 'title' && titleShown;
   if (noticeBanner) {
-    noticeBanner.textContent = noticeText;
+    noticeBanner.textContent = text;
     noticeBanner.classList.toggle('hidden', !show);
   }
 }
 
-api.notice().then((t) => { noticeText = t; renderNotice(); }).catch(() => {});
-// 새로고침 없이도 바뀐 공지가 반영되게 10초마다 다시 받아온다. 응답은
-// 서버가 들고 있는 문자열 한 줄이라 가볍다. 바뀐 게 있을 때만 다시 그린다.
+api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); }).catch(() => {});
+// 10초마다: 최신 공지를 다시 받아오고(바뀌면 처음부터), 안 바뀌었으면 다음
+// 공지로 넘긴다 → 여러 개면 10초 간격으로 번갈아 뜬다.
 setInterval(() => {
-  api.notice().then((t) => {
-    if (t !== noticeText) { noticeText = t; renderNotice(); }
+  api.notices().then((list) => {
+    const changed = list.join('\n') !== notices.join('\n');
+    if (changed) { notices = list; noticeIndex = 0; }
+    else if (notices.length > 1) { noticeIndex = (noticeIndex + 1) % notices.length; }
+    renderNotice();
   }).catch(() => {});
 }, 10_000);
 
@@ -404,15 +409,16 @@ function setupNoticeAdmin() {
   btn.classList.remove('hidden');
   const close = () => modal.classList.add('hidden');
   const open = () => {
-    input.value = noticeText;
-    count.textContent = `${input.value.length} / 200`;
+    input.value = notices.join('\n');   // 줄마다 하나로 편집
+    count.textContent = `공지 ${notices.length}개`;
     errEl.textContent = '';
     modal.classList.remove('hidden');
     input.focus();
   };
   const save = async (text) => {
     try {
-      noticeText = await api.saveNotice(text);
+      notices = await api.saveNotice(text);
+      noticeIndex = 0;
       renderNotice();
       close();
     } catch (e) {
@@ -423,7 +429,8 @@ function setupNoticeAdmin() {
   btn.addEventListener('click', open);
   document.getElementById('notice-close').addEventListener('click', close);
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  input.addEventListener('input', () => { count.textContent = `${input.value.length} / 200`; });
+  const countLines = () => input.value.split('\n').map((s) => s.trim()).filter(Boolean).length;
+  input.addEventListener('input', () => { count.textContent = `공지 ${countLines()}개`; });
   document.getElementById('notice-save').addEventListener('click', () => save(input.value));
   document.getElementById('notice-clear').addEventListener('click', () => save(''));
 }
