@@ -74,7 +74,7 @@ export class BoardUI {
     this.el = {
       modal: $('board-modal'), btn: $('board-btn'),
       tabs: $('board-tabs'),
-      cat: $('board-cat'), colors: $('board-colors'),
+      colors: $('board-colors'),
       input: $('board-input'), send: $('board-send'),
       editCancel: $('board-edit-cancel'),
       count: $('board-count'), error: $('board-error'),
@@ -86,7 +86,7 @@ export class BoardUI {
     this.openId = null;      // 상세로 열려 있는 글 id (없으면 목록)
     this.editingId = null;   // 수정 중인 글 id (없으면 새 글 쓰기)
     this.tab = 'patch';      // 지금 보고 있는 칸 (기본: 패치노트)
-    this.patchReady = false; // 관리자 선택지(패치노트)를 넣었는지
+    this.writeCat = 'patch'; // 글을 올릴 칸 = 보고 있는 탭(수정 중엔 그 글의 칸)
 
     this.el.btn.addEventListener('click', () => this.open());
     $('board-close').addEventListener('click', () => this.close());
@@ -102,12 +102,10 @@ export class BoardUI {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this.submit(); }
     });
 
-    // 탭 누르면 그 칸으로 거른다. 쓰기 칸의 기본 선택도 맞춘다.
+    // 탭 누르면 그 칸으로 거르고, 글도 그 칸으로 올라간다.
     for (const b of this.el.tabs.querySelectorAll('button')) {
       b.addEventListener('click', () => this.setTab(b.dataset.cat));
     }
-    // 쓰기 칸을 바꾸면 색 팔레트·글자수 제한을 그에 맞춘다.
-    this.el.cat.addEventListener('change', () => this.syncWriteMode());
 
     this.buildPalette();
   }
@@ -115,7 +113,6 @@ export class BoardUI {
   async open() {
     this.el.modal.classList.remove('hidden');
     this.el.error.textContent = '';
-    this.ensurePatchOption();
     this.showList();
     this.el.list.innerHTML = '<li class="board-empty">불러오는 중…</li>';
     try { this.render(await this.h.list()); }
@@ -124,37 +121,24 @@ export class BoardUI {
 
   close() { this.el.modal.classList.add('hidden'); this.exitEdit(); this.showList(); }
 
-  // 관리자면 쓰기 칸에 '패치노트' 선택지를 한 번만 추가한다.
-  ensurePatchOption() {
-    if (this.patchReady || !this.h.isAdmin()) return;
-    const opt = document.createElement('option');
-    opt.value = 'patch';
-    opt.textContent = '📢 패치노트';
-    this.el.cat.insertBefore(opt, this.el.cat.firstChild);
-    this.patchReady = true;
-  }
-
   // ── 탭(칸) ───────────────────────────────────────────
   setTab(cat) {
     this.tab = cat;
     for (const b of this.el.tabs.querySelectorAll('button')) {
       b.classList.toggle('current', b.dataset.cat === cat);
     }
-    // 수정 중이면 쓰기 칸(입력·칸 선택)은 건드리지 않는다.
+    // 수정 중이 아니면 글을 올릴 칸을 보고 있는 탭으로 맞춘다.
     if (!this.editingId) {
-      // 보고 있는 칸으로 바로 쓰게 기본 선택을 맞춘다(쓸 수 있는 칸일 때만).
-      if ([...this.el.cat.options].some((o) => o.value === cat)) {
-        this.el.cat.value = cat;
-      }
+      this.writeCat = cat;
       this.syncWriteMode();
     }
     this.showList();
     this.render(this.posts);
   }
 
-  // 쓰기 칸이 패치노트면 색 팔레트를 보이고 길이 제한을 늘린다.
+  // 올릴 칸이 패치노트면 색 팔레트를 보이고 길이 제한을 늘린다.
   syncWriteMode() {
-    const isPatch = this.el.cat.value === 'patch';
+    const isPatch = this.writeCat === 'patch';
     this.el.colors.classList.toggle('hidden', !isPatch);
     this.el.input.maxLength = isPatch ? 6000 : 200;
     this.el.input.placeholder = isPatch
@@ -200,8 +184,8 @@ export class BoardUI {
       if (this.editingId) {
         posts = await this.h.edit(this.editingId, body);
       } else {
-        posts = await this.h.post(body, null, this.el.cat.value);
-        targetTab = this.el.cat.value;   // 방금 쓴 칸으로 탭을 옮겨 보이게
+        posts = await this.h.post(body, null, this.writeCat);
+        targetTab = this.writeCat;       // 방금 쓴 칸으로 탭을 옮겨 보이게
       }
       this.el.error.textContent = '';
       this.exitEdit();                    // 입력칸·버튼 라벨을 원래대로
@@ -217,10 +201,8 @@ export class BoardUI {
   // 관리자: 글을 상단 입력칸으로 불러와 본문을 고친다. 칸·작성자·시각은 그대로.
   enterEdit(post) {
     this.editingId = post.id;
+    this.writeCat = post.category || 'chat';   // 수정은 그 글의 칸을 그대로 유지
     this.showList();                      // 상세에서 눌렀을 수 있으니 목록 화면으로
-    const cat = post.category || 'chat';
-    if ([...this.el.cat.options].some((o) => o.value === cat)) this.el.cat.value = cat;
-    this.el.cat.disabled = true;          // 수정은 칸을 바꾸지 않는다
     this.syncWriteMode();                 // 그 칸에 맞는 색 팔레트·길이 제한
     this.el.input.value = post.body;
     this.el.count.textContent = `${[...post.body].length} / ${this.el.input.maxLength}`;
@@ -235,7 +217,7 @@ export class BoardUI {
   exitEdit() {
     if (!this.editingId) return;
     this.editingId = null;
-    this.el.cat.disabled = false;
+    this.writeCat = this.tab;              // 다시 보고 있는 탭 기준으로
     this.el.input.value = '';
     this.el.send.textContent = '남기기';
     this.el.editCancel.classList.add('hidden');

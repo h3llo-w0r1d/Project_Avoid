@@ -152,15 +152,7 @@
         <button type="button" data-cat="qna">❓ Q&amp;A</button>
       </nav>
       <div class="board-write">
-        <div class="board-write-top">
-          <label class="board-cat-label">칸
-            <select id="board-cat" class="board-cat-select">
-              <option value="chat">💬 잡담</option>
-              <option value="bug">🐞 버그 제보</option>
-              <option value="qna">❓ Q&amp;A</option>
-            </select>
-          </label>
-        </div>
+        <!-- 칸 선택은 없앴다: 글은 지금 보고 있는 탭으로 자동 분류된다 -->
         <!-- 패치노트(운영자)만: 선택 글자에 색을 입히는 팔레트 -->
         <div id="board-colors" class="patch-colors hidden"></div>
         <textarea id="board-input" maxlength="200" rows="2"
