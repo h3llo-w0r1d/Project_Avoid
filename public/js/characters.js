@@ -309,7 +309,8 @@ export const CHARACTERS = [
       eyeScale: [1.0, 1.0],              // 동그랗고 적당한 크기
       eyeGap: 0.2,                       // 눈 사이 넉넉히(강아지처럼)
       mouthY: 0.47,                      // 입을 코 바로 밑으로
-      blush: false                       // 빨간 볼터치 제거(전체 하양 + 눈·입만 검정)
+      blush: false,                      // 빨간 볼터치 제거(전체 하양 + 눈·입만 검정)
+      glint: false                       // 눈 흰 반사광 제거 → 새까만 통짜 눈
     },
     sizeMul: 1.2             // 몸이 작아 보여 키운다(겉보기만)
   },
