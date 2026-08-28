@@ -12,7 +12,7 @@
 
 // 버전을 올리면 옛 캐시를 통째로 버리고 새로 받는다. 예전 서비스워커에
 // 눌러앉은 옛 화면 코드를 강제로 갈아끼울 때 올린다.
-const CACHE = 'avoidarc-v2';
+const CACHE = 'avoidarc-v3';
 
 self.addEventListener('install', (e) => {
   // 새 워커를 기다리지 않고 바로 활성화한다.
