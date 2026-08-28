@@ -757,6 +757,32 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 #roulette-spin { margin-top: 8px; }
 #roulette-spin:disabled { opacity: 0.5; }
 
+/* 확률표 버튼(룰렛 머리 왼쪽) + 펼치는 팝오버 */
+#roulette-modal .modal-card { position: relative; }
+.roul-odds-btn {
+  width: auto; margin: 0; padding: 5px 10px; white-space: nowrap;
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  background: rgba(255, 255, 255, 0.06); border: 1px solid var(--stroke); border-radius: 8px;
+}
+.roul-odds-btn:hover { color: var(--text); background: rgba(120, 170, 255, 0.1); }
+.roul-odds {
+  position: absolute; top: 52px; left: 16px; z-index: 6;
+  width: min(240px, calc(100% - 32px)); padding: 10px 13px;
+  background: rgba(12, 16, 26, 0.97); border: 1px solid var(--stroke);
+  border-radius: 12px; box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55); text-align: left;
+}
+.roul-odds-title { font-size: 12px; font-weight: 800; color: var(--accent); margin-bottom: 6px; }
+.roul-odds ul { list-style: none; margin: 0; padding: 0; }
+.roul-odds li {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 5px 0; font-size: 13px; color: var(--text);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.roul-odds li:last-child { border-bottom: none; }
+.roul-odds li b { font-variant-numeric: tabular-nums; color: var(--muted); }
+.roul-odds li.song span { color: #c79bff; font-weight: 800; }
+.roul-odds li.song b { color: #c79bff; }
+
 /* ---------- 커뮤니티 ---------- */
 .board-hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
 

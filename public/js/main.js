@@ -683,12 +683,31 @@ const adminCoins = (() => {
     }, 4100);
   }
 
-  const open = () => { resultEl.textContent = ''; resultEl.className = 'roulette-result'; refresh(); modal.classList.remove('hidden'); };
-  const close = () => modal.classList.add('hidden');
+  // ── 확률표 ──
+  // 각 칸의 당첨 확률을 WEIGHTS 로 정확히 계산해 채운다(노래 먼저, 코인 큰 순, 꽝).
+  const oddsBox = document.getElementById('roulette-odds');
+  const oddsList = document.getElementById('roulette-odds-list');
+  const oddsBtn = document.getElementById('roulette-odds-btn');
+  if (oddsList) {
+    const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
+    const rank = (w) => (w.song ? 3 : (w.coins || 0));   // 노래 맨 위, 코인 큰 순, 꽝 맨 아래
+    const sorted = [...WEIGHTS].sort((a, b) => (b.song ? 1e9 : rank(b)) - (a.song ? 1e9 : rank(a)));
+    oddsList.innerHTML = sorted.map((w) => {
+      const label = w.song ? '🎵 개발자가 불러주는 노래' : (w.coins ? `🪙 ${w.coins}코인` : '꽝');
+      const pct = (w.p / total) * 100;
+      const txt = pct < 1 ? pct.toFixed(2) : pct.toFixed(1);
+      return `<li${w.song ? ' class="song"' : ''}><span>${label}</span><b>${txt}%</b></li>`;
+    }).join('');
+  }
+  const closeOdds = () => oddsBox?.classList.add('hidden');
+  oddsBtn?.addEventListener('click', (e) => { e.stopPropagation(); oddsBox?.classList.toggle('hidden'); });
+
+  const open = () => { resultEl.textContent = ''; resultEl.className = 'roulette-result'; closeOdds(); refresh(); modal.classList.remove('hidden'); };
+  const close = () => { closeOdds(); modal.classList.add('hidden'); };
   document.getElementById('roulette-btn').addEventListener('click', open);
   document.getElementById('roulette-close').addEventListener('click', close);
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  spinBtn.addEventListener('click', spin);
+  spinBtn.addEventListener('click', () => { closeOdds(); spin(); });
 })();
 
 const characters = new CharacterUI({

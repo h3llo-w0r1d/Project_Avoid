@@ -196,8 +196,14 @@
   <div id="roulette-modal" class="modal hidden">
     <div class="modal-card panel">
       <div class="modal-head">
+        <button id="roulette-odds-btn" class="roul-odds-btn" type="button">🎲 확률표</button>
         <h2>코인 룰렛</h2>
         <button id="roulette-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+      </div>
+      <!-- 확률표(확률표 버튼으로 펼침). 내용은 JS 가 WEIGHTS 로 채운다. -->
+      <div id="roulette-odds" class="roul-odds hidden">
+        <div class="roul-odds-title">당첨 확률</div>
+        <ul id="roulette-odds-list"></ul>
       </div>
       <p class="board-hint">게임 시간이 <b>100초</b> 쌓일 때마다 룰렛 <b>1회</b>! 돌려서 코인 획득 🪙</p>
       <div class="roulette-wrap">
