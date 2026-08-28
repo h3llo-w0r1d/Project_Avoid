@@ -4,7 +4,7 @@
 // 그림 파일을 따로 두지 않아도 되고, 캐릭터를 고치면 미리보기도 같이 바뀐다.
 
 import * as THREE from 'three';
-import { PLAYABLE, isUnlocked, isCoinChar, findCharacter } from './characters.js';
+import { PLAYABLE, isUnlocked, isCoinChar, isRouletteChar, findCharacter } from './characters.js';
 import { buildFallbackAvatar } from './avatar.js';
 
 const $ = (id) => document.getElementById(id);
@@ -129,15 +129,17 @@ export class CharacterUI {
       // 코인으로 사는(아직 안 산) 캐릭터인가 — 상점 카드로 공개한다.
       const shop = !unlocked && isCoinChar(c);
       const affordable = shop && coins >= c.coinCost;
+      // 룰렛 전용(아직 못 얻음) — 모습은 공개하되 살 수는 없다.
+      const roul = !unlocked && isRouletteChar(c);
 
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'char-card';
-      card.classList.toggle('locked', !unlocked && !shop);
-      card.classList.toggle('shop', shop);
+      card.classList.toggle('locked', !unlocked && !shop && !roul);
+      card.classList.toggle('shop', shop || roul);
       card.classList.toggle('chosen', c.id === chosen);
-      // 잠긴 캐릭터는 못 누른다. 상점 카드는 코인이 충분할 때만 누를 수 있다.
-      card.disabled = shop ? !affordable : !unlocked;
+      // 잠긴 캐릭터는 못 누른다. 상점 카드는 코인이 충분할 때만. 룰렛 전용은 못 누른다.
+      card.disabled = shop ? !affordable : (roul ? true : !unlocked);
 
       if (unlocked) {
         const img = document.createElement('img');
@@ -171,6 +173,22 @@ export class CharacterUI {
         price.className = 'char-note price';
         price.textContent = affordable ? `🪙 ${c.coinCost} 해금` : `🪙 ${c.coinCost} 필요`;
         card.appendChild(price);
+      } else if (roul) {
+        // 룰렛 전용: 모습·이름을 공개하고 '룰렛에서만' 이라고 알린다(구매 불가).
+        const img = document.createElement('img');
+        img.src = this.preview(c.id);
+        img.alt = c.name;
+        card.appendChild(img);
+
+        const name = document.createElement('span');
+        name.className = 'char-name';
+        name.textContent = c.name;
+        card.appendChild(name);
+
+        const note = document.createElement('span');
+        note.className = 'char-note price';
+        note.textContent = '🎰 룰렛 전용';
+        card.appendChild(note);
       } else {
         // 잠긴 캐릭터는 모습도 이름도 숨긴다. "???" 와 해금 조건만 보여
         // 궁금증을 남긴다. (preview 를 부르지 않아 렌더로도 새어 나가지 않는다.)

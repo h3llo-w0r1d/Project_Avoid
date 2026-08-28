@@ -113,6 +113,7 @@ function canUnlock(spec) {
   if (!spec) return false;
   if (isAdmin) return true;                     // 관리자는 전부 해금(기록이 집계 제외라 0으로 잡힘)
   if (spec.unlockAt === 0) return true;         // 기본 캐릭터는 누구나
+  if (spec.rouletteOnly) return wallet.isOwned(spec.id); // 룰렛 전용은 룰렛으로 얻었으면
   if (isCoinChar(spec)) return wallet.isOwned(spec.id);  // 코인 캐릭터는 산 적 있으면
   return auth.signedIn && isUnlocked(spec, bestSeconds());
 }
@@ -547,21 +548,26 @@ const adminCoins = (() => {
   const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
   const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
-  // 8칸: 꽝×2, 5×2, 10, 20, 50, 그리고 0.5% 초대박 '개발자 노래'(🎵).
+  // 10칸. 초대박 3종(합 1%): 코인잭팟 500(0.89%), 럭키라고라(0.1%), 노래(0.01%).
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '5', coins: 5, color: '#57d18a' },
     { label: '10', coins: 10, color: '#4fd6ff' },
-    { label: '🎵', song: true, color: '#b57bff' },   // 초대박: 개발자가 불러주는 노래
-    { label: '꽝', coins: 0, color: '#474d5e' },
+    { label: '🎵', song: true, color: '#b57bff' },       // 개발자가 불러주는 노래
     { label: '20', coins: 20, color: '#ff9f43' },
+    { label: '💰500', jackpot: true, coins: 500, color: '#ffd93b' }, // 코인 잭팟
+    { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '5', coins: 5, color: '#57d18a' },
+    { label: '🌈', lucky: true, color: '#ff7eb6' },       // 럭키라고라(한정 캐릭터)
     { label: '50', coins: 50, color: '#ffcf3f' }
   ];
-  // 보상별 확률(합 100). 노래는 0.1% 초대박.
+  // 보상별 확률(합 100). 초대박 3종 합쳐 정확히 1%.
   const WEIGHTS = [
     { coins: 0, p: 33 }, { coins: 5, p: 35 }, { coins: 10, p: 15 },
-    { coins: 20, p: 11 }, { coins: 50, p: 5.9 }, { song: true, p: 0.1 }
+    { coins: 20, p: 11 }, { coins: 50, p: 5 },
+    { jackpot: true, coins: 500, p: 0.89 },   // 코인 잭팟 500
+    { lucky: true, p: 0.1 },                   // 럭키라고라
+    { song: true, p: 0.01 }                    // 개발자 노래
   ];
   const N = SEG.length, ARC = 360 / N;
 
@@ -584,8 +590,11 @@ const adminCoins = (() => {
     SEG.map((s, i) => {
       const a = i * ARC + ARC / 2;
       // 노래 칸은 글씨가 길어 작게 세 줄로 넣는다.
-      const txt = s.song ? '개발자가<br>불러주는<br>노래' : (s.coins ? `🪙${s.label}` : '꽝');
-      const cls = s.song ? 'roul-label roul-label-song' : 'roul-label';
+      const txt = s.song ? '개발자가<br>불러주는<br>노래'
+        : s.lucky ? '🌈<br>럭키라고라'
+        : s.jackpot ? '💰500'
+        : (s.coins ? `🪙${s.label}` : '꽝');
+      const cls = (s.song || s.lucky) ? 'roul-label roul-label-song' : 'roul-label';
       return `<span class="${cls}" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
     }).join('');
 
@@ -611,14 +620,17 @@ const adminCoins = (() => {
       : isAdmin ? '돌리기' : (left > 0 ? `돌리기 (남은 ${left}회)` : '아직 부족해요');
   };
 
-  // 보상 하나 뽑기 → { idx(멈출 칸), coins, song }
+  // 보상 하나 뽑기 → { idx(멈출 칸), coins, song?, lucky?, jackpot? }
   function pick() {
     const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
     let r = Math.random() * total;
     let chosen = WEIGHTS[WEIGHTS.length - 1];
     for (const w of WEIGHTS) { if (r < w.p) { chosen = w; break; } r -= w.p; }
     if (chosen.song) return { idx: SEG.findIndex((s) => s.song), coins: 0, song: true };
-    const idxs = SEG.map((s, i) => (!s.song && s.coins === chosen.coins ? i : -1)).filter((i) => i >= 0);
+    if (chosen.lucky) return { idx: SEG.findIndex((s) => s.lucky), coins: 0, lucky: true };
+    if (chosen.jackpot) return { idx: SEG.findIndex((s) => s.jackpot), coins: chosen.coins, jackpot: true };
+    // 일반 코인: 특별 칸은 빼고 같은 코인 칸 중에서.
+    const idxs = SEG.map((s, i) => (!s.song && !s.lucky && !s.jackpot && s.coins === chosen.coins ? i : -1)).filter((i) => i >= 0);
     return { idx: idxs[(Math.random() * idxs.length) | 0], coins: chosen.coins };
   }
 
@@ -646,7 +658,8 @@ const adminCoins = (() => {
     resultEl.className = 'roulette-result';
     refresh();
 
-    const { idx, coins, song } = pick();
+    const { idx, coins, song, lucky, jackpot } = pick();
+    const wasOwnedLucky = lucky && wallet.isOwned('lucky');   // 이미 가진 럭키라고라인지
     // idx 칸 중심이 위(포인터)로 오게. 칸 중심각(시계방향, top 기준) = idx*ARC+ARC/2
     const center = idx * ARC + ARC / 2;
     const desiredMod = (360 - center) % 360;                 // 그 칸을 위로 보내는 회전각
@@ -658,16 +671,36 @@ const adminCoins = (() => {
 
     setTimeout(() => {
       spinning = false;
-      if (coins > 0) wallet.add(coins);
-      renderCoinHud();
-      // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 시간으로
-      // 돌리므로 건 코인은 0. 노래 당첨이면 prize 로 표시해 누가 됐는지 남긴다.
-      if (!isAdmin) {
-        api.recordSpin(0, coins, auth.signedIn ? undefined : auth.displayName, song ? '노래' : undefined);
+
+      // 보상 지급. 럭키라고라는 이미 있으면 100코인으로 대체한다.
+      let rewardCoins = coins;   // 서버 기록에 남길 보상 코인
+      let prize;                 // 특별 당첨 태그(관리 기록)
+      if (lucky) {
+        if (wasOwnedLucky) { rewardCoins = 100; wallet.add(100); prize = '럭키라고라(중복)'; }
+        else { wallet.markOwned('lucky'); rewardCoins = 0; prize = '럭키라고라'; }
+      } else {
+        if (coins > 0) wallet.add(coins);
+        if (jackpot) prize = '잭팟';
+        else if (song) prize = '노래';
       }
-      if (characters.open$) characters.draw();   // 코인 늘어 상점 살 수 있게 됐을 수도
-      if (song) {
-        resultEl.textContent = '🎉 0.5% 초대박! 개발자가 불러주는 노래 🎵';
+      renderCoinHud();
+      // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 시간으로 돌려
+      // 건 코인은 0. 특별 당첨은 prize 로 누가 됐는지 남긴다.
+      if (!isAdmin) api.recordSpin(0, rewardCoins, auth.signedIn ? undefined : auth.displayName, prize);
+      if (characters.open$) characters.draw();   // 럭키라고라 해금·코인 반영
+
+      if (lucky) {
+        resultEl.textContent = wasOwnedLucky
+          ? '🌈 럭키라고라는 이미 있어요! 대신 100코인 지급'
+          : '🌈🎉 초대박! 한정 캐릭터 럭키라고라 획득!';
+        resultEl.className = 'roulette-result win jackpot';
+        audio.stageUp?.();
+      } else if (jackpot) {
+        resultEl.textContent = '💰🎉 잭팟! 500코인 획득!!';
+        resultEl.className = 'roulette-result win jackpot';
+        audio.coin?.(); audio.stageUp?.();
+      } else if (song) {
+        resultEl.textContent = '🎉 초대박! 개발자가 불러주는 노래 🎵';
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
         playDevSong();
@@ -691,13 +724,18 @@ const adminCoins = (() => {
   const oddsBtn = document.getElementById('roulette-odds-btn');
   if (oddsList) {
     const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
-    const rank = (w) => (w.song ? 3 : (w.coins || 0));   // 노래 맨 위, 코인 큰 순, 꽝 맨 아래
-    const sorted = [...WEIGHTS].sort((a, b) => (b.song ? 1e9 : rank(b)) - (a.song ? 1e9 : rank(a)));
-    oddsList.innerHTML = sorted.map((w) => {
-      const label = w.song ? '🎵 개발자가 불러주는 노래' : (w.coins ? `🪙 ${w.coins}코인` : '꽝');
-      const pct = (w.p / total) * 100;
-      const txt = String(parseFloat(pct.toFixed(2)));   // 33, 5.9, 0.1 처럼 필요한 만큼만
-      return `<li${w.song ? ' class="song"' : ''}><span>${label}</span><b>${txt}%</b></li>`;
+    // 표시 정보(라벨·정렬순서·강조). 초대박 3종을 맨 위, 그다음 코인 큰 순, 꽝은 맨 아래.
+    const info = (w) => {
+      if (w.song) return { label: '🎵 개발자가 불러주는 노래', ord: 1000, special: true };
+      if (w.lucky) return { label: '🌈 럭키라고라 (한정 캐릭터)', ord: 999, special: true };
+      if (w.jackpot) return { label: '💰 코인 500 잭팟', ord: 998, special: true };
+      if (w.coins) return { label: `🪙 ${w.coins}코인`, ord: w.coins, special: false };
+      return { label: '꽝', ord: -1, special: false };
+    };
+    const rows = WEIGHTS.map((w) => ({ ...info(w), p: w.p })).sort((a, b) => b.ord - a.ord);
+    oddsList.innerHTML = rows.map((r) => {
+      const txt = String(parseFloat(((r.p / total) * 100).toFixed(2)));   // 0.01, 5, 33 처럼 필요한 만큼만
+      return `<li${r.special ? ' class="song"' : ''}><span>${r.label}</span><b>${txt}%</b></li>`;
     }).join('');
   }
   const closeOdds = () => oddsBox?.classList.add('hidden');

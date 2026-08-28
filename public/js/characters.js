@@ -282,6 +282,28 @@ export const CHARACTERS = [
     skin: 'fiber'
   },
   {
+    // 럭키라고라 — 돈으로 못 사고 오직 룰렛 대박(0.1%)으로만 얻는 한정 캐릭터.
+    // 파스텔 무지개빛으로 반짝인다.
+    id: 'lucky',
+    name: '럭키라고라',
+    unlockAt: Infinity,
+    rouletteOnly: true,      // 룰렛 전용(코인으로 못 삼)
+    previewZoom: 1.18,
+    body: 0x8fe0c4,          // 민트빛 몸
+    bodyTop: 0xffd9f0,       // 위는 분홍
+    bodyBottom: 0x9cc0ff,    // 아래는 하늘 → 파스텔 무지개 그라데
+    outlineColor: 0x7a86a8,
+    shine: true,             // 반짝반짝
+    profile: [               // 만드라고라 몸매 그대로
+      [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
+      [0.220, 0.56], [0.380, 0.575], [0.560, 0.56], [0.760, 0.51],
+      [0.960, 0.44], [1.140, 0.34], [1.300, 0.21], [1.410, 0.09],
+      [1.450, 0.00]
+    ],
+    top: { kind: 'leaves', count: 5, length: 1.5, color: '#8be27f' }, // 밝은 초록 잎
+    skin: 'fiber'
+  },
+  {
     id: 'carrot',
     wip: true,
     name: '당근',
@@ -378,6 +400,9 @@ export const isPlayable = (spec) => !!spec && !spec.wip;
 
 // 코인으로 사는 캐릭터인가(coinCost 가 있으면 시간 대신 코인으로 해금).
 export const isCoinChar = (spec) => Number(spec?.coinCost) > 0;
+
+// 룰렛으로만 얻는 캐릭터인가(돈으로 못 사고, 룰렛 대박으로만 얻는다).
+export const isRouletteChar = (spec) => !!spec?.rouletteOnly;
 
 // 최고 기록으로 열린 캐릭터인지 (코인 캐릭터는 unlockAt 이 Infinity 라 늘 false)
 export function isUnlocked(spec, bestSeconds) {
