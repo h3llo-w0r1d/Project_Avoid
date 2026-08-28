@@ -386,15 +386,11 @@ function makeMouthTexture(kind = 'smile', size = 256) {
   if (kind === 'cute') {
     g.strokeStyle = '#000000';
     g.lineWidth = size * 0.05; g.lineCap = 'round'; g.lineJoin = 'round';
-    const my = size * 0.44, w = size * 0.15;
-    g.beginPath();                            // 입 위 작은 세로선(인중)
-    g.moveTo(cx, my - size * 0.10);
-    g.lineTo(cx, my - size * 0.01);
-    g.stroke();
-    g.beginPath();                            // ω 입(두 봉우리)
+    const my = size * 0.44, w = size * 0.24;  // 넓게 펼친 ω 입
+    g.beginPath();                            // ω 입(두 봉우리) — 인중 세로선 없이
     g.moveTo(cx - w, my - size * 0.02);
-    g.quadraticCurveTo(cx - w * 0.5, my + size * 0.11, cx, my - size * 0.01);
-    g.quadraticCurveTo(cx + w * 0.5, my + size * 0.11, cx + w, my - size * 0.02);
+    g.quadraticCurveTo(cx - w * 0.5, my + size * 0.13, cx, my - size * 0.01);
+    g.quadraticCurveTo(cx + w * 0.5, my + size * 0.13, cx + w, my - size * 0.02);
     g.stroke();
     return textureFrom(cv);
   }
