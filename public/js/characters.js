@@ -265,6 +265,7 @@ export const CHARACTERS = [
     bodyBottom: 0x480e0e,    // 아래로 갈수록 검붉게
     outlineColor: 0x260707,  // 검붉은 테두리
     horns: { color: 0x3a0a0a },  // 검붉은 뿔
+    wings: 'dark',           // 등에 검은 날개
     trident: true,           // 손에 든 빨간 삼지창
     face: {
       eye: 0xffd21f, sclera: 0x2a0808,       // 노랗게 빛나는 악마 눈

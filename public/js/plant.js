@@ -1009,10 +1009,20 @@ function addTrident(root, ruler, outlineMat) {
 
 // 오른쪽 날개 하나를 2D 로 그린다(흰 깃털 실루엣 + 깃털 선). 왼쪽은 평면을
 // 좌우반전해 쓴다. 3D 깃털을 쌓는 것보다 훨씬 깔끔하고 조명에도 안 물든다.
-function makeWingTexture(size = 360) {
+function makeWingTexture(size = 360, dark = false) {
   const cv = canvas(size);
   const g = cv.getContext('2d');
   const S = size;
+  // 색 팔레트: 천사(흰) / 악마(검). 결 선은 대비되게 반대 밝기로.
+  const P = dark ? {
+    fill: '#3b3a42', edge: '#141319',
+    g0: 'rgba(15,14,20,0)', g1: 'rgba(8,7,12,0.55)',
+    line: 'rgba(205,203,214,0.26)', cov: (a) => `rgba(198,196,208,${a * 0.55})`
+  } : {
+    fill: '#fdfdfb', edge: '#d1ccc0',
+    g0: 'rgba(206,202,191,0)', g1: 'rgba(198,194,183,0.42)',
+    line: 'rgba(150,146,136,0.5)', cov: (a) => `rgba(140,136,126,${a})`
+  };
 
   // 트레일링(깃털 끝) 스캘럽 위치
   const tips = [[0.915, 0.37], [0.835, 0.52], [0.74, 0.645], [0.63, 0.735],
@@ -1029,17 +1039,17 @@ function makeWingTexture(size = 360) {
     g.quadraticCurveTo(S * 0.09, S * 0.85, S * 0.10, S * 0.82);
     g.closePath();
   };
-  silhouette(); g.fillStyle = '#fdfdfb'; g.fill();
+  silhouette(); g.fillStyle = P.fill; g.fill();
 
   g.save(); silhouette(); g.clip();
   // 음영(앞전-안쪽을 살짝 어둡게 → 깊이)
   const grd = g.createLinearGradient(S * 0.15, S * 0.15, S * 0.5, S * 0.9);
-  grd.addColorStop(0, 'rgba(206,202,191,0)'); grd.addColorStop(1, 'rgba(198,194,183,0.42)');
+  grd.addColorStop(0, P.g0); grd.addColorStop(1, P.g1);
   g.fillStyle = grd; g.fillRect(0, 0, S, S);
 
   // 비행깃 결 선: 손목(갈라지는 지점)에서 각 트레일링 끝으로
   const wx = 0.34, wy = 0.30;
-  g.lineWidth = S * 0.007; g.strokeStyle = 'rgba(150,146,136,0.5)'; g.lineCap = 'round';
+  g.lineWidth = S * 0.007; g.strokeStyle = P.line; g.lineCap = 'round';
   for (const [tx, ty] of tips) {
     g.beginPath();
     g.moveTo(S * wx, S * wy);
@@ -1053,20 +1063,20 @@ function makeWingTexture(size = 360) {
       const t = i / bumps, x = x0 + (x1 - x0) * t;
       g.quadraticCurveTo(S * (x - (x1 - x0) / bumps * 0.5), S * (y0 + Math.sin(t * Math.PI) * 0.02 + depth * t), S * x, S * (y0 + depth * t));
     }
-    g.lineWidth = S * 0.006; g.strokeStyle = `rgba(140,136,126,${alpha})`; g.stroke();
+    g.lineWidth = S * 0.006; g.strokeStyle = P.cov(alpha); g.stroke();
   };
   covert(0.30, 0.30, 0.90, 7, 0.10, 0.5);
   covert(0.42, 0.24, 0.80, 7, 0.10, 0.45);
   covert(0.55, 0.20, 0.66, 6, 0.09, 0.4);
   g.restore();
 
-  silhouette(); g.lineWidth = S * 0.011; g.strokeStyle = '#d1ccc0'; g.lineJoin = 'round'; g.stroke();
+  silhouette(); g.lineWidth = S * 0.011; g.strokeStyle = P.edge; g.lineJoin = 'round'; g.stroke();
   return textureFrom(cv);
 }
 
-// 천사 날개 — 그린 날개 텍스처를 판 두 개(좌우 대칭)에 붙여 등에 단다.
-function addWings(root, ruler, _outlineMat) {
-  const tex = makeWingTexture();
+// 날개 — 그린 텍스처를 판 두 개(좌우 대칭)에 붙여 등에 단다. dark 면 검은 날개.
+function addWings(root, ruler, _outlineMat, dark = false) {
+  const tex = makeWingTexture(360, dark);
   const shoulderY = ruler.at(0.46);
   const backZ = -ruler.radiusAt(shoulderY) - 0.06;
   const W = 1.7, H = 1.6;
@@ -1463,7 +1473,7 @@ export function buildPlant(id) {
   if (spec.nose) addNose(root, ruler, spec.nose, outlineMat, oW);
   if (spec.halo) addHalo(root, ruler, spec.halo, outlineMat, oW);     // 천사 후광
   if (spec.horns) addHorns(root, ruler, spec.horns, outlineMat, oW);  // 악마 뿔
-  if (spec.wings) addWings(root, ruler, outlineMat);                  // 천사 날개(등)
+  if (spec.wings) addWings(root, ruler, outlineMat, spec.wings === 'dark');  // 날개(등): 흰/검
   if (spec.trident) addTrident(root, ruler, outlineMat);              // 악마 삼지창(손)
 
   // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
