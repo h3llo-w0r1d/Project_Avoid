@@ -401,23 +401,27 @@ setInterval(() => {
 function setupNoticeAdmin() {
   const btn = document.getElementById('notice-btn');
   const modal = document.getElementById('notice-modal');
-  const input = document.getElementById('notice-input');
+  const fields = [1, 2, 3, 4].map((n) => document.getElementById('notice-' + n));
   const count = document.getElementById('notice-count');
   const errEl = document.getElementById('notice-error');
-  if (!btn || !modal) return;
+  if (!btn || !modal || fields.some((f) => !f)) return;
+
+  const filled = () => fields.map((f) => f.value.trim()).filter(Boolean);
+  const paintCount = () => { count.textContent = `공지 ${filled().length}개`; };
 
   btn.classList.remove('hidden');
   const close = () => modal.classList.add('hidden');
   const open = () => {
-    input.value = notices.join('\n');   // 줄마다 하나로 편집
-    count.textContent = `공지 ${notices.length}개`;
+    fields.forEach((f, i) => { f.value = notices[i] ?? ''; });   // 칸마다 하나씩
+    paintCount();
     errEl.textContent = '';
     modal.classList.remove('hidden');
-    input.focus();
+    fields[0].focus();
   };
-  const save = async (text) => {
+  // 빈 칸은 빼고, 채운 순서대로 저장한다.
+  const save = async () => {
     try {
-      notices = await api.saveNotice(text);
+      notices = await api.saveNotice(filled().join('\n'));
       noticeIndex = 0;
       renderNotice();
       close();
@@ -429,10 +433,14 @@ function setupNoticeAdmin() {
   btn.addEventListener('click', open);
   document.getElementById('notice-close').addEventListener('click', close);
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
-  const countLines = () => input.value.split('\n').map((s) => s.trim()).filter(Boolean).length;
-  input.addEventListener('input', () => { count.textContent = `공지 ${countLines()}개`; });
-  document.getElementById('notice-save').addEventListener('click', () => save(input.value));
-  document.getElementById('notice-clear').addEventListener('click', () => save(''));
+  for (const f of fields) f.addEventListener('input', paintCount);
+  document.getElementById('notice-save').addEventListener('click', save);
+  // 비우기: 네 칸을 모두 지운다(저장을 눌러야 실제로 사라진다).
+  document.getElementById('notice-clear').addEventListener('click', () => {
+    fields.forEach((f) => { f.value = ''; });
+    paintCount();
+    fields[0].focus();
+  });
 }
 
 // 자유 게시판. 게스트는 이름을 같이 보내고, 로그인했으면 서버가 계정 닉네임을 쓴다.

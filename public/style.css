@@ -2320,3 +2320,14 @@ kbd {
 #notice-banner::before { content: "📢 "; opacity: 0.9; }
 /* 공지 작성 모달의 버튼 묶음 오른쪽 정렬 */
 #notice-modal .board-write-row > div { display: flex; gap: 8px; }
+
+/* 공지 입력칸(공지 1~4) */
+.notice-fields { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.notice-field { display: flex; align-items: center; gap: 10px; }
+.notice-field > span { flex: none; width: 44px; font-size: 12px; font-weight: 800; color: var(--muted); }
+.notice-field input {
+  flex: 1; width: auto; margin: 0; padding: 9px 11px;
+  font: inherit; font-size: 14px; color: var(--text);
+  background: rgba(0, 0, 0, 0.25); border: 1px solid var(--stroke); border-radius: 8px;
+}
+.notice-field input:focus { border-color: var(--accent); outline: none; }

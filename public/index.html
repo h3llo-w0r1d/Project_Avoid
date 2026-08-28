@@ -100,10 +100,18 @@
         <h2>공지 작성</h2>
         <button id="notice-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
       </div>
-      <p class="board-hint"><b>한 줄에 하나씩</b> 적으면 그만큼 공지가 됩니다. 여러 개면
-        타이틀 상단에 <b>10초마다 번갈아</b> 뜹니다. 비우고 저장하면 사라집니다.</p>
-      <textarea id="notice-input" maxlength="2600" rows="6"
-        placeholder="예) 8/28 음성인식점프 기능 추가!&#10;새 캐릭터 만드라고라(흑화) 출시&#10;룰렛은 이제 게임 시간으로 돌려요"></textarea>
+      <p class="board-hint">칸마다 공지 하나씩. 여러 개 채우면 타이틀 상단에
+        <b>10초마다 번갈아</b> 뜹니다. 빈 칸은 무시돼요.</p>
+      <div class="notice-fields">
+        <label class="notice-field"><span>공지 1</span>
+          <input id="notice-1" type="text" maxlength="200" placeholder="첫 번째 공지"></label>
+        <label class="notice-field"><span>공지 2</span>
+          <input id="notice-2" type="text" maxlength="200" placeholder="두 번째 공지 (선택)"></label>
+        <label class="notice-field"><span>공지 3</span>
+          <input id="notice-3" type="text" maxlength="200" placeholder="세 번째 공지 (선택)"></label>
+        <label class="notice-field"><span>공지 4</span>
+          <input id="notice-4" type="text" maxlength="200" placeholder="네 번째 공지 (선택)"></label>
+      </div>
       <div class="board-write-row">
         <span id="notice-count" class="board-count">공지 0개</span>
         <div>
