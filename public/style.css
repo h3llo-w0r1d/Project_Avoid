@@ -2055,8 +2055,11 @@ kbd {
 .board .rank.medal-3 { background: linear-gradient(150deg, #f0c08a, #cf8b4e); }
 
 .board .who {
-  flex: none;              /* 이름은 제 폭만. 남는 공간은 기록 막대가 채운다 */
-  max-width: 42%;
+  /* 이름 칸을 고정 폭으로 둔다 → 닉네임 길이와 상관없이 막대가 늘 같은
+     자리에서 시작한다. 넘치는 긴 이름은 … 로 줄인다. */
+  flex: 0 0 160px;
+  width: 160px;
+  max-width: 40vw;         /* 좁은 화면에서는 이름 칸이 화면을 너무 먹지 않게 */
   min-width: 0;
   font-weight: 600;
   overflow: hidden;
