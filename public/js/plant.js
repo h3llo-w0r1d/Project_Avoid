@@ -948,9 +948,11 @@ function addFangs(root, ruler, outlineMat, oW = 1) {
 }
 
 // 검은 코 — 얼굴 가운데. 눈과 입 사이에 붙는다.
-function addNose(root, ruler, color, outlineMat, oW = 1) {
-  const y = ruler.at(0.49);
-  const geo = new THREE.SphereGeometry(0.09, 16, 12);
+// face.noseY 로 높이를, face.noseScale 로 크기를 조절한다(입 바로 위 작은 코 등).
+function addNose(root, ruler, color, outlineMat, oW = 1, face = null) {
+  const y = ruler.at(face?.noseY ?? 0.49);
+  const s = face?.noseScale ?? 1;
+  const geo = new THREE.SphereGeometry(0.09 * s, 16, 12);
   geo.scale(1.25, 0.85, 0.9);
   geo.computeVertexNormals();
   const nose = new THREE.Mesh(geo, toon(color));
@@ -1166,9 +1168,9 @@ function addDogEars(root, ruler, spec, outlineMat, oW = 1) {
   const mat = toon(spec.color ?? 0xffffff);
   const y = ruler.at(0.8);
   const ringR = Math.max(0.2, ruler.radiusAt(y) * 0.82);
-  const earGeo = new THREE.SphereGeometry(0.3, 16, 12);
+  const earGeo = new THREE.SphereGeometry(0.25, 16, 12);   // 조금 작은 귀
   earGeo.scale(0.5, 1.05, 0.36);   // 길쭉한 귀
-  earGeo.translate(0, -0.28, 0);   // 밑동을 피벗에, 아래로 처지게
+  earGeo.translate(0, -0.23, 0);   // 밑동을 피벗에, 아래로 처지게
   earGeo.computeVertexNormals();
   for (const dir of [-1, 1]) {
     const pivot = new THREE.Group();
@@ -1582,7 +1584,7 @@ export function buildPlant(id) {
   if (spec.hold === 'gun') addGun(root, ruler, outlineMat);
   if (spec.cigarette) addCigarette(root, ruler, outlineMat);
   if (spec.fangs) addFangs(root, ruler, outlineMat, oW);
-  if (spec.nose) addNose(root, ruler, spec.nose, outlineMat, oW);
+  if (spec.nose) addNose(root, ruler, spec.nose, outlineMat, oW, spec.face);
   if (spec.halo) addHalo(root, ruler, spec.halo, outlineMat, oW);     // 천사 후광
   if (spec.horns) addHorns(root, ruler, spec.horns, outlineMat, oW);  // 악마 뿔
   if (spec.wings) addWings(root, ruler, outlineMat, spec.wings === 'dark');  // 날개(등): 흰/검
