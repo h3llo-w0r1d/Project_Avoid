@@ -1584,7 +1584,7 @@ export function buildPlant(id) {
   if (spec.hold === 'gun') addGun(root, ruler, outlineMat);
   if (spec.cigarette) addCigarette(root, ruler, outlineMat);
   if (spec.fangs) addFangs(root, ruler, outlineMat, oW);
-  if (spec.nose) addNose(root, ruler, spec.nose, outlineMat, oW, spec.face);
+  if (spec.nose != null) addNose(root, ruler, spec.nose, outlineMat, oW, spec.face);
   if (spec.halo) addHalo(root, ruler, spec.halo, outlineMat, oW);     // 천사 후광
   if (spec.horns) addHorns(root, ruler, spec.horns, outlineMat, oW);  // 악마 뿔
   if (spec.wings) addWings(root, ruler, outlineMat, spec.wings === 'dark');  // 날개(등): 흰/검
