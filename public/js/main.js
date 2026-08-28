@@ -1386,8 +1386,10 @@ async function finishGame() {
 
   // 이번 판으로 새로 열린 캐릭터가 있으면, 결과창 전에 해금 연출을 띄운다.
   // 최고기록은 showGameOver 가 갱신하므로, 지금 읽으면 '이전' 최고기록이다.
+  // 관리자는 이미 전부 해금이라(기록이 집계 제외라 최고가 낮게 잡혀 매판 다시
+  // 뜨는 문제도 있어) 해금 연출을 아예 띄우지 않는다.
   const prevBest = bestSeconds();
-  const freshUnlocks = PLAYABLE.filter(
+  const freshUnlocks = isAdmin ? [] : PLAYABLE.filter(
     (c) => c.unlockAt > 0 && prevBest < c.unlockAt && c.unlockAt <= score
   );
   let guestNagged = false;   // 게스트에게 로그인 유도를 이미 한 번 띄웠는가
@@ -1411,8 +1413,8 @@ async function finishGame() {
     }
   }
 
-  // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다.
-  if (prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
+  // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다(관리자는 제외).
+  if (!isAdmin && prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
 
   ui.showGameOver(score, state.cause, state.hardcore);
 
