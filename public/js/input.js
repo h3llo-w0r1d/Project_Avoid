@@ -22,6 +22,9 @@ export class Input {
     this.jumpPressed = false;
     this.jumpQueued = false;
     this.enabled = false;
+    // 마이크 점프 모드: 키·터치 점프를 막고 목소리로만 뛰게 한다.
+    // (음성 감지는 jumpQueued 를 직접 넣으므로 이 잠금에 안 걸린다.)
+    this.voiceOnly = false;
 
     this.touch = { id: null, x: 0, y: 0, dx: 0, dy: 0 };
 
@@ -35,7 +38,7 @@ export class Input {
       if (!action) return;
       if (this.enabled) e.preventDefault();
       if (action === 'jump') {
-        if (!e.repeat) this.jumpQueued = true;
+        if (!e.repeat && !this.voiceOnly) this.jumpQueued = true;
       } else {
         this.keys[action] = true;
       }
@@ -119,7 +122,7 @@ export class Input {
     stickZone.addEventListener('touchcancel', end);
 
     jumpZone.addEventListener('touchstart', (e) => {
-      this.jumpQueued = true;
+      if (!this.voiceOnly) this.jumpQueued = true;
       jumpBtn.classList.add('on');
       e.preventDefault();
     }, { passive: false });

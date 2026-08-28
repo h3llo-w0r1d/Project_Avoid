@@ -875,6 +875,8 @@ function startGame() {
   // 버티기 normal · 하드코어 hardcore · 마이크 voice · 마이크(하드코어) voicehard.
   state.voice = voiceOn;
   state.runMode = runModeOf(state.hardcore, state.voice);
+  // 마이크 모드면 키·터치 점프를 막고 목소리로만 뛰게 한다.
+  input.voiceOnly = state.voice;
 
   // 다시보기용: 이번 판의 씨앗을 정해 전기선을 그 씨앗으로 돌리고,
   // 프레임 입력을 기록하기 시작한다(하드코어는 바닥구멍이 아직 비결정이라 제외).
@@ -1381,6 +1383,7 @@ async function refreshLeaderboard(kind = 'time') {
 
 async function openVersus() {
   audio.unlock();
+  input.voiceOnly = false;   // 대전은 마이크 점프를 쓰지 않는다(키/터치로)
 
   ui.hideAllScreens();
   renderNotice();   // 첫 화면을 벗어났으니 공지 배너를 내린다(대전 중 남는 버그 방지)
