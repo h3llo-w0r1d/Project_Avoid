@@ -1531,7 +1531,7 @@ export function buildPlant(id) {
   }
 
   // 입 (기본은 웃는 입, spec.mouth 로 표정을, spec.mouthScale 로 크기를 바꾼다)
-  const mouthY = at(0.42);
+  const mouthY = at(spec.face?.mouthY ?? 0.42);   // face.mouthY 로 입 높이 조절(코 밑에 붙이기 등)
   const ms = spec.mouthScale ?? 1;
   const mouthGeo = new THREE.PlaneGeometry(0.44 * ms, 0.44 * ms);
   // 반쪽이면 입도 절단선(x=0)에서 딱 자른다. 남은 쪽 반대편 정점을 x=0·uv 0.5

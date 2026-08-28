@@ -306,7 +306,9 @@ export const CHARACTERS = [
     mouthScale: 1.0,
     face: {
       eye: 0x1d1c20, sclera: 0x1d1c20,   // 흰자 없이 동그란 검은 눈
-      eyeScale: [1.05, 1.05]             // 살짝 크게(귀엽게)
+      eyeScale: [1.0, 1.0],              // 동그랗고 적당한 크기
+      eyeGap: 0.2,                       // 눈 사이 넉넉히(강아지처럼)
+      mouthY: 0.47                       // 입을 코 바로 밑으로
     },
     sizeMul: 1.2             // 몸이 작아 보여 키운다(겉보기만)
   },
