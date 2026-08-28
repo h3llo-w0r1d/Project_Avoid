@@ -1630,12 +1630,19 @@ kbd {
   color: var(--muted);
 }
 
+/* 캐릭터 창을 랭킹 창과 같은 크기로 넓혀 한 줄에 5개씩 보이게 한다. */
+#char-modal .modal-card { width: min(960px, calc(100vw - 40px)); max-height: 90vh; }
+
 .char-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
   margin-top: 16px;
 }
+
+/* 좁은 화면에선 5개가 눌리니 칸 수를 줄인다. */
+@media (max-width: 720px) { .char-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 460px) { .char-grid { grid-template-columns: repeat(2, 1fr); } }
 
 /* 아직 다듬는 중이라 안 보여 주는 캐릭터 자리.
    두 칸을 차지해 남은 줄을 채운다 — 칸을 비워 두면 화면이 깨진 것처럼 보인다. */
