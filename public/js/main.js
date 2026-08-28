@@ -490,17 +490,17 @@ const adminCoins = (() => {
 })();
 
 // ── 코인 룰렛 ──────────────────────────────────────────────
-// 코인을 걸고 돌려 랜덤 보상. 칸은 6개(같은 크기)지만 확률은 WEIGHTS 로 따로
-// 준다(50코인은 드물게). 코인은 로컬 지갑이라 결과도 여기서 정한다(경쟁 아님).
+// 누적 게임 시간이 100초 쌓일 때마다 1회씩 돌린다(코인이 아니라 '시간'으로).
+// 돌리면 랜덤 코인 보상. 칸은 7개지만 확률은 WEIGHTS 로 따로 준다.
 (() => {
   const modal = document.getElementById('roulette-modal');
   if (!modal) return;
   const wheel = document.getElementById('roulette-wheel');
   const spinBtn = document.getElementById('roulette-spin');
   const resultEl = document.getElementById('roulette-result');
-  const coinsEl = document.getElementById('roul-coins');
+  const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
-  const COST = 10;                       // 한 번 돌리는 값
+  const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
   // 7칸: 꽝×2, 5×2, 10×1, 20×1, 50×1. 이웃끼리 안 겹치게 섞어 둔다.
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
@@ -543,9 +543,22 @@ const adminCoins = (() => {
   let spinning = false;
   let rotation = 0;
 
+  // 가운데 원과 버튼을 지금 상태로 그린다.
   const refresh = () => {
-    coinsEl.textContent = isAdmin ? '∞' : String(wallet.coins());
-    spinBtn.disabled = spinning || (!isAdmin && wallet.coins() < COST);
+    const secs = wallet.playtime();
+    const left = isAdmin ? Infinity : wallet.spinsAvailable();
+    if (hubEl) {
+      // 다음 1회까지 남은 시간(진행 표시). 관리자는 무제한.
+      const toNext = isAdmin ? 0 : PER - (secs % PER);
+      hubEl.innerHTML = isAdmin
+        ? '<span class="hub-secs">∞</span><span class="hub-spins">무제한</span>'
+        : `<span class="hub-secs">누적 ${Math.floor(secs)}초</span>` +
+          `<span class="hub-spins">${left}회</span>` +
+          `<span class="hub-next">다음까지 ${Math.ceil(toNext)}초</span>`;
+    }
+    spinBtn.disabled = spinning || (!isAdmin && left <= 0);
+    spinBtn.textContent = spinning ? '돌리는 중…'
+      : isAdmin ? '돌리기' : (left > 0 ? `돌리기 (남은 ${left}회)` : '아직 부족해요');
   };
 
   // 보상 하나 뽑기 → { idx(멈출 칸), coins }
@@ -559,12 +572,13 @@ const adminCoins = (() => {
 
   function spin() {
     if (spinning) return;
-    if (!isAdmin && wallet.coins() < COST) {
-      resultEl.textContent = '코인이 부족해요';
+    if (!isAdmin && wallet.spinsAvailable() <= 0) {
+      const toNext = PER - (wallet.playtime() % PER);
+      resultEl.textContent = `게임을 ${Math.ceil(toNext)}초 더 하면 한 번 돌릴 수 있어요`;
       resultEl.className = 'roulette-result lose';
       return;
     }
-    if (!isAdmin) { wallet.spend(COST); renderCoinHud(); }
+    if (!isAdmin) wallet.useSpin();   // 누적 시간 100초 = 1회 소모
     spinning = true;
     resultEl.textContent = '';
     resultEl.className = 'roulette-result';
@@ -584,8 +598,9 @@ const adminCoins = (() => {
       spinning = false;
       if (coins > 0) wallet.add(coins);
       renderCoinHud();
-      // 관리자(무한 코인)가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고).
-      if (!isAdmin) api.recordSpin(COST, coins, auth.signedIn ? undefined : auth.displayName);
+      // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 이제 코인을
+      // 걸지 않으므로(시간으로 돌림) 건 코인은 0.
+      if (!isAdmin) api.recordSpin(0, coins, auth.signedIn ? undefined : auth.displayName);
       if (characters.open$) characters.draw();   // 코인 늘어 상점 살 수 있게 됐을 수도
       if (coins === 0) {
         resultEl.textContent = '꽝! 다음 기회에…';
@@ -1274,6 +1289,10 @@ async function finishGame() {
   // 판이 끝났으니 긴장을 푼다. 결과 화면은 첫 화면과 같은 곡으로.
   audio.playMusic('homeMusic');
   const score = state.elapsed;
+
+  // 이번 판 시간을 누적 게임 시간에 더한다(룰렛 횟수의 원천). 관리자는 룰렛이
+  // 무제한이라 쌓을 필요가 없다.
+  if (!isAdmin) wallet.addPlaytime(score);
 
   // 이번 판으로 새로 열린 캐릭터가 있으면, 결과창 전에 해금 연출을 띄운다.
   // 최고기록은 showGameOver 가 갱신하므로, 지금 읽으면 '이전' 최고기록이다.

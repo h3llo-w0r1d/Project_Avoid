@@ -9,6 +9,9 @@
 
 const COINS_KEY = 'avoidarc.coins';
 const OWNED_KEY = 'avoidarc.owned';   // 코인으로 산 캐릭터 id 목록
+const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
+const SPINUSED_KEY = 'avoidarc.spins.used';   // 지금까지 돌린 룰렛 횟수
+const SECONDS_PER_SPIN = 100;           // 이만큼 쌓일 때마다 룰렛 1회
 
 function readOwned() {
   try { return new Set(JSON.parse(localStorage.getItem(OWNED_KEY) || '[]')); }
@@ -36,6 +39,20 @@ export const wallet = {
     localStorage.setItem(COINS_KEY, String(v - n));
     return true;
   },
+
+  // ── 룰렛(누적 게임 시간으로 돌린다) ──
+  // 누적 게임 시간(초). 판이 끝날 때마다 그 판 시간을 더한다.
+  playtime() { return Math.max(0, Number(localStorage.getItem(PLAY_KEY)) || 0); },
+  addPlaytime(sec) {
+    const v = this.playtime() + Math.max(0, Number(sec) || 0);
+    localStorage.setItem(PLAY_KEY, String(v));
+    return v;
+  },
+  // 지금까지 돌린 횟수 / 100초당 1회 규칙으로 남은 횟수.
+  spinsUsed() { return Math.max(0, Math.floor(Number(localStorage.getItem(SPINUSED_KEY)) || 0)); },
+  spinsAvailable() { return Math.max(0, Math.floor(this.playtime() / SECONDS_PER_SPIN) - this.spinsUsed()); },
+  useSpin() { localStorage.setItem(SPINUSED_KEY, String(this.spinsUsed() + 1)); },
+  secondsPerSpin() { return SECONDS_PER_SPIN; },
 
   // 코인으로 산 캐릭터인가
   isOwned(id) { return readOwned().has(id); },
