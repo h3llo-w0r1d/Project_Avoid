@@ -1048,6 +1048,9 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 
 /* ---------- 랭킹 탭 ---------- */
 
+/* 랭킹 창은 탭이 많고 목록이 길어 넓고 높게 잡는다. */
+#rank-modal .modal-card { width: min(960px, calc(100vw - 40px)); max-height: 90vh; }
+
 .rank-tabs {
   display: flex;
   flex-wrap: wrap;        /* 탭이 많아(8개) 좁으면 다음 줄로 넘긴다 */
