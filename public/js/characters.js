@@ -313,7 +313,7 @@ export const CHARACTERS = [
       eyeY: 0.60,                        // 눈을 더 위로
       mouthY: 0.23,                      // 입을 더더 아래로
       noseY: 0.30,                       // 코를 입 바로 위로
-      noseScale: 0.72,                   // 작지만 보이는 코
+      noseScale: 0.4,                    // 작은 코
       blush: false,                      // 빨간 볼터치 제거(전체 하양)
       glint: false,                      // 눈 흰 반사광 제거 → 새까만 통짜 눈
       brows: false                       // 눈썹 제거(눈 주변까지 검게 보이던 원인)
