@@ -1007,36 +1007,61 @@ function addTrident(root, ruler, outlineMat) {
   root.add(t);
 }
 
-// 천사 날개 — 등(몸 아래·뒤)에서 바깥·아래로 펼친 흰 깃털 한 쌍(새 날개 모양).
+// 천사 날개 — 등에서 바깥으로 펼친 흰 깃털 한 쌍. 뾰족한 깃털을 날개 곡선을
+// 따라 여러 겹(긴 비행깃 + 짧은 덮깃)으로 층층이 얹어 새 날개처럼 보이게 한다.
 function addWings(root, ruler, outlineMat) {
   const white = toon(0xffffff);
+  const shade = toon(0xe9e6df);   // 뒤쪽(아래) 겹은 살짝 어둡게 입체감
   const shoulderY = ruler.at(0.42);                 // 얼굴보다 아래(등쪽)
-  const backZ = -ruler.radiusAt(shoulderY) - 0.14;  // 몸 뒤로 확실히
-  // 어깨에서 바깥으로 뻗는 깃털. ang 이 90°(≈1.57) 근처면 옆으로, 그보다 크면
-  // 아래로 처진다 → 위(길게)에서 아래(짧게)로 부채처럼 펼쳐 새 날개처럼 보인다.
-  const FEATHERS = [
-    { len: 1.35, ang: 1.15 },   // 제일 위·길게(위-바깥)
-    { len: 1.45, ang: 1.42 },
-    { len: 1.30, ang: 1.70 },   // 거의 수평
-    { len: 1.05, ang: 1.98 },
-    { len: 0.78, ang: 2.24 }    // 아래·짧게(아래-바깥)
-  ];
+  const backZ = -ruler.radiusAt(shoulderY) - 0.16;  // 몸 뒤로 확실히
+
+  // 깃털 하나: 밑동 굵고 끝 뾰족한 납작한 잎(원뿔을 눌러 만든다).
+  const featherGeo = (len, r) => {
+    const g = new THREE.ConeGeometry(r, len, 8);
+    g.translate(0, len * 0.5, 0);   // 밑동을 피벗(원점)에
+    g.scale(1, 1, 0.32);            // 앞뒤로 납작하게
+    g.computeVertexNormals();
+    return g;
+  };
+
   for (const dir of [-1, 1]) {
     const wing = new THREE.Group();
-    for (const f of FEATHERS) {
-      const geo = new THREE.SphereGeometry(0.5, 12, 8);
-      geo.scale(0.135, f.len, 0.05);   // 길고 납작한 깃털
-      geo.computeVertexNormals();
-      const feather = new THREE.Mesh(geo, white);
-      feather.position.y = f.len * 0.5;
+
+    // 1) 비행깃(primaries) — 긴 깃털을 어깨→날개끝 곡선을 따라. 가운데가 제일 길고
+    //    끝으로 갈수록 아래로 눕는다.
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1);                       // 0 뿌리 ~ 1 끝
+      const armX = t * 2.0;                         // 바깥으로
+      const armY = Math.sin(t * Math.PI * 0.62) * 0.95 - t * t * 0.55;  // 올랐다가 끝에서 처짐
+      const len = 0.55 + Math.sin(t * Math.PI * 0.9) * 1.05;            // 가운데가 최장
+      const rad = 0.11 - t * 0.02;
+      const ang = 0.65 + t * 1.65;                 // 뿌리는 위로, 끝은 아래-바깥으로
+      const feather = new THREE.Mesh(featherGeo(len, rad), i > N * 0.4 ? shade : white);
       const pivot = new THREE.Group();
-      pivot.rotation.z = dir * f.ang;
+      pivot.position.set(dir * armX, armY, -t * 0.05);
+      pivot.rotation.z = dir * ang;
       pivot.add(feather);
-      addOutline(feather, 0.012, outlineMat);
+      addOutline(feather, 0.009, outlineMat);
       wing.add(pivot);
     }
-    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.4), shoulderY, backZ);
-    wing.rotation.y = dir * 0.4;        // 뒤에서 바깥으로 벌려 입체감
+
+    // 2) 덮깃(coverts) — 어깨 위쪽에 짧은 깃털을 한 줄 더 겹쳐 도톰하게.
+    const M = 7;
+    for (let i = 0; i < M; i++) {
+      const t = i / (M - 1);
+      const len = 0.45 + Math.sin(t * Math.PI) * 0.45;
+      const feather = new THREE.Mesh(featherGeo(len, 0.1), white);
+      const pivot = new THREE.Group();
+      pivot.position.set(dir * (0.12 + t * 1.45), 0.12 + Math.sin(t * Math.PI * 0.6) * 0.62, 0.06);
+      pivot.rotation.z = dir * (0.5 + t * 1.4);
+      pivot.add(feather);
+      wing.add(pivot);
+    }
+
+    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.32), shoulderY, backZ);
+    wing.rotation.y = dir * 0.45;   // 뒤에서 바깥으로 벌려 입체감
+    wing.scale.setScalar(0.92);
     root.add(wing);
   }
 }
