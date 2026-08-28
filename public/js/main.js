@@ -912,7 +912,7 @@ const replayBar = (() => {
 })();
 
 function startReplay(data) {
-  const frames = decodeReplay(data.frames);
+  const frames = decodeReplay(data.data);   // data.data = base64 입력 버퍼(개수는 data.frames)
   versus.hide(); hideRival(); pause.hide(); profile.close?.();
   state.paused = false;
   state.mode = 'replay';
