@@ -382,6 +382,45 @@ function makeMouthTexture(kind = 'smile', size = 256) {
     return textureFrom(cv);
   }
 
+  // 사악한 이빨 웃음 — 시커먼 입에 지그재그 뾰족니. 흑화용.
+  if (kind === 'evil') {
+    const my = size * 0.44;
+    const halfW = size * 0.31;
+    const halfH = size * 0.16;
+    const shape = () => {
+      g.beginPath();
+      g.moveTo(cx - halfW, my - halfH * 0.2);
+      g.quadraticCurveTo(cx, my - halfH * 0.9, cx + halfW, my - halfH * 0.2);   // 윗선(살짝 치켜올림)
+      g.quadraticCurveTo(cx, my + halfH * 1.7, cx - halfW, my - halfH * 0.2);   // 아랫선(크게 벌어짐)
+      g.closePath();
+    };
+    shape();
+    g.fillStyle = '#160a0a';           // 시커먼 입 속
+    g.fill();
+    g.save(); shape(); g.clip();
+    g.fillStyle = '#e9e2cf';           // 누런 뼈색 이빨
+    const teeth = 7;
+    const tw = (halfW * 2) / teeth;
+    for (let i = 0; i < teeth; i++) {  // 윗니(아래로 뾰족)
+      const x0 = cx - halfW + i * tw;
+      g.beginPath();
+      g.moveTo(x0, my - halfH * 0.5); g.lineTo(x0 + tw, my - halfH * 0.5);
+      g.lineTo(x0 + tw / 2, my + halfH * 0.25); g.closePath(); g.fill();
+    }
+    for (let i = 0; i < teeth; i++) {  // 아랫니(위로 뾰족)
+      const x0 = cx - halfW + i * tw;
+      g.beginPath();
+      g.moveTo(x0, my + halfH * 1.5); g.lineTo(x0 + tw, my + halfH * 1.5);
+      g.lineTo(x0 + tw / 2, my + halfH * 0.6); g.closePath(); g.fill();
+    }
+    g.restore();
+    shape();
+    g.strokeStyle = '#0c0808';
+    g.lineWidth = size * 0.05; g.lineJoin = 'round';
+    g.stroke();
+    return textureFrom(cv);
+  }
+
   const top = size * 0.34;
   const w = size * 0.34;
   const deep = size * 0.42;
@@ -1216,17 +1255,21 @@ export function buildPlant(id) {
     pupil.scale.set(es, 1.1 * es, 0.32);
     root.add(pupil);
 
-    const glint = new THREE.Mesh(glintGeo, glintMat);
-    glint.position.set(x - dir * 0.03 + ps[0], eyeY + 0.058 + ps[1], depth(3));
-    glint.scale.set(es, es, 0.38);
-    root.add(glint);
+    // 반사광(생기 있는 눈). face.glint:false 면 뺀다 → 죽은 듯 음산한 눈.
+    if (face?.glint !== false) {
+      const glint = new THREE.Mesh(glintGeo, glintMat);
+      glint.position.set(x - dir * 0.03 + ps[0], eyeY + 0.058 + ps[1], depth(3));
+      glint.scale.set(es, es, 0.38);
+      root.add(glint);
+    }
 
     // 눈썹. 눈만 있으면 표정이 없어 인형처럼 보인다.
+    // face.browAngle 로 기울기를 키우면(예: 2.5) 안쪽이 처져 성난 표정이 된다.
     const browRaise = face?.brow?.[eyeIndex(dir)] ?? 0;
     const browY = eyeY + 0.2 + browRaise;
     const brow = new THREE.Mesh(browGeo, ringMat);
     brow.position.set(x, browY, surfaceZ(x, browY) * 0.86);
-    brow.rotation.z = dir * 0.2;
+    brow.rotation.z = dir * 0.2 * (face?.browAngle ?? 1);
     root.add(brow);
   }
 
@@ -1252,22 +1295,24 @@ export function buildPlant(id) {
   mouth.position.set(0, mouthY, decalZ(0, mouthY));
   root.add(mouth);
 
-  // 볼 홍조
-  const blushGeo = new THREE.CircleGeometry(0.095, 18);
-  const blushMat = new THREE.MeshBasicMaterial({
-    color: COLOR.blush, transparent: true, opacity: 0.8
-  });
-  // 볼은 몸 옆면을 넘지 않게 붙인다. 넉넉하게 벌리면 통통한 몸에서는
-  // 실루엣 밖으로 삐져나가 허공에 분홍 얼룩이 뜬다.
-  const blushY = at(0.49);
-  const blushGap = Math.min(0.34, radiusAt(blushY) * 0.6);
-  for (const dir of DIRS) {
-    const x = dir * blushGap;
-    const blush = new THREE.Mesh(blushGeo, blushMat);
-    blush.position.set(x, blushY, decalZ(x, blushY));
-    blush.rotation.y = dir * 0.62;
-    blush.scale.set(1.3, 0.85, 1);
-    root.add(blush);
+  // 볼 홍조. face.blush:false 면 뺀다 → 귀여운 티를 없앤다(흑화 등).
+  if (face?.blush !== false) {
+    const blushGeo = new THREE.CircleGeometry(0.095, 18);
+    const blushMat = new THREE.MeshBasicMaterial({
+      color: COLOR.blush, transparent: true, opacity: 0.8
+    });
+    // 볼은 몸 옆면을 넘지 않게 붙인다. 넉넉하게 벌리면 통통한 몸에서는
+    // 실루엣 밖으로 삐져나가 허공에 분홍 얼룩이 뜬다.
+    const blushY = at(0.49);
+    const blushGap = Math.min(0.34, radiusAt(blushY) * 0.6);
+    for (const dir of DIRS) {
+      const x = dir * blushGap;
+      const blush = new THREE.Mesh(blushGeo, blushMat);
+      blush.position.set(x, blushY, decalZ(x, blushY));
+      blush.rotation.y = dir * 0.62;
+      blush.scale.set(1.3, 0.85, 1);
+      root.add(blush);
+    }
   }
 
   // ---- 소품 -------------------------------------------------------------
