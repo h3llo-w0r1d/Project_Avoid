@@ -412,7 +412,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 #voice-meter.over .vm-fill { background: linear-gradient(to top, #ffd54a, #fff3b0); }
 #voice-meter.hit .vm-track { box-shadow: 0 0 18px 4px rgba(255, 235, 120, 0.85); }
 #voice-meter .vm-threshold {
-  position: absolute; left: -3px; right: -3px; height: 3px; bottom: 20%;
+  position: absolute; left: -3px; right: -3px; height: 3px; bottom: 45%;  /* 고정 */
   background: #ff5566; box-shadow: 0 0 6px rgba(255, 85, 102, 0.85);
 }
 #voice-meter .vm-cap { font-size: 16px; opacity: 0.9; }

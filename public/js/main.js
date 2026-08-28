@@ -205,20 +205,20 @@ const voiceMeter = (() => {
     '<div class="vm-cap">🎤</div>';
   document.body.appendChild(el);
   const fill = el.querySelector('.vm-fill');
-  const line = el.querySelector('.vm-threshold');
-  const DISPLAY_MAX = 0.5;   // 이 음량이면 바가 꽉 찬다
+  // 기준선은 화면상 이 위치에 '고정'한다(CSS 에서 bottom: LINE%).
+  // 실제 기준(high)은 주변 소음에 맞춰 변하지만, 채워짐을 '기준 대비 비율'로
+  // 그리므로 선은 안 움직이고, 채워짐이 이 선을 넘는 순간이 곧 점프다.
+  const LINE = 45;
   let flashT = 0;
-  const pct = (v) => Math.max(0, Math.min(100, (v / DISPLAY_MAX) * 100));
   return {
     show() { el.classList.remove('hidden'); },
     hide() { el.classList.add('hidden'); },
     flash() { flashT = 0.18; el.classList.add('hit'); },
     update(level, high, dt) {
       el.classList.remove('hidden');
-      fill.style.height = pct(level) + '%';
-      line.style.bottom = pct(high) + '%';
-      // 기준선을 넘고 있으면 바를 뜨겁게(넘기는 중 표시)
-      el.classList.toggle('over', level >= high);
+      const ratio = high > 0 ? level / high : 0;      // 1 이면 기준선에 닿는다
+      fill.style.height = Math.max(0, Math.min(100, ratio * LINE)) + '%';
+      el.classList.toggle('over', level >= high);      // 기준 넘기는 중이면 뜨겁게
       if (flashT > 0) { flashT -= dt; if (flashT <= 0) el.classList.remove('hit'); }
     }
   };
