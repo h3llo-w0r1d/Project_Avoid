@@ -205,12 +205,12 @@ export const CHARACTERS = [
     unlockAt: Infinity,
     coinCost: 200,
     previewZoom: 1.18,
-    body: 0x241f19,          // 시커먼 흙빛
-    bodyTop: 0x3a3025,       // 머리는 살짝 재빛
-    bodyBottom: 0x0d0a07,    // 뿌리로 갈수록 새까맣게
-    outlineColor: 0x080605,  // 거의 검정 테두리
-    lumpy: 0.10,             // 울퉁불퉁 뒤틀린 뿌리 표면
-    bend: 0.08,              // 살짝 비틀린 음산한 자세
+    body: 0x6a5b46,          // 썩은 잿빛 갈색(너무 어둡지 않게 — 이목구비가 보이게)
+    bodyTop: 0x80705a,       // 머리는 조금 더 밝게
+    bodyBottom: 0x3c3122,    // 뿌리로 갈수록 짙게
+    outlineColor: 0x140f0a,  // 짙은 테두리로 이목구비를 또렷하게
+    lumpy: 0.16,             // 심하게 울퉁불퉁 뒤틀린 뿌리
+    bend: 0.14,              // 비틀린 음산한 자세
     profile: [               // 머리는 불룩, 허리는 잘록, 아래는 뒤틀려 홀쭉 — 기괴하게
       [0.000, 0.00], [0.010, 0.19], [0.050, 0.31], [0.140, 0.42],
       [0.280, 0.47], [0.430, 0.44], [0.560, 0.47], [0.700, 0.53],
@@ -224,7 +224,7 @@ export const CHARACTERS = [
       glint: false, blush: false             // 생기·귀여움 제거
     },
     mouth: 'evil', mouthScale: 1.3,          // 이빨 드러낸 사악한 웃음
-    top: { kind: 'leaves', count: 6, length: 1.45, color: '#2a4324' }, // 시들어 짙은 잎
+    top: { kind: 'leaves', count: 6, length: 1.45, color: '#3d5c34' }, // 시들어 짙은 잎
     skin: 'fiber'
   },
   {
