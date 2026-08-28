@@ -594,14 +594,15 @@ const adminCoins = (() => {
 
   // 가운데 원과 버튼을 지금 상태로 그린다.
   const refresh = () => {
-    const secs = wallet.playtime();
+    // 룰렛에 쓸 수 있는 초(잔여 풀). 1회 돌리면 100초 차감된다.
+    const secs = wallet.spendableSeconds();
     const left = isAdmin ? Infinity : wallet.spinsAvailable();
     if (hubEl) {
-      // 다음 1회까지 남은 시간(진행 표시). 관리자는 무제한.
+      // 다음 1회까지 더 필요한 시간(진행 표시). 관리자는 무제한.
       const toNext = isAdmin ? 0 : PER - (secs % PER);
       hubEl.innerHTML = isAdmin
         ? '<span class="hub-secs">∞</span><span class="hub-spins">무제한</span>'
-        : `<span class="hub-secs">누적 ${Math.floor(secs)}초</span>` +
+        : `<span class="hub-secs">보유 ${Math.floor(secs)}초</span>` +
           `<span class="hub-spins">${left}회</span>` +
           `<span class="hub-next">다음까지 ${Math.ceil(toNext)}초</span>`;
     }

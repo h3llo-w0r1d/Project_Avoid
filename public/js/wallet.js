@@ -51,6 +51,8 @@ export const wallet = {
   // 지금까지 돌린 횟수 / 100초당 1회 규칙으로 남은 횟수.
   spinsUsed() { return Math.max(0, Math.floor(Number(localStorage.getItem(SPINUSED_KEY)) || 0)); },
   spinsAvailable() { return Math.max(0, Math.floor(this.playtime() / SECONDS_PER_SPIN) - this.spinsUsed()); },
+  // 룰렛에 쓸 수 있는 초(전체 누적에서 이미 돌린 만큼 뺀 잔여 풀). 1회 돌리면 100초 준다.
+  spendableSeconds() { return Math.max(0, this.playtime() - this.spinsUsed() * SECONDS_PER_SPIN); },
   useSpin() { localStorage.setItem(SPINUSED_KEY, String(this.spinsUsed() + 1)); },
   secondsPerSpin() { return SECONDS_PER_SPIN; },
 
