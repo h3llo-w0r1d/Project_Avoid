@@ -302,10 +302,11 @@ export const CHARACTERS = [
     top: { kind: 'dogears', color: 0xffffff },   // 축 처진 강아지 귀
     tail: true,              // 엉덩이 꼬리
     nose: 0x2a2422,          // 작은 코
-    mouthScale: 0.72,        // 작은 입
+    mouth: 'cute',           // 코 아래 작은 ω 입(선만) — 귀엽게
+    mouthScale: 1.0,
     face: {
-      eye: 0x1d1c20, sclera: 0x1d1c20,   // 솔직한 검은 눈(흰자 없이 동그랗게)
-      eyeScale: [1.15, 1.15]             // 큼직하게(귀엽게)
+      eye: 0x1d1c20, sclera: 0x1d1c20,   // 흰자 없이 동그란 검은 눈
+      eyeScale: [1.05, 1.05]             // 살짝 크게(귀엽게)
     },
     sizeMul: 1.2             // 몸이 작아 보여 키운다(겉보기만)
   },

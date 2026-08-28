@@ -382,6 +382,23 @@ function makeMouthTexture(kind = 'smile', size = 256) {
     return textureFrom(cv);
   }
 
+  // 귀여운 강아지 입 — 코 아래 짧은 세로선 + 작은 ω(두 봉우리). 선만.
+  if (kind === 'cute') {
+    g.strokeStyle = '#2a2320';
+    g.lineWidth = size * 0.05; g.lineCap = 'round'; g.lineJoin = 'round';
+    const my = size * 0.44, w = size * 0.15;
+    g.beginPath();
+    g.moveTo(cx, my - size * 0.14);           // 코 아래 세로선(인중)
+    g.lineTo(cx, my - size * 0.01);
+    g.stroke();
+    g.beginPath();                            // ω 입(두 봉우리)
+    g.moveTo(cx - w, my - size * 0.02);
+    g.quadraticCurveTo(cx - w * 0.5, my + size * 0.11, cx, my - size * 0.01);
+    g.quadraticCurveTo(cx + w * 0.5, my + size * 0.11, cx + w, my - size * 0.02);
+    g.stroke();
+    return textureFrom(cv);
+  }
+
   // 사악한 이빨 웃음 — 시커먼 입에 지그재그 뾰족니. 흑화용.
   if (kind === 'evil') {
     const my = size * 0.44;
