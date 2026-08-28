@@ -980,6 +980,62 @@ function addHorns(root, ruler, spec, outlineMat, oW = 1) {
   return [];
 }
 
+// 악마 삼지창 — 오른손에 세워 든 빨간 창(자루 + 세 갈래 창끝).
+function addTrident(root, ruler, outlineMat) {
+  const red = toon(0xd21f1f);
+  const dark = toon(0x6e1414);
+  const t = new THREE.Group();
+
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 1.5, 10), dark);
+  t.add(shaft); addOutline(shaft, 0.02, outlineMat);
+
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.08), red);
+  bar.position.set(0, 0.62, 0);
+  t.add(bar); addOutline(bar, 0.02, outlineMat);
+
+  const prong = () => new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.34, 10), red);
+  const mid = prong(); mid.position.set(0, 0.86, 0); t.add(mid); addOutline(mid, 0.018, outlineMat);
+  for (const dir of [-1, 1]) {
+    const p = prong(); p.position.set(dir * 0.19, 0.84, 0); t.add(p); addOutline(p, 0.018, outlineMat);
+  }
+
+  // 오른손 쪽에 세워 든다(총 소품과 반대편).
+  const armY = ruler.at(0.42);
+  const handX = ruler.radiusAt(armY) * 0.82 + 0.22;
+  t.position.set(handX, armY + 0.12, 0.28);
+  t.rotation.set(0.12, 0, -0.1);
+  root.add(t);
+}
+
+// 천사 날개 — 등 뒤로 부채처럼 펼친 흰 깃털 한 쌍.
+function addWings(root, ruler, outlineMat) {
+  const white = toon(0xfbfaf5);
+  const backY = ruler.at(0.56);
+  const backZ = -ruler.radiusAt(backY) - 0.05;   // 몸 뒤로
+  const FEATHERS = [
+    { len: 0.95, ang: 0.15 }, { len: 1.15, ang: 0.5 },
+    { len: 1.05, ang: 0.9 }, { len: 0.78, ang: 1.28 }
+  ];
+  for (const dir of [-1, 1]) {
+    const wing = new THREE.Group();
+    for (const f of FEATHERS) {
+      const geo = new THREE.SphereGeometry(0.5, 12, 8);
+      geo.scale(0.15, f.len, 0.055);   // 길고 납작한 깃털
+      geo.computeVertexNormals();
+      const feather = new THREE.Mesh(geo, white);
+      feather.position.y = f.len * 0.5;
+      const pivot = new THREE.Group();
+      pivot.rotation.z = dir * f.ang;   // 부채처럼 벌림
+      pivot.add(feather);
+      addOutline(feather, 0.014, outlineMat);
+      wing.add(pivot);
+    }
+    wing.position.set(dir * (ruler.radiusAt(backY) * 0.45), backY, backZ);
+    wing.rotation.y = dir * 0.3;        // 살짝 바깥으로 벌려 입체감
+    root.add(wing);
+  }
+}
+
 const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
@@ -1357,6 +1413,8 @@ export function buildPlant(id) {
   if (spec.nose) addNose(root, ruler, spec.nose, outlineMat, oW);
   if (spec.halo) addHalo(root, ruler, spec.halo, outlineMat, oW);     // 천사 후광
   if (spec.horns) addHorns(root, ruler, spec.horns, outlineMat, oW);  // 악마 뿔
+  if (spec.wings) addWings(root, ruler, outlineMat);                  // 천사 날개(등)
+  if (spec.trident) addTrident(root, ruler, outlineMat);              // 악마 삼지창(손)
 
   // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
   if (spec.question) {
