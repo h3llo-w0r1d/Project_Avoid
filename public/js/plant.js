@@ -1009,36 +1009,58 @@ function addTrident(root, ruler, outlineMat) {
 
 // 오른쪽 날개 하나를 2D 로 그린다(흰 깃털 실루엣 + 깃털 선). 왼쪽은 평면을
 // 좌우반전해 쓴다. 3D 깃털을 쌓는 것보다 훨씬 깔끔하고 조명에도 안 물든다.
-function makeWingTexture(size = 320) {
+function makeWingTexture(size = 360) {
   const cv = canvas(size);
   const g = cv.getContext('2d');
   const S = size;
 
-  // 실루엣: 어깨(좌하단)에서 앞전이 위로 볼록하게 날개끝까지 갔다가,
-  // 트레일링(깃털 끝)이 뾰족뾰족 아래로 내려와 어깨로 닫힌다.
-  g.beginPath();
-  g.moveTo(S * 0.10, S * 0.82);
-  g.bezierCurveTo(S * 0.18, S * 0.34, S * 0.55, S * 0.09, S * 0.93, S * 0.19);  // 앞전 → 날개끝
-  const tips = [[0.905, 0.40], [0.795, 0.575], [0.66, 0.71], [0.50, 0.80], [0.34, 0.835], [0.19, 0.82]];
-  let px = 0.93, py = 0.19;
-  for (const [tx, ty] of tips) {          // 깃털 스캘럽(끝이 뾰족)
-    g.quadraticCurveTo(S * ((px + tx) / 2 + 0.045), S * ((py + ty) / 2 + 0.05), S * tx, S * ty);
-    px = tx; py = ty;
-  }
-  g.quadraticCurveTo(S * 0.09, S * 0.86, S * 0.10, S * 0.82);
-  g.closePath();
-  g.fillStyle = '#ffffff'; g.fill();
-  g.lineWidth = S * 0.012; g.strokeStyle = '#d7d2c7'; g.lineJoin = 'round'; g.stroke();
-
-  // 안쪽 깃털선(층을 나눠 결을 낸다)
-  g.strokeStyle = 'rgba(150,145,135,0.45)'; g.lineWidth = S * 0.006;
-  const lines = [[0.16, 0.74, 0.82, 0.30], [0.21, 0.79, 0.72, 0.48], [0.27, 0.82, 0.60, 0.66], [0.35, 0.83, 0.50, 0.78]];
-  for (const [x1, y1, x2, y2] of lines) {
+  // 트레일링(깃털 끝) 스캘럽 위치
+  const tips = [[0.915, 0.37], [0.835, 0.52], [0.74, 0.645], [0.63, 0.735],
+    [0.51, 0.80], [0.38, 0.835], [0.25, 0.835], [0.14, 0.81]];
+  const silhouette = () => {
     g.beginPath();
-    g.moveTo(S * x1, S * y1);
-    g.quadraticCurveTo(S * (x1 + x2) / 2, S * Math.min(y1, y2) - S * 0.03, S * x2, S * y2);
+    g.moveTo(S * 0.10, S * 0.82);
+    g.bezierCurveTo(S * 0.18, S * 0.32, S * 0.55, S * 0.08, S * 0.94, S * 0.18);   // 앞전 → 날개끝
+    let px = 0.94, py = 0.18;
+    for (const [tx, ty] of tips) {
+      g.quadraticCurveTo(S * ((px + tx) / 2 + 0.03), S * ((py + ty) / 2 + 0.05), S * tx, S * ty);
+      px = tx; py = ty;
+    }
+    g.quadraticCurveTo(S * 0.09, S * 0.85, S * 0.10, S * 0.82);
+    g.closePath();
+  };
+  silhouette(); g.fillStyle = '#fdfdfb'; g.fill();
+
+  g.save(); silhouette(); g.clip();
+  // 음영(앞전-안쪽을 살짝 어둡게 → 깊이)
+  const grd = g.createLinearGradient(S * 0.15, S * 0.15, S * 0.5, S * 0.9);
+  grd.addColorStop(0, 'rgba(206,202,191,0)'); grd.addColorStop(1, 'rgba(198,194,183,0.42)');
+  g.fillStyle = grd; g.fillRect(0, 0, S, S);
+
+  // 비행깃 결 선: 손목(갈라지는 지점)에서 각 트레일링 끝으로
+  const wx = 0.34, wy = 0.30;
+  g.lineWidth = S * 0.007; g.strokeStyle = 'rgba(150,146,136,0.5)'; g.lineCap = 'round';
+  for (const [tx, ty] of tips) {
+    g.beginPath();
+    g.moveTo(S * wx, S * wy);
+    g.quadraticCurveTo(S * (wx * 0.35 + tx * 0.65), S * (Math.min(wy, ty) + Math.abs(ty - wy) * 0.15), S * tx, S * (ty - 0.01));
     g.stroke();
   }
+  // 덮깃(coverts) 층: 위쪽에 작은 스캘럽 곡선을 겹쳐 그려 결을 낸다
+  const covert = (y0, x0, x1, bumps, depth, alpha) => {
+    g.beginPath(); g.moveTo(S * x0, S * y0);
+    for (let i = 1; i <= bumps; i++) {
+      const t = i / bumps, x = x0 + (x1 - x0) * t;
+      g.quadraticCurveTo(S * (x - (x1 - x0) / bumps * 0.5), S * (y0 + Math.sin(t * Math.PI) * 0.02 + depth * t), S * x, S * (y0 + depth * t));
+    }
+    g.lineWidth = S * 0.006; g.strokeStyle = `rgba(140,136,126,${alpha})`; g.stroke();
+  };
+  covert(0.30, 0.30, 0.90, 7, 0.10, 0.5);
+  covert(0.42, 0.24, 0.80, 7, 0.10, 0.45);
+  covert(0.55, 0.20, 0.66, 6, 0.09, 0.4);
+  g.restore();
+
+  silhouette(); g.lineWidth = S * 0.011; g.strokeStyle = '#d1ccc0'; g.lineJoin = 'round'; g.stroke();
   return textureFrom(cv);
 }
 
