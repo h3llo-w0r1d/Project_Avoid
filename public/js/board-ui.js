@@ -168,7 +168,10 @@ export class BoardUI {
     this.openId = null;
     this.el.detail.classList.add('hidden');
     this.el.tabs.classList.remove('hidden');
-    this.el.write.classList.remove('hidden');
+    // 패치노트 칸은 일반 사용자에겐 읽기 전용 — 입력칸을 숨겨 공지만 보게 한다.
+    // (관리자는 패치노트를 써야 하므로 입력칸을 유지한다.)
+    const canWriteHere = this.tab !== 'patch' || this.h.isAdmin();
+    this.el.write.classList.toggle('hidden', !canWriteHere);
     this.el.list.classList.remove('hidden');
   }
 
