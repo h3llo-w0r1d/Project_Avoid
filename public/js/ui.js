@@ -490,6 +490,14 @@ export const api = {
     }).catch(() => {});
   },
 
+  // 룰렛 한 번 돌린 결과를 남긴다(참고용). 관리자는 서버가 걸러 저장 안 함.
+  recordSpin(cost, reward, guestName) {
+    fetch('/api/spin', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cost, reward, name: guestName })
+    }).catch(() => {});
+  },
+
   // ---- 관리 (관리자 계정으로 로그인했을 때만 통한다) ----
 
   async amIAdmin() {

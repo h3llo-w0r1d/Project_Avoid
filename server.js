@@ -18,6 +18,7 @@ import { openGeo, openAsn, asnOrg, countryCode } from './lib/geo.js';
 import { openBoardStore, CATEGORIES, ADMIN_CATEGORIES } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPurchasesStore } from './lib/purchases.js';
+import { openSpinsStore } from './lib/spins.js';
 import { openCoinGrants } from './lib/coingrants.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
@@ -117,6 +118,7 @@ const board = openBoardStore(db);
 // 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
 const plays = openPlaysStore(db);
 const purchases = openPurchasesStore(db);   // 코인으로 캐릭터 산 기록
+const spins = openSpinsStore(db);           // 코인 룰렛 돌린 기록
 const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 대기
 
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
@@ -487,6 +489,26 @@ app.post('/api/purchase', (req, res) => {
   }
 });
 
+// 코인 룰렛을 돌렸을 때 남긴다(참고용 로그 — 코인 처리는 브라우저에서).
+// 관리자(무한 코인)는 진짜 소비가 아니므로 남기지 않는다. 이름은 로그인한
+// 사람은 서버 닉네임으로 덮어써 사칭을 막는다.
+app.post('/api/spin', (req, res) => {
+  if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
+  const who = posterName(req, req.body?.name);
+  if (who.error) return res.status(400).json({ error: who.error });
+
+  const cost = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.cost) || 0)));
+  const reward = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.reward) || 0)));
+
+  try {
+    spins.add({ name: who.name, userId: req.user?.id ?? null, cost, reward });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('룰렛 기록 저장 실패:', err);
+    res.status(500).json({ error: '기록에 실패했습니다.' });
+  }
+});
+
 // ---------------------------------------------------------------- 관리
 
 // 관리자를 가리는 방법이 둘이다.
@@ -649,6 +671,18 @@ app.get('/api/admin/purchases', requireAdmin, (req, res) => {
 
 app.delete('/api/admin/purchases/:id', requireAdmin, (req, res) => {
   if (!purchases.remove(req.params.id)) return res.status(404).json({ error: '이미 없는 기록입니다.' });
+  res.json({ ok: true });
+});
+
+// 룰렛 기록(관리자). 누가 얼마 걸어 뭐가 나왔는지 시간순으로.
+app.get('/api/admin/spins', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(spins.page(limit, offset));
+});
+
+app.delete('/api/admin/spins/:id', requireAdmin, (req, res) => {
+  if (!spins.remove(req.params.id)) return res.status(404).json({ error: '이미 없는 기록입니다.' });
   res.json({ ok: true });
 });
 

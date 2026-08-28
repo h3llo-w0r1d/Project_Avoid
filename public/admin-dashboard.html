@@ -195,6 +195,12 @@
     <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
   <div class="wrap" id="buy-table"></div>
   <div class="pager" id="buy-pager"></div>
+
+  <h2>룰렛 기록 <span class="dim" id="spin-count"></span></h2>
+  <p class="hint">코인 룰렛을 돌린 기록을 시간순으로 남깁니다. 누가·얼마를 걸어·무엇이 나왔는지.
+    <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
+  <div class="wrap" id="spin-table"></div>
+  <div class="pager" id="spin-pager"></div>
 </main>
 
 <script type="module">
@@ -248,7 +254,7 @@ async function load() {
     $('meta').textContent = `${data.season.name} · 지금 접속 ${data.present ?? 0}명` +
       (versus ? ` (1v1 ${versus}명)` : '');
     say('');
-    drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawPurchases();
+    drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawPurchases(); drawSpins();
   } catch (e) { say(e.message, true); }
 }
 
@@ -551,6 +557,43 @@ async function drawPurchases() {
 async function delPurchase(id) {
   if (!confirm('이 구매 기록을 지웁니다.')) return;
   try { await api(`/api/admin/purchases/${encodeURIComponent(id)}`, { method: 'DELETE' }); say('지웠습니다.'); drawPurchases(); }
+  catch (e) { say(e.message, true); }
+}
+
+const SPIN_PER = 20;
+let spinPage = 0;
+async function drawSpins() {
+  try {
+    const { rows, total, totalCost, totalReward } = await api(`/api/admin/spins?limit=${SPIN_PER}&offset=${spinPage * SPIN_PER}`);
+    // 총 몇 번 돌렸는지 + 전체 순수익(운영자 관점: 건 코인 - 나간 코인).
+    $('spin-count').textContent = total
+      ? `${total}회 · 순코인 ${totalCost - totalReward >= 0 ? '+' : ''}${totalCost - totalReward}` : '';
+    if (!total) { $('spin-table').innerHTML = '<p class="empty">아직 룰렛 기록이 없습니다</p>'; $('spin-pager').innerHTML = ''; return; }
+    const body = rows.map((r) => {
+      const who = r.member ? `<span style="color:#9ad0ff">${esc(r.name)}</span>` : `${esc(r.name)} <span class="dim">(게스트)</span>`;
+      const got = r.reward > 0
+        ? `<span style="color:#57d18a">🪙 ${r.reward}</span>`
+        : '<span class="dim">꽝</span>';
+      return `<tr><td class="dim">${stamp(r.at)}</td>
+        <td>${who}</td>
+        <td class="num">🪙 ${r.cost}</td>
+        <td class="num">${got}</td>
+        <td><button class="act" data-del="${r.id}">삭제</button></td></tr>`;
+    }).join('');
+    $('spin-table').innerHTML =
+      `<table><thead><tr><th>시간</th><th>돌린 사람</th><th>건 코인</th><th>결과</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    for (const b of $('spin-table').querySelectorAll('[data-del]')) {
+      b.addEventListener('click', () => delSpin(b.dataset.del));
+    }
+    const pages = Math.max(1, Math.ceil(total / SPIN_PER));
+    spinPage = Math.min(spinPage, pages - 1);
+    pager('spin-pager', pages, spinPage, (p) => { spinPage = p; drawSpins(); });
+  } catch (e) { $('spin-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+async function delSpin(id) {
+  if (!confirm('이 룰렛 기록을 지웁니다.')) return;
+  try { await api(`/api/admin/spins/${encodeURIComponent(id)}`, { method: 'DELETE' }); say('지웠습니다.'); drawSpins(); }
   catch (e) { say(e.message, true); }
 }
 

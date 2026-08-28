@@ -507,6 +507,8 @@ const adminCoins = (() => {
       spinning = false;
       if (coins > 0) wallet.add(coins);
       renderCoinHud();
+      // 관리자(무한 코인)가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고).
+      if (!isAdmin) api.recordSpin(COST, coins, auth.signedIn ? undefined : auth.displayName);
       if (characters.open$) characters.draw();   // 코인 늘어 상점 살 수 있게 됐을 수도
       if (coins === 0) {
         resultEl.textContent = '꽝! 다음 기회에…';
