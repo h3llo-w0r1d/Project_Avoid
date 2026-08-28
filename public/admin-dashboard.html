@@ -474,13 +474,15 @@ async function drawPlays() {
     // 번호는 "몇 번째로 한 판인지". 제일 오래된 첫 판이 1, 최근 판이 total.
     // 화면은 최근이 위(서버가 시간 역순으로 주므로)라, 위에서부터 번호가 줄어든다.
     const start = playPage * PLAY_PER;
+    const device = (m) => m == null ? '<span class="dim">–</span>' : (m ? '📱 폰' : '💻 PC');
     const body = rows.map((r, i) =>
       `<tr><td class="num dim">${total - start - i}</td>
         <td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
-        <td class="dim">${stamp(r.at)}</td></tr>`).join('');
+        <td class="dim">${stamp(r.at)}</td>
+        <td>${device(r.mobile)}</td></tr>`).join('');
     $('play-table').innerHTML =
-      `<table><thead><tr><th>#</th><th>이름</th><th>버틴 시간</th><th>플레이한 때</th></tr></thead><tbody>${body}</tbody></table>`;
+      `<table><thead><tr><th>#</th><th>이름</th><th>버틴 시간</th><th>플레이한 때</th><th>기기</th></tr></thead><tbody>${body}</tbody></table>`;
 
     const pages = Math.max(1, Math.ceil(total / PLAY_PER));
     playPage = Math.min(playPage, pages - 1);

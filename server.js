@@ -381,7 +381,7 @@ app.post('/api/scores', async (req, res) => {
     const entry = await scores.add(finalName, seconds, req.user?.id ?? null, mode);
     stats.runFinished(t);
     // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
-    plays.add({ name: finalName, seconds, userId: req.user?.id ?? null });
+    plays.add({ name: finalName, seconds, userId: req.user?.id ?? null, mobile: isMobile(req.get('user-agent')) });
     res.json({
       id: entry.id,
       rank: scores.rankOf(entry.id),
