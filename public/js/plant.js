@@ -1007,31 +1007,36 @@ function addTrident(root, ruler, outlineMat) {
   root.add(t);
 }
 
-// 천사 날개 — 등 뒤로 부채처럼 펼친 흰 깃털 한 쌍.
+// 천사 날개 — 등(몸 아래·뒤)에서 바깥·아래로 펼친 흰 깃털 한 쌍(새 날개 모양).
 function addWings(root, ruler, outlineMat) {
-  const white = toon(0xfbfaf5);
-  const backY = ruler.at(0.56);
-  const backZ = -ruler.radiusAt(backY) - 0.05;   // 몸 뒤로
+  const white = toon(0xffffff);
+  const shoulderY = ruler.at(0.42);                 // 얼굴보다 아래(등쪽)
+  const backZ = -ruler.radiusAt(shoulderY) - 0.14;  // 몸 뒤로 확실히
+  // 어깨에서 바깥으로 뻗는 깃털. ang 이 90°(≈1.57) 근처면 옆으로, 그보다 크면
+  // 아래로 처진다 → 위(길게)에서 아래(짧게)로 부채처럼 펼쳐 새 날개처럼 보인다.
   const FEATHERS = [
-    { len: 0.95, ang: 0.15 }, { len: 1.15, ang: 0.5 },
-    { len: 1.05, ang: 0.9 }, { len: 0.78, ang: 1.28 }
+    { len: 1.35, ang: 1.15 },   // 제일 위·길게(위-바깥)
+    { len: 1.45, ang: 1.42 },
+    { len: 1.30, ang: 1.70 },   // 거의 수평
+    { len: 1.05, ang: 1.98 },
+    { len: 0.78, ang: 2.24 }    // 아래·짧게(아래-바깥)
   ];
   for (const dir of [-1, 1]) {
     const wing = new THREE.Group();
     for (const f of FEATHERS) {
       const geo = new THREE.SphereGeometry(0.5, 12, 8);
-      geo.scale(0.15, f.len, 0.055);   // 길고 납작한 깃털
+      geo.scale(0.135, f.len, 0.05);   // 길고 납작한 깃털
       geo.computeVertexNormals();
       const feather = new THREE.Mesh(geo, white);
       feather.position.y = f.len * 0.5;
       const pivot = new THREE.Group();
-      pivot.rotation.z = dir * f.ang;   // 부채처럼 벌림
+      pivot.rotation.z = dir * f.ang;
       pivot.add(feather);
-      addOutline(feather, 0.014, outlineMat);
+      addOutline(feather, 0.012, outlineMat);
       wing.add(pivot);
     }
-    wing.position.set(dir * (ruler.radiusAt(backY) * 0.45), backY, backZ);
-    wing.rotation.y = dir * 0.3;        // 살짝 바깥으로 벌려 입체감
+    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.4), shoulderY, backZ);
+    wing.rotation.y = dir * 0.4;        // 뒤에서 바깥으로 벌려 입체감
     root.add(wing);
   }
 }
