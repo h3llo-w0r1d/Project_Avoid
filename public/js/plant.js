@@ -1007,61 +1007,59 @@ function addTrident(root, ruler, outlineMat) {
   root.add(t);
 }
 
-// 천사 날개 — 등에서 바깥으로 펼친 흰 깃털 한 쌍. 뾰족한 깃털을 날개 곡선을
-// 따라 여러 겹(긴 비행깃 + 짧은 덮깃)으로 층층이 얹어 새 날개처럼 보이게 한다.
-function addWings(root, ruler, outlineMat) {
-  const white = toon(0xffffff);
-  const shade = toon(0xe9e6df);   // 뒤쪽(아래) 겹은 살짝 어둡게 입체감
-  const shoulderY = ruler.at(0.42);                 // 얼굴보다 아래(등쪽)
-  const backZ = -ruler.radiusAt(shoulderY) - 0.16;  // 몸 뒤로 확실히
+// 오른쪽 날개 하나를 2D 로 그린다(흰 깃털 실루엣 + 깃털 선). 왼쪽은 평면을
+// 좌우반전해 쓴다. 3D 깃털을 쌓는 것보다 훨씬 깔끔하고 조명에도 안 물든다.
+function makeWingTexture(size = 320) {
+  const cv = canvas(size);
+  const g = cv.getContext('2d');
+  const S = size;
 
-  // 깃털 하나: 밑동 굵고 끝 뾰족한 납작한 잎(원뿔을 눌러 만든다).
-  const featherGeo = (len, r) => {
-    const g = new THREE.ConeGeometry(r, len, 8);
-    g.translate(0, len * 0.5, 0);   // 밑동을 피벗(원점)에
-    g.scale(1, 1, 0.32);            // 앞뒤로 납작하게
-    g.computeVertexNormals();
-    return g;
-  };
+  // 실루엣: 어깨(좌하단)에서 앞전이 위로 볼록하게 날개끝까지 갔다가,
+  // 트레일링(깃털 끝)이 뾰족뾰족 아래로 내려와 어깨로 닫힌다.
+  g.beginPath();
+  g.moveTo(S * 0.10, S * 0.82);
+  g.bezierCurveTo(S * 0.18, S * 0.34, S * 0.55, S * 0.09, S * 0.93, S * 0.19);  // 앞전 → 날개끝
+  const tips = [[0.905, 0.40], [0.795, 0.575], [0.66, 0.71], [0.50, 0.80], [0.34, 0.835], [0.19, 0.82]];
+  let px = 0.93, py = 0.19;
+  for (const [tx, ty] of tips) {          // 깃털 스캘럽(끝이 뾰족)
+    g.quadraticCurveTo(S * ((px + tx) / 2 + 0.045), S * ((py + ty) / 2 + 0.05), S * tx, S * ty);
+    px = tx; py = ty;
+  }
+  g.quadraticCurveTo(S * 0.09, S * 0.86, S * 0.10, S * 0.82);
+  g.closePath();
+  g.fillStyle = '#ffffff'; g.fill();
+  g.lineWidth = S * 0.012; g.strokeStyle = '#d7d2c7'; g.lineJoin = 'round'; g.stroke();
 
+  // 안쪽 깃털선(층을 나눠 결을 낸다)
+  g.strokeStyle = 'rgba(150,145,135,0.45)'; g.lineWidth = S * 0.006;
+  const lines = [[0.16, 0.74, 0.82, 0.30], [0.21, 0.79, 0.72, 0.48], [0.27, 0.82, 0.60, 0.66], [0.35, 0.83, 0.50, 0.78]];
+  for (const [x1, y1, x2, y2] of lines) {
+    g.beginPath();
+    g.moveTo(S * x1, S * y1);
+    g.quadraticCurveTo(S * (x1 + x2) / 2, S * Math.min(y1, y2) - S * 0.03, S * x2, S * y2);
+    g.stroke();
+  }
+  return textureFrom(cv);
+}
+
+// 천사 날개 — 그린 날개 텍스처를 판 두 개(좌우 대칭)에 붙여 등에 단다.
+function addWings(root, ruler, _outlineMat) {
+  const tex = makeWingTexture();
+  const shoulderY = ruler.at(0.46);
+  const backZ = -ruler.radiusAt(shoulderY) - 0.06;
+  const W = 1.7, H = 1.6;
   for (const dir of [-1, 1]) {
+    // MeshBasic(빛 안 받음)이라 항상 순백. 뒷면도 보이게, 알파로 깃털 모양만.
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: true, alphaTest: 0.4, side: THREE.DoubleSide, depthWrite: false
+    });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(W, H), mat);
+    plane.position.set(W * 0.32, H * 0.28, 0);   // 텍스처의 어깨(좌하단)가 그룹 원점 근처로
     const wing = new THREE.Group();
-
-    // 1) 비행깃(primaries) — 긴 깃털을 어깨→날개끝 곡선을 따라. 가운데가 제일 길고
-    //    끝으로 갈수록 아래로 눕는다.
-    const N = 12;
-    for (let i = 0; i < N; i++) {
-      const t = i / (N - 1);                       // 0 뿌리 ~ 1 끝
-      const armX = t * 2.0;                         // 바깥으로
-      const armY = Math.sin(t * Math.PI * 0.62) * 0.95 - t * t * 0.55;  // 올랐다가 끝에서 처짐
-      const len = 0.55 + Math.sin(t * Math.PI * 0.9) * 1.05;            // 가운데가 최장
-      const rad = 0.11 - t * 0.02;
-      const ang = 0.65 + t * 1.65;                 // 뿌리는 위로, 끝은 아래-바깥으로
-      const feather = new THREE.Mesh(featherGeo(len, rad), i > N * 0.4 ? shade : white);
-      const pivot = new THREE.Group();
-      pivot.position.set(dir * armX, armY, -t * 0.05);
-      pivot.rotation.z = dir * ang;
-      pivot.add(feather);
-      addOutline(feather, 0.009, outlineMat);
-      wing.add(pivot);
-    }
-
-    // 2) 덮깃(coverts) — 어깨 위쪽에 짧은 깃털을 한 줄 더 겹쳐 도톰하게.
-    const M = 7;
-    for (let i = 0; i < M; i++) {
-      const t = i / (M - 1);
-      const len = 0.45 + Math.sin(t * Math.PI) * 0.45;
-      const feather = new THREE.Mesh(featherGeo(len, 0.1), white);
-      const pivot = new THREE.Group();
-      pivot.position.set(dir * (0.12 + t * 1.45), 0.12 + Math.sin(t * Math.PI * 0.6) * 0.62, 0.06);
-      pivot.rotation.z = dir * (0.5 + t * 1.4);
-      pivot.add(feather);
-      wing.add(pivot);
-    }
-
-    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.32), shoulderY, backZ);
-    wing.rotation.y = dir * 0.45;   // 뒤에서 바깥으로 벌려 입체감
-    wing.scale.setScalar(0.92);
+    wing.add(plane);
+    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.28), shoulderY, backZ);
+    wing.rotation.y = dir * 0.32;   // 바깥으로 살짝 틀어 입체감
+    wing.scale.set(dir, 1, 1);      // 왼쪽은 좌우 반전
     root.add(wing);
   }
 }
