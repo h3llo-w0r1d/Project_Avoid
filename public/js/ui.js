@@ -22,6 +22,16 @@ const BOARDS = {
     value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
     mine: (me) => `내 하드코어 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
   },
+  voice: {
+    empty: '아직 마이크 기록이 없습니다',
+    value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
+    mine: (me) => `내 마이크 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
+  },
+  voicehard: {
+    empty: '아직 마이크(하드코어) 기록이 없습니다',
+    value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
+    mine: (me) => `내 마이크·하드코어 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
+  },
   wins: {
     empty: '아직 대전 기록이 없습니다',
     value: (e) => `${e.wins}<em>승</em> <span class="dim">${e.losses}패</span>`,
@@ -428,7 +438,7 @@ export const api = {
   async top(name, mode = 'normal') {
     const params = new URLSearchParams();
     if (name) params.set('name', name);
-    if (mode === 'hardcore') params.set('mode', 'hardcore');
+    if (mode && mode !== 'normal') params.set('mode', mode);
     const query = params.toString() ? `?${params}` : '';
     const res = await fetch(`/api/scores${query}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

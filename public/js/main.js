@@ -25,6 +25,18 @@ import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
 // 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
 const HARDCORE_MODS = { warnMul: 0.75, speedMul: 1.2, maxLiveAdd: 1, volleyAdd: 1 };
+
+// 랭킹 모드(네 갈래)와 랭킹 탭 이름을 서로 오간다.
+function runModeOf(hardcore, voice) {
+  if (hardcore && voice) return 'voicehard';
+  if (voice) return 'voice';
+  if (hardcore) return 'hardcore';
+  return 'normal';
+}
+// 랭킹 탭 kind → 서버 모드. 'time' 만 이름이 다르고 나머지는 같다.
+const BOARD_MODE = { time: 'normal', hardcore: 'hardcore', voice: 'voice', voicehard: 'voicehard' };
+const MODE_BOARD = { normal: 'time', hardcore: 'hardcore', voice: 'voice', voicehard: 'voicehard' };
+
 const HARDCORE_BEST_KEY = 'voltline.best.hardcore';
 function hardcoreBest() { return Number(localStorage.getItem(HARDCORE_BEST_KEY)) || 0; }
 
@@ -859,11 +871,16 @@ function startGame() {
   // 실패해도 여기서 터뜨리지 않는다. 그러면 판이 시작조차 안 된다.
   state.ticket = api.startRun().catch(() => null);
 
+  // 이번 판의 모드를 확정한다(랭킹이 네 갈래로 갈린다):
+  // 버티기 normal · 하드코어 hardcore · 마이크 voice · 마이크(하드코어) voicehard.
+  state.voice = voiceOn;
+  state.runMode = runModeOf(state.hardcore, state.voice);
+
   // 다시보기용: 이번 판의 씨앗을 정해 전기선을 그 씨앗으로 돌리고,
   // 프레임 입력을 기록하기 시작한다(하드코어는 바닥구멍이 아직 비결정이라 제외).
   const seed = (Math.random() * 2 ** 31) | 0;
   rec = state.hardcore ? null
-    : { seed, mode: 'normal', dt: [], x: [], y: [], j: [] };
+    : { seed, mode: state.runMode, dt: [], x: [], y: [], j: [] };
 
   player.reset();
   setArenaVisible(true);
@@ -1288,10 +1305,10 @@ async function finishGame() {
 
   ui.showGameOver(score, state.cause, state.hardcore);
 
-  // 하드코어는 하드코어 랭킹으로, 일반은 일반 랭킹으로 따로 올린다.
-  const mode = state.hardcore ? 'hardcore' : 'normal';
-  const board = state.hardcore ? 'hardcore' : 'time';
-  const tag = state.hardcore ? '🔥 하드코어 ' : '';
+  // 모드마다 랭킹이 따로 있다(버티기·하드코어·마이크·마이크 하드코어).
+  const mode = state.runMode ?? runModeOf(state.hardcore, state.voice);
+  const board = MODE_BOARD[mode] ?? 'time';
+  const tag = { normal: '', hardcore: '🔥 하드코어 ', voice: '🎤 마이크 ', voicehard: '🎤🔥 마이크·하드코어 ' }[mode] ?? '';
 
   // 1초도 못 버틴 기록은 랭킹을 어지럽히므로 올리지 않는다
   if (score < 1) {
@@ -1340,12 +1357,9 @@ const VERSUS_NOTE = {
 
 async function refreshLeaderboard(kind = 'time') {
   try {
-    if (kind === 'time') {
-      ui.renderLeaderboard(await api.top(auth.displayName), null, 'time');
-      return;
-    }
-    if (kind === 'hardcore') {
-      ui.renderLeaderboard(await api.top(auth.displayName, 'hardcore'), null, 'hardcore');
+    // 버티기·하드코어·마이크·마이크(하드코어)는 같은 기록 저장소에서 모드만 다르다.
+    if (BOARD_MODE[kind]) {
+      ui.renderLeaderboard(await api.top(auth.displayName, BOARD_MODE[kind]), null, kind);
       return;
     }
     if (kind === 'hall') {

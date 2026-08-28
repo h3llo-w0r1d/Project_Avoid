@@ -215,11 +215,15 @@ function seasonInfo() {
   return { key, name: seasonName(key), msLeft: msLeftInSeason() };
 }
 
+// 랭킹 모드는 네 가지: 버티기·하드코어·마이크·마이크(하드코어). 각각 따로 쌓인다.
+const SCORE_MODES = new Set(['normal', 'hardcore', 'voice', 'voicehard']);
+const normScoreMode = (m) => (SCORE_MODES.has(m) ? m : 'normal');
+
 app.get('/api/scores', async (req, res) => {
   // 달이 바뀌었으면 지난 시즌 기록을 명예의 전당으로 옮긴다.
   // 서버가 그 순간에 떠 있으리란 보장이 없어, 물어볼 때 확인한다.
   await scores.rollSeasons();
-  const mode = req.query.mode === 'hardcore' ? 'hardcore' : 'normal';
+  const mode = normScoreMode(req.query.mode);
   res.json({ top: scores.top(TOP_N, mode), me: myBest(req, mode), season: seasonInfo() });
 });
 
@@ -333,7 +337,7 @@ app.post('/api/scores', async (req, res) => {
   lastPost.set(ip, now);
 
   const { name, time, ticket } = req.body ?? {};
-  const mode = req.body?.mode === 'hardcore' ? 'hardcore' : 'normal';
+  const mode = normScoreMode(req.body?.mode);
 
   // 관리자(나) 본인 판은 전적·랭킹·판수·논시간 어디에도 안 남긴다.
   // 게임오버 화면은 정상적으로 뜨게, 제외됐다는 표시만 돌려준다.

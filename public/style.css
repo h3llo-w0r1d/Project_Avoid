@@ -1050,6 +1050,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 
 .rank-tabs {
   display: flex;
+  flex-wrap: wrap;        /* 탭이 많아(8개) 좁으면 다음 줄로 넘긴다 */
   gap: 6px;
   margin-top: 14px;
   padding: 4px;
@@ -1061,7 +1062,8 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   /* width 를 되돌려야 한다. 기본 button 규칙이 width:100% 라,
      flex-basis 를 auto 로 두면 버튼 하나가 줄 전체를 차지하고
      나머지 탭이 통째로 밖으로 밀려난다. */
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 68px;        /* 이보다 좁아지면 줄바꿈된다 */
   width: auto;
   margin: 0;
   padding: 9px 6px;
