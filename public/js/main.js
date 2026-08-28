@@ -583,8 +583,10 @@ const adminCoins = (() => {
     `<svg class="roulette-svg" viewBox="0 0 100 100" aria-hidden="true">${wedges}</svg>` +
     SEG.map((s, i) => {
       const a = i * ARC + ARC / 2;
-      const txt = s.song ? '🎵' : (s.coins ? `🪙${s.label}` : '꽝');
-      return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
+      // 노래 칸은 글씨가 길어 작게 세 줄로 넣는다.
+      const txt = s.song ? '개발자가<br>불러주는<br>노래' : (s.coins ? `🪙${s.label}` : '꽝');
+      const cls = s.song ? 'roul-label roul-label-song' : 'roul-label';
+      return `<span class="${cls}" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
     }).join('');
 
   let spinning = false;
