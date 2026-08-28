@@ -754,6 +754,8 @@ const characters = new CharacterUI({
   selected: () => player.characterId,
   canUse: (spec) => canUnlock(spec),
   signedIn: () => auth.signedIn,
+  isAdmin: () => isAdmin,             // 관리자는 최고기록·코인 힌트를 숨긴다
+
   coins: () => wallet.coins(),        // 지금 가진 코인(상점 표시용)
   buy: (spec) => buyCharacter(spec),  // 코인으로 캐릭터 사기. 성공하면 true
   onSelect: (id) => {
