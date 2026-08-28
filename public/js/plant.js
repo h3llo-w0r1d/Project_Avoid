@@ -1148,7 +1148,45 @@ function addClover(root, ruler, spec, outlineMat, oW = 1) {
   return sway;   // 살랑살랑
 }
 
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, none: () => [] };
+// 강아지 귀 — 머리 양옆에서 아래로 축 처진 길쭉한 귀 한 쌍(가나디라고라).
+function addDogEars(root, ruler, spec, outlineMat, oW = 1) {
+  const mat = toon(spec.color ?? 0xffffff);
+  const y = ruler.at(0.8);
+  const ringR = Math.max(0.2, ruler.radiusAt(y) * 0.82);
+  const earGeo = new THREE.SphereGeometry(0.3, 16, 12);
+  earGeo.scale(0.5, 1.05, 0.36);   // 길쭉한 귀
+  earGeo.translate(0, -0.28, 0);   // 밑동을 피벗에, 아래로 처지게
+  earGeo.computeVertexNormals();
+  for (const dir of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(dir * ringR, y + 0.08, 0.03);
+    pivot.rotation.z = dir * 1.2;    // 옆으로 눕혀 아래로 처짐
+    pivot.rotation.x = -0.12;
+    const ear = new THREE.Mesh(earGeo, mat);
+    ear.castShadow = true;
+    pivot.add(ear);
+    addOutline(ear, 0.02 * oW, outlineMat);
+    root.add(pivot);
+  }
+  return [];
+}
+
+// 강아지 꼬리 — 엉덩이(뒤 아래)에 붙는 작고 뭉툭한 꼬리.
+function addTail(root, ruler, spec, outlineMat, oW = 1) {
+  const mat = toon((spec && spec.color) || 0xffffff);
+  const y = ruler.at(0.2);
+  const z = -ruler.radiusAt(y) - 0.02;
+  const geo = new THREE.SphereGeometry(0.16, 12, 10);
+  geo.scale(0.55, 1.15, 0.55);
+  const tail = new THREE.Mesh(geo, mat);
+  tail.position.set(0, y + 0.16, z);
+  tail.rotation.x = 0.7;   // 뒤로 살짝 치켜올림
+  tail.castShadow = true;
+  root.add(tail);
+  addOutline(tail, 0.018 * oW, outlineMat);
+}
+
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
 
@@ -1528,6 +1566,7 @@ export function buildPlant(id) {
   if (spec.wings) addWings(root, ruler, outlineMat, spec.wings === 'dark');  // 날개(등): 흰/검
   if (spec.trident) addTrident(root, ruler, outlineMat);              // 악마 삼지창(손)
   if (spec.cross) addCross(root, ruler, outlineMat);                  // 천사 십자가(손)
+  if (spec.tail) addTail(root, ruler, spec.tail, outlineMat, oW);     // 강아지 꼬리
 
   // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
   if (spec.question) {

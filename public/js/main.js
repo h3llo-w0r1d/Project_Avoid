@@ -548,7 +548,7 @@ const adminCoins = (() => {
   const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
   const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
-  // 10칸. 초대박 3종(합 1%): 코인잭팟 500(0.89%), 럭키라고라(0.1%), 노래(0.01%).
+  // 10칸. 초대박 3종(합 1%): 코인잭팟 500(0.89%), 가나디라고라(0.1%), 노래(0.01%).
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '5', coins: 5, color: '#57d18a' },
@@ -558,7 +558,7 @@ const adminCoins = (() => {
     { label: '💰500', jackpot: true, coins: 500, color: '#ffd93b' }, // 코인 잭팟
     { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '5', coins: 5, color: '#57d18a' },
-    { label: '🌈', lucky: true, color: '#ff7eb6' },       // 럭키라고라(한정 캐릭터)
+    { label: '🐶', lucky: true, color: '#ffcf6a' },       // 가나디라고라(한정 캐릭터)
     { label: '50', coins: 50, color: '#ffcf3f' }
   ];
   // 보상별 확률(합 100). 초대박 3종 합쳐 정확히 1%.
@@ -566,7 +566,7 @@ const adminCoins = (() => {
     { coins: 0, p: 33 }, { coins: 5, p: 35 }, { coins: 10, p: 15 },
     { coins: 20, p: 11 }, { coins: 50, p: 5 },
     { jackpot: true, coins: 500, p: 0.89 },   // 코인 잭팟 500
-    { lucky: true, p: 0.1 },                   // 럭키라고라
+    { lucky: true, p: 0.1 },                   // 가나디라고라
     { song: true, p: 0.01 }                    // 개발자 노래
   ];
   const N = SEG.length, ARC = 360 / N;
@@ -591,7 +591,7 @@ const adminCoins = (() => {
       const a = i * ARC + ARC / 2;
       // 노래 칸은 글씨가 길어 작게 세 줄로 넣는다.
       const txt = s.song ? '개발자가<br>불러주는<br>노래'
-        : s.lucky ? '🌈<br>럭키라고라'
+        : s.lucky ? '🐶<br>가나디라고라'
         : s.jackpot ? '💰500'
         : (s.coins ? `🪙${s.label}` : '꽝');
       const cls = (s.song || s.lucky) ? 'roul-label roul-label-song' : 'roul-label';
@@ -659,7 +659,7 @@ const adminCoins = (() => {
     refresh();
 
     const { idx, coins, song, lucky, jackpot } = pick();
-    const wasOwnedLucky = lucky && wallet.isOwned('lucky');   // 이미 가진 럭키라고라인지
+    const wasOwnedLucky = lucky && wallet.isOwned('lucky');   // 이미 가진 가나디라고라인지
     // idx 칸 중심이 위(포인터)로 오게. 칸 중심각(시계방향, top 기준) = idx*ARC+ARC/2
     const center = idx * ARC + ARC / 2;
     const desiredMod = (360 - center) % 360;                 // 그 칸을 위로 보내는 회전각
@@ -672,12 +672,12 @@ const adminCoins = (() => {
     setTimeout(() => {
       spinning = false;
 
-      // 보상 지급. 럭키라고라는 이미 있으면 100코인으로 대체한다.
+      // 보상 지급. 가나디라고라는 이미 있으면 100코인으로 대체한다.
       let rewardCoins = coins;   // 서버 기록에 남길 보상 코인
       let prize;                 // 특별 당첨 태그(관리 기록)
       if (lucky) {
-        if (wasOwnedLucky) { rewardCoins = 100; wallet.add(100); prize = '럭키라고라(중복)'; }
-        else { wallet.markOwned('lucky'); rewardCoins = 0; prize = '럭키라고라'; }
+        if (wasOwnedLucky) { rewardCoins = 100; wallet.add(100); prize = '가나디라고라(중복)'; }
+        else { wallet.markOwned('lucky'); rewardCoins = 0; prize = '가나디라고라'; }
       } else {
         if (coins > 0) wallet.add(coins);
         if (jackpot) prize = '잭팟';
@@ -687,12 +687,12 @@ const adminCoins = (() => {
       // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 시간으로 돌려
       // 건 코인은 0. 특별 당첨은 prize 로 누가 됐는지 남긴다.
       if (!isAdmin) api.recordSpin(0, rewardCoins, auth.signedIn ? undefined : auth.displayName, prize);
-      if (characters.open$) characters.draw();   // 럭키라고라 해금·코인 반영
+      if (characters.open$) characters.draw();   // 가나디라고라 해금·코인 반영
 
       if (lucky) {
         resultEl.textContent = wasOwnedLucky
-          ? '🌈 럭키라고라는 이미 있어요! 대신 100코인 지급'
-          : '🌈🎉 초대박! 한정 캐릭터 럭키라고라 획득!';
+          ? '🐶 가나디라고라는 이미 있어요! 대신 100코인 지급'
+          : '🐶🎉 초대박! 한정 캐릭터 가나디라고라 획득!';
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
       } else if (jackpot) {
@@ -727,7 +727,7 @@ const adminCoins = (() => {
     // 표시 정보(라벨·정렬순서·강조). 초대박 3종을 맨 위, 그다음 코인 큰 순, 꽝은 맨 아래.
     const info = (w) => {
       if (w.song) return { label: '🎵 개발자가 불러주는 노래', ord: 1000, special: true };
-      if (w.lucky) return { label: '🌈 럭키라고라 (한정 캐릭터)', ord: 999, special: true };
+      if (w.lucky) return { label: '🐶 가나디라고라 (한정 캐릭터)', ord: 999, special: true };
       if (w.jackpot) return { label: '💰 코인 500 잭팟', ord: 998, special: true };
       if (w.coins) return { label: `🪙 ${w.coins}코인`, ord: w.coins, special: false };
       return { label: '꽝', ord: -1, special: false };
