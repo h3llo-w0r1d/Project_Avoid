@@ -309,7 +309,8 @@ export const CHARACTERS = [
       eyeScale: [0.42, 0.42],            // 더 작은 검은 점 두 개
       eyeAspect: 1.0,                    // 완전 동그라미(세로로 안 늘어남)
       eyeGap: 0.19,                      // 눈 사이 간격
-      mouthY: 0.40,                      // 입을 더 아래로
+      eyeY: 0.60,                        // 눈을 더 위로
+      mouthY: 0.33,                      // 입을 훨씬 아래로
       blush: false,                      // 빨간 볼터치 제거(전체 하양)
       glint: false,                      // 눈 흰 반사광 제거 → 새까만 통짜 눈
       brows: false                       // 눈썹 제거(눈 주변까지 검게 보이던 원인)

@@ -387,11 +387,7 @@ function makeMouthTexture(kind = 'smile', size = 256) {
     g.strokeStyle = '#000000';
     g.lineWidth = size * 0.05; g.lineCap = 'round'; g.lineJoin = 'round';
     const my = size * 0.44, w = size * 0.15;
-    g.beginPath();
-    g.moveTo(cx, my - size * 0.14);           // 코 아래 세로선(인중)
-    g.lineTo(cx, my - size * 0.01);
-    g.stroke();
-    g.beginPath();                            // ω 입(두 봉우리)
+    g.beginPath();                            // ω 입(두 봉우리) — 인중 세로선 없이
     g.moveTo(cx - w, my - size * 0.02);
     g.quadraticCurveTo(cx - w * 0.5, my + size * 0.11, cx, my - size * 0.01);
     g.quadraticCurveTo(cx + w * 0.5, my + size * 0.11, cx + w, my - size * 0.02);
@@ -1443,7 +1439,7 @@ export function buildPlant(id) {
   // 눈은 네 겹이다. 검은자만 있으면 눈이 뻥 뚫린 것처럼 보여 무섭다.
   //   테 → 흰자 → 검은자 → 반사광
   // 흰자만 얹으면 몸 색과 비슷해 눈으로 안 읽히므로 테가 꼭 필요하다.
-  const eyeY = at(0.56);
+  const eyeY = at(spec.face?.eyeY ?? 0.56);   // face.eyeY 로 눈 높이 조절
   const ringGeo = new THREE.SphereGeometry(0.163, 18, 14);
   const ringMat = new THREE.MeshBasicMaterial({ color: COLOR.outline });
   const scleraGeo = new THREE.SphereGeometry(0.145, 18, 14);
