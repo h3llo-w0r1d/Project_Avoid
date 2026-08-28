@@ -1494,14 +1494,17 @@ export function buildPlant(id) {
     // 눈 크기 배율. 좌우를 다르게 주면 짝짝이 눈이 되어 어리둥절·못생긴 느낌.
     const es = face?.eyeScale?.[eyeIndex(dir)] ?? 1;
 
+    // face.eyeAspect 로 세로 비율을 바꾼다(1.2=살짝 세로로, 1.0=완전 동그라미).
+    const aspect = face?.eyeAspect ?? 1.2;
+
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.position.set(x, eyeY, depth(0));
-    ring.scale.set(es, 1.2 * es, 0.30);
+    ring.scale.set(es, aspect * es, 0.30);
     root.add(ring);
 
     const sclera = new THREE.Mesh(scleraGeo, scleraMat);
     sclera.position.set(x, eyeY, depth(1));
-    sclera.scale.set(es, 1.2 * es, 0.32);
+    sclera.scale.set(es, aspect * es, 0.32);
     root.add(sclera);
 
     // 검은자를 살짝 위로 올리면 아래쪽에 흰자가 더 보여 순해 보인다.
@@ -1509,7 +1512,7 @@ export function buildPlant(id) {
     const ps = face?.pupil?.[eyeIndex(dir)] ?? [0, 0];
     const pupil = new THREE.Mesh(pupilGeo, pupilMat);
     pupil.position.set(x + ps[0], eyeY + 0.026 + ps[1], depth(2));
-    pupil.scale.set(es, 1.1 * es, 0.32);
+    pupil.scale.set(es, Math.min(aspect, 1.1) * es, 0.32);
     root.add(pupil);
 
     // 반사광(생기 있는 눈). face.glint:false 면 뺀다 → 죽은 듯 음산한 눈.
