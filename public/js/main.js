@@ -895,18 +895,50 @@ function goHome() {
 // ── 다시보기 재생 ──────────────────────────────────────────
 // 기록(seed + 프레임)을 실제 무대에서 다시 돌려 보여 준다. 입력을 새로 받지
 // 않고 기록된 값을 그대로 시뮬에 먹인다 → 그때 그 판이 눈앞에 재현된다.
+// 시뮬이 순수 함수라, 아무 초로 점프하려면 처음부터 그 지점까지 눈 깜짝할
+// 새에 다시 돌리면 된다(탐색바).
 const replayBar = (() => {
   const el = document.createElement('div');
   el.id = 'replay-bar';
   el.className = 'hidden';
   el.innerHTML =
-    '<span class="replay-tag">▶ 다시보기</span> <span id="replay-who"></span>' +
-    '<button id="replay-exit" type="button">나가기</button>';
+    '<div class="replay-row">' +
+      '<span class="replay-tag">▶ 다시보기</span>' +
+      '<span id="replay-who"></span>' +
+      '<span id="replay-time" class="replay-time">0.00 / 0.00초</span>' +
+      '<button id="replay-exit" type="button">나가기</button>' +
+    '</div>' +
+    '<input id="replay-seek" class="replay-seek" type="range" min="0" max="1000" value="0" step="1" ' +
+    'aria-label="재생 위치" />';
   document.body.appendChild(el);
-  el.querySelector('#replay-exit').addEventListener('click', () => endReplay());
   const who = el.querySelector('#replay-who');
+  const timeEl = el.querySelector('#replay-time');
+  const seek = el.querySelector('#replay-seek');
+
+  el.querySelector('#replay-exit').addEventListener('click', () => endReplay());
+  // 탐색바를 잡으면 자동재생을 멈추고, 끌 때마다 그 초로 점프한다.
+  const beginScrub = () => { if (state.replay) state.replay.scrubbing = true; };
+  const endScrub = () => { if (state.replay) state.replay.scrubbing = false; };
+  seek.addEventListener('pointerdown', beginScrub);
+  seek.addEventListener('pointerup', endScrub);
+  seek.addEventListener('input', () => {
+    const rp = state.replay; if (!rp) return;
+    rp.scrubbing = true;
+    seekReplay((Number(seek.value) / 1000) * rp.total);
+  });
+  // 손을 떼면(마우스업이 바 밖에서 나도) 다시 재생
+  addEventListener('pointerup', endScrub);
+
   return {
-    show(data) { who.textContent = `${data.name ?? ''} · ${Number(data.time).toFixed(2)}초`; el.classList.remove('hidden'); },
+    show(data) {
+      who.textContent = data.name ?? '';
+      el.classList.remove('hidden');
+    },
+    // 재생 위치 표시 갱신(드래그 중이 아닐 때만 바를 움직인다).
+    tick(sim, total, scrubbing) {
+      timeEl.textContent = `${sim.toFixed(2)} / ${total.toFixed(2)}초`;
+      if (!scrubbing) seek.value = String(total > 0 ? Math.round((sim / total) * 1000) : 0);
+    },
     hide() { el.classList.add('hidden'); }
   };
 })();
@@ -922,28 +954,66 @@ function startReplay(data) {
   floorHoles.setActive(false);   // v1: 일반 모드만
   coins.setActive(false);        // 재생엔 코인 없음
   input.enabled = false;
-  audio.startAmbient?.();
 
-  player.reset();
+  // 게임오버·타이틀·공지 배너 등 다른 화면을 싹 내리고 무대만 남긴다.
+  ui.hideAllScreens();
+  noticeBanner?.classList.add('hidden');
+
+  // 전체 길이 = 프레임 dt 합(= 그 판이 버틴 시간).
+  let total = 0;
+  for (let i = 0; i < frames.n; i++) total += frames.dt[i];
+
   setArenaVisible(true);
   hazards.reset(data.seed);
-  state.replay = { f: frames, i: 0, n: frames.n, consumed: 0, clock: 0, sim: 0, dead: false, deathTimer: 0 };
+  player.reset();
+  state.replay = {
+    f: frames, n: frames.n, seed: data.seed, total,
+    i: 0, consumed: 0, clock: 0, sim: 0,
+    ended: false, deathTimer: 0, scrubbing: false
+  };
   state.elapsed = 0;
   state.cause = 'zap';
-  ui.showGame();
-  ui.updateHud(0);
   replayBar.show(data);
+  replayBar.tick(0, total, false);
+}
+
+// 기록된 한 프레임을 시뮬에 먹인다. 죽으면 true.
+function replayStepOnce(rp) {
+  const i = rp.i++;
+  const fdt = rp.f.dt[i];
+  rp.consumed += fdt;
+  rp.sim += fdt;
+  player.update(fdt, { move: { x: rp.f.x[i], y: rp.f.y[i] }, jumpPressed: rp.f.j[i] > 0.5 });
+  hazards.update(fdt, rp.sim);
+  if (hazards.hitTest(player)) { rp.ended = true; state.cause = 'zap'; return true; }
+  if (player.body.droppedOff) { rp.ended = true; state.cause = 'fall'; return true; }
+  return false;
+}
+
+// 원하는 초로 점프. 처음부터 그 지점까지 렌더 없이 빠르게 다시 돌린다.
+function seekReplay(targetSim) {
+  const rp = state.replay;
+  if (!rp) return;
+  hazards.reset(rp.seed);
+  player.reset();
+  rp.i = 0; rp.consumed = 0; rp.sim = 0; rp.ended = false; rp.deathTimer = 0;
+  while (rp.i < rp.n && rp.sim < targetSim) {
+    if (replayStepOnce(rp)) break;   // 그 판이 죽는 지점을 넘겨 잡으면 거기서 멈춘다
+  }
+  rp.clock = rp.consumed;            // 재생 시계도 맞춰 이어서 재생되게
+  replayBar.tick(rp.sim, rp.total, true);
 }
 
 function stepReplay(dt) {
   const rp = state.replay;
   if (!rp) return;
 
-  if (rp.dead) {
-    hazards.update(dt, rp.sim);   // 죽는 연출 동안에도 전기선은 움직인다
-    playDeathAnim(dt);
-    rp.deathTimer -= dt;
-    if (rp.deathTimer <= 0) endReplay();
+  // 탐색바를 잡고 있는 동안은 그 자리에 멈춰 있는다(seek 가 위치를 잡는다).
+  if (rp.scrubbing) return;
+
+  if (rp.ended) {
+    // 끝났으면 죽는 연출만 잠깐 더 보이고 그 뒤 정지(자동으로 안 나간다).
+    if (rp.deathTimer > 0) { hazards.update(dt, rp.sim); playDeathAnim(dt); rp.deathTimer -= dt; }
     return;
   }
 
@@ -952,18 +1022,10 @@ function stepReplay(dt) {
   // 따라잡지 않게 상한을 둔다(탭 복귀 등으로 clock 이 튀는 경우).
   let guard = 0;
   while (rp.i < rp.n && rp.consumed < rp.clock && guard++ < 240) {
-    const i = rp.i++;
-    const fdt = rp.f.dt[i];
-    rp.consumed += fdt;
-    rp.sim += fdt;
-    player.update(fdt, { move: { x: rp.f.x[i], y: rp.f.y[i] }, jumpPressed: rp.f.j[i] > 0.5 });
-    hazards.update(fdt, rp.sim);
-    if (hazards.hitTest(player)) { rp.dead = true; state.cause = 'zap'; break; }
-    if (player.body.droppedOff) { rp.dead = true; state.cause = 'fall'; break; }
+    if (replayStepOnce(rp)) { rp.deathTimer = 1.4; break; }
   }
-  if (rp.dead) rp.deathTimer = 1.4;
-  ui.updateHud(rp.sim);
-  if (rp.i >= rp.n && !rp.dead) endReplay();   // 사망 미검출로 끝까지 재생됨
+  if (rp.i >= rp.n && !rp.ended) rp.ended = true;   // 사망 미검출로 끝까지 재생됨
+  replayBar.tick(rp.sim, rp.total, false);
 }
 
 function endReplay() {
