@@ -17,6 +17,7 @@ export class VoiceJump {
     this.warm = 0;            // 켠 직후 잠깐(오작동 방지)
     this.cool = 0;            // 함성 간 최소 간격
     this.level = 0;           // 지금 음량(표시용)
+    this.high = 0.1;          // 지금 점프 기준선(표시용)
   }
 
   supported() {
@@ -73,6 +74,7 @@ export class VoiceJump {
 
     const HIGH = Math.max(0.07, this.baseline * 3.2);  // 이보다 크면 함성 시작
     const LOW = Math.max(0.045, this.baseline * 1.8);  // 이 아래로 내려가면 재장전
+    this.high = HIGH;                                  // 화면 바에 기준선으로 그린다
 
     if (this.armed && this.cool <= 0 && level > HIGH) {
       this.armed = false;

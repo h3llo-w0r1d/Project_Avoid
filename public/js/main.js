@@ -193,8 +193,39 @@ const coins = new Coins(scene, () => {
   audio.coin?.();
 });
 const input = new Input();
-// 마이크로 점프. 함성 시작마다 점프 신호를 넣는다(키보드/터치와 같은 통로).
-const voiceJump = new VoiceJump(() => { input.jumpQueued = true; });
+
+// 음성 점프 모드의 화면 왼쪽 볼륨 바. 지금 목소리 크기(채워짐)와 점프 기준선
+// (가로줄)을 보여 준다. 기준선을 넘겨 소리 지르면 점프 → 그 순간 반짝인다.
+const voiceMeter = (() => {
+  const el = document.createElement('div');
+  el.id = 'voice-meter';
+  el.className = 'hidden';
+  el.innerHTML =
+    '<div class="vm-track"><div class="vm-fill"></div><div class="vm-threshold"></div></div>' +
+    '<div class="vm-cap">🎤</div>';
+  document.body.appendChild(el);
+  const fill = el.querySelector('.vm-fill');
+  const line = el.querySelector('.vm-threshold');
+  const DISPLAY_MAX = 0.5;   // 이 음량이면 바가 꽉 찬다
+  let flashT = 0;
+  const pct = (v) => Math.max(0, Math.min(100, (v / DISPLAY_MAX) * 100));
+  return {
+    show() { el.classList.remove('hidden'); },
+    hide() { el.classList.add('hidden'); },
+    flash() { flashT = 0.18; el.classList.add('hit'); },
+    update(level, high, dt) {
+      el.classList.remove('hidden');
+      fill.style.height = pct(level) + '%';
+      line.style.bottom = pct(high) + '%';
+      // 기준선을 넘고 있으면 바를 뜨겁게(넘기는 중 표시)
+      el.classList.toggle('over', level >= high);
+      if (flashT > 0) { flashT -= dt; if (flashT <= 0) el.classList.remove('hit'); }
+    }
+  };
+})();
+
+// 마이크로 점프. 함성 시작마다 점프 신호를 넣고, 바를 반짝인다.
+const voiceJump = new VoiceJump(() => { input.jumpQueued = true; voiceMeter.flash(); });
 const VOICE_KEY = 'avoidarc.voicejump';
 let voiceOn = localStorage.getItem(VOICE_KEY) === '1';
 
@@ -949,6 +980,7 @@ function goHome() {
   audio.stopAmbient();
   audio.playMusic('homeMusic');
   versus.hide();
+  voiceMeter.hide();
   floorHoles.setActive(false);
   coins.setActive(false);
   setArenaVisible(false);
@@ -1112,6 +1144,7 @@ async function watchReplay(scoreId) {
 function killPlayer(cause) {
   state.phase = 'dying';
   state.cause = cause;
+  voiceMeter.hide();        // 죽으면 음성 바를 내린다
   coins.setActive(false);   // 죽으면 남은 코인 정리·수집 중단
   state.deathTimer = cause === 'fall' ? 0.35 : 0.75;
   input.enabled = false;
@@ -1620,8 +1653,11 @@ function frame() {
     state.elapsed += dt;
 
     // 마이크 함성을 먼저 재서(켜져 있으면) 점프 신호로 넣는다. input.poll() 이
-    // 그 신호를 읽어 가므로 반드시 poll 앞에서 부른다.
-    if (voiceOn && voiceJump.on) voiceJump.poll(dt);
+    // 그 신호를 읽어 가므로 반드시 poll 앞에서 부른다. 그리고 왼쪽 볼륨 바 갱신.
+    if (voiceOn && voiceJump.on) {
+      voiceJump.poll(dt);
+      voiceMeter.update(voiceJump.level, voiceJump.high, dt);
+    }
 
     // 입력은 한 번만 읽어(기록과 시뮬이 같은 값을 쓰게), 다시보기용으로 남긴다.
     const control = input.poll();
