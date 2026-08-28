@@ -228,6 +228,58 @@ export const CHARACTERS = [
     skin: 'fiber'
   },
   {
+    // 천사라고라 — 머리 위에 금빛 후광이 떠 있는 하얀 만드라고라. 은은한 광,
+    // 밝은 잎, 순한 표정. 코인 300개로만 산다.
+    id: 'angel',
+    name: '천사라고라',
+    unlockAt: Infinity,
+    coinCost: 300,
+    previewZoom: 1.2,
+    body: 0xfbf3df,          // 진주빛 흰색
+    bodyTop: 0xffffff,       // 위는 새하얗게
+    bodyBottom: 0xefe4c6,    // 아래는 살짝 크림
+    outlineColor: 0xcbbd97,  // 부드러운 테두리
+    shine: true,             // 은은한 광
+    halo: { color: 0xffe27a },   // 금빛 후광
+    face: { eye: 0x5b7fd0 },      // 맑은 파란 눈(홍조는 기본 유지 → 순한 느낌)
+    profile: [               // 만드라고라 몸매 그대로
+      [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
+      [0.220, 0.56], [0.380, 0.575], [0.560, 0.56], [0.760, 0.51],
+      [0.960, 0.44], [1.140, 0.34], [1.300, 0.21], [1.410, 0.09],
+      [1.450, 0.00]
+    ],
+    top: { kind: 'leaves', count: 5, length: 0.95, color: '#eaf3c9', upright: 0.9 }, // 짧고 밝은 잎(후광 보이게)
+    skin: 'fiber'
+  },
+  {
+    // 악마라고라 — 머리에 뿔이 난 새빨간 만드라고라. 노란 악마 눈, 이빨 웃음.
+    // 코인 300개로만 산다.
+    id: 'demon',
+    name: '악마라고라',
+    unlockAt: Infinity,
+    coinCost: 300,
+    previewZoom: 1.2,
+    body: 0x8f2222,          // 진한 빨강
+    bodyTop: 0xb43636,       // 위는 밝은 빨강
+    bodyBottom: 0x480e0e,    // 아래로 갈수록 검붉게
+    outlineColor: 0x260707,  // 검붉은 테두리
+    horns: { color: 0x3a0a0a },  // 검붉은 뿔
+    face: {
+      eye: 0xffd21f, sclera: 0x2a0808,       // 노랗게 빛나는 악마 눈
+      brow: [-0.04, -0.04], browAngle: 2.4,  // 험악한 눈썹
+      glint: false, blush: false             // 생기·귀여움 제거
+    },
+    mouth: 'evil', mouthScale: 1.25,         // 이빨 드러낸 사악한 웃음
+    profile: [               // 만드라고라 몸매 그대로
+      [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
+      [0.220, 0.56], [0.380, 0.575], [0.560, 0.56], [0.760, 0.51],
+      [0.960, 0.44], [1.140, 0.34], [1.300, 0.21], [1.410, 0.09],
+      [1.450, 0.00]
+    ],
+    top: { kind: 'leaves', count: 5, length: 1.2, color: '#5a1212' }, // 어두운 붉은 잎
+    skin: 'fiber'
+  },
+  {
     id: 'carrot',
     wip: true,
     name: '당근',

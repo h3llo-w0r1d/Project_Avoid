@@ -946,6 +946,40 @@ function addNose(root, ruler, color, outlineMat, oW = 1) {
   addOutline(nose, 0.012 * oW, outlineMat);
 }
 
+// 천사 후광 — 머리 위에 뜬 금빛 링(셰이딩 없이 밝게 빛난다).
+function addHalo(root, ruler, spec, outlineMat, oW = 1) {
+  const color = (spec && spec.color) || 0xffe27a;
+  const geo = new THREE.TorusGeometry(0.34, 0.055, 12, 32);
+  const halo = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color }));
+  halo.position.set(0, ruler.top + 0.7, 0.02);
+  halo.rotation.x = Math.PI / 2 - 0.30;   // 살짝 눕혀 원반처럼 보이게
+  root.add(halo);
+  addOutline(halo, 0.012 * oW, outlineMat);
+  return [];
+}
+
+// 악마 뿔 — 머리 위 양옆에서 위·바깥으로 뻗은 뾰족한 뿔 한 쌍.
+function addHorns(root, ruler, spec, outlineMat, oW = 1) {
+  const color = (spec && spec.color) || 0x5a1010;
+  const baseY = ruler.at(0.9);
+  const ringR = Math.max(0.13, ruler.radiusAt(baseY) * 0.52);
+  const geo = new THREE.ConeGeometry(0.12, 0.48, 12);
+  geo.translate(0, 0.24, 0);   // 밑동을 피벗에 맞춰 위로 뻗게
+  geo.computeVertexNormals();
+  for (const dir of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(dir * ringR, baseY, 0.03);
+    pivot.rotation.z = dir * 0.55;   // 바깥으로 벌림
+    pivot.rotation.x = -0.2;         // 뒤로 살짝
+    const horn = new THREE.Mesh(geo, toon(color));
+    horn.castShadow = true;
+    pivot.add(horn);
+    addOutline(horn, 0.02 * oW, outlineMat);
+    root.add(pivot);
+  }
+  return [];
+}
+
 const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
@@ -1321,6 +1355,8 @@ export function buildPlant(id) {
   if (spec.cigarette) addCigarette(root, ruler, outlineMat);
   if (spec.fangs) addFangs(root, ruler, outlineMat, oW);
   if (spec.nose) addNose(root, ruler, spec.nose, outlineMat, oW);
+  if (spec.halo) addHalo(root, ruler, spec.halo, outlineMat, oW);     // 천사 후광
+  if (spec.horns) addHorns(root, ruler, spec.horns, outlineMat, oW);  // 악마 뿔
 
   // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
   if (spec.question) {
