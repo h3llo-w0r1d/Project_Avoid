@@ -1168,9 +1168,9 @@ function addDogEars(root, ruler, spec, outlineMat, oW = 1) {
   const mat = toon(spec.color ?? 0xffffff);
   const y = ruler.at(0.8);
   const ringR = Math.max(0.2, ruler.radiusAt(y) * 0.82);
-  const earGeo = new THREE.SphereGeometry(0.25, 16, 12);   // 조금 작은 귀
+  const earGeo = new THREE.SphereGeometry(0.21, 16, 12);   // 더 작은 귀
   earGeo.scale(0.5, 1.05, 0.36);   // 길쭉한 귀
-  earGeo.translate(0, -0.23, 0);   // 밑동을 피벗에, 아래로 처지게
+  earGeo.translate(0, -0.19, 0);   // 밑동을 피벗에, 아래로 처지게
   earGeo.computeVertexNormals();
   for (const dir of [-1, 1]) {
     const pivot = new THREE.Group();
