@@ -1007,6 +1007,26 @@ function addTrident(root, ruler, outlineMat) {
   root.add(t);
 }
 
+// 천사 십자가 — 손에 세워 든 금빛 십자가(세로 기둥 + 가로대).
+function addCross(root, ruler, outlineMat) {
+  const gold = toon(0xf2d98a);
+  const c = new THREE.Group();
+
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.11, 1.5, 0.11), gold);
+  c.add(shaft); addOutline(shaft, 0.02, outlineMat);
+
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.11, 0.11), gold);
+  arm.position.set(0, 0.5, 0);   // 위쪽 1/4 지점 가로대
+  c.add(arm); addOutline(arm, 0.02, outlineMat);
+
+  // 손에 세워 든다(삼지창과 같은 자리).
+  const armY = ruler.at(0.42);
+  const handX = ruler.radiusAt(armY) * 0.82 + 0.22;
+  c.position.set(handX, armY + 0.12, 0.28);
+  c.rotation.set(0.12, 0, -0.1);
+  root.add(c);
+}
+
 // 오른쪽 날개 하나를 2D 로 그린다(흰 깃털 실루엣 + 깃털 선). 왼쪽은 평면을
 // 좌우반전해 쓴다. 3D 깃털을 쌓는 것보다 훨씬 깔끔하고 조명에도 안 물든다.
 function makeWingTexture(size = 360, dark = false) {
@@ -1475,6 +1495,7 @@ export function buildPlant(id) {
   if (spec.horns) addHorns(root, ruler, spec.horns, outlineMat, oW);  // 악마 뿔
   if (spec.wings) addWings(root, ruler, outlineMat, spec.wings === 'dark');  // 날개(등): 흰/검
   if (spec.trident) addTrident(root, ruler, outlineMat);              // 악마 삼지창(손)
+  if (spec.cross) addCross(root, ruler, outlineMat);                  // 천사 십자가(손)
 
   // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
   if (spec.question) {

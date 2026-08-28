@@ -241,6 +241,7 @@ export const CHARACTERS = [
     outlineColor: 0xcbbd97,  // 부드러운 테두리
     shine: true,             // 은은한 광
     halo: { color: 0xffe27a },   // 금빛 후광
+    cross: true,             // 손에 든 금빛 십자가
     face: { eye: 0x5b7fd0 },      // 맑은 파란 눈(홍조는 기본 유지 → 순한 느낌)
     profile: [               // 만드라고라 몸매 그대로
       [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
