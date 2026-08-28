@@ -1116,7 +1116,39 @@ function addWings(root, ruler, _outlineMat, dark = false) {
   }
 }
 
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, none: () => [] };
+// 네잎클로버 머리 장식(럭키라고라). 짧은 줄기 위에 둥근 잎 4장이 십자로.
+function addClover(root, ruler, spec, outlineMat, oW = 1) {
+  const green = toon(spec.color ?? 0x49b84f);   // 문자열 hex 도 THREE.Color 가 받는다
+  const stemMat = toon(0x3c8a41);
+  const baseY = ruler.top - 0.02;
+
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.045, 0.32, 8), stemMat);
+  stem.position.y = baseY + 0.16;
+  root.add(stem); addOutline(stem, 0.012 * oW, outlineMat);
+
+  // 둥근 잎(하트처럼 살짝 눌러) 4장을 중심에서 바깥으로 벌린다.
+  const leafGeo = new THREE.SphereGeometry(0.22, 14, 12);
+  leafGeo.scale(1.05, 1.0, 0.45);
+  leafGeo.computeVertexNormals();
+  const hubY = baseY + 0.4;
+  const sway = [];
+  for (let i = 0; i < 4; i++) {
+    const pivot = new THREE.Group();
+    pivot.position.set(0, hubY, 0);
+    pivot.rotation.y = i * Math.PI / 2 + Math.PI / 4;   // 45° 돌려 십자 배치
+    const leaf = new THREE.Mesh(leafGeo, green);
+    leaf.position.set(0, 0.04, 0.2);      // 중심에서 바깥으로
+    leaf.rotation.x = -0.55;              // 위로 벌림
+    leaf.castShadow = true;
+    pivot.add(leaf);
+    addOutline(leaf, 0.016 * oW, outlineMat);
+    root.add(pivot);
+    sway.push(pivot);
+  }
+  return sway;   // 살랑살랑
+}
+
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
 

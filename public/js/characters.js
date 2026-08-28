@@ -288,19 +288,20 @@ export const CHARACTERS = [
     name: '럭키라고라',
     unlockAt: Infinity,
     rouletteOnly: true,      // 룰렛 전용(코인으로 못 삼)
-    previewZoom: 1.18,
-    body: 0x8fe0c4,          // 민트빛 몸
-    bodyTop: 0xffd9f0,       // 위는 분홍
-    bodyBottom: 0x9cc0ff,    // 아래는 하늘 → 파스텔 무지개 그라데
-    outlineColor: 0x7a86a8,
+    previewZoom: 1.15,
+    body: 0x66d9c8,          // 선명한 민트
+    bodyTop: 0xff8fd0,       // 위는 진한 분홍
+    bodyBottom: 0x6ea8ff,    // 아래는 파랑 → 또렷한 무지개 그라데
+    outlineColor: 0x6a5aa0,  // 보랏빛 테두리
     shine: true,             // 반짝반짝
+    face: { eye: 0x3a3050 },  // 순한 눈(홍조는 기본 유지)
     profile: [               // 만드라고라 몸매 그대로
       [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
       [0.220, 0.56], [0.380, 0.575], [0.560, 0.56], [0.760, 0.51],
       [0.960, 0.44], [1.140, 0.34], [1.300, 0.21], [1.410, 0.09],
       [1.450, 0.00]
     ],
-    top: { kind: 'leaves', count: 5, length: 1.5, color: '#8be27f' }, // 밝은 초록 잎
+    top: { kind: 'clover', color: '#3fae4f' },   // 머리 위 네잎클로버(행운)
     skin: 'fiber'
   },
   {
