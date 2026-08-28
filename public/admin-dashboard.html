@@ -573,9 +573,11 @@ async function drawSpins() {
     if (!total) { $('spin-table').innerHTML = '<p class="empty">아직 룰렛 기록이 없습니다</p>'; $('spin-pager').innerHTML = ''; return; }
     const body = rows.map((r) => {
       const who = r.member ? `<span style="color:#9ad0ff">${esc(r.name)}</span>` : `${esc(r.name)} <span class="dim">(게스트)</span>`;
-      const got = r.reward > 0
-        ? `<span style="color:#57d18a">🪙 ${r.reward}</span>`
-        : '<span class="dim">꽝</span>';
+      const got = r.prize
+        ? `<span style="color:#c79bff;font-weight:800">🎵 ${esc(r.prize)}</span>`
+        : r.reward > 0
+          ? `<span style="color:#57d18a">🪙 ${r.reward}</span>`
+          : '<span class="dim">꽝</span>';
       return `<tr><td class="dim">${stamp(r.at)}</td>
         <td>${who}</td>
         <td class="num">🪙 ${r.cost}</td>

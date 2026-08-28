@@ -547,20 +547,21 @@ const adminCoins = (() => {
   const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
   const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
-  // 7칸: 꽝×2, 5×2, 10×1, 20×1, 50×1. 이웃끼리 안 겹치게 섞어 둔다.
+  // 8칸: 꽝×2, 5×2, 10, 20, 50, 그리고 0.5% 초대박 '개발자 노래'(🎵).
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '5', coins: 5, color: '#57d18a' },
     { label: '10', coins: 10, color: '#4fd6ff' },
+    { label: '🎵', song: true, color: '#b57bff' },   // 초대박: 개발자가 불러주는 노래
     { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '20', coins: 20, color: '#ff9f43' },
     { label: '5', coins: 5, color: '#57d18a' },
     { label: '50', coins: 50, color: '#ffcf3f' }
   ];
-  // 보상별 확률(합 100). 값이 클수록 드물게. 50코인은 대박.
+  // 보상별 확률. 값이 클수록 드물게. 노래는 0.5% 초대박(합계 100.5 → ≈0.5%).
   const WEIGHTS = [
     { coins: 0, p: 33 }, { coins: 5, p: 35 }, { coins: 10, p: 15 },
-    { coins: 20, p: 11 }, { coins: 50, p: 6 }
+    { coins: 20, p: 11 }, { coins: 50, p: 6 }, { song: true, p: 0.5 }
   ];
   const N = SEG.length, ARC = 360 / N;
 
@@ -582,7 +583,7 @@ const adminCoins = (() => {
     `<svg class="roulette-svg" viewBox="0 0 100 100" aria-hidden="true">${wedges}</svg>` +
     SEG.map((s, i) => {
       const a = i * ARC + ARC / 2;
-      const txt = s.coins ? `🪙${s.label}` : '꽝';
+      const txt = s.song ? '🎵' : (s.coins ? `🪙${s.label}` : '꽝');
       return `<span class="roul-label" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
     }).join('');
 
@@ -607,13 +608,25 @@ const adminCoins = (() => {
       : isAdmin ? '돌리기' : (left > 0 ? `돌리기 (남은 ${left}회)` : '아직 부족해요');
   };
 
-  // 보상 하나 뽑기 → { idx(멈출 칸), coins }
+  // 보상 하나 뽑기 → { idx(멈출 칸), coins, song }
   function pick() {
-    let r = Math.random() * WEIGHTS.reduce((s, w) => s + w.p, 0);
-    let coins = 0;
-    for (const w of WEIGHTS) { if (r < w.p) { coins = w.coins; break; } r -= w.p; }
-    const idxs = SEG.map((s, i) => (s.coins === coins ? i : -1)).filter((i) => i >= 0);
-    return { idx: idxs[(Math.random() * idxs.length) | 0], coins };
+    const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
+    let r = Math.random() * total;
+    let chosen = WEIGHTS[WEIGHTS.length - 1];
+    for (const w of WEIGHTS) { if (r < w.p) { chosen = w; break; } r -= w.p; }
+    if (chosen.song) return { idx: SEG.findIndex((s) => s.song), coins: 0, song: true };
+    const idxs = SEG.map((s, i) => (!s.song && s.coins === chosen.coins ? i : -1)).filter((i) => i >= 0);
+    return { idx: idxs[(Math.random() * idxs.length) | 0], coins: chosen.coins };
+  }
+
+  // 개발자 노래 재생. 파일이 없으면 조용히 넘어간다(축하 문구는 그대로 뜬다).
+  // public/dev-song.mp3 에 녹음 파일을 넣으면 그게 재생된다.
+  function playDevSong() {
+    try {
+      const a = new Audio('/dev-song.mp3');
+      a.volume = 0.9;
+      a.play().catch(() => { /* 파일 없음/자동재생 막힘 — 무시 */ });
+    } catch { /* 무시 */ }
   }
 
   function spin() {
@@ -630,7 +643,7 @@ const adminCoins = (() => {
     resultEl.className = 'roulette-result';
     refresh();
 
-    const { idx, coins } = pick();
+    const { idx, coins, song } = pick();
     // idx 칸 중심이 위(포인터)로 오게. 칸 중심각(시계방향, top 기준) = idx*ARC+ARC/2
     const center = idx * ARC + ARC / 2;
     const desiredMod = (360 - center) % 360;                 // 그 칸을 위로 보내는 회전각
@@ -644,11 +657,18 @@ const adminCoins = (() => {
       spinning = false;
       if (coins > 0) wallet.add(coins);
       renderCoinHud();
-      // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 이제 코인을
-      // 걸지 않으므로(시간으로 돌림) 건 코인은 0.
-      if (!isAdmin) api.recordSpin(0, coins, auth.signedIn ? undefined : auth.displayName);
+      // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 시간으로
+      // 돌리므로 건 코인은 0. 노래 당첨이면 prize 로 표시해 누가 됐는지 남긴다.
+      if (!isAdmin) {
+        api.recordSpin(0, coins, auth.signedIn ? undefined : auth.displayName, song ? '노래' : undefined);
+      }
       if (characters.open$) characters.draw();   // 코인 늘어 상점 살 수 있게 됐을 수도
-      if (coins === 0) {
+      if (song) {
+        resultEl.textContent = '🎉 0.5% 초대박! 개발자가 불러주는 노래 🎵';
+        resultEl.className = 'roulette-result win jackpot';
+        audio.stageUp?.();
+        playDevSong();
+      } else if (coins === 0) {
         resultEl.textContent = '꽝! 다음 기회에…';
         resultEl.className = 'roulette-result lose';
       } else {

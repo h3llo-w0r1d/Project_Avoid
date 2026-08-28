@@ -531,10 +531,11 @@ export const api = {
   },
 
   // 룰렛 한 번 돌린 결과를 남긴다(참고용). 관리자는 서버가 걸러 저장 안 함.
-  recordSpin(cost, reward, guestName) {
+  // prize: 특별 당첨(예: '노래')이면 함께 남겨 관리 화면에 표시한다.
+  recordSpin(cost, reward, guestName, prize) {
     fetch('/api/spin', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cost, reward, name: guestName })
+      body: JSON.stringify({ cost, reward, name: guestName, prize })
     }).catch(() => {});
   },
 

@@ -568,9 +568,10 @@ app.post('/api/spin', (req, res) => {
 
   const cost = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.cost) || 0)));
   const reward = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.reward) || 0)));
+  const prize = typeof req.body?.prize === 'string' ? req.body.prize.slice(0, 40) : null;
 
   try {
-    spins.add({ name: who.name, userId: req.user?.id ?? null, cost, reward });
+    spins.add({ name: who.name, userId: req.user?.id ?? null, cost, reward, prize });
     res.json({ ok: true });
   } catch (err) {
     console.error('룰렛 기록 저장 실패:', err);
