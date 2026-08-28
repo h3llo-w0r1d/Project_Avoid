@@ -1151,9 +1151,10 @@ export function buildPlant(id) {
   const ringGeo = new THREE.SphereGeometry(0.163, 18, 14);
   const ringMat = new THREE.MeshBasicMaterial({ color: COLOR.outline });
   const scleraGeo = new THREE.SphereGeometry(0.145, 18, 14);
-  const scleraMat = new THREE.MeshBasicMaterial({ color: COLOR.sclera });
+  // 캐릭터마다 흰자·눈동자 색을 바꿀 수 있다(예: 흑화 = 붉은 눈).
+  const scleraMat = new THREE.MeshBasicMaterial({ color: spec.face?.sclera ?? COLOR.sclera });
   const pupilGeo = new THREE.SphereGeometry(0.092, 18, 14);
-  const pupilMat = new THREE.MeshBasicMaterial({ color: COLOR.eye });
+  const pupilMat = new THREE.MeshBasicMaterial({ color: spec.face?.eye ?? COLOR.eye });
   const glintGeo = new THREE.SphereGeometry(0.036, 10, 8);
   const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
 
