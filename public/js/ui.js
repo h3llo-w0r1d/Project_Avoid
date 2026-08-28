@@ -49,6 +49,17 @@ const BOARDS = {
   }
 };
 
+// 기록 막대(1위 대비 비율)를 그릴 때 쓸 숫자값. 보드마다 무엇이 값인지 다르다.
+const METRIC = {
+  time: (e) => Number(e.time) || 0,
+  hardcore: (e) => Number(e.time) || 0,
+  voice: (e) => Number(e.time) || 0,
+  voicehard: (e) => Number(e.time) || 0,
+  wins: (e) => Number(e.wins) || 0,
+  rate: (e) => Number(e.rate) || 0,
+  streak: (e) => Number(e.streak) || 0
+};
+
 export class UI {
   constructor(handlers) {
     this.el = {
@@ -69,6 +80,7 @@ export class UI {
       board: $('leaderboard'),
       pager: $('rank-pager'),
       myRank: $('my-rank'),
+      rankMe: $('rank-me'),          // 헤더에 늘 보이는 내 순위(100위 밖이어도)
       season: $('season-label')
     };
 
@@ -364,6 +376,10 @@ export class UI {
       return;
     }
 
+    // 기록 막대는 1위(=목록 맨 위, 내림차순) 값을 100%로 삼는다.
+    const metric = METRIC[this.boardKind] ?? (() => 0);
+    const topVal = this.entries.length ? metric(this.entries[0]) : 0;
+
     const start = this.page * PER_PAGE;
     for (const [offset, e] of this.entries.slice(start, start + PER_PAGE).entries()) {
       const rank = start + offset + 1;
@@ -371,9 +387,12 @@ export class UI {
       if (this.myEntryId && e.id === this.myEntryId) li.className = 'me';
       // 1~3위는 색이 다른 메달을 준다
       const medal = rank <= 3 ? ` medal medal-${rank}` : '';
+      // 막대 길이(최소 6%는 남겨 아주 낮아도 보이게).
+      const pct = topVal > 0 ? Math.max(6, Math.round((metric(e) / topVal) * 100)) : 0;
       li.innerHTML = `
         <span class="rank${medal}">${rank}</span>
         <button type="button" class="who"></button>
+        <span class="rbar"><span class="rbar-fill" style="width:${pct}%"></span></span>
         <span class="secs">${kindOf.value(e)}</span>`;
       const who = li.querySelector('.who');
       who.textContent = e.name;
@@ -415,6 +434,16 @@ export class UI {
   // 내 순위. 100위 밖이라 목록에 안 나오는 경우가 이 줄의 존재 이유다.
   drawMyRank() {
     const me = this.me;
+    // 헤더에 늘 보이는 짧은 내 순위(100위 밖으로 밀려도 보이게).
+    if (this.el.rankMe) {
+      if (me) {
+        this.el.rankMe.textContent = `내 순위 ${me.rank}위`;
+        this.el.rankMe.classList.remove('hidden');
+      } else {
+        this.el.rankMe.textContent = '';
+        this.el.rankMe.classList.add('hidden');
+      }
+    }
     if (!me) {
       this.el.myRank.textContent = '';
       return;

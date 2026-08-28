@@ -1132,6 +1132,18 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   white-space: nowrap;
 }
 
+/* 헤더에 늘 보이는 내 순위. 100위 밖으로 밀려도 여기서 확인된다. */
+.rank-me {
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 /* 명예의 전당의 시즌 머리글 */
 .board li.hall-head {
   display: block;
@@ -2043,13 +2055,33 @@ kbd {
 .board .rank.medal-3 { background: linear-gradient(150deg, #f0c08a, #cf8b4e); }
 
 .board .who {
-  flex: 1;
+  flex: none;              /* 이름은 제 폭만. 남는 공간은 기록 막대가 채운다 */
+  max-width: 42%;
   min-width: 0;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 기록 막대 — 1위 대비 비율. 이름과 기록 사이의 빈 공간을 채운다. */
+.board .rbar {
+  flex: 1;
+  min-width: 30px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.board .rbar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(79, 139, 255, 0.55), var(--accent));
+}
+/* 1위 막대는 금색으로 강조(어느 쪽이든 medal-1 이 있는 줄만) */
+.board li:has(.medal-1) .rbar-fill { background: linear-gradient(90deg, #f0b429, #ffe08a); }
+.board .me .rbar-fill { background: linear-gradient(90deg, var(--accent), #8fd0ff); }
 
 .board .secs {
   flex: none;
