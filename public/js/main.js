@@ -558,10 +558,10 @@ const adminCoins = (() => {
     { label: '5', coins: 5, color: '#57d18a' },
     { label: '50', coins: 50, color: '#ffcf3f' }
   ];
-  // 보상별 확률. 값이 클수록 드물게. 노래는 0.5% 초대박(합계 100.5 → ≈0.5%).
+  // 보상별 확률(합 100). 노래는 0.1% 초대박.
   const WEIGHTS = [
     { coins: 0, p: 33 }, { coins: 5, p: 35 }, { coins: 10, p: 15 },
-    { coins: 20, p: 11 }, { coins: 50, p: 6 }, { song: true, p: 0.5 }
+    { coins: 20, p: 11 }, { coins: 50, p: 5.9 }, { song: true, p: 0.1 }
   ];
   const N = SEG.length, ARC = 360 / N;
 
@@ -695,7 +695,7 @@ const adminCoins = (() => {
     oddsList.innerHTML = sorted.map((w) => {
       const label = w.song ? '🎵 개발자가 불러주는 노래' : (w.coins ? `🪙 ${w.coins}코인` : '꽝');
       const pct = (w.p / total) * 100;
-      const txt = pct < 1 ? pct.toFixed(2) : pct.toFixed(1);
+      const txt = String(parseFloat(pct.toFixed(2)));   // 33, 5.9, 0.1 처럼 필요한 만큼만
       return `<li${w.song ? ' class="song"' : ''}><span>${label}</span><b>${txt}%</b></li>`;
     }).join('');
   }
