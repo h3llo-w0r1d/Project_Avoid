@@ -172,7 +172,7 @@ export const CHARACTERS = [
     // 새까만 뿌리, 이빨을 드러낸 사악한 웃음, 벌겋게 째린 눈. 귀여운 티(홍조·
     // 눈 반사광)는 전부 뺐다. 시간으론 안 열리고 코인 200개로만 산다.
     id: 'dark',
-    name: '만드라고라(흑화)',
+    name: '만드라고라(타락)',
     unlockAt: Infinity,
     coinCost: 200,
     previewZoom: 1.18,
