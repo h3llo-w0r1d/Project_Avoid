@@ -394,12 +394,12 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 /* 음성 점프 볼륨 바(게임 화면 왼쪽). 지금 목소리 크기(채워짐)와 점프 기준선
    (빨간 가로줄)을 보여 준다. 기준을 넘기면 노랗게, 점프 순간 반짝인다. */
 #voice-meter {
-  position: fixed; left: 22px; top: 50%; transform: translateY(-50%);
+  position: fixed; left: 64px; top: 50%; transform: translateY(-50%);
   z-index: 30; display: flex; flex-direction: column; align-items: center; gap: 8px;
   pointer-events: none;
 }
 #voice-meter .vm-track {
-  position: relative; width: 16px; height: 42vh; max-height: 380px;
+  position: relative; width: 22px; height: 42vh; max-height: 380px;
   background: rgba(0, 0, 0, 0.38); border: 1px solid var(--stroke);
   border-radius: 999px; overflow: hidden;
   transition: box-shadow 0.1s ease;
@@ -416,8 +416,8 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   background: #ff5566; box-shadow: 0 0 6px rgba(255, 85, 102, 0.85);
 }
 #voice-meter .vm-cap { font-size: 16px; opacity: 0.9; }
-:root.force-landscape #voice-meter { left: 10px; }
-:root.force-landscape #voice-meter .vm-track { width: 12px; height: 46vw; }
+:root.force-landscape #voice-meter { left: 28px; }
+:root.force-landscape #voice-meter .vm-track { width: 16px; height: 46vw; }
 
 /* 다시보기 재생 중 하단 바 — 정보 한 줄 + 탐색바(원하는 초로 점프). */
 #replay-bar {
