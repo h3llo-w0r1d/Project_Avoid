@@ -566,10 +566,9 @@ const SPIN_PER = 20;
 let spinPage = 0;
 async function drawSpins() {
   try {
-    const { rows, total, totalCost, totalReward } = await api(`/api/admin/spins?limit=${SPIN_PER}&offset=${spinPage * SPIN_PER}`);
-    // 총 몇 번 돌렸는지 + 전체 순수익(운영자 관점: 건 코인 - 나간 코인).
-    $('spin-count').textContent = total
-      ? `${total}회 · 순코인 ${totalCost - totalReward >= 0 ? '+' : ''}${totalCost - totalReward}` : '';
+    const { rows, total } = await api(`/api/admin/spins?limit=${SPIN_PER}&offset=${spinPage * SPIN_PER}`);
+    // 룰렛은 시간으로 돌리므로 '건 코인'·'순코인'은 의미가 없어 뺐다. 총 횟수만.
+    $('spin-count').textContent = total ? `${total}회` : '';
     if (!total) { $('spin-table').innerHTML = '<p class="empty">아직 룰렛 기록이 없습니다</p>'; $('spin-pager').innerHTML = ''; return; }
     const body = rows.map((r) => {
       const who = r.member ? `<span style="color:#9ad0ff">${esc(r.name)}</span>` : `${esc(r.name)} <span class="dim">(게스트)</span>`;
@@ -580,12 +579,11 @@ async function drawSpins() {
           : '<span class="dim">꽝</span>';
       return `<tr><td class="dim">${stamp(r.at)}</td>
         <td>${who}</td>
-        <td class="num">🪙 ${r.cost}</td>
         <td class="num">${got}</td>
         <td><button class="act" data-del="${r.id}">삭제</button></td></tr>`;
     }).join('');
     $('spin-table').innerHTML =
-      `<table><thead><tr><th>시간</th><th>돌린 사람</th><th>건 코인</th><th>결과</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+      `<table><thead><tr><th>시간</th><th>돌린 사람</th><th>결과</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
     for (const b of $('spin-table').querySelectorAll('[data-del]')) {
       b.addEventListener('click', () => delSpin(b.dataset.del));
     }
