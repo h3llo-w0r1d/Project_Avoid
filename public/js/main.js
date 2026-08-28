@@ -7,6 +7,7 @@ import { FloorHoles } from './floor-holes.js';
 import { Coins } from './coins.js';
 import { wallet } from './wallet.js';
 import { Input } from './input.js';
+import { VoiceJump } from './voice-jump.js';
 import { UI, api } from './ui.js';
 import { VersusUI } from './versus-ui.js';
 import { PauseUI } from './pause-ui.js';
@@ -180,6 +181,33 @@ const coins = new Coins(scene, () => {
   audio.coin?.();
 });
 const input = new Input();
+// 마이크로 점프. 함성 시작마다 점프 신호를 넣는다(키보드/터치와 같은 통로).
+const voiceJump = new VoiceJump(() => { input.jumpQueued = true; });
+const VOICE_KEY = 'avoidarc.voicejump';
+let voiceOn = localStorage.getItem(VOICE_KEY) === '1';
+
+// 소리 질러 점프 토글(하드코어 밑). 켜면 지금 바로 마이크 권한을 물어본다.
+const voiceToggle = document.getElementById('voice-toggle');
+function paintVoice() {
+  if (!voiceToggle) return;
+  voiceToggle.classList.toggle('on', voiceOn);
+  voiceToggle.setAttribute('aria-pressed', voiceOn ? 'true' : 'false');
+  const st = voiceToggle.querySelector('.hc-state');
+  if (st) st.textContent = voiceOn ? 'ON' : 'OFF';
+}
+paintVoice();
+voiceToggle?.addEventListener('click', async () => {
+  if (!voiceOn) {
+    if (!voiceJump.supported()) { alert('이 브라우저는 마이크를 지원하지 않습니다.'); return; }
+    try { await voiceJump.open(); voiceOn = true; }       // 권한 프롬프트 → 켜 둔다
+    catch { alert('마이크 권한을 허용해야 소리 질러 점프를 쓸 수 있어요.'); voiceOn = false; }
+  } else {
+    voiceOn = false; voiceJump.close();
+  }
+  localStorage.setItem(VOICE_KEY, voiceOn ? '1' : '0');
+  paintVoice();
+});
+
 const net = new Net();
 
 // 관리자(개발자) 여부. 아래 api.amIAdmin() 로 확정되며, canUnlock·코인표시 등
@@ -813,6 +841,8 @@ function startGame() {
   player.body.maxJumps = state.hardcore ? 1 : PLAYER.maxJumps;
   hazards.setMods(state.hardcore ? HARDCORE_MODS : null);
   floorHoles.setActive(state.hardcore);   // 하드코어에서만 바닥이 사라진다
+  // 소리 질러 점프가 켜져 있으면 마이크를 준비한다(키·터치 점프도 그대로 된다).
+  if (voiceOn && !voiceJump.on) voiceJump.open().catch(() => {});
   state.paused = false;
   pause.hide();
   // 대전을 하다 왔을 수 있으니 대전 흔적을 지운다
@@ -1552,6 +1582,10 @@ function frame() {
 
   if (state.phase === 'playing') {
     state.elapsed += dt;
+
+    // 마이크 함성을 먼저 재서(켜져 있으면) 점프 신호로 넣는다. input.poll() 이
+    // 그 신호를 읽어 가므로 반드시 poll 앞에서 부른다.
+    if (voiceOn && voiceJump.on) voiceJump.poll(dt);
 
     // 입력은 한 번만 읽어(기록과 시뮬이 같은 값을 쓰게), 다시보기용으로 남긴다.
     const control = input.poll();
