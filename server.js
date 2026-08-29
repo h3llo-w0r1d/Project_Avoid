@@ -290,8 +290,9 @@ app.get('/api/profile', (req, res) => {
     hardcore: hard ? { time: hard.time, rank: hard.rank, ...bestExtra(hard) } : null,
     plays,
     coffee: !!coffee,
-    // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부(판수로 판정).
-    titles: describeTitles({ plays }, user?.titles)
+    // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부. 관리자는 전부 획득 처리되고
+    // 운영자 칭호는 관리자에게만 보인다(프로필 주인의 관리자 여부로 판정).
+    titles: describeTitles({ plays, isAdmin: isAdminUser(user) }, user?.titles)
   };
 
   if (user) {
@@ -817,9 +818,10 @@ app.post('/api/titles', (req, res) => {
   const best = scores.bestOf({ name, mode: 'normal' });
   const hard = scores.bestOf({ name, mode: 'hardcore' });
   const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
-  const equipped = sanitizeEquipped(req.body?.equipped, { plays });
+  const ctx = { plays, isAdmin: isAdminUser(req.user) };
+  const equipped = sanitizeEquipped(req.body?.equipped, ctx);
   const updated = users.setTitles(req.user.id, equipped);
-  res.json({ ok: true, titles: describeTitles({ plays }, updated?.titles ?? equipped) });
+  res.json({ ok: true, titles: describeTitles(ctx, updated?.titles ?? equipped) });
 });
 
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.

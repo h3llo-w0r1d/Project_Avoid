@@ -213,7 +213,7 @@ export class ProfileUI {
         card.innerHTML = `
           <span class="tt-ico">${t.icon || '🏷️'}</span>
           <span class="tt-name">${esc(t.name)}</span>
-          <span class="tt-cond">${t.earned ? (on ? '장착 중' : '장착 가능') : `${t.plays}판 달성 시`}</span>`;
+          <span class="tt-cond">${t.earned ? (on ? '장착 중' : '장착 가능') : (t.cond || `${t.plays}판 달성 시`)}</span>`;
         if (t.earned) card.addEventListener('click', () => toggle(t.id));
         listEl.appendChild(card);
       }
