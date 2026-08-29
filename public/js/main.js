@@ -766,7 +766,24 @@ const adminCoins = (() => {
   const closeOdds = () => oddsBox?.classList.add('hidden');
   oddsBtn?.addEventListener('click', (e) => { e.stopPropagation(); oddsBox?.classList.toggle('hidden'); });
 
-  const open = () => { resultEl.textContent = ''; resultEl.className = 'roulette-result'; closeOdds(); refresh(); modal.classList.remove('hidden'); };
+  const open = () => {
+    // 게스트는 룰렛을 이용할 수 없다 — 창을 열지 않고 로그인 안내만 띄운다.
+    if (!auth.signedIn) {
+      const ov = document.createElement('div');
+      ov.className = 'unlock-overlay';
+      ov.innerHTML =
+        '<div class="unlock-card">' +
+        '<div class="unlock-kicker">🔒 로그인 필요</div>' +
+        '<div class="unlock-lockface">🎰</div>' +
+        '<div class="unlock-name">로그인 후 이용 가능</div>' +
+        '<div class="unlock-hint">로그인하면 룰렛을 돌릴 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(() => ov.classList.add('show'));
+      ov.addEventListener('click', () => { ov.classList.remove('show'); setTimeout(() => ov.remove(), 260); });
+      return;
+    }
+    resultEl.textContent = ''; resultEl.className = 'roulette-result'; closeOdds(); refresh(); modal.classList.remove('hidden');
+  };
   const close = () => { closeOdds(); modal.classList.add('hidden'); };
   document.getElementById('roulette-btn').addEventListener('click', open);
   document.getElementById('roulette-close').addEventListener('click', close);
