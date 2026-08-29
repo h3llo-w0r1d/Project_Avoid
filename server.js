@@ -275,8 +275,6 @@ app.get('/api/profile', (req, res) => {
   const hard = scores.bestOf({ name, mode: 'hardcore' });
   // 판수는 두 모드의 제출된 판을 더한다(각 모드 한 줄, runs 에 누적).
   const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
-  // 111초 커피 이벤트를 넘긴 적이 있는가(어느 모드든).
-  const coffee = (best && best.time >= 111) || (hard && hard.time >= 111);
 
   // 관리자에게만 최고기록의 점수 id 와 다시보기 유무를 함께 준다(다시보기 버튼용).
   const admin = isAdminUser(req.user);
@@ -289,7 +287,6 @@ app.get('/api/profile', (req, res) => {
     best: best ? { time: best.time, rank: best.rank, ...bestExtra(best) } : null,
     hardcore: hard ? { time: hard.time, rank: hard.rank, ...bestExtra(hard) } : null,
     plays,
-    coffee: !!coffee,
     // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부. 관리자는 전부 획득 처리되고
     // 운영자 칭호는 관리자에게만 보인다(프로필 주인의 관리자 여부로 판정).
     titles: describeTitles(

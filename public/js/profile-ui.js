@@ -99,10 +99,6 @@ export class ProfileUI {
         parts.push(`<p class="profile-total">🔥 하드코어 최고 ` +
           `${p.hardcore.time.toFixed(2)}초 · ${ProfileUI.rankText(p.hardcore.rank)}</p>`);
       }
-      // 111초를 넘긴 적 있으면 커피 클럽 뱃지.
-      if (p.coffee) {
-        parts.push('<p class="profile-badge">☕ 111초 클럽</p>');
-      }
     } else if (p.plays > 0) {
       // 기록은 시즌 밖으로 밀렸지만 플레이한 적은 있는 경우
       parts.push(`<p class="profile-empty">이번 시즌 순위권 기록은 없지만 ${p.plays}판 플레이했습니다</p>`);
