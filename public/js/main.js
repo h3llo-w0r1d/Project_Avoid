@@ -158,22 +158,36 @@ async function onAuthChange() {
       ui.setBest(p.best ? p.best.time : 0, p.hardcore ? p.hardcore.time : 0);
     } catch { /* 못 불러오면 로컬 유지 */ }
   }
-  // 관리자가 준 코인이 대기 중이면 받아 지갑에 넣는다(한 계정당 한 번).
-  if (auth.signedIn && claimedCoinsFor !== auth.displayName) {
-    claimedCoinsFor = auth.displayName;
-    try {
-      const got = await api.claimCoins();
-      if (got > 0) {
-        wallet.add(got);
-        renderCoinHud();
-        if (characters.open$) characters.draw();
-        showCoinGift(got);
-      }
-    } catch { /* 무시 */ }
-  }
+  // 관리자가 준 코인이 대기 중이면 받아 지갑에 넣는다. 로그인 상태면 폴링으로
+  // 새로고침 없이도 10초 안에 받는다(아래 startCoinPolling).
+  if (auth.signedIn) { await claimCoinsNow(); startCoinPolling(); }
+  else stopCoinPolling();
   syncCharacterForAuth();
 }
-let claimedCoinsFor = null;
+
+// 대기 코인을 한 번 받아 지갑에 넣고, 있으면 선물 팝업(관리자 멘트 포함)을 띄운다.
+async function claimCoinsNow() {
+  if (!auth.signedIn) return;
+  try {
+    const { amount, message } = await api.claimCoins();
+    if (amount > 0) {
+      wallet.add(amount);
+      renderCoinHud();
+      if (characters.open$) characters.draw();
+      showCoinGift(amount, message);
+    }
+  } catch { /* 무시 */ }
+}
+
+// 로그인 상태면 10초마다 대기 코인을 확인해 자동 수령(화면이 보일 때만).
+let coinPoll = null;
+function startCoinPolling() {
+  if (coinPoll) return;
+  coinPoll = setInterval(() => {
+    if (auth.signedIn && document.visibilityState === 'visible') claimCoinsNow();
+  }, 10000);
+}
+function stopCoinPolling() { if (coinPoll) { clearInterval(coinPoll); coinPoll = null; } }
 
 const player = new Player(scene, { characterId: savedCharacter() });
 // 상대는 발밑 링 색으로 구분한다. 캐릭터는 상대가 고른 걸 그대로 보여 준다.
@@ -521,6 +535,7 @@ const adminCoins = (() => {
         <div class="buy-ico">💰</div>
         <p class="buy-msg"><b>${esc(name)}</b> 에게 줄 코인 수</p>
         <input class="ac-amt" type="number" min="1" max="100000" value="20" inputmode="numeric" />
+        <input class="ac-msg" type="text" maxlength="100" placeholder="멘트(선택) — 받을 때 뜹니다" />
         <div class="buy-row">
           <button type="button" class="ghost small ac-cancel">취소</button>
           <button type="button" class="primary small ac-ok">지급</button>
@@ -528,6 +543,7 @@ const adminCoins = (() => {
         <em class="ac-err field-error"></em></div>`;
     document.body.appendChild(dlg);
     const amt = dlg.querySelector('.ac-amt');
+    const msgEl = dlg.querySelector('.ac-msg');
     const errEl = dlg.querySelector('.ac-err');
     const closeDlg = () => dlg.remove();
     setTimeout(() => { amt.focus(); amt.select(); }, 0);
@@ -537,7 +553,7 @@ const adminCoins = (() => {
       const n = Math.floor(Number(amt.value) || 0);
       if (n < 1) { errEl.textContent = '1 이상 입력하세요.'; return; }
       try {
-        const pending = await api.grantCoins(id, n);
+        const pending = await api.grantCoins(id, n, msgEl.value.trim());
         const a = accounts.find((x) => x.id === id); if (a) a.pending = pending;
         render();
         closeDlg();
@@ -1355,8 +1371,10 @@ function showCoinLost(count) {
 }
 
 // 관리자가 준 코인을 받았을 때 띄우는 선물 안내.
-function showCoinGift(count) {
+function showCoinGift(count, message = '') {
   return new Promise((resolve) => {
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const overlay = document.createElement('div');
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
@@ -1364,6 +1382,7 @@ function showCoinGift(count) {
       '<div class="unlock-kicker">🎁 선물 도착!</div>' +
       '<div class="unlock-lockface">🪙</div>' +
       '<div class="unlock-name">코인 ' + count + '개를 받았어요</div>' +
+      (message ? '<div class="coin-gift-msg">“' + esc(message) + '”</div>' : '') +
       '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));

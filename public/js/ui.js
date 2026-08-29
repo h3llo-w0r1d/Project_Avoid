@@ -508,11 +508,11 @@ export const api = {
     return (await res.json()).rows;
   },
 
-  // 관리자: 계정에 코인 지급(대기에 쌓임).
-  async grantCoins(userId, amount) {
+  // 관리자: 계정에 코인 지급(대기에 쌓임). message 는 유저가 받을 때 뜨는 한 줄 멘트.
+  async grantCoins(userId, amount, message = '') {
     const res = await fetch('/api/admin/coins/grant', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, amount })
+      body: JSON.stringify({ userId, amount, message })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -530,10 +530,12 @@ export const api = {
     return data.pending;
   },
 
-  // 로그인한 내가 대기 중인 코인을 받아 온다(있으면 개수, 없으면 0).
+  // 로그인한 내가 대기 중인 코인을 받아 온다 → { amount, message }.
   async claimCoins() {
     const res = await fetch('/api/me/coins/claim', { method: 'POST' });
-    return res.ok ? (await res.json()).amount ?? 0 : 0;
+    if (!res.ok) return { amount: 0, message: '' };
+    const d = await res.json();
+    return { amount: d.amount ?? 0, message: d.message ?? '' };
   },
 
   // 코인으로 캐릭터를 샀다고 서버에 남긴다(관리자 참고용). 실패해도 조용히 넘어간다.

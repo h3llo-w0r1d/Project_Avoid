@@ -808,9 +808,10 @@ app.get('/api/admin/accounts', requireAdmin, (req, res) => {
 app.post('/api/admin/coins/grant', requireAdmin, (req, res) => {
   const userId = String(req.body?.userId ?? '');
   const amount = Math.floor(Number(req.body?.amount) || 0);
+  const message = String(req.body?.message ?? '').slice(0, 100);
   if (!users.byId(userId)) return res.status(404).json({ error: '없는 계정입니다.' });
   if (amount < 1 || amount > 100000) return res.status(400).json({ error: '1~100000 사이로 정해 주세요.' });
-  const pending = coinGrants.grant(userId, amount);
+  const pending = coinGrants.grant(userId, amount, message);
   res.json({ ok: true, pending });
 });
 
@@ -825,8 +826,9 @@ app.post('/api/admin/coins/revoke', requireAdmin, (req, res) => {
 
 // (로그인한 사람) 대기 중인 코인을 받아 간다. 받으면 대기는 0이 된다.
 app.post('/api/me/coins/claim', (req, res) => {
-  if (!req.user) return res.json({ amount: 0 });
-  res.json({ amount: coinGrants.claim(req.user.id) });
+  if (!req.user) return res.json({ amount: 0, message: '' });
+  const g = coinGrants.claim(req.user.id);
+  res.json({ amount: g.amount, message: g.message });
 });
 
 // 칭호 장착(최대 3개, 얻은 것만). 로그인·닉네임이 있어야 한다.

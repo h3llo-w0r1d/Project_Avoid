@@ -702,6 +702,11 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   color: var(--text); background: rgba(0, 0, 0, 0.35);
   border: 1px solid var(--stroke); border-radius: 10px;
 }
+.ac-msg {
+  width: 100%; margin-top: 8px; padding: 10px 13px; font-size: 14px;
+  color: var(--text); background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--stroke); border-radius: 10px;
+}
 
 /* ---------- 코인 룰렛 ---------- */
 #roulette-modal .modal-card { width: min(430px, 100%); text-align: center; }
@@ -1415,6 +1420,13 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   animation: unlockPop 0.5s ease-out;
 }
 .unlock-hint { margin-top: 14px; font-size: 12px; color: var(--muted); }
+/* 코인 선물에 관리자가 붙인 한 줄 멘트 */
+.coin-gift-msg {
+  margin-top: 12px; padding: 8px 14px; font-size: 15px; font-weight: 600;
+  color: #ffe6a1; background: rgba(255, 193, 84, 0.14);
+  border: 1px solid rgba(255, 193, 84, 0.4); border-radius: 12px;
+  max-width: 320px; word-break: break-word;
+}
 @keyframes unlockPop {
   0% { transform: scale(0.55); opacity: 0; }
   60% { transform: scale(1.1); opacity: 1; }
