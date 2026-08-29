@@ -281,8 +281,8 @@ function pcMobile(total, mobile) {
 
 // 초 → 'YYYY-MM-DD'(KST). 계정 생성일이 '오늘'인지 셀 때 쓴다.
 function kstDay(ms) { return new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10); }
-// 생존 기록 표기. 초 단위 소수 1자리. 없으면 '–'.
-function recSecs(s) { return s > 0 ? `${(+s).toFixed(1)}초` : '<span class="dim">–</span>'; }
+// 생존 기록 표기. 랭킹처럼 소수 2자리(00.00초). 없으면 '–'.
+function recSecs(s) { return s > 0 ? `${(+s).toFixed(2)}초` : '<span class="dim">–</span>'; }
 // 하루/한 달 평균 기록 = 총 플레이초 ÷ 판수.
 function avgSecs(u) { return u.runs > 0 ? u.seconds / u.runs : 0; }
 
