@@ -1649,5 +1649,23 @@ export function buildPlant(id) {
     body.scale.set(1 + breathe, 1 - breathe, 1 + breathe);
   };
 
+  // ---- 조합 캐릭터(많다고라 등) --------------------------------------------
+  // spec.companions: 본체 둘레에 다른 캐릭터를 작게 세운다.
+  //   { id, scale(본체 키 대비), x, z(바닥 위치), rot(y 회전) }
+  // 각 동반 캐릭터를 buildPlant 로 만들고, 원하는 키로 맞춘 뒤 발바닥을 바닥에 붙인다.
+  if (Array.isArray(spec.companions)) {
+    for (const c of spec.companions) {
+      const sub = buildPlant(c.id);
+      const size = new THREE.Vector3();
+      new THREE.Box3().setFromObject(sub).getSize(size);
+      const h = size.y > 1e-4 ? size.y : 1;
+      sub.scale.setScalar(((c.scale ?? 0.4) * ruler.top) / h);   // 본체 키의 scale 배
+      const floor = new THREE.Box3().setFromObject(sub);
+      sub.position.set(c.x ?? 0, -floor.min.y, c.z ?? 0);        // 발바닥을 y=0 에
+      sub.rotation.y = c.rot ?? 0;
+      root.add(sub);
+    }
+  }
+
   return root;
 }
