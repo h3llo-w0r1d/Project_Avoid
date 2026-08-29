@@ -1040,13 +1040,13 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 
 /* 칭호 창 — 한 줄에 3개씩 카드로 */
 .tt-hint { margin: 4px 0 12px; font-size: 12px; color: var(--muted); }
-.tt-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tt-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .tt-item {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; width: 100%; min-height: 60px;
-  margin: 0; padding: 12px 10px; text-align: center; cursor: pointer;
+  gap: 6px; width: 100%; min-height: 110px;
+  margin: 0; padding: 18px 14px; text-align: center; cursor: pointer;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--stroke); border-radius: 12px;
+  border: 1px solid var(--stroke); border-radius: 14px;
 }
 .tt-item.on {
   border-color: rgba(255, 193, 84, 0.7);
@@ -1054,9 +1054,9 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 }
 .tt-item.locked { cursor: default; opacity: 0.5; border-style: dashed; }
 .tt-item:hover.earned:not(.on) { background: rgba(255, 255, 255, 0.1); }
-.tt-ico { font-size: 18px; }
-.tt-name { font-weight: 800; font-size: 14px; color: var(--text); }
-.tt-cond { font-size: 11px; font-weight: 700; color: var(--muted); line-height: 1.25; }
+.tt-ico { font-size: 24px; }
+.tt-name { font-weight: 800; font-size: 18px; color: var(--text); }
+.tt-cond { font-size: 13px; font-weight: 700; color: var(--muted); line-height: 1.3; }
 .tt-item.on .tt-cond { color: #ffcf6a; }
 @media (max-width: 420px) { .tt-list { grid-template-columns: repeat(2, 1fr); } }
 

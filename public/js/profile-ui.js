@@ -195,7 +195,7 @@ export class ProfileUI {
     overlay.className = 'modal';
     overlay.style.zIndex = '60';   // 프로필 위에
     overlay.innerHTML = `
-      <div class="modal-card panel" style="max-width:620px">
+      <div class="modal-card panel" style="width:min(1200px,92vw);max-width:none">
         <div class="modal-head">
           <h2>칭호</h2>
           <button type="button" class="icon-btn tt-close" aria-label="닫기">✕</button>
