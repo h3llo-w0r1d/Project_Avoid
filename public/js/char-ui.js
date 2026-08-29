@@ -35,7 +35,7 @@ function snapshot(characterId) {
 
   // 이전 캐릭터를 치우고 새로 얹는다
   shot.holder.clear();
-  const skin = buildFallbackAvatar({ characterId });
+  const skin = buildFallbackAvatar({ characterId, preview: true });
   shot.holder.add(skin);
 
   // 캐릭터마다 키가 달라서, 화면에 꽉 차게 카메라를 맞춘다

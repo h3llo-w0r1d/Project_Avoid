@@ -1323,7 +1323,7 @@ function addCigarette(root, ruler, outlineMat) {
 
 // ---------------------------------------------------------------- 조립
 
-export function buildPlant(id) {
+export function buildPlant(id, opts = {}) {
   const spec = findCharacter(id);
   const ruler = makeRuler(spec.profile);
   const { at, radiusAt, surfaceZ, decalZ } = ruler;
@@ -1651,17 +1651,20 @@ export function buildPlant(id) {
 
   // ---- 조합 캐릭터(많다고라 등) --------------------------------------------
   // spec.companions: 본체 둘레에 다른 캐릭터를 작게 세운다.
-  //   { id, scale(본체 키 대비), x, z(바닥 위치), rot(y 회전) }
-  // 각 동반 캐릭터를 buildPlant 로 만들고, 원하는 키로 맞춘 뒤 발바닥을 바닥에 붙인다.
-  if (Array.isArray(spec.companions)) {
-    for (const c of spec.companions) {
+  //   { id, scale(본체 키 대비), x, z(바닥 위치), y(띄우기, 기본 0=바닥), rot(y 회전) }
+  // opts.preview 이고 previewCompanions 가 있으면 썸네일에선 그 배치를 쓴다(인게임과 다르게).
+  const comps = (opts.preview && Array.isArray(spec.previewCompanions))
+    ? spec.previewCompanions : spec.companions;
+  if (Array.isArray(comps)) {
+    for (const c of comps) {
       const sub = buildPlant(c.id);
       const size = new THREE.Vector3();
       new THREE.Box3().setFromObject(sub).getSize(size);
       const h = size.y > 1e-4 ? size.y : 1;
       sub.scale.setScalar(((c.scale ?? 0.4) * ruler.top) / h);   // 본체 키의 scale 배
       const floor = new THREE.Box3().setFromObject(sub);
-      sub.position.set(c.x ?? 0, -floor.min.y, c.z ?? 0);        // 발바닥을 y=0 에
+      // y 를 주면 그만큼 띄운다(썸네일에서 머리 옆 위쪽 등). 없으면 발바닥을 바닥에.
+      sub.position.set(c.x ?? 0, (c.y ?? 0) - floor.min.y, c.z ?? 0);
       sub.rotation.y = c.rot ?? 0;
       root.add(sub);
     }

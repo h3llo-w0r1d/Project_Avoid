@@ -56,8 +56,8 @@ const BODY_WIDTH = PLAYER.radius * 2 * 1.11;
 
 // 모델 파일 없이도 게임이 돌아가게 해 주는 기본 캐릭터.
 // characterId 로 어떤 캐릭터를 만들지 고른다.
-export function buildFallbackAvatar({ characterId = DEFAULT_CHARACTER } = {}) {
-  const inner = buildPlant(characterId);
+export function buildFallbackAvatar({ characterId = DEFAULT_CHARACTER, preview = false } = {}) {
+  const inner = buildPlant(characterId, { preview });
   const root = new THREE.Group();
   root.add(inner);
   // sizeMul: 순수 겉보기 배율. 판정(고정 반경)엔 영향이 없고, '왕만두'처럼

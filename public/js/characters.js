@@ -128,6 +128,13 @@ export const CHARACTERS = [
       { id: 'mango',      scale: 0.58, x: 0.9,   z: 0.55, rot: -0.3 },  // 앞-오(망고, 큼)
       { id: 'mandragura', scale: 0.44, x: 0.82,  z: -0.5, rot: -0.25 }, // 뒤-오(만드라구라)
       { id: 'gorani',     scale: 0.44, x: -0.82, z: -0.5, rot: 0.25 }   // 뒤-왼(고라니, 정면)
+    ],
+    // 썸네일(미리보기)에서만 다르게: 앞줄은 그대로, 고라니는 왼쪽 위, 만드라구라는 오른쪽 위로 띄운다.
+    previewCompanions: [
+      { id: 'mandu',      scale: 0.52, x: -0.85, z: 0.55, rot: 0.3 },            // 앞-왼(왕만두)
+      { id: 'mango',      scale: 0.58, x: 0.9,   z: 0.55, rot: -0.3 },           // 앞-오(망고)
+      { id: 'gorani',     scale: 0.4,  x: -0.9,  z: -0.2, y: 0.85, rot: 0.3 },   // 위-왼(파란 자리)
+      { id: 'mandragura', scale: 0.4,  x: 0.9,   z: -0.2, y: 0.85, rot: -0.3 }   // 위-오(빨간 자리)
     ]
   },
   {
