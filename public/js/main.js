@@ -752,8 +752,8 @@ const adminCoins = (() => {
     // 표시 정보(라벨·정렬순서·강조). 초대박 3종을 맨 위, 그다음 코인 큰 순, 꽝은 맨 아래.
     const info = (w) => {
       if (w.song) return { label: '🎵 개발자가 불러주는 노래', ord: 1000, special: true };
-      if (w.lucky) return { label: '가나디라고라 (한정 캐릭터)', ord: 999, special: true };
-      if (w.jackpot) return { label: '💰 코인 500 잭팟', ord: 998, special: true };
+      if (w.jackpot) return { label: '💰 코인 500 잭팟', ord: 999, special: true };
+      if (w.lucky) return { label: '가나디라고라 (한정 캐릭터)', ord: 998, special: true };
       if (w.coins) return { label: `🪙 ${w.coins}코인`, ord: w.coins, special: false };
       return { label: '꽝', ord: -1, special: false };
     };
