@@ -121,12 +121,13 @@ export const CHARACTERS = [
     ],
     top: { kind: 'leaves', count: 5, length: 1.5, color: '#a9d477' },
     skin: 'fiber',
-    // 본체 둘레 네 자리에 다양한 크기로. (x: 좌-우, z: 앞(+)-뒤(-))
+    // 본체 둘레 네 자리에 다양한 크기로. 모두 정면(카메라)을 보게 rot 은 작게.
+    // (x: 좌-우, z: 앞(+, 아래로 크게)-뒤(-, 위로 작게))
     companions: [
-      { id: 'mandu',      scale: 0.52, x: -0.85, z: 0.55,  rot: 0.35 },   // 앞-왼(큰편)
-      { id: 'mandragura', scale: 0.42, x: 0.9,   z: 0.6,   rot: -0.4 },   // 앞-오(작은편)
-      { id: 'mango',      scale: 0.6,  x: 0.8,   z: -0.55, rot: -2.6 },   // 뒤-오(제일 큼)
-      { id: 'gorani',     scale: 0.38, x: -0.75, z: -0.6,  rot: 2.7 }     // 뒤-왼(제일 작음)
+      { id: 'mandu',      scale: 0.52, x: -0.85, z: 0.55, rot: 0.3 },   // 앞-왼(왕만두)
+      { id: 'mango',      scale: 0.58, x: 0.9,   z: 0.55, rot: -0.3 },  // 앞-오(망고, 큼)
+      { id: 'mandragura', scale: 0.44, x: 0.82,  z: -0.5, rot: -0.25 }, // 뒤-오(만드라구라)
+      { id: 'gorani',     scale: 0.44, x: -0.82, z: -0.5, rot: 0.25 }   // 뒤-왼(고라니, 정면)
     ]
   },
   {
