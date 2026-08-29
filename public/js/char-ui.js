@@ -133,6 +133,7 @@ export class CharacterUI {
 
     this.el.grid.innerHTML = '';
     for (const c of PLAYABLE) {
+     try {
       const unlocked = usable(c);
       // 코인으로 사는(아직 안 산) 캐릭터인가 — 상점 카드로 공개한다.
       const shop = !unlocked && isCoinChar(c);
@@ -235,6 +236,10 @@ export class CharacterUI {
       });
 
       this.el.grid.appendChild(card);
+     } catch (err) {
+      // 한 캐릭터가 터져도 나머지는 계속 그린다(예전엔 여기서 목록이 통째로 끊겼다).
+      console.error('캐릭터 카드 렌더 실패:', c.id, err);
+     }
     }
   }
 
