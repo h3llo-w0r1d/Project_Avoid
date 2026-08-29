@@ -724,6 +724,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   text-align: center; color: #1a0f2e;
 }
 :root.force-landscape .roul-label-song { font-size: 8px; }
+.roul-label-song small { font-size: 0.82em; font-weight: 700; opacity: 0.8; }
 /* 가운데 원 — 누적 게임 시간과 남은 룰렛 횟수. 휠과 별개라 안 돌아간다. */
 .roulette-hub {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);

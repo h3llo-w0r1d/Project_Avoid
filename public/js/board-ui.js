@@ -35,22 +35,43 @@ const COLOR_NAMES = {
   보라: '#b57bff', purple: '#b57bff',
   분홍: '#ff7eb6', pink: '#ff7eb6',
   회색: '#9aa4bf', gray: '#9aa4bf', grey: '#9aa4bf',
-  흰색: '#ffffff', white: '#ffffff'
+  흰색: '#ffffff', white: '#ffffff',
+  검정: '#000000', 검은: '#000000', black: '#000000'
 };
 const toColor = (key) =>
   /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(key)
     ? key : (COLOR_NAMES[key] || COLOR_NAMES[key.toLowerCase()] || null);
 
+// 색이 아닌 서식 키(굵게). 색과 함께 '{빨강+굵게|글자}' 처럼 조합할 수 있다.
+const STYLE_KEYS = {
+  굵게: 'font-weight:800', 진하게: 'font-weight:800', bold: 'font-weight:800'
+};
+const toStyleCss = (key) => STYLE_KEYS[key] || STYLE_KEYS[key.toLowerCase()] || null;
+const isStyleKey = (key) => !!toStyleCss(key);
+
+// 토큰의 키 부분(색·굵게, '+' 로 여러 개)을 CSS 로. 유효한 게 하나도 없으면 null.
+function specToCss(spec) {
+  let css = '';
+  for (const part of spec.split('+')) {
+    const c = toColor(part);
+    if (c) { css += `color:${c};`; continue; }
+    const s = toStyleCss(part);
+    if (s) { css += s + ';'; continue; }
+    return null;   // 모르는 키가 섞이면 토큰을 글자 그대로 둔다
+  }
+  return css || null;
+}
+
 // 문장 속 {색|부분} 을 그 색 span 으로. 색이 아니면 토큰을 글자 그대로 둔다.
 // 나머지는 전부 escape 하고 개행만 <br>.
 function colorize(s) {
-  const re = /\{(#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g;
+  const re = /\{(#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+(?:\+[가-힣A-Za-z]+)*)\|([^}]*)\}/g;
   let out = '', last = 0, m;
   const put = (t) => esc(t).replace(/\n/g, '<br>');
   while ((m = re.exec(s))) {
     out += put(s.slice(last, m.index));
-    const color = toColor(m[1]);
-    out += color ? `<span style="color:${color}">${put(m[2])}</span>` : put(m[0]);
+    const css = specToCss(m[1]);
+    out += css ? `<span style="${css}">${put(m[2])}</span>` : put(m[0]);
     last = m.index + m[0].length;
   }
   return out + put(s.slice(last));

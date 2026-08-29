@@ -591,7 +591,7 @@ const adminCoins = (() => {
       const a = i * ARC + ARC / 2;
       // 노래 칸은 글씨가 길어 작게 세 줄로 넣는다.
       const txt = s.song ? '개발자가<br>불러주는<br>노래'
-        : s.lucky ? '가나디<br>라고라'
+        : s.lucky ? '가나디라고라<br><small>(룰렛 전용)</small>'
         : s.jackpot ? '💰500'
         : (s.coins ? `🪙${s.label}` : '꽝');
       const cls = (s.song || s.lucky) ? 'roul-label roul-label-song' : 'roul-label';
