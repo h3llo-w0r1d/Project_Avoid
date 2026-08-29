@@ -7,6 +7,13 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+// #rrggbb → rgba(...,a). 칭호 색을 은은한 배경으로 쓸 때.
+const hexA = (hex, a) => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return `rgba(255,255,255,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
 
 export class ProfileUI {
   constructor() {
@@ -167,7 +174,13 @@ export class ProfileUI {
     const all = p.titles?.all ?? [];
     const equipped = all.filter((t) => t.equipped);
     this.el.titles.innerHTML = equipped
-      .map((t) => `<span class="title-chip">${t.icon ? t.icon + ' ' : ''}${esc(t.name)}</span>`)
+      .map((t) => {
+        // 칭호마다 색이 있으면 그 색으로(테두리·글자·은은한 배경). 없으면 기본 금색.
+        const style = t.color
+          ? ` style="color:${t.color};border-color:${t.color};background:${hexA(t.color, 0.15)}"`
+          : '';
+        return `<span class="title-chip"${style}>${t.icon ? t.icon + ' ' : ''}${esc(t.name)}</span>`;
+      })
       .join('');
   }
 
@@ -182,7 +195,7 @@ export class ProfileUI {
     overlay.className = 'modal';
     overlay.style.zIndex = '60';   // 프로필 위에
     overlay.innerHTML = `
-      <div class="modal-card panel" style="max-width:480px">
+      <div class="modal-card panel" style="max-width:620px">
         <div class="modal-head">
           <h2>칭호</h2>
           <button type="button" class="icon-btn tt-close" aria-label="닫기">✕</button>
@@ -210,9 +223,11 @@ export class ProfileUI {
         card.classList.toggle('locked', !t.earned);
         card.classList.toggle('on', on);
         card.disabled = !t.earned;
+        // 칭호 색이 있으면 이름을 그 색으로(획득한 경우만 또렷하게).
+        const nameStyle = (t.color && t.earned) ? ` style="color:${t.color}"` : '';
         card.innerHTML = `
           ${t.icon ? `<span class="tt-ico">${t.icon}</span>` : ''}
-          <span class="tt-name">${esc(t.name)}</span>
+          <span class="tt-name"${nameStyle}>${esc(t.name)}</span>
           <span class="tt-cond">${t.earned ? (on ? '장착 중' : '장착 가능') : (t.cond || `${t.plays}판 달성 시`)}</span>`;
         if (t.earned) card.addEventListener('click', () => toggle(t.id));
         listEl.appendChild(card);
