@@ -647,6 +647,20 @@ export const api = {
     return (await res.json()).titles;
   },
 
+  // 업적 칭호 수여(예: 럭키가이 — 룰렛 대박). { fresh, title } 을 준다.
+  // 로그인 안 했거나 실패하면 조용히 null(축하만 못 뜬다).
+  async awardTitle(id) {
+    try {
+      const res = await fetch('/api/titles/award', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
+  },
+
   async hall() {
     const res = await fetch('/api/hall');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

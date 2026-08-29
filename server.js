@@ -25,7 +25,7 @@ import { openCoinGrants } from './lib/coingrants.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
-import { describe as describeTitles, sanitizeEquipped, earnedIds as earnedTitleIds, titleById } from './lib/titles.js';
+import { describe as describeTitles, sanitizeEquipped, earnedIds as earnedTitleIds, titleById, isAwardable } from './lib/titles.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -292,7 +292,9 @@ app.get('/api/profile', (req, res) => {
     coffee: !!coffee,
     // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부. 관리자는 전부 획득 처리되고
     // 운영자 칭호는 관리자에게만 보인다(프로필 주인의 관리자 여부로 판정).
-    titles: describeTitles({ plays, isAdmin: isAdminUser(user) }, user?.titles)
+    titles: describeTitles(
+      { plays, isAdmin: isAdminUser(user), awards: user?.awards },
+      user?.titles)
   };
 
   if (user) {
@@ -830,10 +832,23 @@ app.post('/api/titles', (req, res) => {
   const best = scores.bestOf({ name, mode: 'normal' });
   const hard = scores.bestOf({ name, mode: 'hardcore' });
   const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
-  const ctx = { plays, isAdmin: isAdminUser(req.user) };
+  const acct = users.byId(req.user.id);
+  const ctx = { plays, isAdmin: isAdminUser(req.user), awards: acct?.awards };
   const equipped = sanitizeEquipped(req.body?.equipped, ctx);
   const updated = users.setTitles(req.user.id, equipped);
   res.json({ ok: true, titles: describeTitles(ctx, updated?.titles ?? equipped) });
+});
+
+// 업적 칭호 수여(예: 럭키가이 — 룰렛 대박). 클라가 대박이 나면 부른다.
+// 룰렛/코인은 원래 클라 신뢰 모델이라(코인이 localStorage), 여기서도
+// 클라 요청을 믿되, 수여 가능한 업적 id 만 받는다. fresh 면 이번에 처음 얻음.
+app.post('/api/titles/award', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  const id = String(req.body?.id ?? '');
+  if (!isAwardable(id)) return res.status(400).json({ error: '수여할 수 없는 칭호입니다.' });
+  const { user, fresh } = users.awardTitle(req.user.id, id);
+  const t = titleById(id);
+  res.json({ ok: true, fresh, title: fresh ? { id, name: t?.name ?? id } : null });
 });
 
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.

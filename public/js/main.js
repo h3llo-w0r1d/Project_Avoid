@@ -715,6 +715,14 @@ const adminCoins = (() => {
         audio.coin?.();
         if (coins >= 50) audio.stageUp?.();
       }
+
+      // 룰렛 대박(가나디라고라·500코인 잭팟·노래) → '럭키가이' 업적 칭호.
+      // 로그인 계정만 서버에 새기고, 처음 얻는 거면 축하 연출을 띄운다.
+      if ((lucky || jackpot || song) && auth.signedIn) {
+        api.awardTitle('luckyguy').then((r) => {
+          if (r?.fresh && r.title) showTitleUnlock([r.title]);
+        });
+      }
       refresh();
     }, 4100);
   }
