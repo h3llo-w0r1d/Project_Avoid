@@ -551,18 +551,16 @@ const adminCoins = (() => {
 
   const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
   const BLANK_STREAK_KEY = 'avoidarc.roul.blankStreak';   // 룰렛 꽝 연속 횟수(불운·저주 업적용)
-  // 10칸. 초대박 3종(합 1%): 코인잭팟 500(0.89%), 가나디라고라(0.1%), 노래(0.01%).
+  // 8칸(결과당 한 칸씩). 확률은 아래 WEIGHTS 로만 정해지므로 칸을 여러 개 둘 필요가 없다.
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
     { label: '5', coins: 5, color: '#57d18a' },
     { label: '10', coins: 10, color: '#4fd6ff' },
-    { label: '🎵', song: true, color: '#b57bff' },       // 개발자가 불러주는 노래
     { label: '20', coins: 20, color: '#ff9f43' },
+    { label: '50', coins: 50, color: '#ffcf3f' },
     { label: '💰500', jackpot: true, coins: 500, color: '#ffd93b' }, // 코인 잭팟
-    { label: '꽝', coins: 0, color: '#474d5e' },
-    { label: '5', coins: 5, color: '#57d18a' },
-    { label: '가나디라고라', lucky: true, color: '#ffcf6a' },   // 가나디라고라(한정 캐릭터)
-    { label: '50', coins: 50, color: '#ffcf3f' }
+    { label: '가나디라고라', lucky: true, color: '#ffcf6a' },        // 가나디라고라(한정 캐릭터)
+    { label: '🎵', song: true, color: '#b57bff' }                    // 개발자가 불러주는 노래
   ];
   // 보상별 확률(합 100). 노래 1% · 코인 잭팟 2% · 가나디라고라 5%,
   // 코인은 값이 클수록 희귀: 꽝 40 · 5코인 20 · 10코인 15 · 20코인 10 · 50코인 7.
