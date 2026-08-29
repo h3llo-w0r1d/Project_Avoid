@@ -113,6 +113,8 @@ export class CharacterUI {
     const signedIn = this.h.signedIn ? this.h.signedIn() : true;
     const usable = (c) => (this.h.canUse ? this.h.canUse(c) : isUnlocked(c, best));
     const locked = PLAYABLE.filter((c) => !usable(c));
+    // 코인 잔액. 상점 카드 판정(affordable)에도 쓰므로 함수 스코프에 둔다.
+    const coins = this.h.coins ? this.h.coins() : 0;
 
     // 관리자는 모든 캐릭터가 열려 있고 코인도 의미가 없으니 힌트 줄을 숨긴다.
     const admin = this.h.isAdmin ? this.h.isAdmin() : false;
@@ -122,7 +124,6 @@ export class CharacterUI {
     } else {
       this.el.hint.classList.remove('hidden');
       // 코인 잔액도 같이 보여 준다(코인 상점 캐릭터가 있으니).
-      const coins = this.h.coins ? this.h.coins() : 0;
       const coinTag = ` · 🪙 ${coins} 보유`;
       this.el.hint.textContent = (!signedIn
         ? '🔒 로그인하면 캐릭터를 해금할 수 있어요'
