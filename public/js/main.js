@@ -564,13 +564,14 @@ const adminCoins = (() => {
     { label: '가나디라고라', lucky: true, color: '#ffcf6a' },   // 가나디라고라(한정 캐릭터)
     { label: '50', coins: 50, color: '#ffcf3f' }
   ];
-  // 보상별 확률(합 100). 초대박 3종 합쳐 정확히 1%.
+  // 보상별 확률(합 100). 특별 3종: 코인 잭팟 5% · 가나디라고라 3% · 노래 1%(합 9%).
+  // 나머지 91% 를 코인 당첨(0/5/10/20/50)에 기존 비율대로 배분.
   const WEIGHTS = [
-    { coins: 0, p: 33 }, { coins: 5, p: 35 }, { coins: 10, p: 15 },
-    { coins: 20, p: 11 }, { coins: 50, p: 5 },
-    { jackpot: true, coins: 500, p: 0.89 },   // 코인 잭팟 500
-    { lucky: true, p: 0.1 },                   // 가나디라고라
-    { song: true, p: 0.01 }                    // 개발자 노래
+    { coins: 0, p: 30 }, { coins: 5, p: 32 }, { coins: 10, p: 14 },
+    { coins: 20, p: 10 }, { coins: 50, p: 5 },
+    { jackpot: true, coins: 500, p: 5 },   // 코인 잭팟 500
+    { lucky: true, p: 3 },                  // 가나디라고라
+    { song: true, p: 1 }                    // 개발자 노래
   ];
   const N = SEG.length, ARC = 360 / N;
 
