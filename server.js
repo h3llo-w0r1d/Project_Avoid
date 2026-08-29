@@ -814,6 +814,15 @@ app.post('/api/admin/coins/grant', requireAdmin, (req, res) => {
   res.json({ ok: true, pending });
 });
 
+// 실수로 준 코인 취소: 아직 안 받아간 '지급 대기'를 0으로 지운다.
+// (이미 받아간 코인은 브라우저에 있어 서버가 못 되돌린다.)
+app.post('/api/admin/coins/revoke', requireAdmin, (req, res) => {
+  const userId = String(req.body?.userId ?? '');
+  if (!users.byId(userId)) return res.status(404).json({ error: '없는 계정입니다.' });
+  const pending = coinGrants.revoke(userId);
+  res.json({ ok: true, pending });
+});
+
 // (로그인한 사람) 대기 중인 코인을 받아 간다. 받으면 대기는 0이 된다.
 app.post('/api/me/coins/claim', (req, res) => {
   if (!req.user) return res.json({ amount: 0 });

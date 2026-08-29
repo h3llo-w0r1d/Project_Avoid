@@ -690,6 +690,12 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .acgrant:hover { background: rgba(120, 170, 255, 0.08); }
 .acgrant-name { flex: 1; font-weight: 700; color: var(--text); }
 .acgrant-pending { font-size: 12px; font-weight: 700; color: #ffcf6a; }
+.acgrant-revoke {
+  width: auto; margin: 0; padding: 2px 9px; font-size: 11px; font-weight: 700;
+  color: #ff9aa6; background: rgba(255,85,102,0.14);
+  border: 1px solid rgba(255,85,102,0.5); border-radius: 999px;
+}
+.acgrant-revoke:hover { background: rgba(255,85,102,0.24); }
 .acgrant-go { font-size: 12px; color: var(--muted); }
 .ac-amt {
   width: 100%; margin-top: 12px; padding: 11px 13px; font-size: 17px; text-align: center;

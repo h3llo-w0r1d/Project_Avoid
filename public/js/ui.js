@@ -519,6 +519,17 @@ export const api = {
     return data.pending;
   },
 
+  // 관리자: 실수로 준 대기 코인을 취소(0으로). 아직 안 받아갔을 때만 효과.
+  async revokeCoins(userId) {
+    const res = await fetch('/api/admin/coins/revoke', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data.pending;
+  },
+
   // 로그인한 내가 대기 중인 코인을 받아 온다(있으면 개수, 없으면 0).
   async claimCoins() {
     const res = await fetch('/api/me/coins/claim', { method: 'POST' });

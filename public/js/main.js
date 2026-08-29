@@ -481,11 +481,26 @@ const adminCoins = (() => {
     list.innerHTML = rows.length
       ? rows.map((a) => `<li class="acgrant" data-id="${esc(a.id)}" data-name="${esc(a.nickname)}">
           <span class="acgrant-name">${esc(a.nickname)}</span>
-          ${a.pending ? `<span class="acgrant-pending">대기 🪙${a.pending}</span>` : ''}
+          ${a.pending ? `<span class="acgrant-pending">대기 🪙${a.pending}</span>` +
+            `<button type="button" class="acgrant-revoke" data-revoke="${esc(a.id)}">취소</button>` : ''}
           <span class="acgrant-go">지급 ▸</span></li>`).join('')
       : '<li class="board-empty">계정이 없습니다.</li>';
     for (const li of list.querySelectorAll('.acgrant')) {
       li.addEventListener('click', () => askGrant(li.dataset.id, li.dataset.name));
+    }
+    // 대기 코인 '취소' — 아직 안 받아간 지급을 0으로. (li 지급 창이 안 뜨게 전파 차단)
+    for (const b of list.querySelectorAll('.acgrant-revoke')) {
+      b.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = b.dataset.revoke;
+        const a = accounts.find((x) => x.id === id);
+        if (!confirm(`${a?.nickname ?? ''} 에게 준 대기 코인 🪙${a?.pending ?? 0} 을(를) 취소할까요?\n(이미 받아간 코인은 되돌릴 수 없습니다.)`)) return;
+        try {
+          await api.revokeCoins(id);
+          if (a) a.pending = 0;
+          render();
+        } catch (err) { alert(err.message); }
+      });
     }
   }
 
