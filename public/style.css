@@ -659,6 +659,11 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   width: auto; padding: 0 10px; font-size: 12px; font-weight: 700;
   color: var(--muted); background: rgba(255, 255, 255, 0.06);
 }
+/* 굵게 토글 버튼 — '가' 를 굵게 보여 준다 */
+.patch-swatch.bold {
+  font-size: 14px; font-weight: 900; color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
 /* 편집 미리보기 */
 .patch-preview-label {
   margin-top: 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.1em;

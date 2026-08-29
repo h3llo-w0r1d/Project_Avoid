@@ -420,28 +420,46 @@ export class BoardUI {
     const bar = this.el.colors;
     if (!bar || bar.dataset.built) return;
     bar.dataset.built = '1';
-    const make = (name, bg, text) => {
+    const make = (key, bg, text, cls) => {
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'patch-swatch'; b.title = name || '색 지우기';
+      b.type = 'button'; b.className = 'patch-swatch'; b.title = text || key || '서식 지우기';
+      if (cls) b.classList.add(cls);
       if (bg) b.style.background = bg; else { b.classList.add('clear'); b.textContent = text; }
-      b.addEventListener('mousedown', (e) => { e.preventDefault(); this.applyColor(name); });
+      b.addEventListener('mousedown', (e) => { e.preventDefault(); this.applyStyle(key); });
       bar.appendChild(b);
     };
     for (const name of PALETTE) make(name, COLOR_NAMES[name]);
-    make(null, null, '기본');
+    make('검정', COLOR_NAMES['검정']);   // 검정 색(어두운 배경이라 테두리로 보이게)
+    make('굵게', null, '가', 'bold');    // 굵게 토글(색과 함께 쓸 수 있다)
+    make(null, null, '기본');            // 모든 서식 지우기
   }
 
-  // 선택 안의 기존 색 토큰을 벗긴다(중첩 방지).
-  applyColor(name) {
+  // 선택한 글자에 서식을 씌운다. 색은 하나만(바꾸면 교체), 굵게는 토글.
+  // 색과 굵게는 '{빨강+굵게|글자}' 처럼 함께 쓸 수 있어 서로 지우지 않는다.
+  // key=null 이면 '기본' — 선택 안의 모든 서식을 벗긴다.
+  applyStyle(key) {
     const input = this.el.input;
     const a = input.selectionStart, b = input.selectionEnd;
     if (a === b) return;                       // 선택한 게 없으면 아무것도 안 함
-    const strip = (s) => s.replace(/\{(?:#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+)\|([^}]*)\}/g, '$1');
     const before = input.value.slice(0, a);
-    const sel = strip(input.value.slice(a, b));
     const after = input.value.slice(b);
-    input.value = before + (name ? `{${name}|${sel}}` : sel) + after;
-    const innerStart = before.length + (name ? `{${name}|`.length : 0);
+    // 선택 안의 기존 토큰에서 키(색·굵게)를 모으고 글자만 남긴다.
+    let keys = [];
+    const sel = input.value.slice(a, b).replace(
+      /\{(#[0-9a-fA-F]{3,6}|[가-힣A-Za-z]+(?:\+[가-힣A-Za-z]+)*)\|([^}]*)\}/g,
+      (_mm, k, t) => { keys.push(...k.split('+')); return t; });
+
+    if (key === null) {
+      keys = [];                               // 기본: 서식 모두 지우기
+    } else if (isStyleKey(key)) {
+      keys = keys.includes(key) ? keys.filter((k) => k !== key) : [...keys, key];
+    } else {                                   // 색: 기존 색은 빼고 새 색으로
+      keys = keys.filter((k) => !toColor(k));
+      keys.push(key);
+    }
+    const spec = keys.join('+');
+    input.value = before + (spec ? `{${spec}|${sel}}` : sel) + after;
+    const innerStart = before.length + (spec ? `{${spec}|`.length : 0);
     input.focus();
     input.selectionStart = innerStart;
     input.selectionEnd = innerStart + sel.length;
