@@ -564,12 +564,12 @@ const adminCoins = (() => {
     { label: '가나디라고라', lucky: true, color: '#ffcf6a' },   // 가나디라고라(한정 캐릭터)
     { label: '50', coins: 50, color: '#ffcf3f' }
   ];
-  // 보상별 확률(합 100). 특별: 가나디라고라 5% · 코인 잭팟 3% · 노래 1%, 50코인 10%.
-  // 나머지 81% 를 코인 당첨(0/5/10/20)에 기존 비율대로 배분.
+  // 보상별 확률(합 100). 가나디라고라 5% · 코인 잭팟 2% · 노래 1%,
+  // 50코인 5% · 20코인 15% · 10코인 25%, 나머지 47% 를 0/5코인에 배분.
   const WEIGHTS = [
-    { coins: 0, p: 28 }, { coins: 5, p: 31 }, { coins: 10, p: 13 },
-    { coins: 20, p: 9 }, { coins: 50, p: 10 },
-    { jackpot: true, coins: 500, p: 3 },   // 코인 잭팟 500
+    { coins: 0, p: 22 }, { coins: 5, p: 25 }, { coins: 10, p: 25 },
+    { coins: 20, p: 15 }, { coins: 50, p: 5 },
+    { jackpot: true, coins: 500, p: 2 },   // 코인 잭팟 500
     { lucky: true, p: 5 },                  // 가나디라고라
     { song: true, p: 1 }                    // 개발자 노래
   ];
