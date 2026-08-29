@@ -1061,15 +1061,13 @@ function startGame() {
   renderCoinHud();
   state.phase = 'playing';
   renderNotice();   // 플레이 중엔 공지 배너를 숨긴다
-  // 영상 촬영용: 관리자가 '일반 마이크' 모드를 하면 50초부터 시작한다(타이머·난이도
-  // 모두 50초 지점에서 출발). 관리자는 랭킹 집계에서 제외라 기록엔 영향이 없다.
-  state.elapsed = (isAdmin && state.runMode === 'voice') ? 50 : 0;
+  state.elapsed = 0;
   state.deathTimer = 0;
   state.cause = 'zap';
   input.enabled = true;
   input.releaseAll();
   ui.showGame();
-  ui.updateHud(state.elapsed);
+  ui.updateHud(0);
 }
 
 // ESC. 게임 중이 아닐 때는 아무 일도 하지 않는다.
