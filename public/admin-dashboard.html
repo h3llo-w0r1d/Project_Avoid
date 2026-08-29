@@ -98,6 +98,11 @@
   .num { font-variant-numeric: tabular-nums; }
   .name { font-weight: 700; }
   .dim { color: var(--muted); font-size: 12px; }
+  .new-badge {
+    display: inline-block; margin-left: 6px; padding: 1px 6px;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.04em; vertical-align: middle;
+    color: #052; background: #38e08a; border-radius: 999px;
+  }
   td button.act {
     background: rgba(255,255,255,0.06); border: 1px solid var(--stroke);
     color: var(--muted); border-radius: 6px; padding: 5px 10px; font-size: 12px;
@@ -477,7 +482,7 @@ async function drawPlays() {
     const device = (m) => m == null ? '<span class="dim">–</span>' : (m ? '📱 폰' : '💻 PC');
     const body = rows.map((r, i) =>
       `<tr><td class="num dim">${total - start - i}</td>
-        <td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
+        <td class="name${r.member ? ' member' : ''}">${esc(r.name)}${r.first ? ' <span class="new-badge">NEW</span>' : ''}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
         <td class="dim">${stamp(r.at)}</td>
         <td>${device(r.mobile)}</td></tr>`).join('');
