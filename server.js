@@ -25,7 +25,7 @@ import { openCoinGrants } from './lib/coingrants.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
-import { describe as describeTitles, sanitizeEquipped } from './lib/titles.js';
+import { describe as describeTitles, sanitizeEquipped, earnedIds as earnedTitleIds, titleById } from './lib/titles.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -386,12 +386,24 @@ app.post('/api/scores', async (req, res) => {
     stats.runFinished(t);
     // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
     plays.add({ name: finalName, seconds, userId: req.user?.id ?? null, mobile: isMobile(req.get('user-agent')) });
+
+    // 이번 판으로 새로 얻은 칭호(판수 문턱을 넘겼는지). 판수는 두 모드 합이고
+    // 이번 제출로 정확히 1 늘었으므로, 직전 판수는 (지금-1) 이다. 축하 연출용.
+    const isAdmin = isAdminUser(req.user);
+    const pN = scores.bestOf({ name: finalName, mode: 'normal' });
+    const pH = scores.bestOf({ name: finalName, mode: 'hardcore' });
+    const playsNow = (pN?.runs ?? 0) + (pH?.runs ?? 0);
+    const gainedIds = earnedTitleIds({ plays: playsNow, isAdmin })
+      .filter((id) => !earnedTitleIds({ plays: Math.max(0, playsNow - 1), isAdmin }).includes(id));
+    const newTitles = gainedIds.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
+
     res.json({
       id: entry.id,
       rank: scores.rankOf(entry.id),
       top: scores.top(TOP_N, mode),
       me: scores.bestOf(req.user ? { userId: req.user.id, mode } : { name: finalName, mode }),
-      season: seasonInfo()
+      season: seasonInfo(),
+      newTitles
     });
   } catch (err) {
     console.error('기록 저장 실패:', err);

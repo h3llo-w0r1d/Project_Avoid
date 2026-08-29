@@ -1382,6 +1382,40 @@ function showUnlock(list) {
   });
 }
 
+// 판이 끝나 새 칭호를 얻었을 때 띄우는 축하 연출(캐릭터 해금과 같은 스타일).
+// 여러 개면 하나씩 넘긴다. 화면을 누르면 건너뛴다.
+function showTitleUnlock(list) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">🏆 새 칭호 획득!</div>' +
+      '<div class="unlock-lockface">🏷️</div>' +
+      '<div class="unlock-name"></div>' +
+      '<div class="unlock-hint">프로필에서 장착할 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    const nameEl = overlay.querySelector('.unlock-name');
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    let i = 0, timer = null;
+    const done = () => {
+      clearTimeout(timer);
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    const next = () => {
+      if (i >= list.length) { done(); return; }
+      nameEl.textContent = `「${list[i++].name}」`;
+      nameEl.style.animation = 'none';
+      void nameEl.offsetWidth;
+      nameEl.style.animation = 'unlockPop 0.5s ease-out';
+      timer = setTimeout(next, 1900);
+    };
+    overlay.addEventListener('click', done);
+    next();
+  });
+}
+
 // 커피 이벤트 기준 초.
 const COFFEE_SECONDS = 111;
 
@@ -1483,6 +1517,10 @@ async function finishGame() {
       ui.setSubmitState(result.rank ? `${tag}전체 ${result.rank}위 등록!` : `${tag}기록이 등록되었습니다`);
     }
     ui.renderLeaderboard(result, result.id, board);
+
+    // 이번 판으로 새 칭호를 얻었으면 축하 연출을 띄운다(로그인 계정만 — 칭호는
+    // 계정에 저장돼 게스트는 장착할 수 없다).
+    if (auth.signedIn && result.newTitles?.length) await showTitleUnlock(result.newTitles);
 
     // 이 판이 그 사람의 최고 기록이면 다시보기를 서버에 올린다(관리자만 봄).
     // rec 은 일반 모드에서만 만들어지고, 최고 기록일 때만(me.time 과 일치) 올린다.
