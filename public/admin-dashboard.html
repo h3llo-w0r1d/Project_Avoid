@@ -283,8 +283,12 @@ function pcMobile(total, mobile) {
 function kstDay(ms) { return new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10); }
 // 생존 기록 표기. 랭킹처럼 소수 2자리(00.00초). 없으면 '–'.
 function recSecs(s) { return s > 0 ? `${(+s).toFixed(2)}초` : '<span class="dim">–</span>'; }
-// 하루/한 달 평균 기록 = 총 플레이초 ÷ 판수.
-function avgSecs(u) { return u.runs > 0 ? u.seconds / u.runs : 0; }
+// 하루/한 달 평균 기록 = '제대로 한 판'(4초 이상)의 평균. 시작하자마자 죽은
+// 짧은 판은 뺀다. 그 값이 없는 옛 날짜는 전체 평균으로 대체.
+function avgSecs(u) {
+  if (u.realRuns > 0) return u.realSeconds / u.realRuns;
+  return u.runs > 0 ? u.seconds / u.runs : 0;
+}
 
 function drawUsage() {
   const rows = data.usage ?? [];
