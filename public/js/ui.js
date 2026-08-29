@@ -1,4 +1,5 @@
 import { STAGES } from './config.js';
+import { GUEST_PATTERN } from './profanity.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -396,6 +397,8 @@ export class UI {
         <span class="secs">${kindOf.value(e)}</span>`;
       const who = li.querySelector('.who');
       who.textContent = e.name;
+      // 게스트(Guest####)는 회색으로 — 로그인 유저와 구분되게.
+      if (GUEST_PATTERN.test(e.name)) who.classList.add('guest');
       who.addEventListener('click', () => this.onName?.(e.name));
       board.appendChild(li);
     }

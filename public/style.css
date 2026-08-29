@@ -2195,6 +2195,9 @@ kbd {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* 게스트(비로그인)는 회색으로 — 로그인 유저와 구분. */
+.board .who.guest { color: var(--muted); font-weight: 500; }
+.board li.me .who.guest { color: var(--muted); }
 
 /* 기록 막대 — 1위 대비 비율. 이름과 기록 사이의 빈 공간을 채운다. */
 .board .rbar {
