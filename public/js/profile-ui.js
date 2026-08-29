@@ -5,6 +5,8 @@
 // 이유가 없고, 하나만 만들면 어긋날 일도 없다.
 
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export class ProfileUI {
   constructor() {
@@ -12,6 +14,7 @@ export class ProfileUI {
       modal: $('profile-modal'),
       btn: $('profile-btn'),
       name: $('profile-name'),
+      titles: $('profile-titles'),     // 이름 옆 장착 칭호 칩
       body: $('profile-body'),
       replayBtn: $('profile-replay')   // 관리자 전용 '다시보기' (기록 있을 때만)
     };
@@ -28,8 +31,10 @@ export class ProfileUI {
     this.openMine = null;   // main.js 가 채운다
     this.onRename = null;   // main.js 가 채운다. 없으면 바꾸기 버튼을 안 만든다.
     this.onReplay = null;   // main.js 가 채운다(관리자만). 최고기록 다시보기.
+    this.onEquipTitles = null; // main.js 가 채운다. 칭호 장착 저장(POST). 없으면 칭호 버튼 숨김.
     this.me = null;         // 지금 로그인한 사람의 닉네임 (게스트면 null)
     this.replayId = null;   // 지금 프로필의 최고기록 점수 id (다시보기 대상)
+    this.data = null;       // 지금 그린 프로필 원본(칭호 창에서 다시 쓴다)
   }
 
   get isOpen() { return !this.el.modal.classList.contains('hidden'); }
@@ -63,7 +68,9 @@ export class ProfileUI {
   }
 
   draw(p) {
+    this.data = p;
     this.el.name.textContent = p.name;
+    this.renderChips(p);
 
     // 다시보기 버튼: 관리자에게만, 그 최고기록의 리플레이가 있을 때만 뜬다.
     // (서버가 관리자에게만 best.id·best.replay 를 내려준다.)
@@ -128,19 +135,110 @@ export class ProfileUI {
 
     this.el.body.innerHTML = parts.join('');
 
-    // 내 프로필일 때만 닉네임을 바꿀 수 있다. 남의 프로필에 이 버튼이
+    // 내 프로필일 때만 닉네임 바꾸기·칭호 버튼을 보여 준다. 남의 프로필엔
     // 뜨면 안 되므로 이름이 같은지 확인한다.
-    if (this.onRename && this.me && this.me === p.name) {
+    const mine = this.me && this.me === p.name;
+    if (mine && (this.onRename || this.onEquipTitles)) {
       const row = document.createElement('div');
       row.className = 'profile-actions';
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'ghost small';
-      btn.textContent = '닉네임 바꾸기';
-      btn.addEventListener('click', () => this.askRename(p.name));
-      row.appendChild(btn);
+      if (this.onEquipTitles) {
+        const tbtn = document.createElement('button');
+        tbtn.type = 'button';
+        tbtn.className = 'ghost small';
+        tbtn.textContent = '🏷️ 칭호';
+        tbtn.addEventListener('click', () => this.openTitles());
+        row.appendChild(tbtn);
+      }
+      if (this.onRename) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ghost small';
+        btn.textContent = '닉네임 바꾸기';
+        btn.addEventListener('click', () => this.askRename(p.name));
+        row.appendChild(btn);
+      }
       this.el.body.appendChild(row);
     }
+  }
+
+  // 이름 옆에 장착한 칭호 칩을 그린다(최대 3개). 남의 프로필에서도 보인다.
+  renderChips(p) {
+    if (!this.el.titles) return;
+    const all = p.titles?.all ?? [];
+    const equipped = all.filter((t) => t.equipped);
+    this.el.titles.innerHTML = equipped
+      .map((t) => `<span class="title-chip">${t.icon ? t.icon + ' ' : ''}${esc(t.name)}</span>`)
+      .join('');
+  }
+
+  // 칭호 창: 모든 칭호를 보여 주고, 얻은 것만 장착(최대 3개)할 수 있다.
+  openTitles() {
+    const p = this.data;
+    if (!p || !p.titles) return;
+    // 지금 장착 상태를 로컬로 들고 편집하다가, 바뀔 때마다 서버에 저장한다.
+    let equipped = p.titles.all.filter((t) => t.equipped).map((t) => t.id);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'modal';
+    overlay.style.zIndex = '60';   // 프로필 위에
+    overlay.innerHTML = `
+      <div class="modal-card panel" style="max-width:420px">
+        <div class="modal-head">
+          <h2>칭호</h2>
+          <button type="button" class="icon-btn tt-close" aria-label="닫기">✕</button>
+        </div>
+        <p class="tt-hint">얻은 칭호만 장착할 수 있어요 · 최대 3개</p>
+        <div class="tt-list"></div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const listEl = overlay.querySelector('.tt-list');
+    const hintEl = overlay.querySelector('.tt-hint');
+    const close = () => overlay.remove();
+    overlay.querySelector('.tt-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    const paint = () => {
+      hintEl.textContent = `얻은 칭호만 장착할 수 있어요 · 장착 ${equipped.length}/3`;
+      listEl.innerHTML = '';
+      for (const t of p.titles.all) {
+        const on = equipped.includes(t.id);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'tt-item';
+        card.classList.toggle('earned', t.earned);
+        card.classList.toggle('locked', !t.earned);
+        card.classList.toggle('on', on);
+        card.disabled = !t.earned;
+        card.innerHTML = `
+          <span class="tt-ico">${t.icon || '🏷️'}</span>
+          <span class="tt-name">${esc(t.name)}</span>
+          <span class="tt-cond">${t.earned ? (on ? '장착 중' : '장착 가능') : `${t.plays}판 달성 시`}</span>`;
+        if (t.earned) card.addEventListener('click', () => toggle(t.id));
+        listEl.appendChild(card);
+      }
+    };
+
+    const toggle = async (id) => {
+      if (equipped.includes(id)) equipped = equipped.filter((x) => x !== id);
+      else {
+        if (equipped.length >= 3) return;   // 3개까지만
+        equipped = [...equipped, id];
+      }
+      paint();
+      // 서버에 저장하고, 돌아온 확정 상태로 프로필 칩·데이터를 갱신한다.
+      try {
+        const res = await this.onEquipTitles(equipped);
+        if (res) {
+          p.titles = res;
+          equipped = res.all.filter((t) => t.equipped).map((t) => t.id);
+          this.renderChips(p);
+          paint();
+        }
+      } catch { /* 실패해도 화면은 유지 */ }
+    };
+
+    paint();
   }
 
   // 화면 가운데 뜨는 입력창. 브라우저 기본 prompt() 는 창 맨 위에 떠서

@@ -345,6 +345,8 @@ profile.onRename = async (name) => {
 };
 // 관리자 전용: 프로필의 최고기록 다시보기.
 profile.onReplay = (scoreId) => watchReplay(scoreId);
+// 칭호 장착 저장(로그인 계정만). 게스트는 계정이 없어 저장되지 않는다.
+profile.onEquipTitles = (equipped) => api.equipTitles(equipped);
 
 // 관리는 별도 페이지 /admin 하나로 한다. 게임 안 관리 창은 없앴다.
 // 여기서는 게시판에서 관리자에게만 삭제 버튼을 보여 줄지 정하는 데만 쓴다.

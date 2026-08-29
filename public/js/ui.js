@@ -636,6 +636,17 @@ export const api = {
     return res.json();
   },
 
+  // 칭호 장착 저장. 얻은 것만·최대 3개는 서버가 다시 걸러 확정본을 준다.
+  async equipTitles(equipped) {
+    const res = await fetch('/api/titles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ equipped })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).titles;
+  },
+
   async hall() {
     const res = await fetch('/api/hall');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

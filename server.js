@@ -25,6 +25,7 @@ import { openCoinGrants } from './lib/coingrants.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
+import { describe as describeTitles, sanitizeEquipped } from './lib/titles.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -288,7 +289,9 @@ app.get('/api/profile', (req, res) => {
     best: best ? { time: best.time, rank: best.rank, ...bestExtra(best) } : null,
     hardcore: hard ? { time: hard.time, rank: hard.rank, ...bestExtra(hard) } : null,
     plays,
-    coffee: !!coffee
+    coffee: !!coffee,
+    // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부(판수로 판정).
+    titles: describeTitles({ plays }, user?.titles)
   };
 
   if (user) {
@@ -803,6 +806,20 @@ app.post('/api/admin/coins/grant', requireAdmin, (req, res) => {
 app.post('/api/me/coins/claim', (req, res) => {
   if (!req.user) return res.json({ amount: 0 });
   res.json({ amount: coinGrants.claim(req.user.id) });
+});
+
+// 칭호 장착(최대 3개, 얻은 것만). 로그인·닉네임이 있어야 한다.
+// 판수는 서버가 아는 제출된 판수(두 모드 합)로 판정한다 — 클라 조작 무시.
+app.post('/api/titles', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  const name = req.user.nickname;
+  if (!name) return res.status(400).json({ error: '닉네임을 먼저 정해 주세요.' });
+  const best = scores.bestOf({ name, mode: 'normal' });
+  const hard = scores.bestOf({ name, mode: 'hardcore' });
+  const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
+  const equipped = sanitizeEquipped(req.body?.equipped, { plays });
+  const updated = users.setTitles(req.user.id, equipped);
+  res.json({ ok: true, titles: describeTitles({ plays }, updated?.titles ?? equipped) });
 });
 
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.
