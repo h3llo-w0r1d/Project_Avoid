@@ -550,6 +550,7 @@ const adminCoins = (() => {
   const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
   const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
+  const BLANK_STREAK_KEY = 'avoidarc.roul.blankStreak';   // 룰렛 꽝 연속 횟수(불운·저주 업적용)
   // 10칸. 초대박 3종(합 1%): 코인잭팟 500(0.89%), 가나디라고라(0.1%), 노래(0.01%).
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
@@ -722,6 +723,21 @@ const adminCoins = (() => {
         api.awardTitle('luckyguy').then((r) => {
           if (r?.fresh && r.title) showTitleUnlock([r.title]);
         });
+      }
+
+      // 꽝 연속 카운트 → 불운(5연속)·저주받은 자(10연속) 업적. 대박·코인 당첨이
+      // 나오면 연속이 끊겨 0 으로 돌아간다. 카운트는 브라우저에 이어 둔다.
+      const isBlank = !lucky && !jackpot && !song && coins === 0;
+      if (isBlank) {
+        const n = (parseInt(localStorage.getItem(BLANK_STREAK_KEY) || '0', 10) || 0) + 1;
+        localStorage.setItem(BLANK_STREAK_KEY, String(n));
+        if (auth.signedIn && (n === 5 || n === 10)) {
+          api.awardTitle(n >= 10 ? 'cursed' : 'unlucky').then((r) => {
+            if (r?.fresh && r.title) showTitleUnlock([r.title]);
+          });
+        }
+      } else {
+        localStorage.setItem(BLANK_STREAK_KEY, '0');
       }
       refresh();
     }, 4100);
