@@ -112,14 +112,16 @@ const users = await openUserStore(DATA_DIR, db);
 // 서버를 다시 켜면 진행 중이던 판의 기록은 못 올린다. 대신 표가 새는 일도 없다.
 const runTickets = createTickets();
 
+// 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
+// stats 보다 먼저 연다 — stats 가 '일별 최고 기록'을 처음 만들 때 이 표에서 백필한다.
+const plays = openPlaysStore(db);
+
 // 날짜별 이용 현황. 누가 왔는지는 안 적고 횟수만 센다.
 const stats = openStatsStore(db);
 
 // 자유 게시판.
 const board = openBoardStore(db);
 
-// 모든 판 기록(플레이 로그). 최고 기록만 남기는 scores 와 별개다.
-const plays = openPlaysStore(db);
 const purchases = openPurchasesStore(db);   // 코인으로 캐릭터 산 기록
 const spins = openSpinsStore(db);           // 코인 룰렛 돌린 기록
 const replays = openReplaysStore(db);       // 최고기록 다시보기(입력 기록)
