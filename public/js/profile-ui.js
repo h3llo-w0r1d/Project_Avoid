@@ -145,7 +145,7 @@ export class ProfileUI {
         const tbtn = document.createElement('button');
         tbtn.type = 'button';
         tbtn.className = 'ghost small';
-        tbtn.textContent = '🏷️ 칭호';
+        tbtn.textContent = '칭호';
         tbtn.addEventListener('click', () => this.openTitles());
         row.appendChild(tbtn);
       }
@@ -211,7 +211,7 @@ export class ProfileUI {
         card.classList.toggle('on', on);
         card.disabled = !t.earned;
         card.innerHTML = `
-          <span class="tt-ico">${t.icon || '🏷️'}</span>
+          ${t.icon ? `<span class="tt-ico">${t.icon}</span>` : ''}
           <span class="tt-name">${esc(t.name)}</span>
           <span class="tt-cond">${t.earned ? (on ? '장착 중' : '장착 가능') : (t.cond || `${t.plays}판 달성 시`)}</span>`;
         if (t.earned) card.addEventListener('click', () => toggle(t.id));
