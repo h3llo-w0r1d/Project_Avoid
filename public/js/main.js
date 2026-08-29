@@ -1440,37 +1440,8 @@ function showTitleUnlock(list) {
   });
 }
 
-// 커피 이벤트 기준 초.
-const COFFEE_SECONDS = 111;
-
 // 이 초 이상 버텨야 그 판에 먹은 코인을 인정한다(먹고 바로 죽는 파밍 방지).
 const MIN_COIN_SECONDS = 10;
-
-// 커피 이벤트 창. 캡처해서 인스타 DM 을 보내야 하므로 자동으로 사라지지 않고,
-// '확인' 을 누르거나 바깥을 눌러야 닫힌다.
-function showCoffee(score) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement('div');
-    overlay.className = 'unlock-overlay coffee';
-    overlay.innerHTML =
-      '<div class="unlock-card coffee-card">' +
-      '<div class="coffee-emoji">☕</div>' +
-      '<div class="coffee-kicker">' + COFFEE_SECONDS + '초 돌파!</div>' +
-      '<div class="coffee-title">커피 이벤트 당첨 🎉</div>' +
-      '<div class="coffee-body">' + score.toFixed(2) + '초로 ' + COFFEE_SECONDS + '초를 넘겼어요!<br>' +
-      '이 화면을 캡처해서<br><b>AvoidArc 인스타그램 DM</b> 으로 보내주세요.</div>' +
-      '<button class="coffee-ok" type="button">확인</button>' +
-      '</div>';
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add('show'));
-    const close = () => {
-      overlay.classList.remove('show');
-      setTimeout(() => { overlay.remove(); resolve(); }, 260);
-    };
-    overlay.querySelector('.coffee-ok').addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-  });
-}
 
 async function finishGame() {
   state.phase = 'over';
@@ -1512,9 +1483,6 @@ async function finishGame() {
       await showCoinLost(runCoins);  // 10초 못 버팀 → 무효 안내
     }
   }
-
-  // 기준 초를 처음 넘긴 사람에게 커피 이벤트 창을 띄운다(관리자는 제외).
-  if (!isAdmin && prevBest < COFFEE_SECONDS && score >= COFFEE_SECONDS) await showCoffee(score);
 
   ui.showGameOver(score, state.cause, state.hardcore);
 
