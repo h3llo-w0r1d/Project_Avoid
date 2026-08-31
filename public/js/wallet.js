@@ -11,7 +11,7 @@ const COINS_KEY = 'avoidarc.coins';
 const OWNED_KEY = 'avoidarc.owned';   // 코인으로 산 캐릭터 id 목록
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
 const SPINUSED_KEY = 'avoidarc.spins.used';   // 지금까지 돌린 룰렛 횟수
-const SECONDS_PER_SPIN = 100;           // 이만큼 쌓일 때마다 룰렛 1회
+const SECONDS_PER_SPIN = 80;            // 이만큼 쌓일 때마다 룰렛 1회
 
 function readOwned() {
   try { return new Set(JSON.parse(localStorage.getItem(OWNED_KEY) || '[]')); }

@@ -197,7 +197,7 @@ rival.blob.visible = false;
 rival.halo.visible = false;
 
 const hazards = new Hazards(scene);
-const floorHoles = new FloorHoles(scene);   // 하드코어: 바닥이 사라졌다 나타난다
+const floorHoles = new FloorHoles(scene);   // 하드코어: 부채꼴 감전 지대(시드 기반)
 // 이번 판에 먹은 코인 수. 판 중엔 지갑에 바로 넣지 않고 여기 모아 뒀다가,
 // 판이 끝날 때 정산한다(10초 넘게 버텨야 인정 — 먹고 바로 죽는 악용 방지).
 // startGame 에서 0으로.
@@ -1065,10 +1065,12 @@ function startGame() {
   state.mode = 'solo';
   // 하드코어 여부는 타이틀 토글에서 읽는다. 다시 시작해도 같은 모드로 이어진다.
   state.hardcore = ui.isHardcore();
+  // 이번 판의 씨앗. 전기선·감전지대를 이 씨앗으로 돌려 다시보기가 그대로 재현된다.
+  const seed = (Math.random() * 2 ** 31) | 0;
   // 1) 1단 점프만 (하드코어) / 평소 2단.  2·3·6) 빔 난이도는 hazards 로.
   player.body.maxJumps = state.hardcore ? 1 : PLAYER.maxJumps;
   hazards.setMods(state.hardcore ? HARDCORE_MODS : null);
-  floorHoles.setActive(state.hardcore);   // 하드코어에서만 바닥이 사라진다
+  floorHoles.setActive(state.hardcore, seed);   // 하드코어: 감전 지대(시드 기반)
   // 소리 질러 점프가 켜져 있으면 마이크를 준비한다(키·터치 점프도 그대로 된다).
   if (voiceOn && !voiceJump.on) voiceJump.open().catch(() => {});
   state.paused = false;
@@ -1094,11 +1096,8 @@ function startGame() {
   // 마이크 모드면 키·터치 점프를 막고 목소리로만 뛰게 한다.
   input.voiceOnly = state.voice;
 
-  // 다시보기용: 이번 판의 씨앗을 정해 전기선을 그 씨앗으로 돌리고,
-  // 프레임 입력을 기록하기 시작한다(하드코어는 바닥구멍이 아직 비결정이라 제외).
-  const seed = (Math.random() * 2 ** 31) | 0;
-  rec = state.hardcore ? null
-    : { seed, mode: state.runMode, dt: [], x: [], y: [], j: [] };
+  // 다시보기용 프레임 입력 기록 시작. 감전 지대도 시드 기반이라 하드코어도 재현된다.
+  rec = { seed, mode: state.runMode, dt: [], x: [], y: [], j: [] };
 
   player.reset();
   setArenaVisible(true);
@@ -1214,10 +1213,10 @@ function startReplay(data) {
   versus.hide(); hideRival(); pause.hide(); profile.close?.();
   state.paused = false;
   state.mode = 'replay';
-  state.hardcore = data.mode === 'hardcore';
+  state.hardcore = data.mode === 'hardcore' || data.mode === 'voicehard';
   player.body.maxJumps = state.hardcore ? 1 : PLAYER.maxJumps;
   hazards.setMods(state.hardcore ? HARDCORE_MODS : null);
-  floorHoles.setActive(false);   // v1: 일반 모드만
+  floorHoles.setActive(state.hardcore, data.seed);   // 하드코어: 감전 지대(같은 씨앗으로 재현)
   coins.setActive(false);        // 재생엔 코인 없음
   input.enabled = false;
 
@@ -1251,8 +1250,12 @@ function replayStepOnce(rp) {
   rp.sim += fdt;
   player.update(fdt, { move: { x: rp.f.x[i], y: rp.f.y[i] }, jumpPressed: rp.f.j[i] > 0.5 });
   hazards.update(fdt, rp.sim);
+  if (state.hardcore) floorHoles.update(fdt);   // 감전 지대(시드로 재현)
   if (hazards.hitTest(player)) { rp.ended = true; state.cause = 'zap'; return true; }
   if (player.body.droppedOff) { rp.ended = true; state.cause = 'fall'; return true; }
+  if (state.hardcore && floorHoles.isOpenAt(player.body.x, player.body.z)) {
+    rp.ended = true; state.cause = 'zap'; return true;   // 감전사
+  }
   return false;
 }
 
@@ -1261,6 +1264,7 @@ function seekReplay(targetSim) {
   const rp = state.replay;
   if (!rp) return;
   hazards.reset(rp.seed);
+  if (state.hardcore) floorHoles.reset(rp.seed);   // 감전 지대도 씨앗부터 다시 돌린다
   player.reset();
   rp.i = 0; rp.consumed = 0; rp.sim = 0; rp.ended = false; rp.deathTimer = 0;
   while (rp.i < rp.n && rp.sim < targetSim) {
@@ -1855,10 +1859,9 @@ function frame() {
       killPlayer('zap');
     } else if (player.body.droppedOff) {
       killPlayer('fall');
-    } else if (state.hardcore && player.body.grounded
-               && floorHoles.isOpenAt(player.body.x, player.body.z)) {
-      // 사라진 바닥을 밟고 있으면 아래로 떨어진다
-      killPlayer('fall');
+    } else if (state.hardcore && floorHoles.isOpenAt(player.body.x, player.body.z)) {
+      // 감전 지대 안에 있으면 감전사 — 점프해도 못 피하니 다른 구역으로 이동해야 한다
+      killPlayer('zap');
     }
 
     if (ui.updateHud(state.elapsed)) audio.stageUp();
