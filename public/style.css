@@ -2393,12 +2393,28 @@ kbd {
   .tower-ico { font-size: 20px; } .tower-label { font-size: 10px; } }
 
 /* 탑 화면 — 둥둥 뜬 땅이 아래(1층)부터 위로 이어지고, 그 위를 올라간다 */
-.tower-card { width: min(1000px, 94vw); max-width: none; max-height: 92vh; }
-.tower-list {
-  display: flex; flex-direction: column; gap: 6px;
-  max-height: 72vh; overflow-y: auto; margin-top: 10px; padding: 10px 2px 4px;
+.tower-card { width: min(1100px, 96vw); max-width: none; max-height: 94vh; }
+.tower-list { margin-top: 10px; }
+/* 한 화면에 5층만 보이는 창. 안쪽 트랙을 밀어 다음 5층으로 넘어간다. */
+.tower-view { position: relative; overflow: hidden; }
+.tower-track {
+  display: flex; flex-direction: column;
+  transition: transform 0.55s cubic-bezier(0.22, 0.8, 0.3, 1);
 }
-.tower-floor { position: relative; display: flex; }
+/* 층 넘기기 버튼 */
+.tower-pager {
+  display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px;
+}
+.tower-pager button {
+  width: 44px; height: 34px; margin: 0; padding: 0; border-radius: 10px;
+  color: #ffd9a1; background: rgba(255, 150, 60, 0.12);
+  border: 1px solid rgba(255, 150, 60, 0.45); cursor: pointer; font-size: 13px;
+}
+.tower-pager button:hover:not(:disabled) { background: rgba(255, 150, 60, 0.24); }
+.tower-pager button:disabled { opacity: 0.3; cursor: default; }
+.tower-page-now { font-size: 13px; font-weight: 800; color: var(--muted); min-width: 74px; text-align: center; }
+
+.tower-floor { position: relative; display: flex; align-items: center; }
 /* 층을 지그재그로 놓아 '올라가는 길' 느낌을 낸다 */
 .tower-floor:nth-child(odd) { justify-content: flex-start; padding-left: 12%; }
 .tower-floor:nth-child(even) { justify-content: flex-end; padding-right: 12%; }

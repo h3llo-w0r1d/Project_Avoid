@@ -1169,26 +1169,53 @@ async function openTower() {
     ? `${data.cleared} / ${data.top}층 클리어`
     : '🔒 로그인하면 도전모드를 할 수 있어요';
 
-  // 1층이 맨 아래로 오게 뒤집어 그린다. 지금 도전할 층에 내 캐릭터를 세운다.
+  // 한 화면에 5층씩. 위로 갈수록 땅이 커지고, 5층을 넘기면 화면이 위로 넘어간다.
+  const PER_PAGE = 5, ROW = 124;
   let face = '';
   try { face = characters.preview(player.characterId); } catch { /* 미리보기 실패는 무시 */ }
   const cur = Math.min(data.top, data.cleared + 1);
-  const list = overlay.querySelector('.tower-list');
-  list.innerHTML = [...data.floors].reverse().map((f) => {
+  const pages = Math.max(1, Math.ceil(data.top / PER_PAGE));
+  let page = Math.min(pages, Math.ceil(Math.max(1, cur) / PER_PAGE));
+
+  // 1층이 맨 아래로 오게 뒤집어 그린다. 섬 크기는 층이 올라갈수록 커진다.
+  const rows = [...data.floors].reverse().map((f) => {
     const state = f.done ? 'done' : (f.open ? 'open' : 'lock');
     const canGo = f.open && data.signedIn;
-    // 둥둥 뜬 땅(섬) 위에 지금 층이면 내 캐릭터가 서 있다.
+    const w = 116 + f.floor * 9;                 // 위층일수록 넓은 땅
     const me = (f.floor === cur && data.signedIn && face)
       ? `<img class="tower-me" src="${face}" alt="">` : '';
-    return `<div class="tower-floor ${state}" data-floor="${f.floor}">` +
+    return `<div class="tower-floor ${state}" data-floor="${f.floor}" style="height:${ROW}px">` +
       `<button type="button" class="tower-node"${canGo ? '' : ' disabled'}>` +
-      `<span class="tower-stage">${me}<span class="tower-island"></span></span>` +
+      `<span class="tower-stage" style="width:${w}px;height:${Math.round(w * 0.35)}px">` +
+      `${me}<span class="tower-island"></span></span>` +
       `<span class="tower-label"><b class="tower-num">${f.floor}층</b>` +
       `<em class="tower-goal">${f.done ? '✔ 클리어' : f.goal}</em></span>` +
       '</button></div>';
   }).join('');
-  // 아래(1층)가 보이게 스크롤을 맨 밑으로.
-  list.scrollTop = list.scrollHeight;
+
+  const list = overlay.querySelector('.tower-list');
+  list.innerHTML =
+    `<div class="tower-view" style="height:${PER_PAGE * ROW}px">` +
+    `<div class="tower-track">${rows}</div></div>` +
+    '<div class="tower-pager">' +
+    '<button type="button" class="tower-page up" aria-label="위층">▲</button>' +
+    '<span class="tower-page-now"></span>' +
+    '<button type="button" class="tower-page down" aria-label="아래층">▼</button>' +
+    '</div>';
+
+  const track = list.querySelector('.tower-track');
+  const nowEl = list.querySelector('.tower-page-now');
+  // page 1 = 아래(1~5층). 트랙을 밀어 그 구간만 보이게 한다.
+  const showPage = (p) => {
+    page = Math.max(1, Math.min(pages, p));
+    track.style.transform = `translateY(${-(data.top - page * PER_PAGE) * ROW}px)`;
+    nowEl.textContent = `${(page - 1) * PER_PAGE + 1}~${Math.min(data.top, page * PER_PAGE)}층`;
+    list.querySelector('.tower-page.up').disabled = page >= pages;
+    list.querySelector('.tower-page.down').disabled = page <= 1;
+  };
+  list.querySelector('.tower-page.up').addEventListener('click', () => showPage(page + 1));
+  list.querySelector('.tower-page.down').addEventListener('click', () => showPage(page - 1));
+  showPage(page);
 
   for (const b of list.querySelectorAll('.tower-node:not([disabled])')) {
     b.addEventListener('click', () => {
