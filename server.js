@@ -770,10 +770,16 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     present: presence.count(),
     online: lobby.stats(),
     scores: scores.all(),
-    // 계정 목록에 '몇 판 했는지'(제출된 판수 합)를 붙여 준다.
+    // 계정 목록에 '몇 판 했는지'를 붙인다. scores 는 시즌이 바뀌면 지난 기록을
+    // 지우므로(8월 등), 지난 달까지 포함한 총 판수는 plays 로그에서 센다.
+    // 혹시 로그가 상한에 걸려 잘렸으면 scores 쪽 값이 더 클 수 있어 둘 중 큰 값.
     accounts: (() => {
+      const logged = plays.countsByName();
       const runs = scores.runsByName();
-      return users.listAccounts().map((a) => ({ ...a, plays: runs.get(a.nickname) ?? 0 }));
+      return users.listAccounts().map((a) => ({
+        ...a,
+        plays: Math.max(logged.get(a.nickname) ?? 0, runs.get(a.nickname) ?? 0)
+      }));
     })(),
     usage: stats.recent(30),
     usageMonthly: stats.monthly(24),
