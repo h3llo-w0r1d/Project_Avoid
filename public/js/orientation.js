@@ -64,8 +64,46 @@ function apply() {
   }
 }
 
+// 회전 상태에선 iOS 네이티브 세로 스크롤이 먹지 않는다. 화면을 -90도 돌렸기 때문에
+// '화면상 아래'는 실제 터치의 clientX 축이라(toLocal 참고), 손가락을 세로로 끌어도
+// 브라우저는 그걸 가로 스크롤로 보고 목록이 제자리로 튕긴다.
+// 그래서 스크롤되는 조상을 찾아 손가락 이동량을 scrollTop 에 직접 반영한다.
+function scrollableFrom(node) {
+  for (let el = node; el && el !== document.body; el = el.parentElement) {
+    if (el.scrollHeight > el.clientHeight + 1) {
+      const oy = getComputedStyle(el).overflowY;
+      if (oy === 'auto' || oy === 'scroll') return el;
+    }
+  }
+  return null;
+}
+
+function startRotatedScroll() {
+  let target = null, last = 0;
+  addEventListener('touchstart', (e) => {
+    target = null;
+    if (!isForced() || e.touches.length !== 1) return;
+    target = scrollableFrom(e.target);
+    last = e.touches[0].clientX;
+  }, { passive: true });
+
+  addEventListener('touchmove', (e) => {
+    // 스크롤되는 곳을 잡고 있을 때만 가로챈다(게임 조이스틱 입력은 건드리지 않는다).
+    if (!target || !isForced() || e.touches.length !== 1) return;
+    const x = e.touches[0].clientX;
+    target.scrollTop -= (x - last);
+    last = x;
+    e.preventDefault();          // 페이지가 튕기지 않게
+  }, { passive: false });
+
+  const end = () => { target = null; };
+  addEventListener('touchend', end, { passive: true });
+  addEventListener('touchcancel', end, { passive: true });
+}
+
 export function startOrientationManager() {
   apply();
   addEventListener('resize', apply);
   addEventListener('orientationchange', apply);
+  startRotatedScroll();
 }

@@ -447,15 +447,16 @@ function drawAccounts() {
       <td class="num">${a.seasonWins}승 ${a.seasonLosses}패</td>
       <td class="num dim">통산 ${a.wins}-${a.losses} · ${a.streak}연승</td>
       <td class="dim">${when(a.createdAt)} 가입</td>
+      <td class="dim">${a.lastSeen ? when(a.lastSeen) : '–'}</td>
       <td><button class="act" data-reset="${a.id}" data-name="${esc(nm)}">전적 초기화</button></td></tr>`;
     const detail = openUser.has(a.id)
-      ? `<tr class="detail"><td colspan="6"><div class="detail-inner" id="detail-${a.id}">불러오는 중…</div></td></tr>`
+      ? `<tr class="detail"><td colspan="7"><div class="detail-inner" id="detail-${a.id}">불러오는 중…</div></td></tr>`
       : '';
     return head + detail;
   }).join('');
 
   $('acc-table').innerHTML =
-    `<table><thead><tr><th>닉네임</th><th>판수</th><th>이번 시즌</th><th>통산</th><th>가입</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    `<table><thead><tr><th>닉네임</th><th>판수</th><th>이번 시즌</th><th>통산</th><th>가입</th><th>최근 접속</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
   pager('acc-pager', pages, page.acc, (p) => { page.acc = p; drawAccounts(); });
 
   for (const tr of $('acc-table').querySelectorAll('tr.click')) {
