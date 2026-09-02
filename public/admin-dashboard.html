@@ -600,7 +600,6 @@ async function drawTowerLog() {
         <td class="num">${r.floor}층</td>
         <td class="dim">${esc(r.goal)}</td>
         <td class="${r.ok ? 'ok-yes' : 'ok-no'}">${r.ok ? '성공' : '실패'}</td>
-        <td>${mode(r.mode)}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
         <td class="dim">${stamp(r.at)}</td></tr>`).join('');
     $('tower-table').innerHTML =
@@ -693,6 +692,7 @@ async function drawPlays() {
     const body = rows.map((r, i) =>
       `<tr><td class="num dim">${total - start - i}</td>
         <td class="name${r.member ? ' member' : ''}">${esc(r.name)}${visitBadge(r)}</td>
+        <td>${mode(r.mode)}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
         <td class="dim">${stamp(r.at)}</td>
         <td>${device(r.mobile)}</td></tr>`).join('');
