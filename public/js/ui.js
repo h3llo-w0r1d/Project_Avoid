@@ -657,6 +657,22 @@ export const api = {
     return (await res.json()).titles;
   },
 
+  // 도전모드 한 판 기록(성공·실패). 실패해도 조용히 넘어간다.
+  recordChallenge(floor, goal, ok, seconds, guestName) {
+    fetch('/api/challenge-log', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ floor, goal, ok, seconds, name: guestName })
+    }).catch(() => {});
+  },
+
+  // 봇전 한 판 기록.
+  recordBotMatch(tier, win, seconds, guestName) {
+    fetch('/api/bot-log', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tier, win, seconds, name: guestName })
+    }).catch(() => {});
+  },
+
   // 도전모드(탑) 랭킹 — 누가 몇 층까지 올라갔나.
   async towerRanks() {
     const res = await fetch('/api/tower-ranks');

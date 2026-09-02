@@ -19,6 +19,7 @@ import { openBoardStore, CATEGORIES, ADMIN_CATEGORIES } from './lib/board.js';
 import { openPlaysStore } from './lib/plays.js';
 import { openPurchasesStore } from './lib/purchases.js';
 import { openSpinsStore } from './lib/spins.js';
+import { openModeLogs } from './lib/modelogs.js';
 import { openReplaysStore } from './lib/replays.js';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { openCoinGrants } from './lib/coingrants.js';
@@ -125,6 +126,7 @@ const board = openBoardStore(db);
 
 const purchases = openPurchasesStore(db);   // 코인으로 캐릭터 산 기록
 const spins = openSpinsStore(db);           // 코인 룰렛 돌린 기록
+const modeLogs = openModeLogs(db);          // 도전모드·봇전 한 판 기록
 const replays = openReplaysStore(db);       // 최고기록 다시보기(입력 기록)
 const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 대기
 
@@ -579,6 +581,39 @@ app.post('/api/purchase', (req, res) => {
 // 코인 룰렛을 돌렸을 때 남긴다(참고용 로그 — 코인 처리는 브라우저에서).
 // 관리자(무한 코인)는 진짜 소비가 아니므로 남기지 않는다. 이름은 로그인한
 // 사람은 서버 닉네임으로 덮어써 사칭을 막는다.
+// 도전모드 한 판 기록(성공·실패 모두). 관리 화면에서 보려는 용도.
+app.post('/api/challenge-log', (req, res) => {
+  const who = posterName(req, req.body?.name);
+  if (who.error) return res.status(400).json({ error: who.error });
+  const floor = Math.max(0, Math.min(999, Math.floor(Number(req.body?.floor) || 0)));
+  const goal = typeof req.body?.goal === 'string' ? req.body.goal.slice(0, 60) : '';
+  const ok = req.body?.ok ? 1 : 0;
+  const seconds = Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0));
+  try {
+    modeLogs.challenge.add({ name: who.name, userId: req.user?.id ?? null, floor, goal, ok, seconds });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('도전 기록 저장 실패:', err);
+    res.status(500).json({ error: '기록 저장 실패' });
+  }
+});
+
+// 봇전 한 판 기록.
+app.post('/api/bot-log', (req, res) => {
+  const who = posterName(req, req.body?.name);
+  if (who.error) return res.status(400).json({ error: who.error });
+  const tier = typeof req.body?.tier === 'string' ? req.body.tier.slice(0, 20) : '';
+  const win = req.body?.win ? 1 : 0;
+  const seconds = Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0));
+  try {
+    modeLogs.bot.add({ name: who.name, userId: req.user?.id ?? null, tier, win, seconds });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('봇전 기록 저장 실패:', err);
+    res.status(500).json({ error: '기록 저장 실패' });
+  }
+});
+
 app.post('/api/spin', (req, res) => {
   if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
   const who = posterName(req, req.body?.name);
@@ -954,6 +989,28 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
 });
 
 // 모든 판 기록(플레이 로그). 시간 역순 한 쪽씩 준다.
+// 도전모드 기록(관리자). 성공·실패 모두.
+app.get('/api/admin/challenge-log', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(modeLogs.challenge.page(limit, offset));
+});
+app.post('/api/admin/challenge-log/clear', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+  res.json({ ok: true, removed: modeLogs.challenge.clear() });
+});
+
+// 봇전 기록(관리자).
+app.get('/api/admin/bot-log', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(modeLogs.bot.page(limit, offset));
+});
+app.post('/api/admin/bot-log/clear', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+  res.json({ ok: true, removed: modeLogs.bot.clear() });
+});
+
 app.get('/api/admin/plays', requireAdmin, (req, res) => {
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
   const offset = Math.max(0, Number(req.query.offset) || 0);

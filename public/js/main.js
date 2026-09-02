@@ -1311,6 +1311,8 @@ async function challengeCleared() {
   audio.stopAmbient();
   audio.playMusic('homeMusic');
   audio.stageUp?.();
+  api.recordChallenge(f.floor, f.goal, true, state.elapsed,
+    auth.signedIn ? undefined : auth.displayName);
   let msg = '';
   try {
     const r = await api.clearFloor(f.floor);
@@ -1398,7 +1400,10 @@ function endBotMatch(win) {
   audio.playMusic('homeMusic');
   if (win) audio.stageUp?.(); else audio.death?.();
   const secs = state.elapsed;
+  // 봇전도 논 시간만큼 룰렛 누적 초가 쌓인다(관리자는 룰렛 무제한이라 제외).
+  if (!isAdmin) wallet.addPlaytime(secs);
   hideRival();
+  api.recordBotMatch(state.botTier, win, secs, auth.signedIn ? undefined : auth.displayName);
   showBotResult(win, secs, state.botTier);
 }
 
@@ -1842,6 +1847,9 @@ async function finishGame() {
     const f = state.challenge;
     state.challenge = null;
     voiceMeter.hide();
+    if (!isAdmin) wallet.addPlaytime(score);   // 도전모드도 룰렛 초가 쌓인다
+    api.recordChallenge(f.floor, f.goal, false, score,
+      auth.signedIn ? undefined : auth.displayName);
     showTowerResult(false, f, `${score.toFixed(2)}초 버팀`);
     return;
   }

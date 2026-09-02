@@ -96,6 +96,21 @@
   tr.click { cursor: pointer; }
   tr.click:hover td { background: rgba(255,255,255,0.03); }
   .num { font-variant-numeric: tabular-nums; }
+  .hidden { display: none !important; }
+  /* 기록 종류 탭 */
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 18px; }
+  .tabs button {
+    padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    color: var(--muted); background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--stroke); cursor: pointer;
+  }
+  .tabs button:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+  .tabs button.on {
+    color: #fff; background: rgba(120, 170, 255, 0.18); border-color: rgba(120, 170, 255, 0.6);
+  }
+  .ok-yes { color: #57d18a; font-weight: 800; }
+  .ok-no { color: #ff9aa6; font-weight: 800; }
+
   .name { font-weight: 700; }
   .dim { color: var(--muted); font-size: 12px; }
   .new-badge {
@@ -158,6 +173,18 @@
 
   <p class="state" id="state"></p>
 
+  <!-- 기록 종류 탭. 이용 현황은 아래에 항상 보이고, 그 밑 표만 탭으로 바뀐다. -->
+  <nav class="tabs" id="tabs">
+    <button type="button" data-panel="acc" class="on">계정</button>
+    <button type="button" data-panel="score">버티기 기록</button>
+    <button type="button" data-panel="play">플레이 기록</button>
+    <button type="button" data-panel="match">1v1 대전 기록</button>
+    <button type="button" data-panel="buy">캐릭터 구매 기록</button>
+    <button type="button" data-panel="spin">룰렛 기록</button>
+    <button type="button" data-panel="tower">층 오르기 기록</button>
+    <button type="button" data-panel="bot">봇전 기록</button>
+  </nav>
+
   <div class="head-row">
     <h2>이용 현황</h2>
     <div class="right">
@@ -171,47 +198,81 @@
   <div class="cards" id="usage-cards"></div>
   <div class="wrap" id="usage-table" style="margin-top:12px"></div>
 
-  <h2>계정 <span class="dim" id="acc-count"></span></h2>
-  <div class="tools">
-    <input id="acc-search" type="text" placeholder="닉네임으로 찾기" autocomplete="off">
-  </div>
-  <div class="wrap" id="acc-table"></div>
-  <div class="pager" id="acc-pager"></div>
+  <section class="tab-panel" id="panel-acc">
+    <h2>계정 <span class="dim" id="acc-count"></span></h2>
+    <div class="tools">
+      <input id="acc-search" type="text" placeholder="닉네임으로 찾기" autocomplete="off">
+    </div>
+    <div class="wrap" id="acc-table"></div>
+    <div class="pager" id="acc-pager"></div>
+  </section>
 
-  <h2>버티기 기록 <span class="dim" id="score-count"></span></h2>
-  <div class="tools">
-    <input id="score-search" type="text" placeholder="이름으로 찾기" autocomplete="off">
-    <button class="danger" id="score-clear" type="button">전체 비우기</button>
-  </div>
-  <div class="wrap" id="score-table"></div>
-  <div class="pager" id="score-pager"></div>
+  <section class="tab-panel hidden" id="panel-score">
+    <h2>버티기 기록 <span class="dim" id="score-count"></span></h2>
+    <div class="tools">
+      <input id="score-search" type="text" placeholder="이름으로 찾기" autocomplete="off">
+      <button class="danger" id="score-clear" type="button">전체 비우기</button>
+    </div>
+    <div class="wrap" id="score-table"></div>
+    <div class="pager" id="score-pager"></div>
+  </section>
 
-  <h2>플레이 기록 <span class="dim" id="play-count"></span></h2>
-  <p class="hint">최고 기록만 남는 위와 달리, 한 판 한 판을 모두 시간순으로 남깁니다.</p>
-  <div class="tools">
-    <span class="grow"></span>
-    <button class="danger" id="play-clear" type="button">전체 비우기</button>
-  </div>
-  <div class="wrap" id="play-table"></div>
-  <div class="pager" id="play-pager"></div>
+  <section class="tab-panel hidden" id="panel-play">
+    <h2>플레이 기록 <span class="dim" id="play-count"></span></h2>
+    <p class="hint">최고 기록만 남는 버티기 기록과 달리, 한 판 한 판을 모두 시간순으로 남깁니다.</p>
+    <div class="tools">
+      <span class="grow"></span>
+      <button class="danger" id="play-clear" type="button">전체 비우기</button>
+    </div>
+    <div class="wrap" id="play-table"></div>
+    <div class="pager" id="play-pager"></div>
+  </section>
 
-  <h2>1v1 대전 기록 <span class="dim" id="match-count"></span></h2>
-  <p class="hint">끝난 1:1 대전을 시간순으로 남깁니다. <b>로그인 유저·게스트 모두</b> 나옵니다.
-    승자·패자·버틴 시간과, 무작위 매칭(queue)인지 방 코드(room)인지 함께 보여 줍니다.</p>
-  <div class="wrap" id="match-table"></div>
-  <div class="pager" id="match-pager"></div>
+  <section class="tab-panel hidden" id="panel-match">
+    <h2>1v1 대전 기록 <span class="dim" id="match-count"></span></h2>
+    <p class="hint">끝난 1:1 대전을 시간순으로 남깁니다. <b>로그인 유저·게스트 모두</b> 나옵니다.
+      승자·패자·버틴 시간과, 무작위 매칭(queue)인지 방 코드(room)인지 함께 보여 줍니다.</p>
+    <div class="wrap" id="match-table"></div>
+    <div class="pager" id="match-pager"></div>
+  </section>
 
-  <h2>캐릭터 구매 기록 <span class="dim" id="buy-count"></span></h2>
-  <p class="hint">코인으로 캐릭터를 산 기록을 시간순으로 남깁니다. 누가·무엇을·몇 코인에 샀는지.
-    <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
-  <div class="wrap" id="buy-table"></div>
-  <div class="pager" id="buy-pager"></div>
+  <section class="tab-panel hidden" id="panel-buy">
+    <h2>캐릭터 구매 기록 <span class="dim" id="buy-count"></span></h2>
+    <p class="hint">코인으로 캐릭터를 산 기록을 시간순으로 남깁니다. 누가·무엇을·몇 코인에 샀는지.
+      <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
+    <div class="wrap" id="buy-table"></div>
+    <div class="pager" id="buy-pager"></div>
+  </section>
 
-  <h2>룰렛 기록 <span class="dim" id="spin-count"></span></h2>
-  <p class="hint">코인 룰렛을 돌린 기록을 시간순으로 남깁니다. 누가·얼마를 걸어·무엇이 나왔는지.
-    <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
-  <div class="wrap" id="spin-table"></div>
-  <div class="pager" id="spin-pager"></div>
+  <section class="tab-panel hidden" id="panel-spin">
+    <h2>룰렛 기록 <span class="dim" id="spin-count"></span></h2>
+    <p class="hint">코인 룰렛을 돌린 기록을 시간순으로 남깁니다. 누가·얼마를 걸어·무엇이 나왔는지.
+      <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
+    <div class="wrap" id="spin-table"></div>
+    <div class="pager" id="spin-pager"></div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-tower">
+    <h2>층 오르기 기록 <span class="dim" id="tower-count"></span></h2>
+    <p class="hint">도전모드 한 판 한 판을 남깁니다. <b>성공·실패 모두</b> 나옵니다.</p>
+    <div class="tools">
+      <span class="grow"></span>
+      <button class="danger" id="tower-clear" type="button">전체 비우기</button>
+    </div>
+    <div class="wrap" id="tower-table"></div>
+    <div class="pager" id="tower-pager"></div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-bot">
+    <h2>봇전 기록 <span class="dim" id="botlog-count"></span></h2>
+    <p class="hint">봇전 한 판 한 판을 남깁니다. 난이도·승패·버틴 시간.</p>
+    <div class="tools">
+      <span class="grow"></span>
+      <button class="danger" id="botlog-clear" type="button">전체 비우기</button>
+    </div>
+    <div class="wrap" id="botlog-table"></div>
+    <div class="pager" id="botlog-pager"></div>
+  </section>
 </main>
 
 <script type="module">
@@ -490,6 +551,63 @@ async function clearScores() {
    받아 오지 않으려는 것이다. 페이지를 넘길 때마다 그 쪽만 받아 온다. */
 const PLAY_PER = 20;
 let playPage = 0;
+let towerPage = 0, botPage = 0;
+
+/* ---- 층 오르기 기록(도전모드) — 성공·실패 모두 ---- */
+async function drawTowerLog() {
+  try {
+    const { rows, total } = await api(`/api/admin/challenge-log?limit=${PLAY_PER}&offset=${towerPage * PLAY_PER}`);
+    $('tower-count').textContent = total ? `${total}판` : '';
+    $('tower-clear').style.display = total ? '' : 'none';
+    if (total === 0) { $('tower-table').innerHTML = '<p class="empty">아직 기록이 없습니다</p>'; $('tower-pager').innerHTML = ''; return; }
+    const body = rows.map((r) =>
+      `<tr><td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
+        <td class="num">${r.floor}층</td>
+        <td class="dim">${esc(r.goal)}</td>
+        <td class="${r.ok ? 'ok-yes' : 'ok-no'}">${r.ok ? '성공' : '실패'}</td>
+        <td class="num">${r.seconds.toFixed(2)}초</td>
+        <td class="dim">${stamp(r.at)}</td></tr>`).join('');
+    $('tower-table').innerHTML =
+      `<table><thead><tr><th>이름</th><th>층</th><th>조건</th><th>결과</th><th>버틴 시간</th><th>때</th></tr></thead><tbody>${body}</tbody></table>`;
+    const pages = Math.max(1, Math.ceil(total / PLAY_PER));
+    towerPage = Math.min(towerPage, pages - 1);
+    pager('tower-pager', pages, towerPage, (p) => { towerPage = p; drawTowerLog(); });
+  } catch (e) { $('tower-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+/* ---- 봇전 기록 ---- */
+const BOT_NAME = { novice: '초보', mid: '중수', expert: '고수', godwater: '고인물' };
+async function drawBotLog() {
+  try {
+    const { rows, total } = await api(`/api/admin/bot-log?limit=${PLAY_PER}&offset=${botPage * PLAY_PER}`);
+    $('botlog-count').textContent = total ? `${total}판` : '';
+    $('botlog-clear').style.display = total ? '' : 'none';
+    if (total === 0) { $('botlog-table').innerHTML = '<p class="empty">아직 기록이 없습니다</p>'; $('botlog-pager').innerHTML = ''; return; }
+    const body = rows.map((r) =>
+      `<tr><td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
+        <td>${esc(BOT_NAME[r.tier] ?? r.tier)}</td>
+        <td class="${r.win ? 'ok-yes' : 'ok-no'}">${r.win ? '승리' : '패배'}</td>
+        <td class="num">${r.seconds.toFixed(2)}초</td>
+        <td class="dim">${stamp(r.at)}</td></tr>`).join('');
+    $('botlog-table').innerHTML =
+      `<table><thead><tr><th>이름</th><th>난이도</th><th>결과</th><th>버틴 시간</th><th>때</th></tr></thead><tbody>${body}</tbody></table>`;
+    const pages = Math.max(1, Math.ceil(total / PLAY_PER));
+    botPage = Math.min(botPage, pages - 1);
+    pager('botlog-pager', pages, botPage, (p) => { botPage = p; drawBotLog(); });
+  } catch (e) { $('botlog-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+/* ---- 탭 전환. 처음 열 때 그 표를 불러온다. ---- */
+const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog };
+function showPanel(name) {
+  for (const b of document.querySelectorAll('#tabs button')) {
+    b.classList.toggle('on', b.dataset.panel === name);
+  }
+  for (const s of document.querySelectorAll('.tab-panel')) {
+    s.classList.toggle('hidden', s.id !== `panel-${name}`);
+  }
+  PANEL_DRAW[name]?.();
+}
 
 // 이름 옆 방문 뱃지: 첫 판이면 NEW, 그 뒤 다른 날 다시 왔으면 'N일'(며칠째 접속).
 function visitBadge(r) {
@@ -681,6 +799,29 @@ $('score-search').addEventListener('input', (e) => { query.score = e.target.valu
 $('score-clear').addEventListener('click', clearScores);
 $('play-clear').addEventListener('click', clearPlays);
 $('usage-clear').addEventListener('click', clearUsage);
+
+// 기록 종류 탭
+$('tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-panel]');
+  if (b) showPanel(b.dataset.panel);
+});
+
+// 층 오르기·봇전 기록 비우기
+async function clearLog(path, label, after) {
+  if (!confirm(`${label}을(를) 모두 지웁니다. 되돌릴 수 없습니다.`)) return;
+  if (prompt('정말 지우려면 DELETE ALL 을 입력하세요.') !== 'DELETE ALL') { say('취소했습니다.'); return; }
+  try {
+    const r = await api(path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: 'DELETE ALL' })
+    });
+    say(`${label} ${r.removed}개를 지웠습니다.`); after();
+  } catch (e) { say(e.message, true); }
+}
+$('tower-clear').addEventListener('click', () =>
+  clearLog('/api/admin/challenge-log/clear', '층 오르기 기록', () => { towerPage = 0; drawTowerLog(); }));
+$('botlog-clear').addEventListener('click', () =>
+  clearLog('/api/admin/bot-log/clear', '봇전 기록', () => { botPage = 0; drawBotLog(); }));
 $('usage-seg').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-view]'); if (!b) return;
   usageView = b.dataset.view;
