@@ -12,6 +12,8 @@ const OWNED_KEY = 'avoidarc.owned';   // 코인으로 산 캐릭터 id 목록
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
 const SPINUSED_KEY = 'avoidarc.spins.used';   // 지금까지 돌린 룰렛 횟수
 const SECONDS_PER_SPIN = 80;            // 이만큼 쌓일 때마다 룰렛 1회
+const OWNED_FX_KEY = 'avoidarc.owned.fx';   // 상점에서 산 발자국 효과 id 목록
+const EQUIP_FX_KEY = 'avoidarc.equip.fx';   // 지금 켠 효과 id (하나만)
 
 function readOwned() {
   try { return new Set(JSON.parse(localStorage.getItem(OWNED_KEY) || '[]')); }
@@ -64,5 +66,29 @@ export const wallet = {
     const s = readOwned();
     s.add(id);
     localStorage.setItem(OWNED_KEY, JSON.stringify([...s]));
+  },
+
+  // ── 상점에서 산 발자국 효과 ──
+  // 캐릭터와 칸을 나눠 둔다. 한 칸에 섞으면 나중에 id 가 겹칠 때
+  // 캐릭터를 산 사람에게 효과가 딸려 오는 사고가 난다.
+  ownedFx() {
+    try { return new Set(JSON.parse(localStorage.getItem(OWNED_FX_KEY) || '[]')); }
+    catch { return new Set(); }
+  },
+  isFxOwned(id) { return this.ownedFx().has(id); },
+  markFxOwned(id) {
+    const s = this.ownedFx();
+    s.add(id);
+    localStorage.setItem(OWNED_FX_KEY, JSON.stringify([...s]));
+  },
+
+  // 지금 켠 효과. 없으면 null. 산 적 없는 걸 켜 두면 무시한다.
+  equippedFx() {
+    const id = localStorage.getItem(EQUIP_FX_KEY);
+    return id && this.isFxOwned(id) ? id : null;
+  },
+  equipFx(id) {
+    if (id) localStorage.setItem(EQUIP_FX_KEY, id);
+    else localStorage.removeItem(EQUIP_FX_KEY);
   }
 };

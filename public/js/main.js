@@ -22,6 +22,8 @@ import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
 import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
+import { TrailFX } from './effects.js';
+import { ShopUI } from './shop-ui.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
 // 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
@@ -209,6 +211,20 @@ const coins = new Coins(scene, () => {
   audio.coin?.();
 });
 const input = new Input();
+
+// 상점에서 산 발자국 효과. 꾸미기라 판정에는 아무 영향이 없다.
+// 지금 켠 것만 그린다(안 샀거나 껐으면 setEffect(null) 로 통째로 끈다).
+const trail = new TrailFX(scene);
+trail.setEffect(wallet.equippedFx());
+
+// 발자국 효과 한 프레임. 혼자 하기·봇전·1v1 이 모두 이 한 줄만 부른다.
+// 죽고 나서까지 뿌리면 시체에서 반짝이므로 살아 있을 때만.
+function updateTrail(dt) {
+  if (!trail.spec) return;
+  const b = player.body;
+  trail.update(dt, { x: b.x, y: b.y, z: b.z },
+    Math.hypot(b.vx, b.vz), !!b.grounded);
+}
 
 // 음성 점프 모드의 화면 왼쪽 볼륨 바. 지금 목소리 크기(채워짐)와 점프 기준선
 // (가로줄)을 보여 준다. 기준선을 넘겨 소리 지르면 점프 → 그 순간 반짝인다.
@@ -520,6 +536,27 @@ const board = new BoardUI({
 for (const btn of document.querySelectorAll('#side-menu [data-forward]')) {
   btn.addEventListener('click', () => document.getElementById(btn.dataset.forward)?.click());
 }
+
+// ── 상점 ────────────────────────────────────────────────
+// 코인으로 사는 꾸미기(지금은 발자국 효과). 코인 처리는 캐릭터 구매와 똑같이
+// 브라우저에서 하고, 서버에는 '누가 뭘 샀다' 기록만 남긴다.
+const shop = new ShopUI();
+shop.isAdmin = () => isAdmin;
+shop.onBuy = (spec) => {
+  if (isAdmin) { wallet.markFxOwned(spec.id); return true; }   // 관리자는 코인 무한
+  if (wallet.isFxOwned(spec.id)) return true;
+  if (!wallet.spend(spec.cost)) return false;
+  wallet.markFxOwned(spec.id);
+  renderCoinHud();
+  api.recordPurchase(`fx:${spec.id}`, `${spec.name}(발자국)`, spec.cost,
+    auth.signedIn ? undefined : auth.displayName);
+  return true;
+};
+shop.onEquip = (id) => {
+  wallet.equipFx(id);
+  trail.setEffect(id);
+};
+document.getElementById('shop-btn')?.addEventListener('click', () => shop.open());
 
 // ── 코인 지급(관리자) ──────────────────────────────────────
 // 계정 목록을 보여 주고, 누르면 그 계정에 코인을 지급한다(대기에 쌓임 →
@@ -1179,6 +1216,7 @@ function startGame() {
   rec = { seed, mode: state.runMode, dt: [], x: [], y: [], j: [] };
 
   player.reset();
+  trail.reset();           // 지난 판에 남은 입자를 치운다
   setArenaVisible(true);
   hazards.reset(seed);
   coins.setActive(true);   // 맵에 코인이 뜨기 시작한다(솔로 전용)
@@ -2297,6 +2335,7 @@ function frame() {
       rec.y.push(control.move.y); rec.j.push(control.jumpPressed ? 1 : 0);
     }
     player.update(dt, control);
+    updateTrail(dt);
     hazards.update(dt, state.elapsed);
     if (state.hardcore) floorHoles.update(dt);
     coins.update(dt, player.body.x, player.body.z);   // 코인 회전·수집 판정
@@ -2355,6 +2394,7 @@ function stepVersus(dt) {
     const control = input.poll();
     net.feedInput(control);
     player.update(dt, control);
+    updateTrail(dt);
   } else {
     player.sync(dt);
   }

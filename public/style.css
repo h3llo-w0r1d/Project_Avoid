@@ -2687,3 +2687,65 @@ kbd {
   background: rgba(0, 0, 0, 0.25); border: 1px solid var(--stroke); border-radius: 8px;
 }
 .notice-field input:focus { border-color: var(--accent); outline: none; }
+
+/* ---------- 상점 (코인으로 사는 꾸미기) ---------- */
+.shop-card { width: min(880px, calc(100vw - 40px)); max-height: 88vh; }
+:root.force-landscape #shop-modal .modal-card,
+:root.force-landscape .shop-card { width: min(760px, calc(100vh - 56px)); max-height: 78vw; }
+
+.shop-coins {
+  margin-left: auto; margin-right: 6px;
+  font-size: 15px; color: #ffd76a; white-space: nowrap;
+}
+
+.shop-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 10px; margin-top: 14px;
+}
+@media (max-width: 760px) { .shop-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 460px) { .shop-grid { grid-template-columns: repeat(2, 1fr); } }
+:root.force-landscape .shop-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.shop-item {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  margin: 0; padding: 13px 9px 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--stroke); border-radius: 14px;
+  color: var(--text); font: inherit; text-align: center; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+}
+.shop-item:hover { background: rgba(255, 255, 255, 0.09); transform: translateY(-2px); }
+/* 켠 것은 테두리를 밝혀 한눈에 보이게 */
+.shop-item.on { border-color: var(--accent); background: rgba(90, 200, 255, 0.12); }
+.shop-item.locked { opacity: 0.82; }
+
+/* 효과 색 미리보기 막대. 그 효과가 무슨 색인지 사기 전에 보여 준다. */
+.shop-swatch {
+  width: 100%; height: 34px; border-radius: 9px;
+  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.28);
+}
+.shop-swatch.none {
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255, 255, 255, 0.06); color: var(--muted); font-size: 16px;
+  box-shadow: none;
+}
+
+.shop-name { font-size: 14px; font-weight: 800; }
+.shop-desc { font-size: 11px; line-height: 1.35; color: var(--muted); min-height: 30px; }
+.shop-state { font-size: 12px; font-weight: 700; color: var(--accent); }
+.shop-state.dim { color: var(--muted); font-weight: 600; }
+.shop-cost { font-size: 13px; font-weight: 800; color: #ffd76a; }
+.shop-cost.short { color: #ff7a8a; }
+
+/* 구매 결과 알림 — 화면 아래에 잠깐 떴다 사라진다 */
+.shop-toast {
+  position: fixed; left: 50%; bottom: 42px; z-index: 90;
+  padding: 11px 20px; border-radius: 999px;
+  background: rgba(16, 18, 32, 0.94); border: 1px solid var(--stroke);
+  color: var(--text); font-size: 14px; font-weight: 700;
+  transform: translate(-50%, 14px); opacity: 0;
+  transition: opacity 0.22s, transform 0.22s;
+  pointer-events: none;
+}
+.shop-toast.show { transform: translate(-50%, 0); opacity: 1; }
