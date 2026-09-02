@@ -1181,10 +1181,13 @@ async function openTower() {
   const rows = [...data.floors].reverse().map((f) => {
     const state = f.done ? 'done' : (f.open ? 'open' : 'lock');
     const canGo = f.open && data.signedIn;
-    const w = 116 + f.floor * 9;                 // 위층일수록 넓은 땅
+    const w = 105 + f.floor * 14;                // 위층일수록 넓은 땅
+    // 한 화면(5층) 안에서 왼쪽 아래 → 오른쪽 위로 대각선으로 오른다.
+    const step = (f.floor - 1) % PER_PAGE;
     const me = (f.floor === cur && data.signedIn && face)
       ? `<img class="tower-me" src="${face}" alt="">` : '';
-    return `<div class="tower-floor ${state}" data-floor="${f.floor}" style="height:${ROW}px">` +
+    return `<div class="tower-floor ${state}" data-floor="${f.floor}"` +
+      ` style="height:${ROW}px;padding-left:${5 + step * 15}%">` +
       `<button type="button" class="tower-node"${canGo ? '' : ' disabled'}>` +
       `<span class="tower-stage" style="width:${w}px;height:${Math.round(w * 0.35)}px">` +
       `${me}<span class="tower-island"></span></span>` +

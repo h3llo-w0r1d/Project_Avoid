@@ -2414,10 +2414,8 @@ kbd {
 .tower-pager button:disabled { opacity: 0.3; cursor: default; }
 .tower-page-now { font-size: 13px; font-weight: 800; color: var(--muted); min-width: 74px; text-align: center; }
 
-.tower-floor { position: relative; display: flex; align-items: center; }
-/* 층을 지그재그로 놓아 '올라가는 길' 느낌을 낸다 */
-.tower-floor:nth-child(odd) { justify-content: flex-start; padding-left: 12%; }
-.tower-floor:nth-child(even) { justify-content: flex-end; padding-right: 12%; }
+/* 왼쪽 아래 → 오른쪽 위로 대각선으로 오른다(들여쓰기는 JS 가 층마다 준다). */
+.tower-floor { position: relative; display: flex; align-items: center; justify-content: flex-start; }
 
 .tower-node {
   width: auto; margin: 0; padding: 0 8px; background: none; border: 0;
@@ -2477,8 +2475,6 @@ kbd {
   .tower-me { width: 48px; height: 48px; }
   .tower-num { font-size: 16px; }
   .tower-goal { font-size: 11px; }
-  .tower-floor:nth-child(odd) { padding-left: 4%; }
-  .tower-floor:nth-child(even) { padding-right: 4%; }
 }
 
 /* 봇전 | 온라인 1v1 을 반반 나눠 놓는 줄 */
