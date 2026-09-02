@@ -26,6 +26,7 @@ import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 import { describe as describeTitles, sanitizeEquipped, earnedIds as earnedTitleIds, titleById, isAwardable } from './lib/titles.js';
+import { describe as describeChallenge, floorAt, TOP_FLOOR } from './lib/challenge.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -847,6 +848,29 @@ app.post('/api/titles', (req, res) => {
   const equipped = sanitizeEquipped(req.body?.equipped, ctx);
   const updated = users.setTitles(req.user.id, equipped);
   res.json({ ok: true, titles: describeTitles(ctx, updated?.titles ?? equipped) });
+});
+
+// 도전모드(탑) — 내 진행도와 층 목록. 로그인해야 도전할 수 있다.
+app.get('/api/challenge', (req, res) => {
+  if (!req.user) return res.json({ signedIn: false, ...describeChallenge(0) });
+  const me = users.byId(req.user.id);
+  res.json({ signedIn: true, ...describeChallenge(me?.challenge ?? 0) });
+});
+
+// 한 층을 깼다고 알린다. 순서대로만(지금 층 +1) 인정한다.
+// 조건 달성 자체는 클라가 판정한다(코인·판정이 원래 클라 신뢰 모델이라 동일).
+app.post('/api/challenge/clear', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  const floor = Math.floor(Number(req.body?.floor) || 0);
+  const me = users.byId(req.user.id);
+  const cleared = me?.challenge ?? 0;
+  if (!floorAt(floor)) return res.status(400).json({ error: '없는 층입니다.' });
+  if (floor !== cleared + 1) {
+    // 이미 깬 층을 다시 깨는 건 조용히 무시(진행도 그대로).
+    return res.json({ ok: true, ...describeChallenge(cleared) });
+  }
+  const now = users.setChallenge(req.user.id, Math.min(floor, TOP_FLOOR));
+  res.json({ ok: true, cleared: now, ...describeChallenge(now) });
 });
 
 // 업적 칭호 수여(예: 럭키가이 — 룰렛 대박). 클라가 대박이 나면 부른다.

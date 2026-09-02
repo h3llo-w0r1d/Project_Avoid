@@ -298,7 +298,8 @@ const state = {
   botAI: null,          // BotAI 인스턴스(봇전일 때만)
   botAlive: true,
   botTier: 'mid',
-  botInvuln: 0          // 위기탈출 후 잠깐 무적(초)
+  botInvuln: 0,         // 위기탈출 후 잠깐 무적(초)
+  challenge: null       // 도전모드에서 지금 도전 중인 층(없으면 일반 판)
 };
 
 const audio = new Audio();
@@ -908,6 +909,8 @@ const versus = new VersusUI({
 
 // 봇전 버튼 — 난이도 고르는 창을 연다.
 document.getElementById('bot-btn')?.addEventListener('click', pickBotDifficulty);
+// 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼.
+document.getElementById('tower-btn')?.addEventListener('click', openTower);
 
 // 물리·연출 쪽은 소리를 모른다. 사건만 받아서 여기서 소리를 낸다.
 //
@@ -1083,6 +1086,8 @@ function setArenaVisible(visible) {
 
 function startGame() {
   state.mode = 'solo';
+  state.botAI = null;      // 봇전·도전모드 흔적을 지운다(일반 판)
+  state.challenge = null;
   // 하드코어 여부는 타이틀 토글에서 읽는다. 다시 시작해도 같은 모드로 이어진다.
   state.hardcore = ui.isHardcore();
   // 이번 판의 씨앗. 전기선·감전지대를 이 씨앗으로 돌려 다시보기가 그대로 재현된다.
@@ -1134,6 +1139,107 @@ function startGame() {
   input.releaseAll();
   ui.showGame();
   ui.updateHud(0);
+}
+
+// ── 도전모드(탑) ────────────────────────────────────────────
+// 1층부터 한 층씩. 층 정의·진행도는 서버가 갖고 있고(계정에 저장), 여기선
+// 그걸 받아 그리고 클리어를 보고한다.
+async function openTower() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal tower-modal';
+  overlay.innerHTML =
+    '<div class="modal-card panel tower-card">' +
+    '<div class="modal-head"><h2>도전모드</h2>' +
+    '<button type="button" class="icon-btn tower-close" aria-label="닫기">✕</button></div>' +
+    '<p class="board-hint tower-hint">불러오는 중…</p>' +
+    '<div class="tower-list"></div></div>';
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector('.tower-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  let data;
+  try { data = await api.challenge(); }
+  catch { overlay.querySelector('.tower-hint').textContent = '불러오지 못했습니다.'; return; }
+
+  const hint = overlay.querySelector('.tower-hint');
+  hint.textContent = data.signedIn
+    ? `${data.cleared} / ${data.top}층 클리어`
+    : '🔒 로그인하면 도전모드를 할 수 있어요';
+
+  // 1층이 맨 아래로 오게 뒤집어 그린다. 지금 도전할 층에 내 캐릭터를 세운다.
+  let face = '';
+  try { face = characters.preview(player.characterId); } catch { /* 미리보기 실패는 무시 */ }
+  const cur = Math.min(data.top, data.cleared + 1);
+  const list = overlay.querySelector('.tower-list');
+  list.innerHTML = [...data.floors].reverse().map((f) => {
+    const state = f.done ? 'done' : (f.open ? 'open' : 'lock');
+    const me = (f.floor === cur && data.signedIn && face)
+      ? `<img class="tower-me" src="${face}" alt="">` : '';
+    const canGo = f.open && data.signedIn;
+    return `<div class="tower-floor ${state}" data-floor="${f.floor}">${me}` +
+      `<button type="button" class="tower-node"${canGo ? '' : ' disabled'}>` +
+      `<span class="tower-num">${f.floor}층</span>` +
+      `<span class="tower-goal">${f.done ? '✔ 클리어' : f.goal}</span>` +
+      '</button></div>';
+  }).join('');
+  // 아래(1층)가 보이게 스크롤을 맨 밑으로.
+  list.scrollTop = list.scrollHeight;
+
+  for (const b of list.querySelectorAll('.tower-node:not([disabled])')) {
+    b.addEventListener('click', () => {
+      const n = Number(b.closest('.tower-floor').dataset.floor);
+      const f = data.floors.find((x) => x.floor === n);
+      close();
+      startChallenge(f);
+    });
+  }
+}
+
+// 그 층에 도전한다. 일반 판과 같은 게임이지만 목표를 채우면 바로 클리어.
+function startChallenge(f) {
+  startGame();
+  state.challenge = f;
+  ui.setSubmitState?.(`${f.floor}층 — ${f.goal}`);
+}
+
+// 목표를 채웠다. 서버에 보고하고 결과창을 띄운다.
+async function challengeCleared() {
+  const f = state.challenge;
+  state.challenge = null;
+  state.phase = 'over';
+  input.enabled = false;
+  voiceMeter.hide();
+  audio.stopAmbient();
+  audio.playMusic('homeMusic');
+  audio.stageUp?.();
+  let msg = '';
+  try {
+    const r = await api.clearFloor(f.floor);
+    msg = `${r.cleared} / ${r.top}층 클리어`;
+  } catch (e) { msg = '진행 저장에 실패했습니다.'; }
+  showTowerResult(true, f, msg);
+}
+
+// 도전 결과창(성공/실패). 다시 도전하거나 탑으로 돌아간다.
+function showTowerResult(win, f, msg) {
+  const overlay = document.createElement('div');
+  overlay.className = 'unlock-overlay';
+  overlay.innerHTML =
+    '<div class="unlock-card bot-result">' +
+    `<div class="unlock-kicker">${win ? '🏆 층 클리어!' : '😢 실패'}</div>` +
+    `<div class="bot-result-face">${win ? '🗼' : '💥'}</div>` +
+    `<div class="unlock-name">${f.floor}층 — ${f.goal}</div>` +
+    `<div class="unlock-hint">${msg}</div>` +
+    '<div class="bot-result-row">' +
+    '<button type="button" class="ghost small tower-again">다시</button>' +
+    '<button type="button" class="primary small tower-back">탑으로</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  const close = () => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); };
+  overlay.querySelector('.tower-again').addEventListener('click', () => { close(); startChallenge(f); });
+  overlay.querySelector('.tower-back').addEventListener('click', () => { close(); goHome(); openTower(); });
 }
 
 // ── 봇전(연습) ──────────────────────────────────────────────
@@ -1633,6 +1739,15 @@ async function finishGame() {
   audio.playMusic('homeMusic');
   const score = state.elapsed;
 
+  // 도전모드 중 죽었으면 그 층 실패. 랭킹엔 올리지 않는다.
+  if (state.challenge) {
+    const f = state.challenge;
+    state.challenge = null;
+    voiceMeter.hide();
+    showTowerResult(false, f, `${score.toFixed(2)}초 버팀`);
+    return;
+  }
+
   // 이번 판 시간을 누적 게임 시간에 더한다(룰렛 횟수의 원천). 관리자는 룰렛이
   // 무제한이라 쌓을 필요가 없다.
   if (!isAdmin) wallet.addPlaytime(score);
@@ -2001,7 +2116,10 @@ function frame() {
     const playerDead = hazards.hitTest(player) || player.body.droppedOff
       || (state.hardcore && floorHoles.isOpenAt(player.body.x, player.body.z));
 
-    if (state.botAI) {
+    if (state.challenge && state.challenge.kind === 'survive'
+        && state.elapsed >= state.challenge.seconds) {
+      challengeCleared();                          // 도전모드: 목표 달성
+    } else if (state.botAI) {
       if (playerDead) endBotMatch(false);          // 내가 먼저 죽음 → 패배
       else if (!state.botAlive) endBotMatch(true);  // 봇이 먼저 죽음 → 승리
     } else if (hazards.hitTest(player)) {

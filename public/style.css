@@ -2376,6 +2376,54 @@ kbd {
 }
 
 /* ── 하드코어 모드 토글 (타이틀) ─────────────────────────────── */
+/* ---------- 도전모드(탑) ---------- */
+/* 타이틀 왼쪽 아래 동그란 버튼 */
+#tower-btn {
+  position: fixed; left: 34px; bottom: 40px; z-index: 12;
+  width: 92px; height: 92px; margin: 0; padding: 0; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: #ffd9a1; background: rgba(255, 150, 60, 0.12);
+  border: 2px solid rgba(255, 150, 60, 0.5); cursor: pointer;
+  box-shadow: 0 0 24px rgba(255, 140, 50, 0.18);
+}
+#tower-btn:hover { background: rgba(255, 150, 60, 0.24); }
+.tower-ico { font-size: 26px; line-height: 1; }
+.tower-label { font-size: 12px; font-weight: 800; }
+@media (max-width: 820px) { #tower-btn { left: 14px; bottom: 16px; width: 66px; height: 66px; }
+  .tower-ico { font-size: 20px; } .tower-label { font-size: 10px; } }
+
+/* 탑 화면 — 아래(1층)부터 위로 쌓인다 */
+.tower-card { width: min(420px, 100%); }
+.tower-list {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 56vh; overflow-y: auto; margin-top: 12px; padding: 4px 2px;
+}
+.tower-floor { position: relative; display: flex; }
+/* 층을 지그재그로 놓아 '올라가는 길' 느낌을 낸다 */
+.tower-floor:nth-child(odd) { justify-content: flex-start; padding-left: 8%; }
+.tower-floor:nth-child(even) { justify-content: flex-end; padding-right: 8%; }
+.tower-node {
+  width: auto; min-width: 190px; margin: 0; padding: 10px 16px; border-radius: 999px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--stroke);
+  color: var(--text); cursor: pointer;
+}
+.tower-floor.done .tower-node {
+  border-color: rgba(87, 209, 138, 0.6); background: rgba(87, 209, 138, 0.14); color: #a9edc4;
+}
+.tower-floor.open .tower-node {
+  border-color: rgba(255, 150, 60, 0.75); background: rgba(255, 150, 60, 0.16);
+  color: #ffd9a1; box-shadow: 0 0 16px rgba(255, 140, 50, 0.25);
+}
+.tower-floor.lock .tower-node { opacity: 0.45; cursor: default; border-style: dashed; }
+.tower-num { font-size: 15px; font-weight: 900; }
+.tower-goal { font-size: 11px; font-weight: 700; opacity: 0.85; }
+/* 지금 도전할 층에 서 있는 내 캐릭터 */
+.tower-me {
+  position: absolute; top: -14px; width: 46px; height: 46px;
+  left: 50%; transform: translateX(-50%); pointer-events: none;
+}
+
 /* 봇전 | 온라인 1v1 을 반반 나눠 놓는 줄 */
 .split-row { display: flex; gap: 10px; margin-top: 10px; }
 .split-row > button { flex: 1 1 0; margin: 0; min-width: 0; }

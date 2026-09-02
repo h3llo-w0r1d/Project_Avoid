@@ -663,6 +663,24 @@ export const api = {
     return (await res.json()).titles;
   },
 
+  // 도전모드(탑): 내 진행도 + 층 목록.
+  async challenge() {
+    const res = await fetch('/api/challenge');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  // 도전모드: 한 층 클리어 보고. 갱신된 진행도를 돌려준다.
+  async clearFloor(floor) {
+    const res = await fetch('/api/challenge/clear', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ floor })
+    });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
+    return d;
+  },
+
   // 업적 칭호 수여(예: 럭키가이 — 룰렛 대박). { fresh, title } 을 준다.
   // 로그인 안 했거나 실패하면 조용히 null(축하만 못 뜬다).
   async awardTitle(id) {
