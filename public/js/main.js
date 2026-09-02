@@ -3,6 +3,7 @@ import { createWorld, fitCamera } from './scene.js';
 import { startOrientationManager } from './orientation.js';
 import { Player } from './player.js';
 import { Hazards } from './hazards.js';
+import { BotAI, BOT_TIERS } from './bot-ai.js';
 import { FloorHoles } from './floor-holes.js';
 import { Coins } from './coins.js';
 import { wallet } from './wallet.js';
@@ -292,7 +293,11 @@ const state = {
   serverAt: 0,          // 그걸 받은 순간(로컬 시계)
   rivalName: '상대',
   rivalAlive: true,
-  myAlive: true
+  myAlive: true,
+  // 봇전용
+  botAI: null,          // BotAI 인스턴스(봇전일 때만)
+  botAlive: true,
+  botTier: 'mid'
 };
 
 const audio = new Audio();
@@ -900,6 +905,9 @@ const versus = new VersusUI({
   onCancel: cancelWaiting
 });
 
+// 봇전 버튼 — 난이도 고르는 창을 연다.
+document.getElementById('bot-btn')?.addEventListener('click', pickBotDifficulty);
+
 // 물리·연출 쪽은 소리를 모른다. 사건만 받아서 여기서 소리를 낸다.
 //
 // 내 목소리는 두 번 다 낸다. 다만 2단 점프는 조금 높은 음으로 낸다.
@@ -1127,6 +1135,110 @@ function startGame() {
   ui.updateHud(0);
 }
 
+// ── 봇전(연습) ──────────────────────────────────────────────
+// 봇이랑 나란히 같은 빔을 피하다가 오래 버티는 쪽이 승리. 서버·랭킹과 무관한
+// 연습 모드다. 난이도(초보~고인물)는 봇 AI 의 실력만 바꾼다.
+function startBotMatch(tier) {
+  state.mode = 'bot';
+  state.hardcore = false;
+  state.voice = false;
+  player.body.maxJumps = PLAYER.maxJumps;
+  hazards.setMods(null);
+  floorHoles.setActive(false);
+  versus.hide(); pause.hide();
+  state.paused = false;
+  audio.unlock();
+  audio.startAmbient();
+  audio.playMusic('music');
+
+  const seed = (Math.random() * 2 ** 31) | 0;
+  rec = null;            // 봇전은 다시보기 저장 안 함
+  input.voiceOnly = false;
+
+  // 나와 봇을 서로 반대편에서 시작(가까이 시작하면 초반이 불공평).
+  const a = Math.random() * Math.PI * 2, r = 4.5;
+  player.reset(Math.cos(a) * r, Math.sin(a) * r);
+  rival.reset(-Math.cos(a) * r, -Math.sin(a) * r);
+  rival.mesh.visible = true; rival.blob.visible = true; rival.halo.visible = true;
+  player.setLabel('나', '#4fd6ff');
+  rival.setLabel(`봇 · ${BOT_TIERS[tier]?.name ?? ''}`, '#c07dff');
+
+  state.botAI = new BotAI(tier);
+  state.botAlive = true;
+  state.botTier = tier;
+
+  setArenaVisible(true);
+  hazards.reset(seed);
+  coins.setActive(false);
+  runCoins = 0;
+  state.phase = 'playing';
+  renderNotice();
+  state.elapsed = 0;
+  state.deathTimer = 0;
+  state.cause = 'zap';
+  input.enabled = true;
+  input.releaseAll();
+  ui.showGame();
+  ui.updateHud(0);
+}
+
+// 봇전 종료. win 이면 내가 봇보다 오래 버틴 것.
+function endBotMatch(win) {
+  state.phase = 'over';
+  state.botAI = null;
+  input.enabled = false;
+  voiceMeter.hide();
+  audio.stopAmbient();
+  audio.playMusic('homeMusic');
+  if (win) audio.stageUp?.(); else audio.death?.();
+  const secs = state.elapsed;
+  hideRival();
+  showBotResult(win, secs, state.botTier);
+}
+
+// 봇전 결과 오버레이(승리/패배 + 버틴 시간 + 다시/나가기).
+function showBotResult(win, secs, tier) {
+  const tname = BOT_TIERS[tier]?.name ?? '';
+  const overlay = document.createElement('div');
+  overlay.className = 'unlock-overlay';
+  overlay.innerHTML =
+    '<div class="unlock-card bot-result">' +
+    `<div class="unlock-kicker">${win ? '🏆 승리!' : '😢 패배'}</div>` +
+    `<div class="bot-result-face">${win ? '🎉' : '🤖'}</div>` +
+    `<div class="unlock-name">${win ? `봇(${tname})을 이겼어요` : `봇(${tname})에게 졌어요`}</div>` +
+    `<div class="unlock-hint">${secs.toFixed(2)}초 버팀</div>` +
+    '<div class="bot-result-row">' +
+    `<button type="button" class="ghost small bot-again">다시</button>` +
+    `<button type="button" class="primary small bot-exit">나가기</button>` +
+    '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  const close = () => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); };
+  overlay.querySelector('.bot-again').addEventListener('click', () => { close(); startBotMatch(tier); });
+  overlay.querySelector('.bot-exit').addEventListener('click', () => { close(); goHome(); });
+}
+
+// 난이도 고르는 오버레이. 고르면 그 난이도로 봇전 시작.
+function pickBotDifficulty() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal bot-pick';
+  const btns = Object.entries(BOT_TIERS)
+    .map(([k, v]) => `<button type="button" class="bot-tier" data-tier="${k}">${v.name}</button>`).join('');
+  overlay.innerHTML =
+    '<div class="modal-card panel" style="max-width:360px">' +
+    '<div class="modal-head"><h2>봇전 난이도</h2>' +
+    '<button type="button" class="icon-btn bot-pick-close" aria-label="닫기">✕</button></div>' +
+    '<p class="board-hint">봇이랑 같은 빔을 피하다가 오래 버티는 쪽이 승리! (연습 · 랭킹 반영 안 됨)</p>' +
+    `<div class="bot-tier-list">${btns}</div></div>`;
+  document.body.appendChild(overlay);
+  const close = () => overlay.remove();
+  overlay.querySelector('.bot-pick-close').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  for (const b of overlay.querySelectorAll('.bot-tier')) {
+    b.addEventListener('click', () => { close(); startBotMatch(b.dataset.tier); });
+  }
+}
+
 // ESC. 게임 중이 아닐 때는 아무 일도 하지 않는다.
 function togglePause() {
   const inPlay = state.phase === 'playing' || state.phase === 'countdown';
@@ -1156,6 +1268,9 @@ function goHome() {
     return;
   }
   state.phase = 'title';
+  state.mode = 'solo';
+  state.botAI = null;
+  hideRival();
   input.enabled = false;
   audio.stopAmbient();
   audio.playMusic('homeMusic');
@@ -1866,7 +1981,20 @@ function frame() {
     if (state.hardcore) floorHoles.update(dt);
     coins.update(dt, player.body.x, player.body.z);   // 코인 회전·수집 판정
 
-    if (hazards.hitTest(player)) {
+    // 봇전: 봇도 같은 빔을 AI 로 피한다. 먼저 죽는 쪽이 진다.
+    if (state.botAI && state.botAlive) {
+      const bc = state.botAI.think(dt, rival.body, hazards.sim);
+      rival.update(dt, bc);
+      if (hazards.hitTest(rival) || rival.body.droppedOff) state.botAlive = false;
+    }
+
+    const playerDead = hazards.hitTest(player) || player.body.droppedOff
+      || (state.hardcore && floorHoles.isOpenAt(player.body.x, player.body.z));
+
+    if (state.botAI) {
+      if (playerDead) endBotMatch(false);          // 내가 먼저 죽음 → 패배
+      else if (!state.botAlive) endBotMatch(true);  // 봇이 먼저 죽음 → 승리
+    } else if (hazards.hitTest(player)) {
       killPlayer('zap');
     } else if (player.body.droppedOff) {
       killPlayer('fall');
