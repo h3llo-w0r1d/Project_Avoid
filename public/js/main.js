@@ -412,6 +412,36 @@ function renderNotice() {
 }
 
 api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); }).catch(() => {});
+
+// 타이틀 오른쪽 '누적 판수' 카드. 못 받아 오면 카드를 그냥 안 띄운다 —
+// 장식이라 없다고 아쉬울 게 없고, 0판이라고 거짓말하는 것보단 낫다.
+function showPlayCount() {
+  const card = document.getElementById('play-count');
+  const numEl = document.getElementById('play-count-num');
+  if (!card || !numEl) return;
+  api.playCount().then((total) => {
+    if (!(total > 0)) return;
+    card.classList.remove('hidden');
+    // 0 에서 실제 숫자까지 굴려 올린다(1.1초). 끝은 정확한 값으로 맞춘다.
+    const t0 = performance.now(), DUR = 1100;
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / DUR);
+      const eased = 1 - (1 - p) ** 3;              // 끝에서 부드럽게 멈추게
+      numEl.textContent = Math.round(total * eased).toLocaleString('ko-KR');
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }).catch(() => {});
+}
+showPlayCount();
+// 첫 화면에 오래 머무는 사람도 있으니 1분마다 조용히 갱신한다(연출 없이).
+setInterval(() => {
+  const numEl = document.getElementById('play-count-num');
+  if (!numEl) return;
+  api.playCount()
+    .then((total) => { if (total > 0) numEl.textContent = total.toLocaleString('ko-KR'); })
+    .catch(() => {});
+}, 60_000);
 // 10초마다: 최신 공지를 다시 받아오고(바뀌면 처음부터), 안 바뀌었으면 다음
 // 공지로 넘긴다 → 여러 개면 10초 간격으로 번갈아 뜬다.
 setInterval(() => {

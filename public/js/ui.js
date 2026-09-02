@@ -674,6 +674,13 @@ export const api = {
   },
 
   // 도전모드(탑) 랭킹 — 누가 몇 층까지 올라갔나.
+  // 사이트 전체 누적 판수(혼자 하기·층 오르기·봇전·1v1 전부).
+  async playCount() {
+    const res = await fetch('/api/play-count');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).total;
+  },
+
   async towerRanks() {
     const res = await fetch('/api/tower-ranks');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

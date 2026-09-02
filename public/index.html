@@ -401,6 +401,14 @@
     <button id="tower-btn" class="hidden" type="button" aria-label="층 오르기" title="층 오르기 — 층을 올라가며 깨기">
       <span class="tower-label">층 오르기</span>
     </button>
+
+    <!-- 오른쪽 빈 자리에 두는 누적 판수 카드. 이 사이트에서 지금까지 몇 판이
+         돌았는지 보여 준다. 숫자는 js/main.js 가 채운다(못 받으면 카드를 숨긴다). -->
+    <aside id="play-count" class="hidden" aria-label="누적 판수">
+      <div class="pc-kicker">TOTAL PLAYS</div>
+      <div class="pc-num"><span id="play-count-num">0</span><span class="pc-unit">판</span></div>
+      <div class="pc-sub">지금까지 누적된 전체 판수</div>
+    </aside>
   </div>
 
   <!-- 첫 로그인 뒤 닉네임 정하기 -->

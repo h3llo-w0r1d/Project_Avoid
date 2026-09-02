@@ -935,6 +935,30 @@ app.post('/api/titles', (req, res) => {
 });
 
 // 도전모드(탑) 랭킹 — 누가 몇 층까지 올라갔나(통산).
+// 첫 화면에 띄우는 '누적 판수'. 이 사이트에서 지금까지 시작된 모든 판을 센다.
+//
+// 셋을 더한다 — 한 곳에 다 세지 않는 이유는 판이 시작되는 길이 서로 다르기
+// 때문이다. 혼자 하기·층 오르기는 표(run/start)를 받아 가므로 stats 가 세고,
+// 봇전과 1v1 은 표를 안 받아서 각자의 기록표 줄 수로 센다.
+// 1v1 은 두 명이 하지만 한 판으로 친다.
+//
+// 봇전 기록표는 최근 1만 줄만 남으므로, 봇전이 1만 판을 넘기면 그때부터
+// 조금씩 적게 세인다. 넘길 때가 되면 stats 에 따로 세는 쪽으로 옮기면 된다.
+//
+// 30초 동안은 같은 답을 돌려준다. 첫 화면을 여는 사람마다 세 표를 세면
+// 사람이 몰릴 때 괜히 일을 시킨다. 30초쯤 늦게 반영돼도 아무 문제 없다.
+let playCountCache = { at: 0, total: 0 };
+app.get('/api/play-count', (req, res) => {
+  const now = Date.now();
+  if (now - playCountCache.at > 30_000) {
+    let total = stats.totals().runs;              // 혼자 하기 + 층 오르기
+    try { total += modeLogs.bot.size; } catch { /* 표가 없으면 그냥 뺀다 */ }
+    try { total += matchLog.size; } catch { /* 1v1 */ }
+    playCountCache = { at: now, total };
+  }
+  res.json({ total: playCountCache.total });
+});
+
 app.get('/api/tower-ranks', (req, res) => {
   const top = users.towerRanking(TOP_N);
   const me = req.user ? users.byId(req.user.id) : null;
