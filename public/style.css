@@ -2431,23 +2431,34 @@ kbd {
 
 /* 떠 있는 땅덩이 — 잔디 윗면 + 아래로 뾰족한 바위 */
 .tower-stage { position: relative; display: block; width: 150px; height: 52px; flex: none; }
-.tower-stage::after {            /* 땅 아래로 뾰족한 바위(잔디 뒤에 깔린다) */
-  content: ''; position: absolute; left: 50%; top: 60%; transform: translateX(-50%);
-  width: 0; height: 0; border-left: 32px solid transparent; border-right: 32px solid transparent;
-  border-top: 44px solid #5b4029; z-index: 0;
+/* 공중에 떠 있는 느낌을 내는 부드러운 그림자(뾰족한 바위 대신) */
+.tower-stage::after {
+  content: ''; position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
+  width: 68%; height: 14px; border-radius: 50%; z-index: 0;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 70%);
+  filter: blur(3px);
 }
+/* 잔디 언덕 — 위에서 빛이 드는 둥근 땅 */
 .tower-island {
   position: absolute; inset: 0; z-index: 1; border-radius: 50%;
-  background: radial-gradient(ellipse at 50% 28%, #63c06b, #3f8a47 62%, #2f6a37);
-  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.5);
+  background:
+    radial-gradient(ellipse 55% 50% at 36% 24%, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(ellipse at 50% 34%, #74d079 0%, #4d9f55 55%, #2f6f3a 100%);
+  box-shadow:
+    inset 0 -9px 16px rgba(0, 0, 0, 0.38),        /* 아래쪽 흙 그늘 */
+    inset 0 4px 7px rgba(255, 255, 255, 0.20),    /* 윗면 광 */
+    0 12px 22px rgba(0, 0, 0, 0.45);
 }
-.tower-floor.lock .tower-stage::after { border-top-color: #3f434e; }
 /* 깬 층은 색이 바래고, 잠긴 층은 회색 바위만 */
 .tower-floor.done .tower-island {
-  background: radial-gradient(ellipse at 50% 28%, #7fd08a, #4f9a58 62%, #3b7442);
+  background:
+    radial-gradient(ellipse 55% 50% at 36% 24%, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(ellipse at 50% 34%, #9ae7a2 0%, #66bd71 55%, #40874c 100%);
 }
 .tower-floor.lock .tower-island {
-  background: radial-gradient(ellipse at 50% 28%, #5b6070, #464b58 62%, #363a44);
+  background:
+    radial-gradient(ellipse 55% 50% at 36% 24%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(ellipse at 50% 34%, #6a707f 0%, #4c515e 55%, #373b45 100%);
 }
 .tower-floor.lock .tower-node { opacity: 0.5; animation: none; }
 .tower-floor.open .tower-island {
