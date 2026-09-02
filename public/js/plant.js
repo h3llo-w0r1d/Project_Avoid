@@ -395,6 +395,26 @@ function makeMouthTexture(kind = 'smile', size = 256) {
     return textureFrom(cv);
   }
 
+  // 작고 동그랗게 벌린 빨간 입 — 스티커 그림체의 순한 "오" 표정. 산삼용.
+  // 기본 웃는 입은 크고 혀까지 있어 이 그림체에선 과하다.
+  if (kind === 'ohh') {
+    const my = size * 0.46;
+    const shape = () => {
+      g.beginPath();
+      // 완전한 원보다 아래가 조금 더 넓은 물방울꼴이 그림체에 맞는다.
+      g.ellipse(cx, my, size * 0.13, size * 0.155, 0, 0, Math.PI * 2);
+      g.closePath();
+    };
+    shape();
+    g.fillStyle = '#e2453f';        // 안쪽은 빨강
+    g.fill();
+    shape();
+    g.strokeStyle = '#161210';      // 굵은 검은 테두리(스티커 느낌)
+    g.lineWidth = size * 0.055;
+    g.stroke();
+    return textureFrom(cv);
+  }
+
   // 사악한 이빨 웃음 — 시커먼 입에 지그재그 뾰족니. 흑화용.
   if (kind === 'evil') {
     const my = size * 0.44;
@@ -971,6 +991,56 @@ function addHalo(root, ruler, spec, outlineMat, oW = 1) {
   halo.rotation.x = Math.PI / 2 - 0.30;   // 살짝 눕혀 원반처럼 보이게
   root.add(halo);
   addOutline(halo, 0.012 * oW, outlineMat);
+  return [];
+}
+
+// 산삼 열매 — 잎 사이에서 곧게 솟은 대 끝에 빨간 열매가 뭉쳐 달린다.
+// 산삼을 산삼처럼 보이게 하는 건 뿌리 모양이 아니라 이 빨간 열매 뭉치다.
+//
+// 열매는 대 끝에서 한 층 위로 올려 붙인다 — 대 끝에 딱 맞추면 열매가
+// 대를 삼켜 '막대 사탕' 처럼 보인다. 잎(swaying)처럼 흔들리진 않는다.
+function addBerries(root, ruler, spec, outlineMat, oW = 1) {
+  const {
+    color = 0xe23b3b,      // 잘 익은 빨강
+    stem = 0x7fa650,       // 잎과 같은 계열의 초록 대
+    stemHeight = 0.62,
+    count = 7,
+    size = 0.115
+  } = spec || {};
+
+  const baseY = ruler.top - 0.04;
+
+  // 대 — 잎 밑동에서 위로. 위로 갈수록 살짝 가늘어진다.
+  const rod = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.035, 0.05, stemHeight, 10),
+    toon(stem)
+  );
+  rod.position.y = baseY + stemHeight / 2;
+  root.add(rod);
+  addOutline(rod, 0.016 * oW, outlineMat);
+
+  // 열매 뭉치 — 가운데 한 알, 나머지는 그 둘레에 고르게. 높이를 조금씩
+  // 어긋내야 공 여러 개를 한 평면에 늘어놓은 것처럼 보이지 않는다.
+  const topY = baseY + stemHeight;
+  const geo = new THREE.SphereGeometry(size, 14, 12);
+  const mat = toon(color);
+  const place = (x, y, z, s = 1) => {
+    const b = new THREE.Mesh(geo, mat);
+    b.position.set(x, y, z);
+    b.scale.setScalar(s);
+    b.castShadow = true;
+    root.add(b);
+    addOutline(b, 0.02 * oW, outlineMat);
+  };
+
+  place(0, topY + size * 0.9, 0, 1.05);            // 가운데
+  const ring = Math.max(0, count - 1);
+  for (let i = 0; i < ring; i++) {
+    const a = (i / ring) * Math.PI * 2 + 0.35;
+    const r = size * 1.45;
+    place(Math.cos(a) * r, topY + size * (0.45 + (i % 3) * 0.22), Math.sin(a) * r,
+      0.88 + (i % 2) * 0.1);
+  }
   return [];
 }
 
@@ -1586,6 +1656,7 @@ export function buildPlant(id, opts = {}) {
   if (spec.cigarette) addCigarette(root, ruler, outlineMat);
   if (spec.fangs) addFangs(root, ruler, outlineMat, oW);
   if (spec.nose != null) addNose(root, ruler, spec.nose, outlineMat, oW, spec.face);
+  if (spec.berries) addBerries(root, ruler, spec.berries, outlineMat, oW); // 산삼 열매
   if (spec.halo) addHalo(root, ruler, spec.halo, outlineMat, oW);     // 천사 후광
   if (spec.horns) addHorns(root, ruler, spec.horns, outlineMat, oW);  // 악마 뿔
   if (spec.wings) addWings(root, ruler, outlineMat, spec.wings === 'dark');  // 날개(등): 흰/검
