@@ -850,6 +850,18 @@ app.post('/api/titles', (req, res) => {
   res.json({ ok: true, titles: describeTitles(ctx, updated?.titles ?? equipped) });
 });
 
+// 도전모드(탑) 랭킹 — 누가 몇 층까지 올라갔나(통산).
+app.get('/api/tower-ranks', (req, res) => {
+  const top = users.towerRanking(TOP_N);
+  const me = req.user ? users.byId(req.user.id) : null;
+  const myFloor = me?.challenge ?? 0;
+  res.json({
+    season: seasonInfo(),
+    top,
+    me: myFloor > 0 ? { name: me.nickname, floor: myFloor, rank: users.towerRankOf(myFloor) } : null
+  });
+});
+
 // 도전모드(탑) — 내 진행도와 층 목록. 로그인해야 도전할 수 있다.
 app.get('/api/challenge', (req, res) => {
   if (!req.user) return res.json({ signedIn: false, ...describeChallenge(0) });

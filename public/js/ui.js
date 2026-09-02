@@ -38,15 +38,10 @@ const BOARDS = {
     value: (e) => `${e.wins}<em>승</em> <span class="dim">${e.losses}패</span>`,
     mine: (me) => `내 순위 ${me.rank}위 · ${me.wins}승 ${me.losses}패`
   },
-  rate: {
-    empty: '아직 조건을 채운 사람이 없습니다',
-    value: (e) => `${(e.rate * 100).toFixed(1)}<em>%</em> <span class="dim">${e.games}전</span>`,
-    mine: (me) => `내 순위 ${me.rank}위 · ${(me.rate * 100).toFixed(1)}% (${me.games}전)`
-  },
-  streak: {
-    empty: '2연승 이상 달리는 사람이 아직 없습니다',
-    value: (e) => `${e.streak}<em>연승</em>`,
-    mine: (me) => `내 순위 ${me.rank}위 · ${me.streak}연승 중`
+  tower: {
+    empty: '아직 도전모드를 깬 사람이 없습니다',
+    value: (e) => `${e.floor}<em>층</em>`,
+    mine: (me) => `내 순위 ${me.rank}위 · ${me.floor}층`
   }
 };
 
@@ -57,8 +52,7 @@ const METRIC = {
   voice: (e) => Number(e.time) || 0,
   voicehard: (e) => Number(e.time) || 0,
   wins: (e) => Number(e.wins) || 0,
-  rate: (e) => Number(e.rate) || 0,
-  streak: (e) => Number(e.streak) || 0
+  tower: (e) => Number(e.floor) || 0
 };
 
 export class UI {
@@ -661,6 +655,13 @@ export const api = {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()).titles;
+  },
+
+  // 도전모드(탑) 랭킹 — 누가 몇 층까지 올라갔나.
+  async towerRanks() {
+    const res = await fetch('/api/tower-ranks');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   },
 
   // 도전모드(탑): 내 진행도 + 층 목록.

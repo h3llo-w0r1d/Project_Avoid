@@ -1848,6 +1848,10 @@ async function refreshLeaderboard(kind = 'time') {
       ui.renderHall((await api.hall()).seasons);
       return;
     }
+    if (kind === 'tower') {   // 도전모드 — 몇 층까지 올라갔나
+      ui.renderLeaderboard(await api.towerRanks(), null, kind);
+      return;
+    }
     const data = await api.versus();
     ui.renderLeaderboard({
       ...data[kind],
