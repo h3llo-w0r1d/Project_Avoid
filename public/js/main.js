@@ -591,6 +591,9 @@ const adminCoins = (() => {
 
   const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
   const BLANK_STREAK_KEY = 'avoidarc.roul.blankStreak';   // 룰렛 꽝 연속 횟수(불운·저주 업적용)
+  // 게스트가 뽑은 희귀 보상 횟수. 서버에 쌓을 계정이 없어 브라우저에만 센다.
+  // 칭호를 주는 게 아니라 '로그인하면 받을 수 있다'고 알릴 때만 쓴다.
+  const GUEST_LUCKY_KEY = 'avoidarc.roul.guestLucky';
   // 8칸(결과당 한 칸씩). 확률은 아래 WEIGHTS 로만 정해지므로 칸을 여러 개 둘 필요가 없다.
   const SEG = [
     { label: '꽝', coins: 0, color: '#474d5e' },
@@ -768,10 +771,19 @@ const adminCoins = (() => {
 
       // 희귀 보상(0.1~3%: 가나디·300코인 잭팟·노래·개발자의 선물)을 뽑으면 누적 횟수를
       // 올린다. 3회면 럭키가이, 10회면 행운의 여신을 얻고 축하 연출이 뜬다.
-      if ((lucky || jackpot || song || gift) && auth.signedIn) {
-        api.luckyHit().then((r) => {
-          if (r?.newTitles?.length) showTitleUnlock(r.newTitles);
-        });
+      if (lucky || jackpot || song || gift) {
+        if (auth.signedIn) {
+          api.luckyHit().then((r) => {
+            if (r?.newTitles?.length) showTitleUnlock(r.newTitles);
+          });
+        } else {
+          // 게스트는 서버에 쌓을 계정이 없어서, 브라우저에만 세어 두고 문턱을
+          // 넘길 때 로그인하면 받을 수 있다고 알려 준다(칭호를 주진 않는다).
+          const n = (parseInt(localStorage.getItem(GUEST_LUCKY_KEY) || '0', 10) || 0) + 1;
+          localStorage.setItem(GUEST_LUCKY_KEY, String(n));
+          if (n === 3) showTitleLoginPrompt(['럭키가이']);
+          else if (n === 10) showTitleLoginPrompt(['행운의 여신']);
+        }
       }
 
       // 꽝 연속 카운트 → 불운(5연속)·저주받은 자(10연속) 업적. 대박·코인 당첨이
@@ -780,10 +792,14 @@ const adminCoins = (() => {
       if (isBlank) {
         const n = (parseInt(localStorage.getItem(BLANK_STREAK_KEY) || '0', 10) || 0) + 1;
         localStorage.setItem(BLANK_STREAK_KEY, String(n));
-        if (auth.signedIn && (n === 5 || n === 10)) {
-          api.awardTitle(n >= 10 ? 'cursed' : 'unlucky').then((r) => {
-            if (r?.fresh && r.title) showTitleUnlock([r.title]);
-          });
+        if (n === 5 || n === 10) {
+          if (auth.signedIn) {
+            api.awardTitle(n >= 10 ? 'cursed' : 'unlucky').then((r) => {
+              if (r?.fresh && r.title) showTitleUnlock([r.title]);
+            });
+          } else {
+            showTitleLoginPrompt([n >= 10 ? '저주받은 자' : '불운']);
+          }
         }
       } else {
         localStorage.setItem(BLANK_STREAK_KEY, '0');
@@ -1831,6 +1847,38 @@ function showTitleUnlock(list) {
   });
 }
 
+// 게스트가 칭호 조건을 채웠을 때. 칭호는 계정에 저장돼서 게스트는 받아 둘 곳이
+// 없다 — 얻었다고 하면 거짓말이니, '로그인하면 받을 수 있다'고 알려 준다.
+// 조건을 넘긴 그 순간 한 번만 뜬다.
+function showTitleLoginPrompt(names) {
+  if (!names?.length) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'unlock-overlay';
+  overlay.innerHTML =
+    '<div class="unlock-card">' +
+    '<div class="unlock-kicker">🔒 칭호 조건 달성!</div>' +
+    '<div class="unlock-lockface">🏷️</div>' +
+    '<div class="unlock-name"></div>' +
+    '<div class="unlock-hint">칭호는 계정에 저장돼요 · 로그인하면 바로 받을 수 있어요</div>' +
+    '<button type="button" class="unlock-login">구글로 로그인</button>' +
+    '<div class="unlock-hint dim-hint">화면을 누르면 넘어가요</div></div>';
+  document.body.appendChild(overlay);
+  overlay.querySelector('.unlock-name').textContent =
+    names.map((n) => `「${n}」`).join(' ');
+  requestAnimationFrame(() => overlay.classList.add('show'));
+
+  const close = () => {
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 260);
+  };
+  overlay.querySelector('.unlock-login').addEventListener('click', (e) => {
+    e.stopPropagation();          // 닫기보다 로그인이 먼저
+    location.href = '/auth/google';
+  });
+  overlay.addEventListener('click', close);
+  setTimeout(close, 5200);        // 읽을 시간은 주되 알아서 사라지게
+}
+
 // 이 초 이상 버텨야 그 판에 먹은 코인을 인정한다(먹고 바로 죽는 파밍 방지).
 const MIN_COIN_SECONDS = 10;
 
@@ -1913,9 +1961,12 @@ async function finishGame() {
     }
     ui.renderLeaderboard(result, result.id, board);
 
-    // 이번 판으로 새 칭호를 얻었으면 축하 연출을 띄운다(로그인 계정만 — 칭호는
-    // 계정에 저장돼 게스트는 장착할 수 없다).
-    if (auth.signedIn && result.newTitles?.length) await showTitleUnlock(result.newTitles);
+    // 이번 판으로 새 칭호를 얻었으면 축하 연출을 띄운다. 게스트는 조건만 채운
+    // 것이므로(계정이 없어 저장할 곳이 없다) 로그인 안내를 대신 띄운다.
+    if (result.newTitles?.length) {
+      if (result.titlesLocked) showTitleLoginPrompt(result.newTitles.map((t) => t.name));
+      else await showTitleUnlock(result.newTitles);
+    }
 
     // 이 판이 그 사람의 최고 기록이면 다시보기를 서버에 올린다(관리자만 봄).
     // rec 은 일반 모드에서만 만들어지고, 최고 기록일 때만(me.time 과 일치) 올린다.

@@ -1420,6 +1420,22 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   animation: unlockPop 0.5s ease-out;
 }
 .unlock-hint { margin-top: 14px; font-size: 12px; color: var(--muted); }
+/* 게스트에게 뜨는 '로그인하면 받을 수 있어요' 안내의 로그인 단추 */
+.unlock-login {
+  margin-top: 12px;
+  padding: 9px 20px;
+  border: 1px solid rgba(120, 160, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(80, 120, 255, 0.18);
+  color: #dce6ff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.unlock-login:hover { background: rgba(80, 120, 255, 0.32); transform: translateY(-1px); }
+.unlock-hint.dim-hint { margin-top: 10px; font-size: 11px; opacity: 0.6; }
 /* 코인 선물에 관리자가 붙인 한 줄 멘트 */
 .coin-gift-msg {
   margin-top: 12px; padding: 8px 14px; font-size: 15px; font-weight: 600;

@@ -425,12 +425,14 @@ app.post('/api/scores', async (req, res) => {
     const gainedIds = earnedTitleIds({ plays: playsNow, isAdmin })
       .filter((id) => !earnedTitleIds({ plays: Math.max(0, playsNow - 1), isAdmin }).includes(id));
     const newTitles = gainedIds.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
-    // 판수로 새로 딴 칭호도 기록에 남긴다.
+    // 판수로 새로 딴 칭호도 기록에 남긴다. 게스트는 칭호를 저장할 계정이 없어
+    // 실제로 얻은 게 아니다 — 기록에도 그렇게 적어 둔다(로그만 보고 오해하지 않게).
     for (const t of newTitles) {
       try {
         modeLogs.title.add({
           name: finalName, userId: req.user?.id ?? null,
-          title_id: t.id, title: t.name, how: `${playsNow}판 달성`
+          title_id: t.id, title: t.name,
+          how: `${playsNow}판 달성${req.user ? '' : ' · 게스트(미획득)'}`
         });
       } catch (err) { console.error('칭호 기록 실패:', err); }
     }
@@ -441,7 +443,10 @@ app.post('/api/scores', async (req, res) => {
       top: scores.top(TOP_N, mode),
       me: scores.bestOf(req.user ? { userId: req.user.id, mode } : { name: finalName, mode }),
       season: seasonInfo(),
-      newTitles
+      newTitles,
+      // 게스트면 조건은 채웠지만 받아 갈 계정이 없다. 클라가 '로그인하면
+      // 받을 수 있어요' 안내를 대신 띄운다.
+      titlesLocked: !req.user
     });
   } catch (err) {
     console.error('기록 저장 실패:', err);
