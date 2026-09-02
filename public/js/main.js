@@ -3,7 +3,7 @@ import { createWorld, fitCamera } from './scene.js';
 import { startOrientationManager } from './orientation.js';
 import { Player } from './player.js';
 import { Hazards } from './hazards.js';
-import { BotAI, BOT_TIERS } from './bot-ai.js';
+import { BotAI, BOT_TIERS, saveChanceAt } from './bot-ai.js';
 import { FloorHoles } from './floor-holes.js';
 import { Coins } from './coins.js';
 import { wallet } from './wallet.js';
@@ -1992,8 +1992,8 @@ function frame() {
       if (rival.body.droppedOff) {
         state.botAlive = false;
       } else if (hazards.hitTest(rival) && state.botInvuln <= 0) {
-        const save = BOT_TIERS[state.botTier]?.save ?? 0;
-        if (Math.random() < save) state.botInvuln = 0.6;   // 위기탈출
+        // 목표 시간 전엔 잘 빠져나가고, 목표를 넘기면 보호가 사라진다.
+        if (Math.random() < saveChanceAt(state.botTier, state.elapsed)) state.botInvuln = 0.6;
         else state.botAlive = false;
       }
     }
