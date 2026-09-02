@@ -1144,6 +1144,70 @@ function startGame() {
 }
 
 // ── 도전모드(탑) ────────────────────────────────────────────
+// 잔디·바위 텍스처를 캔버스로 한 번 그려 두고 섬 배경으로 쓴다. 그라데이션만으론
+// 단색으로 밋밋해서, 잎을 수천 개 그려 진짜 잔디처럼 보이게 한다.
+let grassTex = null, stoneTex = null;
+function makeGrassTexture(dark = false) {
+  const w = 512, h = 200;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  // 바탕: 위는 볕든 잔디, 아래로 갈수록 그늘
+  const base = g.createLinearGradient(0, 0, 0, h);
+  base.addColorStop(0, dark ? '#4f9a52' : '#63b45e');
+  base.addColorStop(0.6, dark ? '#3c7f42' : '#4a9a4e');
+  base.addColorStop(1, dark ? '#24552b' : '#2c6733');
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  // 잔디 잎 — 짧은 곡선을 빽빽하게. 위쪽일수록 밝게 해 빛 방향을 준다.
+  g.lineCap = 'round';
+  for (let i = 0; i < 3200; i++) {
+    const x = Math.random() * w, y = Math.random() * h;
+    const len = 7 + Math.random() * 15;
+    const lean = (Math.random() - 0.5) * 9;
+    const light = 0.6 + (1 - y / h) * 0.55;
+    const hue = 92 + Math.random() * 32;
+    const sat = 38 + Math.random() * 32;
+    const lum = Math.min(72, (24 + Math.random() * 26) * light);
+    g.strokeStyle = `hsl(${hue} ${sat}% ${lum}%)`;
+    g.lineWidth = 0.8 + Math.random() * 1.5;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + lean * 0.5, y - len * 0.6, x + lean, y - len);
+    g.stroke();
+  }
+  return cv.toDataURL('image/png');
+}
+function makeStoneTexture() {
+  const w = 512, h = 200;
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+  const base = g.createLinearGradient(0, 0, 0, h);
+  base.addColorStop(0, '#767d8c'); base.addColorStop(1, '#3a3e48');
+  g.fillStyle = base; g.fillRect(0, 0, w, h);
+  // 자잘한 돌 얼룩
+  for (let i = 0; i < 1400; i++) {
+    const x = Math.random() * w, y = Math.random() * h;
+    const r = 1 + Math.random() * 5;
+    const v = Math.random() < 0.5 ? 255 : 0;
+    g.fillStyle = `rgba(${v},${v},${v},${0.03 + Math.random() * 0.09})`;
+    g.beginPath(); g.ellipse(x, y, r, r * 0.7, Math.random() * 3, 0, 6.3); g.fill();
+  }
+  return cv.toDataURL('image/png');
+}
+// 섬 배경 스타일(윗면 광 그라데이션을 잔디 텍스처 위에 얹는다).
+function islandStyle(state) {
+  if (!grassTex) { grassTex = makeGrassTexture(false); stoneTex = makeStoneTexture(); }
+  const tex = state === 'lock' ? stoneTex : grassTex;
+  const glow = state === 'lock'
+    ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.34)';
+  // 깬 층은 살짝 밝은 초록을 덧입혀 더 무성해 보이게.
+  const tint = state === 'done'
+    ? 'linear-gradient(rgba(180,255,180,0.18),rgba(180,255,180,0.10)),' : '';
+  return `background-image:${tint}radial-gradient(ellipse 55% 48% at 34% 22%,${glow},rgba(255,255,255,0) 62%),url(${tex});` +
+    `background-size:cover;background-position:center;`;
+}
+
 // 1층부터 한 층씩. 층 정의·진행도는 서버가 갖고 있고(계정에 저장), 여기선
 // 그걸 받아 그리고 클리어를 보고한다.
 async function openTower() {
@@ -1190,7 +1254,7 @@ async function openTower() {
       ` style="height:${ROW}px;padding-left:${5 + step * 15}%">` +
       `<button type="button" class="tower-node"${canGo ? '' : ' disabled'}>` +
       `<span class="tower-stage" style="width:${w}px;height:${Math.round(w * 0.35)}px">` +
-      `${me}<span class="tower-island"></span></span>` +
+      `${me}<span class="tower-island" style="${islandStyle(state)}"></span></span>` +
       `<span class="tower-label"><b class="tower-num">${f.floor}층</b>` +
       `<em class="tower-goal">${f.done ? '✔ 클리어' : f.goal}</em></span>` +
       '</button></div>';
