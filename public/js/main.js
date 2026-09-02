@@ -598,19 +598,19 @@ const adminCoins = (() => {
     { label: '10', coins: 10, color: '#4fd6ff' },
     { label: '20', coins: 20, color: '#ff9f43' },
     { label: '50', coins: 50, color: '#ffcf3f' },
-    { label: '💰500', jackpot: true, coins: 500, color: '#ffd93b' }, // 코인 잭팟
+    { label: '💰300', jackpot: true, coins: 300, color: '#ffd93b' }, // 코인 잭팟
     { label: '가나디라고라', lucky: true, color: '#ffcf6a' },        // 가나디라고라(한정 캐릭터)
     { label: '개발자의 선물', gift: true, color: '#ff7eb6' },        // 인스타 DM 소정의 선물
     { label: '🎵', song: true, color: '#b57bff' }                    // 개발자가 불러주는 노래
   ];
-  // 보상별 확률(합 100). 노래 1% · 개발자의 선물 0.1% · 코인 잭팟 2% · 가나디라고라 5%,
-  // 코인은 값이 클수록 희귀: 꽝 39.9 · 5코인 20 · 10코인 15 · 20코인 10 · 50코인 7.
+  // 보상별 확률(합 100). 노래 1% · 개발자의 선물 0.1% · 코인 잭팟 2% · 가나디라고라 3%,
+  // 코인은 값이 클수록 희귀: 꽝 41.9 · 5코인 20 · 10코인 15 · 20코인 10 · 50코인 7.
   const WEIGHTS = [
-    { coins: 0, p: 39.9 }, { coins: 5, p: 20 }, { coins: 10, p: 15 },
+    { coins: 0, p: 41.9 }, { coins: 5, p: 20 }, { coins: 10, p: 15 },
     { coins: 20, p: 10 }, { coins: 50, p: 7 },
-    { jackpot: true, coins: 500, p: 2 },   // 코인 잭팟 500
-    { lucky: true, p: 5 },                  // 가나디라고라
-    { gift: true, p: 0.1 },                 // 개발자의 선물(인스타 DM)
+    { jackpot: true, coins: 300, p: 2 },   // 코인 잭팟 300
+    { lucky: true, p: 3 },                  // 가나디라고라
+    { gift: true, p: 0.1 },                 // 개발자의 선물(당첨되면 안내창에서 인스타 DM 요청)
     { song: true, p: 1 }                    // 개발자 노래
   ];
   const N = SEG.length, ARC = 360 / N;
@@ -637,7 +637,7 @@ const adminCoins = (() => {
       const txt = s.song ? '개발자가<br>불러주는<br>노래'
         : s.lucky ? '가나디라고라<br><small>(룰렛 전용)</small>'
         : s.gift ? '🎁<br>개발자의<br>선물'
-        : s.jackpot ? '💰500'
+        : s.jackpot ? '💰300'
         : (s.coins ? `🪙${s.label}` : '꽝');
       const cls = (s.song || s.lucky || s.gift) ? 'roul-label roul-label-song' : 'roul-label';
       return `<span class="${cls}" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
@@ -743,7 +743,7 @@ const adminCoins = (() => {
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
       } else if (jackpot) {
-        resultEl.textContent = '💰🎉 잭팟! 500코인 획득!!';
+        resultEl.textContent = '💰🎉 잭팟! 300코인 획득!!';
         resultEl.className = 'roulette-result win jackpot';
         audio.coin?.(); audio.stageUp?.();
       } else if (song) {
@@ -766,7 +766,7 @@ const adminCoins = (() => {
         if (coins >= 50) audio.stageUp?.();
       }
 
-      // 룰렛 대박(가나디라고라·500코인 잭팟·노래·개발자의 선물) → '럭키가이' 업적 칭호.
+      // 룰렛 대박(가나디라고라·300코인 잭팟·노래·개발자의 선물) → '럭키가이' 업적 칭호.
       // 로그인 계정만 서버에 새기고, 처음 얻는 거면 축하 연출을 띄운다.
       if ((lucky || jackpot || song || gift) && auth.signedIn) {
         api.awardTitle('luckyguy').then((r) => {
@@ -801,9 +801,9 @@ const adminCoins = (() => {
     const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
     // 표시 정보(라벨·정렬순서·강조). 초대박 3종을 맨 위, 그다음 코인 큰 순, 꽝은 맨 아래.
     const info = (w) => {
-      if (w.gift) return { label: '🎁 개발자의 선물 (인스타 DM)', ord: 1001, special: true };
+      if (w.gift) return { label: '🎁 개발자의 선물', ord: 1001, special: true };
       if (w.song) return { label: '🎵 개발자가 불러주는 노래', ord: 1000, special: true };
-      if (w.jackpot) return { label: '💰 코인 500 잭팟', ord: 999, special: true };
+      if (w.jackpot) return { label: '💰 코인 300 잭팟', ord: 999, special: true };
       if (w.lucky) return { label: '가나디라고라 (한정 캐릭터)', ord: 998, special: true };
       if (w.coins) return { label: `🪙 ${w.coins}코인`, ord: w.coins, special: false };
       return { label: '꽝', ord: -1, special: false };
