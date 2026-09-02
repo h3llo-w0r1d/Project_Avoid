@@ -293,6 +293,25 @@ app.get('/api/versus-ranks', (req, res) => {
 
 // 한 사람의 기록 모음. 랭킹에서 이름을 누르면 이걸 보여 준다.
 //
+// 이 사람이 지금까지 한 총 판수. 칭호(10·100·500·1000판)와 관리 화면이
+// 같은 값을 쓰도록 한 곳에 모아 둔다.
+//
+// scores 의 runs 만 보면 안 된다 — 시즌이 바뀌면 지난 시즌 줄이 지워져
+// 9월 1일에 모두의 판수가 0 으로 돌아가고, 베테랑·고인물이 칭호를 잃는다.
+// 칭호는 '지금까지 몇 판' 이라는 약속이라 시즌과 무관해야 한다.
+//
+// 계정이면 user_id 로 센다. 로그에는 그때 쓰던 이름이 박히므로 이름으로
+// 세면 닉네임을 바꾼 사람의 옛 판이 통째로 떨어져 나간다.
+// 이름 쪽과 scores 쪽도 함께 보는 건, 로그인 전(게스트 때) 같은 이름으로 한
+// 판이나 로그가 상한에 걸려 잘린 경우를 놓치지 않기 위한 안전망이다.
+function totalPlaysOf(name, user = null) {
+  const byName = plays.countsByName().get(name) ?? 0;
+  const byUser = user ? (plays.countsByUser().get(user.id) ?? 0) : 0;
+  const n = scores.bestOf({ name, mode: 'normal' })?.runs ?? 0;
+  const h = scores.bestOf({ name, mode: 'hardcore' })?.runs ?? 0;
+  return Math.max(byUser, byName, n + h);
+}
+
 // 계정과 게스트를 같은 통로로 다룬다. 게스트는 계정이 없으니 대전 전적이
 // 없고, 버틴 기록만 있다. 이름은 계정끼리 겹칠 수 없고 게스트는 Guest####
 // 형식만 쓸 수 있어서, 이름 하나로 사람을 특정할 수 있다.
@@ -303,8 +322,7 @@ app.get('/api/profile', (req, res) => {
   const user = users.byNickname(name);
   const best = scores.bestOf({ name, mode: 'normal' });
   const hard = scores.bestOf({ name, mode: 'hardcore' });
-  // 판수는 두 모드의 제출된 판을 더한다(각 모드 한 줄, runs 에 누적).
-  const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
+  const playCount = totalPlaysOf(name, user);   // 시즌·개명과 무관한 통산 판수
 
   // 관리자에게만 최고기록의 점수 id 와 다시보기 유무를 함께 준다(다시보기 버튼용).
   const admin = isAdminUser(req.user);
@@ -316,11 +334,11 @@ app.get('/api/profile', (req, res) => {
     season: seasonInfo(),
     best: best ? { time: best.time, rank: best.rank, ...bestExtra(best) } : null,
     hardcore: hard ? { time: hard.time, rank: hard.rank, ...bestExtra(hard) } : null,
-    plays,
+    plays: playCount,
     // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부. 관리자는 전부 획득 처리되고
     // 운영자 칭호는 관리자에게만 보인다(프로필 주인의 관리자 여부로 판정).
     titles: describeTitles(
-      { plays, isAdmin: isAdminUser(user), awards: user?.awards, luckyHits: user?.luckyHits },
+      { plays: playCount, isAdmin: isAdminUser(user), awards: user?.awards, luckyHits: user?.luckyHits },
       user?.titles)
   };
 
@@ -419,9 +437,7 @@ app.post('/api/scores', async (req, res) => {
     // 이번 판으로 새로 얻은 칭호(판수 문턱을 넘겼는지). 판수는 두 모드 합이고
     // 이번 제출로 정확히 1 늘었으므로, 직전 판수는 (지금-1) 이다. 축하 연출용.
     const isAdmin = isAdminUser(req.user);
-    const pN = scores.bestOf({ name: finalName, mode: 'normal' });
-    const pH = scores.bestOf({ name: finalName, mode: 'hardcore' });
-    const playsNow = (pN?.runs ?? 0) + (pH?.runs ?? 0);
+    const playsNow = totalPlaysOf(finalName, req.user ?? null);
     const gainedIds = earnedTitleIds({ plays: playsNow, isAdmin })
       .filter((id) => !earnedTitleIds({ plays: Math.max(0, playsNow - 1), isAdmin }).includes(id));
     const newTitles = gainedIds.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
@@ -802,13 +818,22 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     scores: scores.all(),
     // 계정 목록에 '몇 판 했는지'를 붙인다. scores 는 시즌이 바뀌면 지난 기록을
     // 지우므로(8월 등), 지난 달까지 포함한 총 판수는 plays 로그에서 센다.
-    // 혹시 로그가 상한에 걸려 잘렸으면 scores 쪽 값이 더 클 수 있어 둘 중 큰 값.
+    //
+    // 계정 id 로 센다. 이름으로 세면 닉네임을 바꾼 사람의 옛 판이 통째로
+    // 떨어져 나간다 — 네 번 바꾼 계정이 258판인데 9판으로 보이고 있었다.
+    // 이름 쪽 값도 함께 보는 건, 로그인 전(게스트 때) 같은 이름으로 한 판이나
+    // 로그가 상한에 걸려 잘린 경우를 놓치지 않기 위한 안전망이다.
     accounts: (() => {
-      const logged = plays.countsByName();
+      const byUser = plays.countsByUser();
+      const byName = plays.countsByName();
       const runs = scores.runsByName();
       return users.listAccounts().map((a) => ({
         ...a,
-        plays: Math.max(logged.get(a.nickname) ?? 0, runs.get(a.nickname) ?? 0)
+        plays: Math.max(
+          byUser.get(a.id) ?? 0,
+          byName.get(a.nickname) ?? 0,
+          runs.get(a.nickname) ?? 0
+        )
       }));
     })(),
     usage: stats.recent(30),
@@ -924,10 +949,8 @@ app.post('/api/titles', (req, res) => {
   if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
   const name = req.user.nickname;
   if (!name) return res.status(400).json({ error: '닉네임을 먼저 정해 주세요.' });
-  const best = scores.bestOf({ name, mode: 'normal' });
-  const hard = scores.bestOf({ name, mode: 'hardcore' });
-  const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
   const acct = users.byId(req.user.id);
+  const plays = totalPlaysOf(name, req.user);
   const ctx = { plays, isAdmin: isAdminUser(req.user), awards: acct?.awards, luckyHits: acct?.luckyHits };
   const equipped = sanitizeEquipped(req.body?.equipped, ctx);
   const updated = users.setTitles(req.user.id, equipped);
