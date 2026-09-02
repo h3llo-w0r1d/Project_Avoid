@@ -971,16 +971,24 @@ app.post('/api/titles', (req, res) => {
 // 5초 동안은 같은 답을 돌려준다. 세는 값 자체는 싸다(세 쿼리 합쳐 36µs 로 쟀다).
 // 캐시는 CPU 를 아끼려는 게 아니라, 사람이 몰려도 쿼리 수가 접속자 수에
 // 비례해 늘지 않게 상한을 씌우는 용도다.
-let playCountCache = { at: 0, total: 0 };
+let playCountCache = { at: 0, total: 0, since: null };
 app.get('/api/play-count', (req, res) => {
   const now = Date.now();
   if (now - playCountCache.at > 5_000) {
     let total = stats.totals().runs;              // 혼자 하기 + 층 오르기
     try { total += modeLogs.bot.size; } catch { /* 표가 없으면 그냥 뺀다 */ }
     try { total += matchLog.size; } catch { /* 1v1 */ }
-    playCountCache = { at: now, total };
+    // 언제부터 센 숫자인지. 사이트를 연 날(8/7)이 아니라 '판을 세기 시작한
+    // 날' 이다 — 그 전엔 한 판 한 판을 남기지 않고 최고 기록만 저장했다.
+    // 오픈일을 적으면 그때부터의 판을 다 센 것처럼 보여 거짓말이 된다.
+    let since = playCountCache.since;
+    if (!since) {
+      try { since = db.prepare('SELECT MIN(day) d FROM daily').get()?.d ?? null; }
+      catch { since = null; }
+    }
+    playCountCache = { at: now, total, since };
   }
-  res.json({ total: playCountCache.total });
+  res.json({ total: playCountCache.total, since: playCountCache.since });
 });
 
 // 판수 랭킹 — 누가 제일 많이 했나(통산). 기록이 아니라 '많이 한 순서' 라

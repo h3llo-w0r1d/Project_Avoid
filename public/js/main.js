@@ -427,9 +427,12 @@ function refreshPlayCount(animate = false) {
   const card = document.getElementById('play-count');
   const numEl = document.getElementById('play-count-num');
   if (!card || !numEl) return;
-  api.playCount().then((total) => {
+  api.playCount().then(({ total, since }) => {
     if (!(total > 0)) return;
     card.classList.remove('hidden');
+    // '2026-08-20' → '2026.08.20'. 언제부터 센 숫자인지 밝혀 둔다.
+    const sinceEl = document.getElementById('play-count-since');
+    if (sinceEl && since) sinceEl.textContent = String(since).replaceAll('-', '.');
     if (!animate) { numEl.textContent = total.toLocaleString('ko-KR'); playCountShown = total; return; }
     // 지금 보이는 숫자에서 새 숫자까지 굴린다(처음엔 0 에서).
     const from = playCountShown, t0 = performance.now(), DUR = 1100;

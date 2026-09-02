@@ -681,10 +681,11 @@ export const api = {
 
   // 도전모드(탑) 랭킹 — 누가 몇 층까지 올라갔나.
   // 사이트 전체 누적 판수(혼자 하기·층 오르기·봇전·1v1 전부).
+  // { total, since } — since 는 언제부터 센 숫자인지('YYYY-MM-DD').
   async playCount() {
     const res = await fetch('/api/play-count');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()).total;
+    return res.json();
   },
 
   // 판수 랭킹 — 누가 제일 많이 했나. 게스트도 이름으로 함께 줄을 선다.

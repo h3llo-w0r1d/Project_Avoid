@@ -2464,7 +2464,16 @@ kbd {
   color: #fff; font-variant-numeric: tabular-nums;
 }
 .pc-unit { margin-left: 6px; font-size: 20px; font-weight: 800; color: var(--muted); }
-.pc-sub { margin-top: 10px; font-size: 12px; color: var(--muted); }
+/* 언제부터 센 숫자인지. 날짜만 또렷하게 해서 '개근한 기간' 처럼 읽히게. */
+.pc-sub {
+  margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 12px; color: var(--muted);
+}
+#play-count-since {
+  color: #ffb3c0; font-weight: 800; letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
 
 /* 화면이 좁아지면 가운데 패널과 겹친다. 그 전에 치운다. */
 @media (max-width: 1240px) { #play-count { display: none; } }
