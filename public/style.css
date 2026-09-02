@@ -2768,7 +2768,9 @@ kbd {
   margin-top: 14px;
 }
 .shop-tabs button {
-  margin: 0; padding: 8px 16px;
+  /* 전역 button 은 width:100% 라 그대로 두면 탭이 한 줄씩 꽉 차게 늘어난다 */
+  width: auto; flex: 0 0 auto;
+  margin: 0; padding: 7px 15px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--stroke); border-radius: 999px;
   color: var(--muted); font: inherit; font-size: 14px; font-weight: 700;
