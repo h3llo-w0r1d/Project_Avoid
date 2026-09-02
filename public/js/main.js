@@ -415,33 +415,36 @@ api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); 
 
 // 타이틀 오른쪽 '누적 판수' 카드. 못 받아 오면 카드를 그냥 안 띄운다 —
 // 장식이라 없다고 아쉬울 게 없고, 0판이라고 거짓말하는 것보단 낫다.
-function showPlayCount() {
+//
+// 갱신은 셋으로 나눠 둔다:
+//  · 처음 한 번 — 0 에서 굴려 올리는 연출과 함께
+//  · 15초마다  — 숫자만 조용히 바꾼다
+//  · 타이틀로 돌아올 때 — 방금 내 판이 더해진 걸 바로 보게(제일 보고 싶은 순간)
+// 이보다 더 촘촘히 할 이유는 없다. 제일 붐비는 시간대도 평균 51초에 한 판이라
+// 1초마다 물어봐도 대개 같은 숫자가 돌아온다.
+let playCountShown = 0;
+function refreshPlayCount(animate = false) {
   const card = document.getElementById('play-count');
   const numEl = document.getElementById('play-count-num');
   if (!card || !numEl) return;
   api.playCount().then((total) => {
     if (!(total > 0)) return;
     card.classList.remove('hidden');
-    // 0 에서 실제 숫자까지 굴려 올린다(1.1초). 끝은 정확한 값으로 맞춘다.
-    const t0 = performance.now(), DUR = 1100;
+    if (!animate) { numEl.textContent = total.toLocaleString('ko-KR'); playCountShown = total; return; }
+    // 지금 보이는 숫자에서 새 숫자까지 굴린다(처음엔 0 에서).
+    const from = playCountShown, t0 = performance.now(), DUR = 1100;
+    playCountShown = total;
     const tick = (now) => {
       const p = Math.min(1, (now - t0) / DUR);
       const eased = 1 - (1 - p) ** 3;              // 끝에서 부드럽게 멈추게
-      numEl.textContent = Math.round(total * eased).toLocaleString('ko-KR');
+      numEl.textContent = Math.round(from + (total - from) * eased).toLocaleString('ko-KR');
       if (p < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   }).catch(() => {});
 }
-showPlayCount();
-// 첫 화면에 오래 머무는 사람도 있으니 1분마다 조용히 갱신한다(연출 없이).
-setInterval(() => {
-  const numEl = document.getElementById('play-count-num');
-  if (!numEl) return;
-  api.playCount()
-    .then((total) => { if (total > 0) numEl.textContent = total.toLocaleString('ko-KR'); })
-    .catch(() => {});
-}, 60_000);
+refreshPlayCount(true);
+setInterval(() => refreshPlayCount(false), 15_000);
 // 10초마다: 최신 공지를 다시 받아오고(바뀌면 처음부터), 안 바뀌었으면 다음
 // 공지로 넘긴다 → 여러 개면 10초 간격으로 번갈아 뜬다.
 setInterval(() => {
@@ -1538,6 +1541,7 @@ function goHome() {
   setArenaVisible(false);
   ui.showTitle();
   renderNotice();
+  refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
 }
 
 // ── 다시보기 재생 ──────────────────────────────────────────
@@ -2102,6 +2106,7 @@ function leaveVersus() {
   setArenaVisible(false);
   ui.showTitle();
   renderNotice();
+  refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
 }
 
 function hideRival() {

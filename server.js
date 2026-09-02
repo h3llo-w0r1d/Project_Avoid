@@ -945,12 +945,13 @@ app.post('/api/titles', (req, res) => {
 // 봇전 기록표는 최근 1만 줄만 남으므로, 봇전이 1만 판을 넘기면 그때부터
 // 조금씩 적게 세인다. 넘길 때가 되면 stats 에 따로 세는 쪽으로 옮기면 된다.
 //
-// 30초 동안은 같은 답을 돌려준다. 첫 화면을 여는 사람마다 세 표를 세면
-// 사람이 몰릴 때 괜히 일을 시킨다. 30초쯤 늦게 반영돼도 아무 문제 없다.
+// 5초 동안은 같은 답을 돌려준다. 세는 값 자체는 싸다(세 쿼리 합쳐 36µs 로 쟀다).
+// 캐시는 CPU 를 아끼려는 게 아니라, 사람이 몰려도 쿼리 수가 접속자 수에
+// 비례해 늘지 않게 상한을 씌우는 용도다.
 let playCountCache = { at: 0, total: 0 };
 app.get('/api/play-count', (req, res) => {
   const now = Date.now();
-  if (now - playCountCache.at > 30_000) {
+  if (now - playCountCache.at > 5_000) {
     let total = stats.totals().runs;              // 혼자 하기 + 층 오르기
     try { total += modeLogs.bot.size; } catch { /* 표가 없으면 그냥 뺀다 */ }
     try { total += matchLog.size; } catch { /* 1v1 */ }
