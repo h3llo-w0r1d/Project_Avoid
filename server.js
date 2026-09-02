@@ -983,6 +983,42 @@ app.get('/api/play-count', (req, res) => {
   res.json({ total: playCountCache.total });
 });
 
+// 판수 랭킹 — 누가 제일 많이 했나(통산). 기록이 아니라 '많이 한 순서' 라
+// 실력과 무관하게 오래 붙어 있던 사람이 위로 온다. 그게 이 판의 취지다.
+//
+// 계정은 user_id 로 묶는다. 이름으로 묶으면 닉네임을 바꾼 사람의 옛 판이
+// 딴 사람으로 갈라져 나온다(totalPlaysOf 와 같은 이유).
+// 게스트는 계정이 없어 이름으로 묶는다 — 같은 이름을 계속 쓰는 동안만 이어진다.
+// 관리자는 뺀다(집계에서 빼는 다른 곳과 같은 규칙).
+app.get('/api/play-ranks', (req, res) => {
+  const byUser = plays.countsByUser();
+  const byName = plays.countsByName();
+
+  const rows = [];
+  const claimed = new Set();          // 계정이 이미 가져간 이름
+  for (const a of users.listAccounts()) {
+    if (!a.nickname || isAdminUser(a)) continue;
+    claimed.add(a.nickname);
+    const n = Math.max(byUser.get(a.id) ?? 0, byName.get(a.nickname) ?? 0);
+    if (n > 0) rows.push({ id: a.id, name: a.nickname, plays: n });
+  }
+  for (const [name, n] of byName) {
+    // 계정이 가져간 이름은 건너뛴다(위에서 이미 더 큰 값으로 넣었다).
+    if (claimed.has(name) || n <= 0) continue;
+    rows.push({ id: null, name, plays: n });
+  }
+  rows.sort((a, b) => b.plays - a.plays);
+
+  const myName = req.user?.nickname ?? String(req.query.name ?? '').trim();
+  const at = rows.findIndex((r) => r.name === myName);
+  res.json({
+    season: seasonInfo(),
+    note: '시즌과 상관없는 통산 판수입니다 · 혼자 하기와 층 오르기를 셉니다',
+    top: rows.slice(0, TOP_N),
+    me: at >= 0 ? { name: rows[at].name, plays: rows[at].plays, rank: at + 1 } : null
+  });
+});
+
 app.get('/api/tower-ranks', (req, res) => {
   const top = users.towerRanking(TOP_N);
   const me = req.user ? users.byId(req.user.id) : null;

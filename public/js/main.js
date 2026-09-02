@@ -2043,6 +2043,10 @@ async function refreshLeaderboard(kind = 'time') {
       ui.renderLeaderboard(await api.towerRanks(), null, kind);
       return;
     }
+    if (kind === 'plays') {   // 판수 — 누가 제일 많이 했나
+      ui.renderLeaderboard(await api.playRanks(auth.displayName), null, kind);
+      return;
+    }
     const data = await api.versus();
     ui.renderLeaderboard({
       ...data[kind],

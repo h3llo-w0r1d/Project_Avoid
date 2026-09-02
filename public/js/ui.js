@@ -42,6 +42,11 @@ const BOARDS = {
     empty: '아직 도전모드를 깬 사람이 없습니다',
     value: (e) => `${e.floor}<em>층</em>`,
     mine: (me) => `내 순위 ${me.rank}위 · ${me.floor}층`
+  },
+  plays: {
+    empty: '아직 판 기록이 없습니다',
+    value: (e) => `${Number(e.plays).toLocaleString('ko-KR')}<em>판</em>`,
+    mine: (me) => `내 순위 ${me.rank}위 · ${Number(me.plays).toLocaleString('ko-KR')}판`
   }
 };
 
@@ -52,7 +57,8 @@ const METRIC = {
   voice: (e) => Number(e.time) || 0,
   voicehard: (e) => Number(e.time) || 0,
   wins: (e) => Number(e.wins) || 0,
-  tower: (e) => Number(e.floor) || 0
+  tower: (e) => Number(e.floor) || 0,
+  plays: (e) => Number(e.plays) || 0
 };
 
 export class UI {
@@ -679,6 +685,13 @@ export const api = {
     const res = await fetch('/api/play-count');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return (await res.json()).total;
+  },
+
+  // 판수 랭킹 — 누가 제일 많이 했나. 게스트도 이름으로 함께 줄을 선다.
+  async playRanks(name) {
+    const res = await fetch(`/api/play-ranks?name=${encodeURIComponent(name ?? '')}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
   },
 
   async towerRanks() {
