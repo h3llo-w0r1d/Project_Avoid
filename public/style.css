@@ -2438,27 +2438,62 @@ kbd {
   background: radial-gradient(ellipse, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 70%);
   filter: blur(3px);
 }
-/* 잔디 언덕 — 위에서 빛이 드는 둥근 땅 */
+/* 흙 바닥 — 잔디 밑으로 살짝 드러나는 테두리(두께감) */
+.tower-stage::before {
+  content: ''; position: absolute; z-index: 0; left: 50%; top: 8px;
+  transform: translateX(-50%); width: 101%; height: 100%; border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.22) 0 12%, transparent 13%),
+    radial-gradient(circle at 72% 55%, rgba(0, 0, 0, 0.18) 0 9%, transparent 10%),
+    radial-gradient(ellipse at 50% 30%, #9a6438 0%, #74472a 58%, #4a2d1b 100%);
+  box-shadow: inset 0 -7px 12px rgba(0, 0, 0, 0.5);
+}
+/* 잔디 언덕 — 얼룩진 잔디 + 위에서 드는 빛 */
 .tower-island {
   position: absolute; inset: 0; z-index: 1; border-radius: 50%;
   background:
-    radial-gradient(ellipse 55% 50% at 36% 24%, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(ellipse at 50% 34%, #74d079 0%, #4d9f55 55%, #2f6f3a 100%);
+    /* 밝은 잔디 뭉치 */
+    radial-gradient(circle at 24% 36%, rgba(196, 245, 160, 0.40) 0 7%, transparent 8%),
+    radial-gradient(circle at 63% 28%, rgba(196, 245, 160, 0.32) 0 6%, transparent 7%),
+    radial-gradient(circle at 84% 44%, rgba(196, 245, 160, 0.24) 0 5%, transparent 6%),
+    /* 짙은 그늘 뭉치 */
+    radial-gradient(circle at 44% 66%, rgba(22, 66, 32, 0.34) 0 8%, transparent 9%),
+    radial-gradient(circle at 74% 68%, rgba(22, 66, 32, 0.28) 0 6%, transparent 7%),
+    radial-gradient(circle at 14% 60%, rgba(22, 66, 32, 0.26) 0 5%, transparent 6%),
+    /* 윗면 광 */
+    radial-gradient(ellipse 55% 48% at 34% 22%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 62%),
+    /* 기본 잔디 */
+    radial-gradient(ellipse at 50% 34%, #7fdd85 0%, #52ac5b 55%, #2e7038 100%);
   box-shadow:
-    inset 0 -9px 16px rgba(0, 0, 0, 0.38),        /* 아래쪽 흙 그늘 */
-    inset 0 4px 7px rgba(255, 255, 255, 0.20),    /* 윗면 광 */
+    inset 0 -10px 16px rgba(0, 0, 0, 0.40),       /* 아래쪽 흙 그늘 */
+    inset 0 4px 8px rgba(255, 255, 255, 0.26),    /* 윗면 광 */
     0 12px 22px rgba(0, 0, 0, 0.45);
 }
 /* 깬 층은 색이 바래고, 잠긴 층은 회색 바위만 */
+/* 깬 층 — 더 무성하고 밝은 잔디 */
 .tower-floor.done .tower-island {
   background:
-    radial-gradient(ellipse 55% 50% at 36% 24%, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(ellipse at 50% 34%, #9ae7a2 0%, #66bd71 55%, #40874c 100%);
+    radial-gradient(circle at 24% 36%, rgba(214, 250, 180, 0.45) 0 7%, transparent 8%),
+    radial-gradient(circle at 63% 28%, rgba(214, 250, 180, 0.36) 0 6%, transparent 7%),
+    radial-gradient(circle at 84% 44%, rgba(214, 250, 180, 0.28) 0 5%, transparent 6%),
+    radial-gradient(circle at 44% 66%, rgba(30, 84, 42, 0.30) 0 8%, transparent 9%),
+    radial-gradient(circle at 74% 68%, rgba(30, 84, 42, 0.24) 0 6%, transparent 7%),
+    radial-gradient(ellipse 55% 48% at 34% 22%, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(ellipse at 50% 34%, #a3edaa 0%, #6cc477 55%, #3f8b4c 100%);
 }
+/* 잠긴 층 — 이끼 없는 회색 바위 */
 .tower-floor.lock .tower-island {
   background:
-    radial-gradient(ellipse 55% 50% at 36% 24%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(ellipse at 50% 34%, #6a707f 0%, #4c515e 55%, #373b45 100%);
+    radial-gradient(circle at 26% 38%, rgba(255, 255, 255, 0.10) 0 8%, transparent 9%),
+    radial-gradient(circle at 70% 62%, rgba(0, 0, 0, 0.22) 0 7%, transparent 8%),
+    radial-gradient(circle at 46% 30%, rgba(0, 0, 0, 0.16) 0 6%, transparent 7%),
+    radial-gradient(ellipse 55% 48% at 34% 22%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 62%),
+    radial-gradient(ellipse at 50% 34%, #737a8a 0%, #545a67 55%, #3a3e48 100%);
+}
+.tower-floor.lock .tower-stage::before {
+  background:
+    radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.24) 0 12%, transparent 13%),
+    radial-gradient(ellipse at 50% 30%, #5f6470, #464b56 58%, #2f333b 100%);
 }
 .tower-floor.lock .tower-node { opacity: 0.5; animation: none; }
 .tower-floor.open .tower-island {
