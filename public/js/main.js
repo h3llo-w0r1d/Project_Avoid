@@ -297,7 +297,8 @@ const state = {
   // 봇전용
   botAI: null,          // BotAI 인스턴스(봇전일 때만)
   botAlive: true,
-  botTier: 'mid'
+  botTier: 'mid',
+  botInvuln: 0          // 위기탈출 후 잠깐 무적(초)
 };
 
 const audio = new Audio();
@@ -1166,6 +1167,7 @@ function startBotMatch(tier) {
   state.botAI = new BotAI(tier);
   state.botAlive = true;
   state.botTier = tier;
+  state.botInvuln = 0;
 
   setArenaVisible(true);
   hazards.reset(seed);
@@ -1982,10 +1984,18 @@ function frame() {
     coins.update(dt, player.body.x, player.body.z);   // 코인 회전·수집 판정
 
     // 봇전: 봇도 같은 빔을 AI 로 피한다. 먼저 죽는 쪽이 진다.
+    // 상위 난이도는 맞을 뻔했을 때 save 확률로 아슬아슬하게 빠져나간다(잠깐 무적).
     if (state.botAI && state.botAlive) {
       const bc = state.botAI.think(dt, rival.body, hazards.sim);
       rival.update(dt, bc);
-      if (hazards.hitTest(rival) || rival.body.droppedOff) state.botAlive = false;
+      if (state.botInvuln > 0) state.botInvuln -= dt;
+      if (rival.body.droppedOff) {
+        state.botAlive = false;
+      } else if (hazards.hitTest(rival) && state.botInvuln <= 0) {
+        const save = BOT_TIERS[state.botTier]?.save ?? 0;
+        if (Math.random() < save) state.botInvuln = 0.6;   // 위기탈출
+        else state.botAlive = false;
+      }
     }
 
     const playerDead = hazards.hitTest(player) || player.body.droppedOff
