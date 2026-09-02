@@ -400,6 +400,15 @@ app.post('/api/scores', async (req, res) => {
     const gainedIds = earnedTitleIds({ plays: playsNow, isAdmin })
       .filter((id) => !earnedTitleIds({ plays: Math.max(0, playsNow - 1), isAdmin }).includes(id));
     const newTitles = gainedIds.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
+    // 판수로 새로 딴 칭호도 기록에 남긴다.
+    for (const t of newTitles) {
+      try {
+        modeLogs.title.add({
+          name: finalName, userId: req.user?.id ?? null,
+          title_id: t.id, title: t.name, how: `${playsNow}판 달성`
+        });
+      } catch (err) { console.error('칭호 기록 실패:', err); }
+    }
 
     res.json({
       id: entry.id,
@@ -761,7 +770,11 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     present: presence.count(),
     online: lobby.stats(),
     scores: scores.all(),
-    accounts: users.listAccounts(),
+    // 계정 목록에 '몇 판 했는지'(제출된 판수 합)를 붙여 준다.
+    accounts: (() => {
+      const runs = scores.runsByName();
+      return users.listAccounts().map((a) => ({ ...a, plays: runs.get(a.nickname) ?? 0 }));
+    })(),
     usage: stats.recent(30),
     usageMonthly: stats.monthly(24),
     usageTotals: stats.totals()
@@ -934,6 +947,15 @@ app.post('/api/titles/award', (req, res) => {
   if (!isAwardable(id)) return res.status(400).json({ error: '수여할 수 없는 칭호입니다.' });
   const { user, fresh } = users.awardTitle(req.user.id, id);
   const t = titleById(id);
+  // 처음 얻은 순간만 기록에 남긴다(관리 화면 '칭호 획득 기록').
+  if (fresh) {
+    try {
+      modeLogs.title.add({
+        name: req.user.nickname ?? '(닉네임 없음)', userId: req.user.id,
+        title_id: id, title: t?.name ?? id, how: '룰렛'
+      });
+    } catch (err) { console.error('칭호 기록 실패:', err); }
+  }
   res.json({ ok: true, fresh, title: fresh ? { id, name: t?.name ?? id } : null });
 });
 
@@ -998,6 +1020,17 @@ app.get('/api/admin/challenge-log', requireAdmin, (req, res) => {
 app.post('/api/admin/challenge-log/clear', requireAdmin, (req, res) => {
   if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
   res.json({ ok: true, removed: modeLogs.challenge.clear() });
+});
+
+// 칭호 획득 기록(관리자).
+app.get('/api/admin/title-log', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(modeLogs.title.page(limit, offset));
+});
+app.post('/api/admin/title-log/clear', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+  res.json({ ok: true, removed: modeLogs.title.clear() });
 });
 
 // 봇전 기록(관리자).

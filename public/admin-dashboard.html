@@ -184,6 +184,7 @@
     <button type="button" data-panel="spin">룰렛 기록</button>
     <button type="button" data-panel="tower">층 오르기 기록</button>
     <button type="button" data-panel="bot">봇전 기록</button>
+    <button type="button" data-panel="title">칭호 획득 기록</button>
   </nav>
 
   <section class="tab-panel" id="panel-usage">
@@ -275,6 +276,17 @@
     </div>
     <div class="wrap" id="botlog-table"></div>
     <div class="pager" id="botlog-pager"></div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-title">
+    <h2>칭호 획득 기록 <span class="dim" id="titlelog-count"></span></h2>
+    <p class="hint">누가 언제 어떤 칭호를 <b>처음</b> 얻었는지 남깁니다(판수 달성·룰렛 업적).</p>
+    <div class="tools">
+      <span class="grow"></span>
+      <button class="danger" id="titlelog-clear" type="button">전체 비우기</button>
+    </div>
+    <div class="wrap" id="titlelog-table"></div>
+    <div class="pager" id="titlelog-pager"></div>
   </section>
 </main>
 
@@ -431,18 +443,19 @@ function drawAccounts() {
     const nm = a.nickname ?? '(닉네임 없음)';
     const head = `<tr class="click" data-user="${a.id}">
       <td class="name">${esc(nm)}</td>
+      <td class="num">${(a.plays ?? 0).toLocaleString('ko-KR')}판</td>
       <td class="num">${a.seasonWins}승 ${a.seasonLosses}패</td>
       <td class="num dim">통산 ${a.wins}-${a.losses} · ${a.streak}연승</td>
       <td class="dim">${when(a.createdAt)} 가입</td>
       <td><button class="act" data-reset="${a.id}" data-name="${esc(nm)}">전적 초기화</button></td></tr>`;
     const detail = openUser.has(a.id)
-      ? `<tr class="detail"><td colspan="5"><div class="detail-inner" id="detail-${a.id}">불러오는 중…</div></td></tr>`
+      ? `<tr class="detail"><td colspan="6"><div class="detail-inner" id="detail-${a.id}">불러오는 중…</div></td></tr>`
       : '';
     return head + detail;
   }).join('');
 
   $('acc-table').innerHTML =
-    `<table><thead><tr><th>닉네임</th><th>이번 시즌</th><th>통산</th><th>가입</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    `<table><thead><tr><th>닉네임</th><th>판수</th><th>이번 시즌</th><th>통산</th><th>가입</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
   pager('acc-pager', pages, page.acc, (p) => { page.acc = p; drawAccounts(); });
 
   for (const tr of $('acc-table').querySelectorAll('tr.click')) {
@@ -600,8 +613,29 @@ async function drawBotLog() {
   } catch (e) { $('botlog-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
+/* ---- 칭호 획득 기록 ---- */
+let titlePage = 0;
+async function drawTitleLog() {
+  try {
+    const { rows, total } = await api(`/api/admin/title-log?limit=${PLAY_PER}&offset=${titlePage * PLAY_PER}`);
+    $('titlelog-count').textContent = total ? `${total}개` : '';
+    $('titlelog-clear').style.display = total ? '' : 'none';
+    if (total === 0) { $('titlelog-table').innerHTML = '<p class="empty">아직 기록이 없습니다</p>'; $('titlelog-pager').innerHTML = ''; return; }
+    const body = rows.map((r) =>
+      `<tr><td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
+        <td class="name">${esc(r.title)}</td>
+        <td class="dim">${esc(r.how)}</td>
+        <td class="dim">${stamp(r.at)}</td></tr>`).join('');
+    $('titlelog-table').innerHTML =
+      `<table><thead><tr><th>이름</th><th>칭호</th><th>획득 방법</th><th>때</th></tr></thead><tbody>${body}</tbody></table>`;
+    const pages = Math.max(1, Math.ceil(total / PLAY_PER));
+    titlePage = Math.min(titlePage, pages - 1);
+    pager('titlelog-pager', pages, titlePage, (p) => { titlePage = p; drawTitleLog(); });
+  } catch (e) { $('titlelog-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
 /* ---- 탭 전환. 처음 열 때 그 표를 불러온다. ---- */
-const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog };
+const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog, title: drawTitleLog };
 function showPanel(name) {
   for (const b of document.querySelectorAll('#tabs button')) {
     b.classList.toggle('on', b.dataset.panel === name);
@@ -825,6 +859,8 @@ $('tower-clear').addEventListener('click', () =>
   clearLog('/api/admin/challenge-log/clear', '층 오르기 기록', () => { towerPage = 0; drawTowerLog(); }));
 $('botlog-clear').addEventListener('click', () =>
   clearLog('/api/admin/bot-log/clear', '봇전 기록', () => { botPage = 0; drawBotLog(); }));
+$('titlelog-clear').addEventListener('click', () =>
+  clearLog('/api/admin/title-log/clear', '칭호 획득 기록', () => { titlePage = 0; drawTitleLog(); }));
 $('usage-seg').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-view]'); if (!b) return;
   usageView = b.dataset.view;
