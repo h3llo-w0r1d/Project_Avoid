@@ -863,8 +863,11 @@ app.get('/api/tower-ranks', (req, res) => {
 });
 
 // 도전모드(탑) — 내 진행도와 층 목록. 로그인해야 도전할 수 있다.
+// 아직 준비 중이라 관리자만 쓸 수 있다(버튼도 관리자에게만 보인다).
 app.get('/api/challenge', (req, res) => {
-  if (!req.user) return res.json({ signedIn: false, ...describeChallenge(0) });
+  if (!isAdminUser(req.user)) {
+    return res.status(403).json({ error: '도전모드는 준비 중입니다.' });
+  }
   const me = users.byId(req.user.id);
   res.json({ signedIn: true, ...describeChallenge(me?.challenge ?? 0) });
 });
@@ -872,7 +875,9 @@ app.get('/api/challenge', (req, res) => {
 // 한 층을 깼다고 알린다. 순서대로만(지금 층 +1) 인정한다.
 // 조건 달성 자체는 클라가 판정한다(코인·판정이 원래 클라 신뢰 모델이라 동일).
 app.post('/api/challenge/clear', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!isAdminUser(req.user)) {
+    return res.status(403).json({ error: '도전모드는 준비 중입니다.' });
+  }
   const floor = Math.floor(Number(req.body?.floor) || 0);
   const me = users.byId(req.user.id);
   const cleared = me?.challenge ?? 0;

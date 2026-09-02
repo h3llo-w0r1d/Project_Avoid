@@ -380,6 +380,8 @@ const adminReady = api.amIAdmin()
     if (yes) {
       setupNoticeAdmin();
       adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기
+      // 도전모드는 아직 준비 중 — 관리자에게만 보인다.
+      document.getElementById('tower-btn')?.classList.remove('hidden');
       renderCoinHud();       // 코인 표시를 ∞ 로
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
       syncCharacterForAuth();
