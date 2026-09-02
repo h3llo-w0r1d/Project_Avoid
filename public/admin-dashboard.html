@@ -108,6 +108,15 @@
   .tabs button.on {
     color: #fff; background: rgba(120, 170, 255, 0.18); border-color: rgba(120, 170, 255, 0.6);
   }
+  /* 플레이 기록의 모드 뱃지. 하드코어는 눈에 띄어야 훑을 때 바로 걸린다. */
+  .mode {
+    display: inline-block; padding: 2px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; white-space: nowrap;
+    color: var(--muted); background: rgba(255,255,255,0.06);
+    border: 1px solid var(--stroke);
+  }
+  .mode.hard { color: #ff9aa6; background: rgba(255,58,78,0.14); border-color: rgba(255,58,78,0.45); }
+  .mode.mic  { color: #ffd9a1; background: rgba(255,180,84,0.14); border-color: rgba(255,180,84,0.45); }
   .ok-yes { color: #57d18a; font-weight: 800; }
   .ok-no { color: #ff9aa6; font-weight: 800; }
 
@@ -591,6 +600,7 @@ async function drawTowerLog() {
         <td class="num">${r.floor}층</td>
         <td class="dim">${esc(r.goal)}</td>
         <td class="${r.ok ? 'ok-yes' : 'ok-no'}">${r.ok ? '성공' : '실패'}</td>
+        <td>${mode(r.mode)}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
         <td class="dim">${stamp(r.at)}</td></tr>`).join('');
     $('tower-table').innerHTML =
@@ -674,6 +684,12 @@ async function drawPlays() {
     // 화면은 최근이 위(서버가 시간 역순으로 주므로)라, 위에서부터 번호가 줄어든다.
     const start = playPage * PLAY_PER;
     const device = (m) => m == null ? '<span class="dim">–</span>' : (m ? '📱 폰' : '💻 PC');
+    // 모드 칸을 만들기 전(9/3 이전) 기록은 NULL 이라 '–' 로 둔다. 일반으로
+    // 뭉뚱그리면 그때 하드코어로 한 판까지 일반으로 둔갑한다.
+    const MODES = { normal: ['일반', ''], hardcore: ['하드코어', 'hard'],
+                    voice: ['마이크', 'mic'], voicehard: ['마이크·하드', 'hard'] };
+    const mode = (v) => { const m = MODES[v];
+      return m ? `<span class="mode ${m[1]}">${m[0]}</span>` : '<span class="dim">–</span>'; };
     const body = rows.map((r, i) =>
       `<tr><td class="num dim">${total - start - i}</td>
         <td class="name${r.member ? ' member' : ''}">${esc(r.name)}${visitBadge(r)}</td>
@@ -681,7 +697,7 @@ async function drawPlays() {
         <td class="dim">${stamp(r.at)}</td>
         <td>${device(r.mobile)}</td></tr>`).join('');
     $('play-table').innerHTML =
-      `<table><thead><tr><th>#</th><th>이름</th><th>버틴 시간</th><th>플레이한 때</th><th>기기</th></tr></thead><tbody>${body}</tbody></table>`;
+      `<table><thead><tr><th>#</th><th>이름</th><th>모드</th><th>버틴 시간</th><th>플레이한 때</th><th>기기</th></tr></thead><tbody>${body}</tbody></table>`;
 
     const pages = Math.max(1, Math.ceil(total / PLAY_PER));
     playPage = Math.min(playPage, pages - 1);

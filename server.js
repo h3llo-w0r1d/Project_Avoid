@@ -432,7 +432,8 @@ app.post('/api/scores', async (req, res) => {
     const entry = await scores.add(finalName, seconds, req.user?.id ?? null, mode);
     stats.runFinished(t);
     // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
-    plays.add({ name: finalName, seconds, userId: req.user?.id ?? null, mobile: isMobile(req.get('user-agent')) });
+    plays.add({ name: finalName, seconds, userId: req.user?.id ?? null,
+      mobile: isMobile(req.get('user-agent')), mode });
 
     // 이번 판으로 새로 얻은 칭호(판수 문턱을 넘겼는지). 판수는 두 모드 합이고
     // 이번 제출로 정확히 1 늘었으므로, 직전 판수는 (지금-1) 이다. 축하 연출용.
