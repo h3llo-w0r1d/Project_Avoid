@@ -2749,3 +2749,15 @@ kbd {
   pointer-events: none;
 }
 .shop-toast.show { transform: translate(-50%, 0); opacity: 1; }
+
+/* 준비 중 안내는 화면 한가운데에 크게. 아래쪽 토스트는 놓치기 쉽다. */
+.shop-toast.center {
+  top: 50%; bottom: auto;
+  padding: 18px 34px;
+  font-size: 18px; letter-spacing: 0.01em;
+  background: rgba(14, 16, 28, 0.96);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  /* 아래에서 살짝 떠오르며 나타난다 */
+  transform: translate(-50%, calc(-50% + 12px));
+}
+.shop-toast.center.show { transform: translate(-50%, -50%); }

@@ -563,7 +563,7 @@ document.getElementById('shop-btn')?.addEventListener('click', () => {
 // 누르면 준비 중이라고만 알린다. 관리자는 그대로 쓸 수 있다.
 function comingSoon() {
   const t = document.createElement('div');
-  t.className = 'shop-toast';
+  t.className = 'shop-toast center';
   t.textContent = '업데이트 중입니다';
   document.body.appendChild(t);
   requestAnimationFrame(() => t.classList.add('show'));
