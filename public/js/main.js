@@ -2309,8 +2309,15 @@ const pollen = scene.getObjectByName('pollen');
 function frame() {
   requestAnimationFrame(frame);
 
-  // 탭이 백그라운드에 갔다 오면 dt가 튀므로 상한을 둔다
-  const dt = Math.min(clock.getDelta(), 1 / 20);
+  // 탭이 백그라운드에 갔다 오면 dt가 튀므로 상한을 둔다.
+  //
+  // Math.fround 로 float32 로 깎아서 쓴다. 다시보기는 dt 를 float32 로 저장하는데
+  // (encodeReplay), 판이 돌 때는 float64 로 굴리면 저장된 값과 미세하게 어긋난다.
+  // 그 차이가 1e-7 쯤인데, 전기선 시뮬은 그보다 훨씬 예민하다 — dt 를 1e-8 만
+  // 흔들어도 죽는 시점이 60초에서 78초로 바뀌는 걸 확인했다(스폰 타이밍이 한
+  // 프레임 밀리면 그 뒤 패턴이 통째로 갈린다). 그래서 애초에 저장할 값 그대로
+  // 굴려, 기록한 판과 다시보기가 한 치도 안 어긋나게 한다.
+  const dt = Math.fround(Math.min(clock.getDelta(), 1 / 20));
   const now = performance.now() / 1000;
 
   animateAmbient(dt, now);
