@@ -1722,6 +1722,13 @@ kbd {
 @media (max-width: 720px) { .char-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (max-width: 460px) { .char-grid { grid-template-columns: repeat(2, 1fr); } }
 
+/* 강제 가로(아이폰)에선 화면이 90° 돌아 있다. 미디어쿼리의 max-width 도,
+   위의 width:min(...,100vw) 도 폰의 '짧은 쪽'을 재기 때문에 실제로는 넓은데도
+   창이 눌리고 한 줄에 2개만 들어갔다. 회전 뒤의 '가로 폭' 은 100vh 이므로
+   그걸로 다시 잡는다. 미디어쿼리보다 선택자가 더 구체적이라 이 규칙이 이긴다. */
+:root.force-landscape #char-modal .modal-card { width: min(960px, calc(100vh - 28px)); }
+:root.force-landscape .char-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
 /* 아직 다듬는 중이라 안 보여 주는 캐릭터 자리.
    두 칸을 차지해 남은 줄을 채운다 — 칸을 비워 두면 화면이 깨진 것처럼 보인다. */
 .char-soon {
