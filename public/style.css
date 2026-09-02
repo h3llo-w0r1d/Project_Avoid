@@ -2761,3 +2761,25 @@ kbd {
   transform: translate(-50%, calc(-50% + 12px));
 }
 .shop-toast.center.show { transform: translate(-50%, -50%); }
+
+/* 상점 항목 탭 — 랭킹 탭과 같은 생김새로 맞춘다(같은 역할이니 같아 보여야 한다) */
+.shop-tabs {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-top: 14px;
+}
+.shop-tabs button {
+  margin: 0; padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--stroke); border-radius: 999px;
+  color: var(--muted); font: inherit; font-size: 14px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.shop-tabs button:hover { background: rgba(255, 255, 255, 0.1); color: var(--text); }
+.shop-tabs button.current {
+  background: rgba(90, 200, 255, 0.16);
+  border-color: var(--accent); color: var(--text);
+}
+.shop-hint { margin-top: 10px; }
+:root.force-landscape .shop-tabs { gap: 6px; margin-top: 10px; }
+:root.force-landscape .shop-tabs button { padding: 6px 12px; font-size: 12px; }

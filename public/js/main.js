@@ -22,7 +22,7 @@ import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
 import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
-import { TrailFX } from './effects.js';
+import { TrailFX, findRing, DEFAULT_RING } from './effects.js';
 import { ShopUI } from './shop-ui.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
@@ -215,7 +215,14 @@ const input = new Input();
 // 상점에서 산 발자국 효과. 꾸미기라 판정에는 아무 영향이 없다.
 // 지금 켠 것만 그린다(안 샀거나 껐으면 setEffect(null) 로 통째로 끈다).
 const trail = new TrailFX(scene);
-trail.setEffect(wallet.equippedFx());
+trail.setEffect(wallet.equippedIn('trail'));
+
+// 발밑 링 색(상점 '발밑 링'). 안 샀으면 기본 하늘색.
+function applyRing(id) {
+  const spec = findRing(id ?? DEFAULT_RING) ?? findRing(DEFAULT_RING);
+  player.halo.material.color.setHex(spec.color);
+}
+applyRing(wallet.equippedIn('ring'));
 
 // 발자국 효과 한 프레임. 혼자 하기·봇전·1v1 이 모두 이 한 줄만 부른다.
 // 죽고 나서까지 뿌리면 시체에서 반짝이므로 살아 있을 때만.
@@ -540,19 +547,20 @@ for (const btn of document.querySelectorAll('#side-menu [data-forward]')) {
 // 브라우저에서 하고, 서버에는 '누가 뭘 샀다' 기록만 남긴다.
 const shop = new ShopUI();
 shop.isAdmin = () => isAdmin;
-shop.onBuy = (spec) => {
-  if (isAdmin) { wallet.markFxOwned(spec.id); return true; }   // 관리자는 코인 무한
-  if (wallet.isFxOwned(spec.id)) return true;
-  if (!wallet.spend(spec.cost)) return false;
-  wallet.markFxOwned(spec.id);
+shop.onBuy = (item, cat) => {
+  if (isAdmin) { wallet.markOwnedIn(cat.kind, item.id); return true; }   // 관리자는 코인 무한
+  if (wallet.isOwnedIn(cat.kind, item.id)) return true;
+  if (!wallet.spend(item.cost)) return false;
+  wallet.markOwnedIn(cat.kind, item.id);
   renderCoinHud();
-  api.recordPurchase(`fx:${spec.id}`, `${spec.name}(발자국)`, spec.cost,
+  api.recordPurchase(`${cat.kind}:${item.id}`, `${item.name}(${cat.name})`, item.cost,
     auth.signedIn ? undefined : auth.displayName);
   return true;
 };
-shop.onEquip = (id) => {
-  wallet.equipFx(id);
-  trail.setEffect(id);
+shop.onEquip = (kind, id) => {
+  wallet.equipIn(kind, id);
+  if (kind === 'trail') trail.setEffect(id);
+  else if (kind === 'ring') applyRing(id);
 };
 document.getElementById('shop-btn')?.addEventListener('click', () => {
   if (isAdmin) shop.open();

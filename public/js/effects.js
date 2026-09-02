@@ -67,6 +67,21 @@ export const TRAILS = [
 
 export const findTrail = (id) => TRAILS.find((t) => t.id === id) ?? null;
 
+// 발밑 링 색. 캐릭터가 어디 있는지 알려 주는 그 링이다(player.js 의 halo).
+// 어두운 무대에서 늘 보이는 부분이라, 색만 바꿔도 티가 확 난다.
+// 기본 하늘색은 공짜다 — 상점에 왔다가 아무것도 못 고르고 나가면 허전하다.
+export const RINGS = [
+  { id: 'cyan',    name: '기본 하늘', cost: 0,   color: 0x4fd6ff, desc: '처음부터 쓰던 하늘색 링' },
+  { id: 'lime',    name: '라임',     cost: 120, color: 0x9be15d, desc: '풀밭에서 잘 보이는 연둣빛' },
+  { id: 'pink',    name: '핑크',     cost: 150, color: 0xff7ab8, desc: '눈에 확 띄는 분홍빛' },
+  { id: 'violet',  name: '보라',     cost: 250, color: 0xb18cff, desc: '차분하게 빛나는 보랏빛' },
+  { id: 'gold',    name: '골드',     cost: 300, color: 0xffcf3f, desc: '묵직한 금빛' },
+  { id: 'crimson', name: '진홍',     cost: 300, color: 0xff5566, desc: '전기선과 같은 계열의 붉은빛' }
+];
+
+export const findRing = (id) => RINGS.find((r) => r.id === id) ?? null;
+export const DEFAULT_RING = 'cyan';
+
 // ---------------------------------------------------------------- 입자 그림
 // 입자 모양은 캔버스에 한 번 그려 두고 모두가 나눠 쓴다. 모양마다 하나씩.
 const texCache = new Map();

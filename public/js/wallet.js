@@ -12,8 +12,13 @@ const OWNED_KEY = 'avoidarc.owned';   // 코인으로 산 캐릭터 id 목록
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
 const SPINUSED_KEY = 'avoidarc.spins.used';   // 지금까지 돌린 룰렛 횟수
 const SECONDS_PER_SPIN = 80;            // 이만큼 쌓일 때마다 룰렛 1회
-const OWNED_FX_KEY = 'avoidarc.owned.fx';   // 상점에서 산 발자국 효과 id 목록
-const EQUIP_FX_KEY = 'avoidarc.equip.fx';   // 지금 켠 효과 id (하나만)
+// 상점 항목마다 '산 목록' 과 '지금 켠 것' 을 담는 칸.
+// 발자국(trail)은 항목을 나누기 전에 쓰던 키를 그대로 둔다 — 키를 바꾸면
+// 이미 산 사람의 기록이 통째로 날아간다.
+const SHOP_KEYS = {
+  trail: { owned: 'avoidarc.owned.fx',   equip: 'avoidarc.equip.fx' },
+  ring:  { owned: 'avoidarc.owned.ring', equip: 'avoidarc.equip.ring' }
+};
 
 function readOwned() {
   try { return new Set(JSON.parse(localStorage.getItem(OWNED_KEY) || '[]')); }
@@ -68,27 +73,37 @@ export const wallet = {
     localStorage.setItem(OWNED_KEY, JSON.stringify([...s]));
   },
 
-  // ── 상점에서 산 발자국 효과 ──
-  // 캐릭터와 칸을 나눠 둔다. 한 칸에 섞으면 나중에 id 가 겹칠 때
-  // 캐릭터를 산 사람에게 효과가 딸려 오는 사고가 난다.
-  ownedFx() {
-    try { return new Set(JSON.parse(localStorage.getItem(OWNED_FX_KEY) || '[]')); }
+  // ── 상점에서 산 꾸미기 ──
+  // 항목(발자국·링…)마다 칸을 따로 쓴다. 한 칸에 섞으면 나중에 id 가 겹칠 때
+  // 하나를 산 사람에게 다른 게 딸려 오는 사고가 난다.
+  // 항목이 늘면 SHOP_KEYS 에 한 줄만 더하면 된다.
+  ownedIn(kind) {
+    const k = SHOP_KEYS[kind];
+    if (!k) return new Set();
+    try { return new Set(JSON.parse(localStorage.getItem(k.owned) || '[]')); }
     catch { return new Set(); }
   },
-  isFxOwned(id) { return this.ownedFx().has(id); },
-  markFxOwned(id) {
-    const s = this.ownedFx();
+  isOwnedIn(kind, id) { return this.ownedIn(kind).has(id); },
+  markOwnedIn(kind, id) {
+    const k = SHOP_KEYS[kind];
+    if (!k) return;
+    const s = this.ownedIn(kind);
     s.add(id);
-    localStorage.setItem(OWNED_FX_KEY, JSON.stringify([...s]));
+    localStorage.setItem(k.owned, JSON.stringify([...s]));
   },
 
-  // 지금 켠 효과. 없으면 null. 산 적 없는 걸 켜 두면 무시한다.
-  equippedFx() {
-    const id = localStorage.getItem(EQUIP_FX_KEY);
-    return id && this.isFxOwned(id) ? id : null;
+  // 지금 켠 것. 없으면 null. 산 적 없는 걸 켜 두면 무시한다
+  // (기기를 옮기거나 저장이 날아가도 없는 걸 켜 둔 상태로 남지 않게).
+  equippedIn(kind) {
+    const k = SHOP_KEYS[kind];
+    if (!k) return null;
+    const id = localStorage.getItem(k.equip);
+    return id && this.isOwnedIn(kind, id) ? id : null;
   },
-  equipFx(id) {
-    if (id) localStorage.setItem(EQUIP_FX_KEY, id);
-    else localStorage.removeItem(EQUIP_FX_KEY);
+  equipIn(kind, id) {
+    const k = SHOP_KEYS[kind];
+    if (!k) return;
+    if (id) localStorage.setItem(k.equip, id);
+    else localStorage.removeItem(k.equip);
   }
 };
