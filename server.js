@@ -295,7 +295,7 @@ app.get('/api/profile', (req, res) => {
     // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부. 관리자는 전부 획득 처리되고
     // 운영자 칭호는 관리자에게만 보인다(프로필 주인의 관리자 여부로 판정).
     titles: describeTitles(
-      { plays, isAdmin: isAdminUser(user), awards: user?.awards },
+      { plays, isAdmin: isAdminUser(user), awards: user?.awards, luckyHits: user?.luckyHits },
       user?.titles)
   };
 
@@ -892,7 +892,7 @@ app.post('/api/titles', (req, res) => {
   const hard = scores.bestOf({ name, mode: 'hardcore' });
   const plays = (best?.runs ?? 0) + (hard?.runs ?? 0);
   const acct = users.byId(req.user.id);
-  const ctx = { plays, isAdmin: isAdminUser(req.user), awards: acct?.awards };
+  const ctx = { plays, isAdmin: isAdminUser(req.user), awards: acct?.awards, luckyHits: acct?.luckyHits };
   const equipped = sanitizeEquipped(req.body?.equipped, ctx);
   const updated = users.setTitles(req.user.id, equipped);
   res.json({ ok: true, titles: describeTitles(ctx, updated?.titles ?? equipped) });
@@ -938,7 +938,28 @@ app.post('/api/challenge/clear', (req, res) => {
   res.json({ ok: true, cleared: now, ...describeChallenge(now) });
 });
 
-// 업적 칭호 수여(예: 럭키가이 — 룰렛 대박). 클라가 대박이 나면 부른다.
+// 룰렛에서 희귀 보상(0.1~3%)을 뽑았다고 알린다. 누적 횟수를 올리고, 그것으로
+// 새로 얻은 칭호(럭키가이 3회·행운의 여신 10회)가 있으면 알려 준다.
+app.post('/api/titles/lucky-hit', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  const before = users.byId(req.user.id)?.luckyHits ?? 0;
+  const after = users.bumpLuckyHit(req.user.id);
+  const isAdmin = isAdminUser(req.user);
+  const gained = earnedTitleIds({ luckyHits: after, isAdmin })
+    .filter((id) => !earnedTitleIds({ luckyHits: before, isAdmin }).includes(id));
+  const newTitles = gained.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
+  for (const t of newTitles) {
+    try {
+      modeLogs.title.add({
+        name: req.user.nickname ?? '(닉네임 없음)', userId: req.user.id,
+        title_id: t.id, title: t.name, how: `룰렛 희귀 보상 ${after}회`
+      });
+    } catch (err) { console.error('칭호 기록 실패:', err); }
+  }
+  res.json({ ok: true, hits: after, newTitles });
+});
+
+// 업적 칭호 수여(예: 불운·저주받은 자 — 룰렛 꽝 연속). 클라가 조건을 채우면 부른다.
 // 룰렛/코인은 원래 클라 신뢰 모델이라(코인이 localStorage), 여기서도
 // 클라 요청을 믿되, 수여 가능한 업적 id 만 받는다. fresh 면 이번에 처음 얻음.
 app.post('/api/titles/award', (req, res) => {

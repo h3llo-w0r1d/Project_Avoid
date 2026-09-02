@@ -766,11 +766,11 @@ const adminCoins = (() => {
         if (coins >= 50) audio.stageUp?.();
       }
 
-      // 룰렛 대박(가나디라고라·300코인 잭팟·노래·개발자의 선물) → '럭키가이' 업적 칭호.
-      // 로그인 계정만 서버에 새기고, 처음 얻는 거면 축하 연출을 띄운다.
+      // 희귀 보상(0.1~3%: 가나디·300코인 잭팟·노래·개발자의 선물)을 뽑으면 누적 횟수를
+      // 올린다. 3회면 럭키가이, 10회면 행운의 여신을 얻고 축하 연출이 뜬다.
       if ((lucky || jackpot || song || gift) && auth.signedIn) {
-        api.awardTitle('luckyguy').then((r) => {
-          if (r?.fresh && r.title) showTitleUnlock([r.title]);
+        api.luckyHit().then((r) => {
+          if (r?.newTitles?.length) showTitleUnlock(r.newTitles);
         });
       }
 

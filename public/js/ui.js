@@ -698,7 +698,16 @@ export const api = {
     return d;
   },
 
-  // 업적 칭호 수여(예: 럭키가이 — 룰렛 대박). { fresh, title } 을 준다.
+  // 룰렛 희귀 보상(0.1~3%)을 뽑았다고 알린다 → { hits, newTitles }.
+  async luckyHit() {
+    try {
+      const res = await fetch('/api/titles/lucky-hit', { method: 'POST' });
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
+  },
+
+  // 업적 칭호 수여(불운·저주받은 자). { fresh, title } 을 준다.
   // 로그인 안 했거나 실패하면 조용히 null(축하만 못 뜬다).
   async awardTitle(id) {
     try {
