@@ -1362,8 +1362,13 @@ async function openTower() {
     const state = f.done ? 'done' : (f.open ? 'open' : 'lock');
     const canGo = f.open && data.signedIn;
     const w = 105 + f.floor * 14;                // 위층일수록 넓은 땅
-    // 한 화면(5층) 안에서 왼쪽 아래 → 오른쪽 위로 대각선으로 오른다.
-    const step = (f.floor - 1) % PER_PAGE;
+    // 한 화면(5층) 안에서 대각선으로 오른다. 한 화면을 다 오르면 방향을
+    // 뒤집어 지그재그로 이어 간다 (1~5층 →, 6~10층 ←, 11~15층 → …).
+    // 뒤집는 편이 화면이 넘어가는 자리에서 자연스럽다 — 5층이 오른쪽 끝에서
+    // 끝나면 6층도 오른쪽 끝에서 시작해 길이 끊기지 않고 이어진다.
+    const band = Math.floor((f.floor - 1) / PER_PAGE);   // 몇 번째 5층 묶음인지
+    const raw = (f.floor - 1) % PER_PAGE;
+    const step = band % 2 === 0 ? raw : PER_PAGE - 1 - raw;
     const me = (f.floor === cur && data.signedIn && face)
       ? `<img class="tower-me" src="${face}" alt="">` : '';
     return `<div class="tower-floor ${state}" data-floor="${f.floor}"` +
