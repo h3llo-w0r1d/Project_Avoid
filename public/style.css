@@ -2392,36 +2392,77 @@ kbd {
 @media (max-width: 820px) { #tower-btn { left: 14px; bottom: 16px; width: 66px; height: 66px; }
   .tower-ico { font-size: 20px; } .tower-label { font-size: 10px; } }
 
-/* 탑 화면 — 아래(1층)부터 위로 쌓인다 */
-.tower-card { width: min(420px, 100%); }
+/* 탑 화면 — 둥둥 뜬 땅이 아래(1층)부터 위로 이어지고, 그 위를 올라간다 */
+.tower-card { width: min(1000px, 94vw); max-width: none; max-height: 92vh; }
 .tower-list {
-  display: flex; flex-direction: column; gap: 10px;
-  max-height: 56vh; overflow-y: auto; margin-top: 12px; padding: 4px 2px;
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 72vh; overflow-y: auto; margin-top: 10px; padding: 10px 2px 4px;
 }
 .tower-floor { position: relative; display: flex; }
 /* 층을 지그재그로 놓아 '올라가는 길' 느낌을 낸다 */
-.tower-floor:nth-child(odd) { justify-content: flex-start; padding-left: 8%; }
-.tower-floor:nth-child(even) { justify-content: flex-end; padding-right: 8%; }
+.tower-floor:nth-child(odd) { justify-content: flex-start; padding-left: 12%; }
+.tower-floor:nth-child(even) { justify-content: flex-end; padding-right: 12%; }
+
 .tower-node {
-  width: auto; min-width: 190px; margin: 0; padding: 10px 16px; border-radius: 999px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--stroke);
-  color: var(--text); cursor: pointer;
+  width: auto; margin: 0; padding: 0 8px; background: none; border: 0;
+  display: flex; align-items: center; gap: 16px; cursor: pointer;
+  animation: towerFloat 3.6s ease-in-out infinite;   /* 둥둥 */
 }
-.tower-floor.done .tower-node {
-  border-color: rgba(87, 209, 138, 0.6); background: rgba(87, 209, 138, 0.14); color: #a9edc4;
+.tower-floor:nth-child(even) .tower-node { animation-delay: -1.8s; }
+.tower-node:disabled { cursor: default; }
+@keyframes towerFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
-.tower-floor.open .tower-node {
-  border-color: rgba(255, 150, 60, 0.75); background: rgba(255, 150, 60, 0.16);
-  color: #ffd9a1; box-shadow: 0 0 16px rgba(255, 140, 50, 0.25);
+
+/* 떠 있는 땅덩이 — 잔디 윗면 + 아래로 뾰족한 바위 */
+.tower-stage { position: relative; display: block; width: 150px; height: 52px; flex: none; }
+.tower-stage::after {            /* 땅 아래로 뾰족한 바위(잔디 뒤에 깔린다) */
+  content: ''; position: absolute; left: 50%; top: 60%; transform: translateX(-50%);
+  width: 0; height: 0; border-left: 32px solid transparent; border-right: 32px solid transparent;
+  border-top: 44px solid #5b4029; z-index: 0;
 }
-.tower-floor.lock .tower-node { opacity: 0.45; cursor: default; border-style: dashed; }
-.tower-num { font-size: 15px; font-weight: 900; }
-.tower-goal { font-size: 11px; font-weight: 700; opacity: 0.85; }
-/* 지금 도전할 층에 서 있는 내 캐릭터 */
+.tower-island {
+  position: absolute; inset: 0; z-index: 1; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 28%, #63c06b, #3f8a47 62%, #2f6a37);
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.5);
+}
+.tower-floor.lock .tower-stage::after { border-top-color: #3f434e; }
+/* 깬 층은 색이 바래고, 잠긴 층은 회색 바위만 */
+.tower-floor.done .tower-island {
+  background: radial-gradient(ellipse at 50% 28%, #7fd08a, #4f9a58 62%, #3b7442);
+}
+.tower-floor.lock .tower-island {
+  background: radial-gradient(ellipse at 50% 28%, #5b6070, #464b58 62%, #363a44);
+}
+.tower-floor.lock .tower-node { opacity: 0.5; animation: none; }
+.tower-floor.open .tower-island {
+  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(255, 170, 70, 0.75),
+    0 0 26px rgba(255, 150, 50, 0.45);
+}
+
+/* 층 번호·목표 */
+.tower-label { display: flex; flex-direction: column; text-align: left; }
+.tower-num { font-size: 20px; font-weight: 900; color: var(--text); }
+.tower-goal { font-size: 13px; font-weight: 700; font-style: normal; color: var(--muted); }
+.tower-floor.done .tower-goal { color: #8fe0a5; }
+.tower-floor.open .tower-num { color: #ffd9a1; }
+.tower-floor.open .tower-goal { color: #ffc07a; }
+
+/* 지금 도전할 층 땅 위에 서 있는 내 캐릭터 */
 .tower-me {
-  position: absolute; top: -14px; width: 46px; height: 46px;
-  left: 50%; transform: translateX(-50%); pointer-events: none;
+  position: absolute; z-index: 2; left: 50%; bottom: 62%; transform: translateX(-50%);
+  width: 66px; height: 66px; pointer-events: none;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.55));
+}
+
+@media (max-width: 720px) {
+  .tower-stage { width: 108px; height: 40px; }
+  .tower-me { width: 48px; height: 48px; }
+  .tower-num { font-size: 16px; }
+  .tower-goal { font-size: 11px; }
+  .tower-floor:nth-child(odd) { padding-left: 4%; }
+  .tower-floor:nth-child(even) { padding-right: 4%; }
 }
 
 /* 봇전 | 온라인 1v1 을 반반 나눠 놓는 줄 */

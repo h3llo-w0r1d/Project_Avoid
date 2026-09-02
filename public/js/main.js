@@ -1174,13 +1174,15 @@ async function openTower() {
   const list = overlay.querySelector('.tower-list');
   list.innerHTML = [...data.floors].reverse().map((f) => {
     const state = f.done ? 'done' : (f.open ? 'open' : 'lock');
+    const canGo = f.open && data.signedIn;
+    // 둥둥 뜬 땅(섬) 위에 지금 층이면 내 캐릭터가 서 있다.
     const me = (f.floor === cur && data.signedIn && face)
       ? `<img class="tower-me" src="${face}" alt="">` : '';
-    const canGo = f.open && data.signedIn;
-    return `<div class="tower-floor ${state}" data-floor="${f.floor}">${me}` +
+    return `<div class="tower-floor ${state}" data-floor="${f.floor}">` +
       `<button type="button" class="tower-node"${canGo ? '' : ' disabled'}>` +
-      `<span class="tower-num">${f.floor}층</span>` +
-      `<span class="tower-goal">${f.done ? '✔ 클리어' : f.goal}</span>` +
+      `<span class="tower-stage">${me}<span class="tower-island"></span></span>` +
+      `<span class="tower-label"><b class="tower-num">${f.floor}층</b>` +
+      `<em class="tower-goal">${f.done ? '✔ 클리어' : f.goal}</em></span>` +
       '</button></div>';
   }).join('');
   // 아래(1층)가 보이게 스크롤을 맨 밑으로.
