@@ -396,8 +396,6 @@ const adminReady = api.amIAdmin()
     if (yes) {
       setupNoticeAdmin();
       adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기
-      // 도전모드는 아직 준비 중 — 관리자에게만 보인다.
-      document.getElementById('tower-btn')?.classList.remove('hidden');
       renderCoinHud();       // 코인 표시를 ∞ 로
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
       syncCharacterForAuth();
@@ -556,7 +554,24 @@ shop.onEquip = (id) => {
   wallet.equipFx(id);
   trail.setEffect(id);
 };
-document.getElementById('shop-btn')?.addEventListener('click', () => shop.open());
+document.getElementById('shop-btn')?.addEventListener('click', () => {
+  if (isAdmin) shop.open();
+  else comingSoon();
+});
+
+// 아직 여는 중인 기능을 눌렀을 때. 버튼은 보이게 두되(뭐가 올지 보이게)
+// 누르면 준비 중이라고만 알린다. 관리자는 그대로 쓸 수 있다.
+function comingSoon() {
+  const t = document.createElement('div');
+  t.className = 'shop-toast';
+  t.textContent = '업데이트 중입니다';
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 240);
+  }, 1600);
+}
 
 // ── 코인 지급(관리자) ──────────────────────────────────────
 // 계정 목록을 보여 주고, 누르면 그 계정에 코인을 지급한다(대기에 쌓임 →
@@ -1001,7 +1016,10 @@ const versus = new VersusUI({
 // 봇전 버튼 — 난이도 고르는 창을 연다.
 document.getElementById('bot-btn')?.addEventListener('click', pickBotDifficulty);
 // 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼.
-document.getElementById('tower-btn')?.addEventListener('click', openTower);
+document.getElementById('tower-btn')?.addEventListener('click', () => {
+  if (isAdmin) openTower();
+  else comingSoon();
+});
 
 // 물리·연출 쪽은 소리를 모른다. 사건만 받아서 여기서 소리를 낸다.
 //
