@@ -175,7 +175,8 @@
 
   <!-- 기록 종류 탭. 이용 현황은 아래에 항상 보이고, 그 밑 표만 탭으로 바뀐다. -->
   <nav class="tabs" id="tabs">
-    <button type="button" data-panel="acc" class="on">계정</button>
+    <button type="button" data-panel="usage" class="on">이용 현황</button>
+    <button type="button" data-panel="acc">계정</button>
     <button type="button" data-panel="score">버티기 기록</button>
     <button type="button" data-panel="play">플레이 기록</button>
     <button type="button" data-panel="match">1v1 대전 기록</button>
@@ -185,20 +186,22 @@
     <button type="button" data-panel="bot">봇전 기록</button>
   </nav>
 
-  <div class="head-row">
-    <h2>이용 현황</h2>
-    <div class="right">
-      <div class="seg" id="usage-seg">
-        <button type="button" class="on" data-view="day">일별</button>
-        <button type="button" data-view="month">월별</button>
+  <section class="tab-panel" id="panel-usage">
+    <div class="head-row">
+      <h2>이용 현황</h2>
+      <div class="right">
+        <div class="seg" id="usage-seg">
+          <button type="button" class="on" data-view="day">일별</button>
+          <button type="button" data-view="month">월별</button>
+        </div>
+        <button class="btn-clear" id="usage-clear" type="button">비우기</button>
       </div>
-      <button class="btn-clear" id="usage-clear" type="button">비우기</button>
     </div>
-  </div>
-  <div class="cards" id="usage-cards"></div>
-  <div class="wrap" id="usage-table" style="margin-top:12px"></div>
+    <div class="cards" id="usage-cards"></div>
+    <div class="wrap" id="usage-table" style="margin-top:12px"></div>
+  </section>
 
-  <section class="tab-panel" id="panel-acc">
+  <section class="tab-panel hidden" id="panel-acc">
     <h2>계정 <span class="dim" id="acc-count"></span></h2>
     <div class="tools">
       <input id="acc-search" type="text" placeholder="닉네임으로 찾기" autocomplete="off">
