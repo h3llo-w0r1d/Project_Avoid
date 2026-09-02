@@ -1215,7 +1215,7 @@ async function openTower() {
   overlay.className = 'modal tower-modal';
   overlay.innerHTML =
     '<div class="modal-card panel tower-card">' +
-    '<div class="modal-head"><h2>도전모드</h2>' +
+    '<div class="modal-head"><h2>탑 오르기</h2>' +
     '<button type="button" class="icon-btn tower-close" aria-label="닫기">✕</button></div>' +
     '<p class="board-hint tower-hint">불러오는 중…</p>' +
     '<div class="tower-list"></div></div>';
