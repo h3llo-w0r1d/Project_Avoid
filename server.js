@@ -134,6 +134,31 @@ const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 �
 const presence = openPresence();
 const matchLog = await openMatchStore(DATA_DIR, db);
 
+// '최근 접속'을 적기 시작한 건 최근이라, 그 전부터 있던 계정은 칸이 비어 있다.
+// 이미 남아 있는 흔적으로 한 번 채워 준다 — 마지막 플레이·마지막 대전·
+// 기록을 세운 시각, 그리고 로그인할 때 발급한 세션의 시각(만료 - 유효기간)
+// 중 가장 최근. 비어 있는 계정만 건드리므로 매번 켜도 덮어쓰지 않는다.
+backfillLastSeen();
+function backfillLastSeen() {
+  const SESSION_MS = 60 * 24 * 60 * 60 * 1000;   // users.js 의 SESSION_DAYS 와 맞춤
+  try {
+    const n = db.prepare(`
+      UPDATE users SET last_seen = (
+        SELECT MAX(v) FROM (
+          SELECT MAX(at) v FROM plays   WHERE user_id = users.id
+          UNION ALL SELECT MAX(at)      FROM plays   WHERE name = users.nickname
+          UNION ALL SELECT MAX(at)      FROM scores  WHERE user_id = users.id
+          UNION ALL SELECT MAX(at)      FROM matches WHERE winner_id = users.id OR loser_id = users.id
+          UNION ALL SELECT MAX(expires_at) - ${SESSION_MS} FROM sessions WHERE user_id = users.id
+        )
+      )
+      WHERE last_seen IS NULL`).run().changes;
+    if (n) console.log(`최근 접속 백필: ${n}개 계정`);
+  } catch (err) {
+    console.error('최근 접속 백필 실패:', err.message);
+  }
+}
+
 const app = express();
 // 무엇으로 만들었는지 알려 줄 이유가 없다. 알려 주면 그 버전에 알려진
 // 약점을 골라 찔러 보기 쉬워진다.
