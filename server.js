@@ -994,8 +994,12 @@ app.get('/api/play-ranks', (req, res) => {
   const byUser = plays.countsByUser();
   const byName = plays.countsByName();
 
+  // 계정이 이미 가져간 이름. 지금 닉네임뿐 아니라 '로그인 상태로 쓴 적 있는
+  // 옛 닉네임' 까지 넣어야 한다 — 안 그러면 이름을 바꾼 사람이 옛 이름으로
+  // 한 번 더 줄을 선다(썩(은)감(자)가 '니뿡내뿡' 으로 2위에 또 나왔다).
+  const claimed = plays.namesWithUser();
+
   const rows = [];
-  const claimed = new Set();          // 계정이 이미 가져간 이름
   for (const a of users.listAccounts()) {
     if (!a.nickname || isAdminUser(a)) continue;
     claimed.add(a.nickname);
@@ -1003,7 +1007,7 @@ app.get('/api/play-ranks', (req, res) => {
     if (n > 0) rows.push({ id: a.id, name: a.nickname, plays: n });
   }
   for (const [name, n] of byName) {
-    // 계정이 가져간 이름은 건너뛴다(위에서 이미 더 큰 값으로 넣었다).
+    // 계정 몫으로 이미 센 이름은 건너뛴다.
     if (claimed.has(name) || n <= 0) continue;
     rows.push({ id: null, name, plays: n });
   }
