@@ -52,11 +52,31 @@ export function toLocal(clientX, clientY) {
   return { x: clientX, y: clientY };
 }
 
+// 돌린 무대의 크기는 JS 가 직접 px 로 못 박는다.
+//
+// CSS 의 100lvh/100lvw 는 '주소창이 숨겨진 가장 큰 화면' 을 잰다. 실제로 보이는
+// 크기와 어긋나면, 무대 폭이 화면 세로보다 짧아져 끝에 검은 띠가 생기고 그만큼
+// 무대가 밀린다. 회전 때문에 밀린 쪽은 '레이아웃 왼쪽'(= 화면 아래)이라,
+// 거기 있는 메뉴와 탑 버튼이 잘려 나갔다.
+//
+// visualViewport 는 지금 실제로 보이는 크기를 준다(주소창·키보드까지 반영).
+// 없으면 innerWidth/innerHeight 로 떨어진다.
+function sizeStage(on) {
+  const b = document.body;
+  if (!on) { b.style.width = ''; b.style.height = ''; return; }
+  const vv = window.visualViewport;
+  const w = Math.round(vv?.width ?? window.innerWidth);
+  const h = Math.round(vv?.height ?? window.innerHeight);
+  if (!(w > 0 && h > 0)) return;      // 못 재면 CSS 값을 그대로 둔다
+  b.style.width = h + 'px';           // 돌린 무대의 가로 = 화면 세로
+  b.style.height = w + 'px';          // 돌린 무대의 세로 = 화면 가로
+}
+
 let applied = null;
 function apply() {
   const want = shouldForce();
   root.classList.toggle('force-landscape', want);
-  // 크기는 CSS(dvh/dvw)가 화면 변화에 맞춰 알아서 조절한다. JS 는 방향만 관리.
+  sizeStage(want);
   if (want !== applied) {
     applied = want;
     // 방향이 바뀌었으니 게임이 카메라·캔버스를 다시 맞추게 한다.
@@ -105,5 +125,8 @@ export function startOrientationManager() {
   apply();
   addEventListener('resize', apply);
   addEventListener('orientationchange', apply);
+  // 주소창이 나타났다 사라지면 보이는 크기가 바뀐다. window resize 가 안 뜨는
+  // 경우가 있어(iOS) visualViewport 쪽도 같이 듣는다.
+  window.visualViewport?.addEventListener('resize', apply);
   startRotatedScroll();
 }
