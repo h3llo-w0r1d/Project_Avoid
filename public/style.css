@@ -2930,3 +2930,23 @@ kbd {
 .shop-item.tall { gap: 7px; }
 /* 좁은 화면에선 조금 낮춘다 */
 @media (max-width: 460px) { .shop-item.tall .shop-swatch { height: 60px; } }
+
+/* ---------- 밝은 무대(설원)에서의 HUD ---------- */
+/* 눈밭과 흰 하늘 위에서는 흐린 회색 글씨가 그대로 묻힌다. 색을 어둡게
+   뒤집고, 흰 테두리를 둘러 어느 밝기 위에서도 읽히게 한다.
+   (테두리는 그림자 네 방향 — text-stroke 는 사파리에서 글자가 얇아진다.) */
+:root.light-arena #best-inline {
+  color: #1b2430;
+  font-weight: 700;
+  text-shadow:
+     1px 0 2px rgba(255, 255, 255, 0.9), -1px 0 2px rgba(255, 255, 255, 0.9),
+     0 1px 2px rgba(255, 255, 255, 0.9),  0 -1px 2px rgba(255, 255, 255, 0.9);
+}
+:root.light-arena #timer {
+  color: #16202c;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.95), 0 2px 10px rgba(255, 255, 255, 0.8);
+}
+:root.light-arena #stage-label {
+  color: #0d4256;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.95);
+}

@@ -230,6 +230,9 @@ trail.setEffect(wallet.equippedIn('trail'));
 function applyArena(id) {
   const spec = findArena(id ?? DEFAULT_ARENA) ?? findArena(DEFAULT_ARENA);
   paintArena(deck, spec);
+  // 밝은 무대(설원)에서는 HUD 글씨를 어둡게 뒤집는다. 흐린 회색 글씨는
+  // 흰 눈밭·흰 하늘 위에서 그대로 묻힌다(최고기록이 안 보인다는 제보).
+  document.documentElement.classList.toggle('light-arena', !!spec.lightHud);
 }
 applyArena(wallet.equippedIn('arena'));
 

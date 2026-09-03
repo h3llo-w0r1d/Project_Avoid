@@ -90,6 +90,7 @@ export const ARENAS = [
     sky: 'snow',             // 하늘도 눈 내린 흐린 날로
     fog: 0x9fbcd2,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
     snowfall: true,          // 눈이 내린다(떠다니는 꽃가루를 눈송이로)
+    lightHud: true,          // 배경이 밝아 흐린 HUD 글씨가 묻힌다 → 어둡게 뒤집는다
     edge: 'ice',             // 가장자리에 얼음 기둥을 더한다
     hideTufts: true,         // 눈밭에 초록 풀포기가 서 있으면 어색하다
     thumbSky: ['#1d3349', '#5b81a0', '#c6dbe9'],
