@@ -2801,9 +2801,19 @@ kbd {
   /* 왼쪽에 메뉴 자리를 비워 두고, 위아래 여백을 줄인다 */
   .screen { padding: 44px 14px 10px 150px; gap: 10px; }
 
-  #side-menu { left: 10px; padding-left: 14px; gap: 4px; }
-  #side-menu button { padding: 6px 9px; gap: 8px; font-size: 13px; }
-  #side-menu .sm-ico { font-size: 15px; }
+  /* 메뉴는 위에서부터 자란다. 가운데 정렬(top:54%)로 두면 항목이 늘 때마다
+     아래로 밀려 내려와 탑 버튼과 부딪힌다 — 실제로 '상점'이 늘면서 겹쳤다.
+     line-height 를 못 박는 게 중요하다. 안 정하면 브라우저마다 버튼 줄높이가
+     달라져(1.2~1.6) 메뉴 높이가 6항목 기준 100px 넘게 벌어진다. */
+  #side-menu {
+    top: 46px; transform: none;
+    left: 10px; padding-left: 14px; gap: 3px;
+  }
+  #side-menu button {
+    padding: 5px 9px; gap: 8px;
+    font-size: 12.5px; line-height: 1.25;
+  }
+  #side-menu .sm-ico { font-size: 14px; line-height: 1.25; }
 
   /* 공지는 위에 바짝, 한 줄로 */
   #notice-banner {
@@ -2831,6 +2841,6 @@ kbd {
   #title-screen .legal-links { margin-top: 7px; font-size: 11px; }
 
   /* 탑 버튼은 메뉴 아래 구석으로. 작게 줄여야 패널과 안 부딪힌다. */
-  #tower-btn { left: 8px; bottom: 8px; width: 78px; height: 78px; }
-  .tower-label { font-size: 10.5px; }
+  #tower-btn { left: 8px; bottom: 6px; width: 66px; height: 66px; }
+  .tower-label { font-size: 10px; }
 }
