@@ -773,3 +773,152 @@ export function makeGalaxySkyTexture(w = 1024, h = 512) {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
+
+// ---------------------------------------------------------------- 행성
+
+// 멀리 떠 있는 행성 하나를 그린 그림(투명 배경).
+//
+// 구체 메시로 만들면 색칠한 공처럼 보인다. 조명이 무대를 향해 맞춰져 있어
+// 행성에는 엉뚱하게 떨어지고, 표면에 아무 무늬가 없기 때문이다.
+// 아주 멀리 있어 카메라가 움직여도 모양이 거의 안 변하므로, 차라리 2D 로
+// 정성껏 그려 판에 붙이는 편이 훨씬 낫다(three.Sprite).
+//
+// 행성을 행성처럼 보이게 하는 건 넷이다:
+//   1) 표면 무늬 — 가스 띠 · 분화구 · 소용돌이
+//   2) 명암 경계선 — 빛을 받는 쪽과 그늘의 경계. 이게 있어야 '구' 로 보인다
+//   3) 가장자리 빛 — 빛 받는 쪽 테두리가 얇게 밝다
+//   4) 대기 — 표면 밖으로 은은히 번지는 빛
+export function makePlanetTexture(kind, tint, size = 512) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const g = cv.getContext('2d');
+  const c = size / 2;
+  const R = size * 0.30;              // 행성 반지름(고리·대기 자리를 남긴다)
+  const LX = -0.55, LY = -0.62;       // 빛 방향(왼쪽 위) — 다른 무늬들과 맞춘다
+
+  const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+  const mix = (a, b, t) => {
+    const A = [a >> 16 & 255, a >> 8 & 255, a & 255];
+    const B = [b >> 16 & 255, b >> 8 & 255, b & 255];
+    return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`;
+  };
+  const light = 0xffffff, dark = 0x0a0a18;
+
+  // ── 대기. 표면 밖으로 번지는 빛. 먼저 깔아야 표면에 안 가린다.
+  const air = g.createRadialGradient(c, c, R * 0.92, c, c, R * 1.42);
+  air.addColorStop(0.0, `rgba(${tint >> 16 & 255},${tint >> 8 & 255},${tint & 255},0.34)`);
+  air.addColorStop(1.0, 'rgba(0,0,0,0)');
+  g.fillStyle = air;
+  g.beginPath(); g.arc(c, c, R * 1.42, 0, Math.PI * 2); g.fill();
+
+  // ── 표면. 원 안에서만 그린다.
+  g.save();
+  g.beginPath(); g.arc(c, c, R, 0, Math.PI * 2); g.clip();
+
+  g.fillStyle = mix(tint, dark, 0.25);
+  g.fillRect(0, 0, size, size);
+
+  if (kind === 'gas') {
+    // 가스 행성 — 가로로 흐르는 띠. 굵기와 색을 제각각으로.
+    for (let y = -R; y < R; ) {
+      // 띠가 두꺼우면 열몇 줄밖에 안 들어가 페인트칠처럼 보인다. 얇게 많이.
+      const h = rnd(size * 0.005, size * 0.026);
+      const t = rnd(-0.22, 0.30);
+      g.fillStyle = t < 0 ? mix(tint, dark, -t) : mix(tint, light, t);
+      g.globalAlpha = rnd(0.35, 0.85);
+      // 띠를 살짝 물결지게 — 곧은 줄은 페인트칠처럼 보인다
+      g.beginPath();
+      g.moveTo(c - R, c + y);
+      g.bezierCurveTo(c - R * 0.3, c + y + rnd(-6, 6), c + R * 0.3, c + y + rnd(-6, 6), c + R, c + y);
+      g.lineTo(c + R, c + y + h);
+      g.bezierCurveTo(c + R * 0.3, c + y + h + rnd(-6, 6), c - R * 0.3, c + y + h + rnd(-6, 6), c - R, c + y + h);
+      g.closePath(); g.fill();
+      y += h;
+    }
+    // 소용돌이 하나(대적점 같은 것)
+    g.globalAlpha = 0.5;
+    g.fillStyle = mix(tint, light, 0.45);
+    g.beginPath();
+    g.ellipse(c + R * 0.28, c + R * 0.18, R * 0.20, R * 0.11, 0.2, 0, Math.PI * 2);
+    g.fill();
+  } else if (kind === 'rock') {
+    // 바위 행성 — 분화구. 밝은 테두리 + 어두운 안쪽이라야 파인 것으로 보인다.
+    for (let i = 0; i < 70; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * R * 0.94;
+      const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
+      const cr = rnd(size * 0.008, size * 0.045);
+      g.globalAlpha = rnd(0.25, 0.6);
+      g.fillStyle = mix(tint, light, 0.30);
+      g.beginPath(); g.arc(x - LX * cr * 0.3, y - LY * cr * 0.3, cr, 0, Math.PI * 2); g.fill();
+      g.fillStyle = mix(tint, dark, 0.45);
+      g.beginPath(); g.arc(x, y, cr * 0.78, 0, Math.PI * 2); g.fill();
+    }
+  } else {
+    // 얼음 행성 — 소용돌이치는 구름
+    for (let i = 0; i < 34; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * R;
+      const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
+      const rw = rnd(R * 0.12, R * 0.5);
+      g.globalAlpha = rnd(0.16, 0.42);
+      g.fillStyle = Math.random() < 0.5 ? mix(tint, light, 0.5) : mix(tint, dark, 0.3);
+      g.save(); g.translate(x, y); g.rotate(rnd(-0.6, 0.6)); g.scale(1, rnd(0.16, 0.34));
+      g.beginPath(); g.arc(0, 0, rw, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+  }
+  g.globalAlpha = 1;
+
+  // ── 명암 경계선. 빛 반대쪽을 크게 어둡게 — 이게 있어야 공이 아니라 구다.
+  const term = g.createRadialGradient(
+    c + LX * R * 0.55, c + LY * R * 0.55, R * 0.15,
+    c - LX * R * 0.25, c - LY * R * 0.25, R * 1.25
+  );
+  term.addColorStop(0.00, 'rgba(255,255,255,0.16)');
+  term.addColorStop(0.42, 'rgba(0,0,0,0)');
+  term.addColorStop(1.00, 'rgba(4,4,14,0.88)');
+  g.fillStyle = term;
+  g.fillRect(0, 0, size, size);
+  g.restore();
+
+  // ── 가장자리 빛. 빛 받는 쪽 테두리만 얇게 밝힌다.
+  g.save();
+  g.beginPath(); g.arc(c, c, R, 0, Math.PI * 2); g.clip();
+  g.strokeStyle = `rgba(255,255,255,0.5)`;
+  g.lineWidth = size * 0.012;
+  const la = Math.atan2(LY, LX);
+  g.beginPath();
+  g.arc(c, c, R - size * 0.004, la - 1.15, la + 1.15);
+  g.stroke();
+  g.restore();
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+// 고리는 따로 그린다. 행성 앞뒤로 지나가야 해서 한 판에 그리면 겹침이 틀린다.
+// (앞쪽 절반만 담은 그림을 행성 위에 덧대는 방식)
+export function makePlanetRingTexture(tint, size = 512) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const g = cv.getContext('2d');
+  const c = size / 2;
+
+  g.save();
+  g.translate(c, c);
+  g.rotate(-0.38);
+  g.scale(1, 0.22);           // 눕혀서 타원으로
+  for (let i = 0; i < 26; i++) {
+    const r = size * (0.34 + i * 0.0062);
+    g.strokeStyle = `rgba(${tint >> 16 & 255},${tint >> 8 & 255},${tint & 255},${rnd(0.06, 0.30).toFixed(2)})`;
+    g.lineWidth = size * rnd(0.002, 0.006);
+    g.beginPath(); g.arc(0, 0, r, 0, Math.PI * 2); g.stroke();
+  }
+  g.restore();
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
