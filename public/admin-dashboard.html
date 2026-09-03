@@ -194,6 +194,7 @@
     <button type="button" data-panel="tower">층 오르기 기록</button>
     <button type="button" data-panel="bot">봇전 기록</button>
     <button type="button" data-panel="title">칭호 획득 기록</button>
+    <button type="button" data-panel="rename">닉네임 변경 기록</button>
   </nav>
 
   <section class="tab-panel" id="panel-usage">
@@ -296,6 +297,17 @@
     </div>
     <div class="wrap" id="titlelog-table"></div>
     <div class="pager" id="titlelog-pager"></div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-rename">
+    <h2>닉네임 변경 기록 <span class="dim" id="renamelog-count"></span></h2>
+    <p class="hint">누가 무슨 이름에서 무슨 이름으로 바꿨는지 남깁니다. 처음 정한 경우엔 '(처음 정함)' 으로 나옵니다.</p>
+    <div class="tools">
+      <span class="grow"></span>
+      <button class="danger" id="renamelog-clear" type="button">전체 비우기</button>
+    </div>
+    <div class="wrap" id="renamelog-table"></div>
+    <div class="pager" id="renamelog-pager"></div>
   </section>
 </main>
 
@@ -653,8 +665,29 @@ async function drawTitleLog() {
   } catch (e) { $('titlelog-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
+/* ---- 닉네임 변경 기록 ---- */
+let renamePage = 0;
+async function drawRenameLog() {
+  try {
+    const { rows, total } = await api(`/api/admin/rename-log?limit=${PLAY_PER}&offset=${renamePage * PLAY_PER}`);
+    $('renamelog-count').textContent = total ? `${total}건` : '';
+    $('renamelog-clear').style.display = total ? '' : 'none';
+    if (total === 0) { $('renamelog-table').innerHTML = '<p class="empty">아직 기록이 없습니다</p>'; $('renamelog-pager').innerHTML = ''; return; }
+    const body = rows.map((r) =>
+      `<tr><td class="dim">${r.from ? esc(r.from) : '<i>(처음 정함)</i>'}</td>
+        <td class="dim">→</td>
+        <td class="name">${esc(r.to)}</td>
+        <td class="dim">${stamp(r.at)}</td></tr>`).join('');
+    $('renamelog-table').innerHTML =
+      `<table><thead><tr><th>바꾸기 전</th><th></th><th>바꾼 뒤</th><th>때</th></tr></thead><tbody>${body}</tbody></table>`;
+    const pages = Math.max(1, Math.ceil(total / PLAY_PER));
+    renamePage = Math.min(renamePage, pages - 1);
+    pager('renamelog-pager', pages, renamePage, (p) => { renamePage = p; drawRenameLog(); });
+  } catch (e) { $('renamelog-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
 /* ---- 탭 전환. 처음 열 때 그 표를 불러온다. ---- */
-const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog, title: drawTitleLog };
+const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog, title: drawTitleLog, rename: drawRenameLog };
 function showPanel(name) {
   for (const b of document.querySelectorAll('#tabs button')) {
     b.classList.toggle('on', b.dataset.panel === name);
@@ -887,6 +920,8 @@ $('botlog-clear').addEventListener('click', () =>
   clearLog('/api/admin/bot-log/clear', '봇전 기록', () => { botPage = 0; drawBotLog(); }));
 $('titlelog-clear').addEventListener('click', () =>
   clearLog('/api/admin/title-log/clear', '칭호 획득 기록', () => { titlePage = 0; drawTitleLog(); }));
+$('renamelog-clear').addEventListener('click', () =>
+  clearLog('/api/admin/rename-log/clear', '닉네임 변경 기록', () => { renamePage = 0; drawRenameLog(); }));
 $('usage-seg').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-view]'); if (!b) return;
   usageView = b.dataset.view;

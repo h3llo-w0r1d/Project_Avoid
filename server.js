@@ -175,7 +175,13 @@ app.use(cookieParser());
 const auth = attachAuth(app, users, {
   port: PORT,
   // 닉네임을 바꾸면 이미 올려 둔 기록의 이름도 따라가야 한다.
-  onRename: (userId, name) => scores.renameUser(userId, name)
+  onRename: (userId, name, before) => {
+    scores.renameUser(userId, name);
+    // 관리 화면 '닉네임 변경 기록'. 판수·랭킹을 계정 id 로 세기 때문에 이름이
+    // 바뀌어도 기록은 안 새지만, 누가 무슨 이름이었는지는 여기서만 알 수 있다.
+    try { modeLogs.rename.add({ name, userId, from_name: before, to_name: name }); }
+    catch (err) { console.error('닉네임 변경 기록 실패:', err); }
+  }
 });
 
 // 관리 대시보드. 관리자 계정으로 로그인했을 때만 페이지 자체를 내준다.
@@ -1185,6 +1191,17 @@ app.get('/api/admin/title-log', requireAdmin, (req, res) => {
 app.post('/api/admin/title-log/clear', requireAdmin, (req, res) => {
   if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
   res.json({ ok: true, removed: modeLogs.title.clear() });
+});
+
+// 닉네임 변경 기록(관리자). 누가 무슨 이름에서 무슨 이름으로 바꿨나.
+app.get('/api/admin/rename-log', requireAdmin, (req, res) => {
+  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  res.json(modeLogs.rename.page(limit, offset));
+});
+app.post('/api/admin/rename-log/clear', requireAdmin, (req, res) => {
+  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+  res.json({ ok: true, removed: modeLogs.rename.clear() });
 });
 
 // 봇전 기록(관리자).
