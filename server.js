@@ -875,10 +875,12 @@ app.delete('/api/admin/matches/:id', requireAdmin, (req, res) => {
 });
 
 // 코인으로 캐릭터 산 기록. 시간순 한 쪽씩.
+// 구매 기록(관리자). kind=char 면 캐릭터만, kind=shop 이면 상점만.
 app.get('/api/admin/purchases', requireAdmin, (req, res) => {
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
   const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(purchases.page(limit, offset));
+  const kind = ['char', 'shop'].includes(req.query.kind) ? req.query.kind : 'all';
+  res.json(purchases.page(limit, offset, kind));
 });
 
 app.delete('/api/admin/purchases/:id', requireAdmin, (req, res) => {

@@ -195,6 +195,7 @@
     <button type="button" data-panel="bot">봇전 기록</button>
     <button type="button" data-panel="title">칭호 획득 기록</button>
     <button type="button" data-panel="rename">닉네임 변경 기록</button>
+    <button type="button" data-panel="shop">상점 구매 기록</button>
   </nav>
 
   <section class="tab-panel" id="panel-usage">
@@ -308,6 +309,13 @@
     </div>
     <div class="wrap" id="renamelog-table"></div>
     <div class="pager" id="renamelog-pager"></div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-shop">
+    <h2>상점 구매 기록 <span class="dim" id="shoplog-count"></span></h2>
+    <p class="hint">발자국 효과와 경기장 스킨을 산 기록입니다. 캐릭터 구매는 옆의 '캐릭터 구매 기록' 에 있습니다.</p>
+    <div class="wrap" id="shoplog-table"></div>
+    <div class="pager" id="shoplog-pager"></div>
   </section>
 </main>
 
@@ -687,7 +695,7 @@ async function drawRenameLog() {
 }
 
 /* ---- 탭 전환. 처음 열 때 그 표를 불러온다. ---- */
-const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog, title: drawTitleLog, rename: drawRenameLog };
+const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog, title: drawTitleLog, rename: drawRenameLog, shop: drawShopLog };
 function showPanel(name) {
   for (const b of document.querySelectorAll('#tabs button')) {
     b.classList.toggle('on', b.dataset.panel === name);
@@ -782,7 +790,7 @@ const BUY_PER = 20;
 let buyPage = 0;
 async function drawPurchases() {
   try {
-    const { rows, total } = await api(`/api/admin/purchases?limit=${BUY_PER}&offset=${buyPage * BUY_PER}`);
+    const { rows, total } = await api(`/api/admin/purchases?kind=char&limit=${BUY_PER}&offset=${buyPage * BUY_PER}`);
     $('buy-count').textContent = total ? `${total}건` : '';
     if (!total) { $('buy-table').innerHTML = '<p class="empty">아직 구매 기록이 없습니다</p>'; $('buy-pager').innerHTML = ''; return; }
     const body = rows.map((r) => {
@@ -802,6 +810,44 @@ async function drawPurchases() {
     buyPage = Math.min(buyPage, pages - 1);
     pager('buy-pager', pages, buyPage, (p) => { buyPage = p; drawPurchases(); });
   } catch (e) { $('buy-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+/* ---- 상점 구매 기록 (발자국 효과·경기장 스킨) ---- */
+// 캐릭터와 같은 표(purchases)에 쌓이지만 character 에 'trail:' 'arena:' 가
+// 붙어 있어 갈라 볼 수 있다. 접두사를 떼고 무슨 항목인지 뱃지로 보여 준다.
+const SHOP_KIND = { trail: ['발자국', 'mic'], arena: ['경기장', ''], fx: ['발자국', 'mic'] };
+let shopPage = 0;
+async function drawShopLog() {
+  try {
+    const { rows, total } = await api(`/api/admin/purchases?kind=shop&limit=${BUY_PER}&offset=${shopPage * BUY_PER}`);
+    $('shoplog-count').textContent = total ? `${total}건` : '';
+    if (!total) { $('shoplog-table').innerHTML = '<p class="empty">아직 구매 기록이 없습니다</p>'; $('shoplog-pager').innerHTML = ''; return; }
+    const body = rows.map((r) => {
+      const who = r.member ? `<span style="color:#9ad0ff">${esc(r.name)}</span>` : `${esc(r.name)} <span class="dim">(게스트)</span>`;
+      const k = SHOP_KIND[String(r.character).split(':')[0]];
+      const badge = k ? `<span class="mode ${k[1]}">${k[0]}</span>` : '<span class="dim">–</span>';
+      // 이름에 '반짝이(발자국 효과)' 처럼 항목이 붙어 있으면 뱃지와 겹치니 뗀다
+      const nm = String(r.charName || r.character).replace(/s*([^)]*)s*$/, '');
+      return `<tr><td class="dim">${stamp(r.at)}</td>
+        <td>${who}</td>
+        <td>${badge}</td>
+        <td class="name">${esc(nm)}</td>
+        <td class="num">🪙 ${r.cost}</td>
+        <td><button class="act" data-del="${r.id}">삭제</button></td></tr>`;
+    }).join('');
+    $('shoplog-table').innerHTML =
+      `<table><thead><tr><th>시간</th><th>구매자</th><th>항목</th><th>이름</th><th>가격</th><th></th></tr></thead><tbody>${body}</tbody></table>`;
+    for (const b of $('shoplog-table').querySelectorAll('[data-del]')) {
+      b.addEventListener('click', async () => {
+        if (!confirm('이 기록을 지울까요?')) return;
+        await api(`/api/admin/purchases/${encodeURIComponent(b.dataset.del)}`, { method: 'DELETE' });
+        drawShopLog();
+      });
+    }
+    const pages = Math.max(1, Math.ceil(total / BUY_PER));
+    shopPage = Math.min(shopPage, pages - 1);
+    pager('shoplog-pager', pages, shopPage, (p) => { shopPage = p; drawShopLog(); });
+  } catch (e) { $('shoplog-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
 async function delPurchase(id) {
