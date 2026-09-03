@@ -107,6 +107,14 @@ function addArena(scene) {
   ice.name = 'deck-ice';
   ice.visible = false;
   group.add(ice);
+
+  // 설원 바닥 장식. 잔디는 풀포기(deck-tufts)가 바닥에 입체감을 주는데,
+  // 눈밭은 그걸 감추다 보니 허허벌판이 됐다. 대신 눈더미와 작은 얼음
+  // 조각을 깔아 준다.
+  const snowy = buildSnowDetail();
+  snowy.name = 'deck-snowdeco';
+  snowy.visible = false;
+  group.add(snowy);
   const tufts = buildGrassTufts();
   tufts.name = 'deck-tufts';
   group.add(tufts);
@@ -309,6 +317,95 @@ function buildEdgeIce() {
       }
     ));
   });
+
+  return group;
+}
+
+// 설원 바닥 장식 — 눈더미 · 작은 얼음조각 · 눈 쓴 전나무.
+//
+// 잔디에는 풀포기가 깔려 있어 바닥이 살아 보인다. 눈밭은 그 풀포기를 감추니
+// 매끈한 흰 접시가 됐다. 그림자를 드리우는 '무언가' 가 바닥에 있어야
+// 평평해 보이지 않는다.
+//
+// 판정에는 전혀 영향이 없다. 전기선은 y 0.38~0.82 에만 있고 이것들은
+// 그보다 낮게 깔린다. 가운데(반지름 40% 안쪽)는 비워 둬야 캐릭터와
+// 전기선을 가리지 않는다.
+function buildSnowDetail() {
+  const group = new THREE.Group();
+
+  // ── 눈더미. 납작한 반구를 흩뿌린다.
+  const moundGeo = new THREE.SphereGeometry(1, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+  rockify(moundGeo, 0.22, 3);
+  group.add(scatter(moundGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0xf4faff, roughness: 0.6, metalness: 0.02, flatShading: true,
+      emissive: 0x2a4763, emissiveIntensity: 0.35
+    }), 54,
+    (i, pos, rot, scl) => {
+      const a = Math.random() * Math.PI * 2;
+      // 가운데는 비운다 — 캐릭터·전기선이 가려지면 안 된다
+      const r = ARENA_RADIUS * rnd(0.42, 0.95);
+      const w = rnd(0.22, 0.62);
+      pos.set(Math.cos(a) * r, -0.02, Math.sin(a) * r);
+      rot.set(0, Math.random() * 6.3, 0);
+      scl.set(w, w * rnd(0.22, 0.42), w * rnd(0.8, 1.3));
+    },
+    () => { const v = 0.9 + Math.random() * 0.14; return new THREE.Color(v * 0.97, v * 0.99, v); }
+  ));
+
+  // ── 바닥에 박힌 작은 얼음조각. 눈더미만 있으면 죄다 둥글어 심심하다.
+  const chipGeo = new THREE.ConeGeometry(0.5, 1.4, 4);
+  rockify(chipGeo, 0.2, 5);
+  group.add(scatter(chipGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0xd5ecff, roughness: 0.24, metalness: 0.05, flatShading: true,
+      emissive: 0x2f5075, emissiveIntensity: 0.5
+    }), 40,
+    (i, pos, rot, scl) => {
+      const a = Math.random() * Math.PI * 2;
+      const r = ARENA_RADIUS * rnd(0.45, 0.96);
+      const h = rnd(0.10, 0.26);
+      const w = rnd(0.07, 0.15);
+      pos.set(Math.cos(a) * r, -0.05 + h * 0.5, Math.sin(a) * r);
+      rot.set(rnd(-0.5, 0.5), Math.random() * 6.3, rnd(-0.5, 0.5));
+      scl.set(w, h * 1.5, w);
+    },
+    () => { const v = 0.85 + Math.random() * 0.2; return new THREE.Color(v * 0.92, v * 0.97, v); }
+  ));
+
+  // ── 눈 쓴 전나무. 가장자리 안쪽에 몇 그루만 — 많으면 시야를 가린다.
+  //    잎(짙은 초록)과 그 위에 얹힌 눈을 따로 심어 두 층으로 보이게 한다.
+  const TREES = 13;
+  const angles = [];
+  for (let i = 0; i < TREES; i++) angles.push((i / TREES) * Math.PI * 2 + rnd(-0.16, 0.16));
+  const rr = [];
+  for (let i = 0; i < TREES; i++) rr.push(ARENA_RADIUS * rnd(0.82, 0.94));
+  const hh = [];
+  for (let i = 0; i < TREES; i++) hh.push(rnd(0.5, 0.95));
+
+  group.add(scatter(new THREE.ConeGeometry(0.5, 1.5, 7),
+    new THREE.MeshStandardMaterial({
+      color: 0x2f5f46, roughness: 0.85, flatShading: true,
+      emissive: 0x0f2a20, emissiveIntensity: 0.5
+    }), TREES,
+    (i, pos, rot, scl) => {
+      pos.set(Math.cos(angles[i]) * rr[i], -0.05 + hh[i] * 0.55, Math.sin(angles[i]) * rr[i]);
+      rot.set(0, Math.random() * 6.3, 0);
+      scl.set(hh[i] * 0.62, hh[i] * 1.25, hh[i] * 0.62);
+    }
+  ));
+  // 나무 위에 얹힌 눈
+  group.add(scatter(new THREE.ConeGeometry(0.5, 1.5, 7),
+    new THREE.MeshStandardMaterial({
+      color: 0xf6fbff, roughness: 0.55, flatShading: true,
+      emissive: 0x2a4763, emissiveIntensity: 0.35
+    }), TREES,
+    (i, pos, rot, scl) => {
+      pos.set(Math.cos(angles[i]) * rr[i], -0.05 + hh[i] * 0.92, Math.sin(angles[i]) * rr[i]);
+      rot.set(0, Math.random() * 6.3, 0);
+      scl.set(hh[i] * 0.44, hh[i] * 0.62, hh[i] * 0.44);
+    }
+  ));
 
   return group;
 }
@@ -559,10 +656,13 @@ export function paintArena(deck, spec = {}) {
   const tufts = deck.getObjectByName('deck-tufts');
   if (tufts) tufts.visible = !spec.hideTufts;
 
-  // 가장자리 장식 — 바위냐 얼음이냐. 둘 다 만들어 두고 하나만 켠다.
+  // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를
+  // 함께 세워 빈틈을 메운다(바위는 spec.stone 색으로 이미 하얗게 칠해진다).
   const wantIce = spec.edge === 'ice';
-  const stones = deck.getObjectByName('deck-stones');
   const ice = deck.getObjectByName('deck-ice');
-  if (stones) stones.visible = !wantIce;
+  const snowy = deck.getObjectByName('deck-snowdeco');
   if (ice) ice.visible = wantIce;
+  if (snowy) snowy.visible = wantIce;
+  // 바위는 어느 스킨에서도 남는다 — 무대 끝을 알려 주는 표시라 없으면
+  // 어디서 떨어지는지 가늠하기 어렵다.
 }

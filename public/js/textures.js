@@ -371,16 +371,17 @@ export function makeSnowTexture(size = 1536) {
   g.fillRect(0, 0, size, size);
 
   // ── 1) 눈언덕. 볕 쪽 흰 테 + 그늘 쪽 푸른 그늘을 짝지어 그린다.
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 130; i++) {
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * R;
-    const rad = rnd(size * 0.05, size * 0.17);
+    // 크기를 크게 벌린다 — 큰 언덕과 잔 둔덕이 섞여야 넓이가 느껴진다
+    const rad = Math.random() < 0.25 ? rnd(size * 0.16, size * 0.30) : rnd(size * 0.035, size * 0.13);
     const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
     const off = rad * 0.34;
 
     // 그늘(빛 반대쪽)
     let gr = g.createRadialGradient(x - LX * off, y - LY * off, 0, x - LX * off, y - LY * off, rad);
-    gr.addColorStop(0, `rgba(150, 178, 210, ${rnd(0.16, 0.30)})`);
+    gr.addColorStop(0, `rgba(146, 175, 208, ${rnd(0.22, 0.42)})`);
     gr.addColorStop(1, 'rgba(150, 178, 210, 0)');
     g.fillStyle = gr;
     g.beginPath(); g.arc(x - LX * off, y - LY * off, rad, 0, Math.PI * 2); g.fill();
@@ -451,19 +452,26 @@ export function makeSnowTexture(size = 1536) {
     g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
   }
 
-  // ── 5) 거리 기준선. 잔디의 '밟힌 자국' 과 같은 역할 — 스킨이 바뀌어도
-  //     중심에서 얼마나 떨어졌는지 눈으로 잴 수 있어야 한다.
+  // ── 5) 거리 띠. 중심에서 얼마나 떨어졌는지 눈으로 재는 기준이라 필요는
+  //     한데, 잔디처럼 점선을 그으면 눈밭에선 '누가 그려 놓은 원' 으로
+  //     보인다. 그래서 선 대신 '눈이 쓸려 쌓인 낮은 띠' 로 만든다 —
+  //     안쪽은 그늘, 바깥쪽은 볕. 굴곡으로 읽혀 자연스럽다.
   g.save();
   g.translate(c, c);
-  for (const [rr, alpha] of [[0.3, 0.16], [0.55, 0.13], [0.77, 0.16]]) {
+  for (const rr of [0.32, 0.58, 0.80]) {
+    const band = R * 0.030;
+    const mid = R * rr;
+    const gr = g.createRadialGradient(0, 0, mid - band, 0, 0, mid + band);
+    gr.addColorStop(0.00, 'rgba(158, 184, 212, 0)');
+    gr.addColorStop(0.40, 'rgba(158, 184, 212, 0.16)');   // 안쪽 그늘
+    gr.addColorStop(0.58, 'rgba(255, 255, 255, 0.30)');   // 마루
+    gr.addColorStop(1.00, 'rgba(255, 255, 255, 0)');
+    g.fillStyle = gr;
     g.beginPath();
-    g.arc(0, 0, R * rr, 0, Math.PI * 2);
-    g.strokeStyle = `rgba(140, 170, 202, ${alpha})`;
-    g.lineWidth = size * 0.012;
-    g.setLineDash([size * 0.05, size * 0.03]);
-    g.stroke();
+    g.arc(0, 0, mid + band, 0, Math.PI * 2);
+    g.arc(0, 0, mid - band, 0, Math.PI * 2, true);
+    g.fill();
   }
-  g.setLineDash([]);
 
   // ── 6) 가장자리 — 눈이 끝나며 언 바위가 드러나는 띠
   const bandIn = R * 0.92;
