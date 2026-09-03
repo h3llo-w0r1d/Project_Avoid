@@ -80,12 +80,15 @@ export const ARENAS = [
   },
   {
     id: 'snow', name: '설원', cost: 300,
-    desc: '눈 덮인 벌판. 붉은 전기선이 또렷하게 보여요',
+    desc: '눈 덮인 벌판. 가장자리엔 얼음 기둥이 솟아 있어요',
     topMap: 'snow',          // 상판 무늬를 눈으로 갈아 끼운다
+    // 밤 무대라 흰 바닥이 그냥 두면 잿빛으로 가라앉는다. 눈이 스스로 은은히
+    // 빛나게 해야 '눈' 으로 보인다. 반질함도 조금 올려 표면이 살짝 반사되게.
+    topEmissive: 0x33506e, topEmissiveIntensity: 0.42, topRoughness: 0.72,
     cliff: 0xa9bccd,         // 절벽은 차갑게 — 눈 밑 언 바위
-    stone: 0xcfdcea,         // 가장자리 돌도 서리 낀 느낌
+    edge: 'ice',             // 가장자리는 바위 대신 얼음 기둥
     hideTufts: true,         // 눈밭에 초록 풀포기가 서 있으면 어색하다
-    swatchTop: 0xe9f1fa, swatchSide: 0x8fa6bb
+    swatchTop: 0xf2f8ff, swatchSide: 0x9ec4e0
   }
 ];
 

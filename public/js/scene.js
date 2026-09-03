@@ -97,6 +97,13 @@ function addArena(scene) {
   const stones = buildEdgeStones();
   stones.name = 'deck-stones';
   group.add(stones);
+
+  // 설원 스킨이 바위 대신 쓰는 얼음 기둥. 미리 만들어 두고 감춰 둔다 —
+  // 고를 때마다 만들면 그 순간 멈칫한다(46개 인스턴싱).
+  const ice = buildEdgeIce();
+  ice.name = 'deck-ice';
+  ice.visible = false;
+  group.add(ice);
   const tufts = buildGrassTufts();
   tufts.name = 'deck-tufts';
   group.add(tufts);
@@ -239,6 +246,55 @@ function mergeTwo(a, b) {
   for (let i = 0; i < bi.length; i++) idx[ai.length + i] = bi[i] + offset;
   geo.setIndex(new THREE.BufferAttribute(idx, 1));
   return geo;
+}
+
+// 설원용 가장자리 장식 — 솟아오른 얼음 기둥.
+//
+// 바위와 같은 자리에 서지만 생김새가 정반대다: 바위는 낮고 둥글게 굴러
+// 있고, 얼음은 뾰족하게 위로 솟는다. 그래야 스킨을 바꿨을 때 '색만 바뀐 게
+// 아니라' 는 느낌이 든다.
+//
+// 안쪽으로 살짝 눕혀 무대를 감싸는 울타리처럼 보이게 한다.
+function buildEdgeIce() {
+  const group = new THREE.Group();
+  const KINDS = 2;
+  const count = 44;
+  const per = count / KINDS;
+
+  for (let k = 0; k < KINDS; k++) {
+    // 밑이 넓고 위가 뾰족한 오각 기둥. 살짝 찌그러뜨려 깎인 결정처럼.
+    const geo = new THREE.ConeGeometry(0.5, 1.6, 5 + k);
+    rockify(geo, 0.16 + k * 0.06, 7 + k);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xdcefff, roughness: 0.28, metalness: 0.06,
+      flatShading: true,
+      // 밤이라 그냥 두면 시커멓게 죽는다. 얼음이 스스로 은은히 빛나게 한다.
+      emissive: 0x2b4a6b, emissiveIntensity: 0.55
+    });
+
+    group.add(scatter(geo, mat, per,
+      (i, pos, rot, scl) => {
+        const idx = i * KINDS + k;
+        const a = (idx / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.07;
+        const h = 0.42 + Math.random() * 0.62;          // 키를 크게 벌린다
+        const w = 0.30 + Math.random() * 0.26;
+        pos.set(
+          Math.cos(a) * (ARENA_RADIUS - 0.12),
+          -0.1 + h * 0.5,                                // 밑동을 바닥에 묻는다
+          Math.sin(a) * (ARENA_RADIUS - 0.12)
+        );
+        // 안쪽으로 살짝 기울이고, 축을 돌려 결이 제각각 보이게
+        rot.set((Math.random() - 0.5) * 0.34, Math.random() * 6.3, (Math.random() - 0.5) * 0.34);
+        scl.set(w, h * 1.5, w);
+      },
+      // 기둥마다 푸른 기를 조금씩 달리 — 맑은 얼음과 흐린 얼음이 섞이게
+      () => {
+        const v = 0.82 + Math.random() * 0.26;
+        return new THREE.Color(v * (0.90 + Math.random() * 0.08), v * (0.95 + Math.random() * 0.05), v);
+      }
+    ));
+  }
+  return group;
 }
 
 // 무대 아래. 흙덩이와 늘어진 뿌리 — 섬이 공중에 떠 있는 느낌을 만든다.
@@ -472,10 +528,25 @@ export function paintArena(deck, spec = {}) {
     top.material.color.setHex(spec.top ?? 0xffffff);
   }
 
+  // 밤 무대라 흰 바닥은 그냥 두면 잿빛으로 가라앉는다. 스킨이 재질을
+  // 조금 손볼 수 있게 열어 둔다(눈은 스스로 은은히 빛나게).
+  if (top) {
+    top.material.roughness = spec.topRoughness ?? 0.95;
+    top.material.emissive.setHex(spec.topEmissive ?? 0x000000);
+    top.material.emissiveIntensity = spec.topEmissiveIntensity ?? 1;
+  }
+
   tint('deck-cliff', spec.cliff);
   tint('deck-stones', spec.stone);
   tint('deck-tufts', spec.tuft);
 
   const tufts = deck.getObjectByName('deck-tufts');
   if (tufts) tufts.visible = !spec.hideTufts;
+
+  // 가장자리 장식 — 바위냐 얼음이냐. 둘 다 만들어 두고 하나만 켠다.
+  const wantIce = spec.edge === 'ice';
+  const stones = deck.getObjectByName('deck-stones');
+  const ice = deck.getObjectByName('deck-ice');
+  if (stones) stones.visible = !wantIce;
+  if (ice) ice.visible = wantIce;
 }
