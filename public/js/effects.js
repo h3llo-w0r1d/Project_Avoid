@@ -75,8 +75,9 @@ export const findTrail = (id) => TRAILS.find((t) => t.id === id) ?? null;
 export const ARENAS = [
   {
     id: 'grass', name: '풀숲', cost: 0,
-    desc: '처음부터 쓰던 초록 들판',
-    swatchTop: 0x6f9e4a, swatchSide: 0x7a5a3a
+    // 상점 미리보기용. 실제 하늘·바닥 색을 작은 그림으로 그린다.
+    thumbSky: ['#0d1524', '#31414a', '#7a6647'],
+    swatchTop: 0x6f9e4a, swatchSide: 0x7a5a3a, thumbEdge: 'stone'
   },
   {
     id: 'snow', name: '설원', cost: 300,
@@ -91,7 +92,8 @@ export const ARENAS = [
     snowfall: true,          // 눈이 내린다(떠다니는 꽃가루를 눈송이로)
     edge: 'ice',             // 가장자리에 얼음 기둥을 더한다
     hideTufts: true,         // 눈밭에 초록 풀포기가 서 있으면 어색하다
-    swatchTop: 0xf2f8ff, swatchSide: 0x9ec4e0
+    thumbSky: ['#1d3349', '#5b81a0', '#c6dbe9'],
+    swatchTop: 0xf2f8ff, swatchSide: 0x9ec4e0, thumbEdge: 'ice'
   }
 ];
 

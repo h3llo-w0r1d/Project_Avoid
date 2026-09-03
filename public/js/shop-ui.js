@@ -17,6 +17,93 @@ const esc = (s) => String(s).replace(/[&<>"']/g,
 
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 
+// 경기장 스킨 미리보기. 색 두 개를 위아래로 칠하면 무슨 스킨인지 알 수 없어서,
+// 작은 무대 그림을 직접 그린다 — 하늘, 떠 있는 섬, 가장자리 장식까지.
+// 한 번 그려 두고 돌려 쓴다(카드를 다시 그릴 때마다 새로 그리면 깜빡인다).
+const thumbCache = new Map();
+function arenaThumb(spec) {
+  if (thumbCache.has(spec.id)) return thumbCache.get(spec.id);
+
+  const W = 320, H = 150;
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const g = cv.getContext('2d');
+
+  // 하늘
+  const sky = spec.thumbSky ?? ['#0d1524', '#31414a', '#7a6647'];
+  const grad = g.createLinearGradient(0, 0, 0, H);
+  sky.forEach((c, i) => grad.addColorStop(i / (sky.length - 1), c));
+  g.fillStyle = grad;
+  g.fillRect(0, 0, W, H);
+
+  const cx = W / 2, cy = H * 0.62, rx = W * 0.40, ry = H * 0.20;
+  const top = hex(spec.swatchTop ?? 0x6f9e4a);
+  const side = hex(spec.swatchSide ?? 0x7a5a3a);
+
+  // 아래로 좁아지는 절벽 — 섬이 떠 있는 게 보여야 무대로 읽힌다
+  g.fillStyle = side;
+  g.beginPath();
+  g.moveTo(cx - rx, cy);
+  g.quadraticCurveTo(cx - rx * 0.55, cy + ry * 3.1, cx, cy + ry * 3.4);
+  g.quadraticCurveTo(cx + rx * 0.55, cy + ry * 3.1, cx + rx, cy);
+  g.closePath();
+  g.fill();
+  // 절벽에 드리운 그늘
+  g.fillStyle = 'rgba(0, 0, 0, 0.22)';
+  g.beginPath();
+  g.moveTo(cx, cy);
+  g.quadraticCurveTo(cx + rx * 0.55, cy + ry * 3.1, cx, cy + ry * 3.4);
+  g.lineTo(cx, cy);
+  g.fill();
+
+  // 상판
+  g.fillStyle = top;
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill();
+  // 볕이 드는 쪽을 살짝 밝게
+  const lit = g.createRadialGradient(cx - rx * 0.3, cy - ry * 0.4, 0, cx, cy, rx);
+  lit.addColorStop(0, 'rgba(255,255,255,0.28)');
+  lit.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = lit;
+  g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); g.fill();
+
+  // 가장자리 장식 — 바위면 둥글게, 얼음이면 뾰족하게
+  const ice = spec.thumbEdge === 'ice';
+  for (let i = 0; i < 30; i++) {
+    const a = (i / 30) * Math.PI * 2;
+    const x = cx + Math.cos(a) * rx * 0.97;
+    const y = cy + Math.sin(a) * ry * 0.97;
+    const s2 = 0.7 + Math.random() * 0.6;
+    if (ice) {
+      const h = (5 + Math.random() * 9) * s2;
+      g.fillStyle = 'rgba(214, 236, 255, 0.95)';
+      g.beginPath();
+      g.moveTo(x - 2.2 * s2, y);
+      g.lineTo(x, y - h);
+      g.lineTo(x + 2.2 * s2, y);
+      g.closePath(); g.fill();
+    } else {
+      g.fillStyle = 'rgba(196, 188, 172, 0.95)';
+      g.beginPath();
+      g.ellipse(x, y - 1.5, 3.4 * s2, 2.6 * s2, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  // 눈 내리는 스킨이면 눈송이 몇 점
+  if (spec.snowfall) {
+    g.fillStyle = 'rgba(255,255,255,0.85)';
+    for (let i = 0; i < 26; i++) {
+      g.beginPath();
+      g.arc(Math.random() * W, Math.random() * H * 0.8, Math.random() * 1.4 + 0.6, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  const url = cv.toDataURL('image/png');
+  thumbCache.set(spec.id, url);
+  return url;
+}
+
 // 파는 항목들. kind 는 wallet 이 '산 목록/켠 것' 을 담는 칸 이름이기도 하다.
 //
 //  allowNone : '사용 안 함' 칸을 맨 앞에 둘지. 무대처럼 늘 하나는 켜져 있어야
@@ -39,8 +126,10 @@ export const CATEGORIES = [
     allowNone: false,
     free: DEFAULT_ARENA,
     items: ARENAS,
-    // 위는 바닥, 아래는 절벽. 무대를 옆에서 본 모습처럼 보이게 한다.
-    swatch: (s) => `linear-gradient(180deg, ${hex(s.swatchTop ?? s.top ?? 0x6f9e4a)} 0 58%, ${hex(s.swatchSide ?? s.cliff ?? 0x7a5a3a)} 58% 100%)`
+    // 색 막대 대신 작은 무대 그림. 이름만으로는 어떤 무대인지 모른다.
+    swatch: (s) => `center / cover no-repeat url(${arenaThumb(s)})`,
+    hideDesc: true,   // 그림이 곧 설명이라 글은 오히려 어수선하다
+    tallSwatch: true
   }
 ];
 
@@ -151,10 +240,11 @@ export class ShopUI {
           : '<span class="shop-state">누르면 사용</span>')
         : `<span class="shop-cost${afford ? '' : ' short'}">🪙 ${item.cost}${afford ? '' : ' 필요'}</span>`;
 
+    if (cat.tallSwatch) el.classList.add('tall');
     el.innerHTML = `
       ${bar}
       <span class="shop-name">${esc(item.name)}</span>
-      <span class="shop-desc">${esc(item.desc ?? '')}</span>
+      ${cat.hideDesc ? '' : `<span class="shop-desc">${esc(item.desc ?? '')}</span>`}
       ${foot}`;
 
     el.addEventListener('click', () => this.#tap(cat, item, owned, on));

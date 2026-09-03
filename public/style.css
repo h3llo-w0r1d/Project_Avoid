@@ -2923,3 +2923,10 @@ kbd {
 :root.force-landscape #board-modal .board-detail { min-height: 96px; }
 :root.force-landscape .board-list,
 :root.force-landscape .patch-list { max-height: none; }
+
+/* 경기장 스킨 카드 — 미리보기가 작은 무대 그림이라 크게 보여 준다.
+   설명 글이 빠진 자리를 그림이 대신 채운다. */
+.shop-item.tall .shop-swatch { height: 74px; box-shadow: none; }
+.shop-item.tall { gap: 7px; }
+/* 좁은 화면에선 조금 낮춘다 */
+@media (max-width: 460px) { .shop-item.tall .shop-swatch { height: 60px; } }
