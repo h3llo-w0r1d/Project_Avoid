@@ -116,6 +116,12 @@ function addArena(scene) {
   snowy.name = 'deck-snowdeco';
   snowy.visible = false;
   group.add(snowy);
+
+  // 은하수용 가장자리 — 빛나는 고리와 떠 있는 운석 조각.
+  const orbit = buildEdgeOrbit();
+  orbit.name = 'deck-orbit';
+  orbit.visible = false;
+  group.add(orbit);
   const tufts = buildGrassTufts();
   tufts.name = 'deck-tufts';
   group.add(tufts);
@@ -322,6 +328,61 @@ function buildEdgeIce() {
   return group;
 }
 
+// 은하수용 가장자리 — 빛나는 고리와 그 둘레를 떠도는 운석 조각.
+//
+// 돌이나 얼음은 우주와 안 어울린다. 그렇다고 아무것도 안 두면 무대 끝이
+// 어디인지 알 수 없어 위험하다(떨어져 죽는 게임이다). 그래서 '경계' 라는
+// 기능은 빛나는 고리가 대신 맡고, 장식은 떠 있는 조각들이 맡는다.
+//
+// 고리는 빛 자체라 조명을 안 받는 재질(MeshBasicMaterial)로 두고 가산 합성한다.
+// 어두운 무대에서 스스로 빛나 보여야 한다.
+function buildEdgeOrbit() {
+  const group = new THREE.Group();
+
+  // ── 빛나는 경계 고리. 두 겹으로 둘러 안쪽은 밝게, 바깥은 옅게 번지게.
+  for (const [r, thick, color, opacity] of [
+    [ARENA_RADIUS - 0.02, 0.055, 0xc9b6ff, 0.95],
+    [ARENA_RADIUS + 0.04, 0.16,  0x7a5ce0, 0.30]
+  ]) {
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(r, thick, 8, 96),
+      new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity,
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.02;
+    group.add(ring);
+  }
+
+  // ── 떠 있는 운석 조각. 높이를 크게 벌려 '공중에 흩어져 있다' 는 걸 보인다.
+  //    바닥에 붙여 놓으면 그냥 돌멩이로 보인다.
+  const KINDS = 2;
+  const CLUSTERS = 22;
+  for (let k = 0; k < KINDS; k++) {
+    const geo = new THREE.IcosahedronGeometry(1, 0);
+    rockify(geo, 0.42 + k * 0.1, 11 + k);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x4a4370, roughness: 0.7, metalness: 0.25, flatShading: true,
+      emissive: 0x3a2470, emissiveIntensity: 0.55
+    });
+    group.add(scatter(geo, mat, CLUSTERS,
+      (i, pos, rot, scl) => {
+        const a = ((i * KINDS + k) / (CLUSTERS * KINDS)) * Math.PI * 2 + rnd(-0.09, 0.09);
+        const rr = ARENA_RADIUS + rnd(-0.12, 0.55);
+        const size = rnd(0.10, 0.30);
+        pos.set(Math.cos(a) * rr, rnd(-0.45, 1.25), Math.sin(a) * rr);
+        rot.set(Math.random() * 6.3, Math.random() * 6.3, Math.random() * 6.3);
+        scl.set(size, size * rnd(0.6, 1.1), size * rnd(0.7, 1.2));
+      },
+      () => { const v = 0.8 + Math.random() * 0.35; return new THREE.Color(v * 0.9, v * 0.85, v); }
+    ));
+  }
+
+  return group;
+}
+
 // 설원 바닥 장식 — 눈더미와 작은 얼음조각.
 //
 // 잔디에는 풀포기가 깔려 있어 바닥이 살아 보인다. 눈밭은 그 풀포기를 감추니
@@ -521,7 +582,8 @@ function addPollen(scene) {
     const M = {
       pollen: { color: 0xffe2a0, size: 0.20, opacity: 0.32, add: true },
       snow:   { color: 0xffffff, size: 0.30, opacity: 0.75, add: false },
-      star:   { color: 0xcfd8ff, size: 0.24, opacity: 0.85, add: true }
+      // 별은 작아야 별이다. 눈송이 크기(0.30)로 두면 우주에 눈이 내린다.
+      star:   { color: 0xdce6ff, size: 0.085, opacity: 0.95, add: true }
     }[kind] ?? { color: 0xffe2a0, size: 0.20, opacity: 0.32, add: true };
     pollen.material.color.setHex(M.color);
     pollen.material.size = M.size;
@@ -688,21 +750,27 @@ export function paintArena(deck, spec = {}) {
 
   // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를
   // 함께 세워 빈틈을 메운다(바위는 spec.stone 색으로 이미 하얗게 칠해진다).
-  // 가장자리 기둥은 하나를 돌려 쓴다. 설원은 얼음, 은하수는 보랏빛 수정 —
-  // 모양은 같아도 색과 빛이 다르면 다른 물건으로 보인다.
-  const wantIce = spec.edge === 'ice' || spec.edge === 'crystal';
+  // 가장자리 장식은 스킨마다 다른 것을 켠다.
+  //   (없음) 바위만 — 풀숲
+  //   ice    얼음 기둥 + 눈더미 — 설원
+  //   orbit  빛나는 고리 + 떠 있는 운석 — 은하수(돌·얼음은 우주와 안 어울린다)
   const ice = deck.getObjectByName('deck-ice');
   const snowy = deck.getObjectByName('deck-snowdeco');
+  const orbit = deck.getObjectByName('deck-orbit');
+  const stones = deck.getObjectByName('deck-stones');
   if (ice) {
-    ice.visible = wantIce;
+    ice.visible = spec.edge === 'ice';
     ice.traverse((m) => {
       if (!m.material?.color) return;
       m.material.color.setHex(spec.edgeColor ?? 0xdcefff);
       m.material.emissive?.setHex(spec.edgeGlow ?? 0x2f5075);
     });
   }
-  // 눈더미·얼음조각은 설원만. 은하수 바닥은 무늬 자체가 볼거리라 비워 둔다.
   if (snowy) snowy.visible = spec.edge === 'ice';
+  if (orbit) orbit.visible = spec.edge === 'orbit';
+  // 바위는 무대 끝을 알려 주는 표시라 웬만하면 남긴다. 은하수처럼 대신할
+  // 표시(빛나는 고리)가 있는 스킨만 감춘다.
+  if (stones) stones.visible = !spec.hideStones;
   // 바위는 어느 스킨에서도 남는다 — 무대 끝을 알려 주는 표시라 없으면
   // 어디서 떨어지는지 가늠하기 어렵다.
 }

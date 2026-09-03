@@ -721,6 +721,44 @@ export function makeGalaxySkyTexture(w = 1024, h = 512) {
     if (x < rw) cloud(x + w, y, rw, rh, tone, alpha);
     if (x > w - rw) cloud(x - w, y, rw, rh, tone, alpha);
   }
+  // 오로라. 하늘을 가로지르는 커튼 — 성운만 있으면 안개처럼 정적이라,
+  // 흐르는 결이 하나 있어야 '살아 있는 하늘' 로 보인다.
+  // 세로로 흔들리는 곡선을 따라 위아래로 옅어지는 띠를 세운다.
+  const aurora = (baseY, height, tone, alpha, wobble) => {
+    const step = w / 90;
+    for (let x = 0; x <= w; x += step) {
+      const y = baseY
+        + Math.sin(x / w * Math.PI * 2 * wobble) * h * 0.06
+        + Math.sin(x / w * Math.PI * 2 * wobble * 2.3) * h * 0.025;
+      const gr = g.createLinearGradient(0, y - height, 0, y + height);
+      gr.addColorStop(0.0, tone.replace('A', '0'));
+      gr.addColorStop(0.5, tone.replace('A', alpha));
+      gr.addColorStop(1.0, tone.replace('A', '0'));
+      g.fillStyle = gr;
+      g.fillRect(x - step * 0.6, y - height, step * 1.6, height * 2);
+    }
+  };
+  aurora(h * 0.30, h * 0.16, 'rgba(90, 230, 190, A)', '0.16', 1.3);
+  aurora(h * 0.40, h * 0.12, 'rgba(120, 200, 255, A)', '0.12', 1.9);
+  aurora(h * 0.24, h * 0.09, 'rgba(190, 140, 255, A)', '0.10', 0.9);
+
+  // 멀리 떠 있는 행성 둘. 크기와 색을 달리해 거리감을 준다.
+  const planet = (x, y, r, base, ring) => {
+    const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
+    gr.addColorStop(0, base[0]);
+    gr.addColorStop(1, base[1]);
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    if (!ring) return;
+    g.save();
+    g.translate(x, y); g.rotate(-0.4); g.scale(1, 0.22);
+    g.strokeStyle = ring; g.lineWidth = r * 0.16;
+    g.beginPath(); g.arc(0, 0, r * 1.7, 0, Math.PI * 2); g.stroke();
+    g.restore();
+  };
+  planet(w * 0.20, h * 0.60, h * 0.075, ['#c8a4e8', '#5b3a86'], 'rgba(220, 200, 255, 0.35)');
+  planet(w * 0.74, h * 0.24, h * 0.040, ['#9fd4e8', '#2f5f7a'], null);
+
   // 별
   for (let i = 0; i < 2600; i++) {
     g.globalAlpha = rnd(0.2, 0.95);

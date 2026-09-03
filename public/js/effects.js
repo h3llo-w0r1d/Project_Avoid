@@ -107,8 +107,9 @@ export const ARENAS = [
     sky: 'galaxy',
     fog: 0x140f2e,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
     cliff: 0x5b4a86,         // 절벽은 보랏빛 암석
-    edge: 'crystal',         // 가장자리는 빛나는 수정 기둥
-    edgeColor: 0xd6c4ff, edgeGlow: 0x4a2a8a,
+    // 돌·고드름은 우주와 안 어울린다. 빛나는 경계 고리와 떠 있는 운석으로.
+    edge: 'orbit',
+    hideStones: true,
     particles: 'star',       // 별가루가 떠오른다
     hideTufts: true,
     // 어두운 무대라 상판이 그냥 두면 새까맣게 죽는다. 은은히 빛나게.
