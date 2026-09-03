@@ -2785,3 +2785,52 @@ kbd {
 .shop-hint { margin-top: 10px; }
 :root.force-landscape .shop-tabs { gap: 6px; margin-top: 10px; }
 :root.force-landscape .shop-tabs button { padding: 6px 12px; font-size: 12px; }
+
+/* ---------- 세로가 짧은 가로 화면 (안드로이드 폰을 눕혔을 때) ---------- */
+/*
+   PC 배치(왼쪽 메뉴 · 가운데 패널 · 왼쪽 아래 탑)는 그대로 두고 크기만 줄인다.
+   문제는 높이다 — 갤럭시를 눕히면 CSS 로 약 915×412 인데, 타이틀 패널이 한 줄로
+   서면 570px 이 넘어 화면 밖으로 넘치고, 그 바람에 메뉴·공지·탑 버튼이 죄다
+   패널 위로 겹쳐 보인다.
+
+   아이폰용 압축 규칙(:root.force-landscape)이 이미 있지만 그건 '화면을 돌린'
+   상태 전용이다. 안드로이드는 진짜 가로라 그 클래스가 안 붙는다. 그래서 화면
+   생김새(가로 + 낮은 높이)로만 판정하는 규칙을 따로 둔다. 데스크톱은 보통
+   520px 보다 높아 안 걸리고, 아이폰 강제가로는 뷰포트가 세로라 안 걸린다. */
+@media (orientation: landscape) and (max-height: 520px) {
+  /* 왼쪽에 메뉴 자리를 비워 두고, 위아래 여백을 줄인다 */
+  .screen { padding: 44px 14px 10px 150px; gap: 10px; }
+
+  #side-menu { left: 10px; padding-left: 14px; gap: 4px; }
+  #side-menu button { padding: 6px 9px; gap: 8px; font-size: 13px; }
+  #side-menu .sm-ico { font-size: 15px; }
+
+  /* 공지는 위에 바짝, 한 줄로 */
+  #notice-banner {
+    top: calc(6px + env(safe-area-inset-top));
+    max-width: 62vw; padding: 5px 14px; font-size: 11px;
+  }
+
+  /* 패널을 두 칸으로 접어 높이를 반으로 줄인다. 한 칸으로 두면 어떤 크기를
+     써도 412px 안에 안 들어간다. */
+  #title-screen .panel {
+    width: min(600px, 100%);
+    padding: 12px 16px; border-radius: 14px;
+    column-count: 2; column-gap: 18px;
+  }
+  #title-screen .panel > * { break-inside: avoid; }
+  #title-screen .logo { font-size: 26px; column-span: all; }
+  #title-screen .tagline { margin-top: 4px; font-size: 11px; line-height: 1.35; }
+  #title-screen button { margin-top: 7px; padding: 9px; font-size: 13px; border-radius: 10px; }
+  #title-screen .field { margin-top: 8px; }
+  #title-screen .account-row { margin-top: 4px; }
+  #title-screen .bottom-row { margin-top: 8px; padding-top: 8px; gap: 6px; flex-direction: column; }
+  #title-screen .controls div { font-size: 10px; }
+  #title-screen .voice-panel { width: 100%; padding: 7px; }
+  #title-screen .install-btn { margin-top: 7px; padding: 8px; font-size: 12px; }
+  #title-screen .legal-links { margin-top: 7px; font-size: 11px; }
+
+  /* 탑 버튼은 메뉴 아래 구석으로. 작게 줄여야 패널과 안 부딪힌다. */
+  #tower-btn { left: 8px; bottom: 8px; width: 78px; height: 78px; }
+  .tower-label { font-size: 10.5px; }
+}
