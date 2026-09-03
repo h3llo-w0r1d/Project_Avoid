@@ -28,35 +28,35 @@ export const TRAILS = [
     colors: [0xfff6c8, 0xffd76a, 0xffffff]
   },
   {
-    id: 'bubble', name: '비눗방울', cost: 200,
+    id: 'bubble', name: '비눗방울', cost: 150,
     desc: '동글동글한 비눗방울이 떠올라요',
     shape: 'ring', size: 0.58, rate: 26, life: 1.60,
     rise: 1.5, spread: 0.22, gravity: 0.35,
     colors: [0x9fe6ff, 0xc9f2ff, 0x7ec8ff]
   },
   {
-    id: 'flame', name: '불꽃', cost: 300,
+    id: 'flame', name: '불꽃', cost: 150,
     desc: '지나간 자리에 불티가 흩날려요',
     shape: 'dot', size: 0.48, rate: 64, life: 0.72,
     rise: 1.5, spread: 0.24, gravity: 0.6,
     colors: [0xffb03a, 0xff5e2a, 0xffe08a]
   },
   {
-    id: 'snow', name: '눈꽃', cost: 250,
+    id: 'snow', name: '눈꽃', cost: 150,
     desc: '차가운 눈송이가 천천히 내려앉아요',
     shape: 'star', size: 0.42, rate: 32, life: 2.0,
     rise: 0.5, spread: 0.42, gravity: -0.55,
     colors: [0xffffff, 0xd6f0ff, 0xaadcff]
   },
   {
-    id: 'heart', name: '하트', cost: 350,
+    id: 'heart', name: '하트', cost: 150,
     desc: '작은 하트가 퐁퐁 피어나요',
     shape: 'heart', size: 0.56, rate: 24, life: 1.5,
     rise: 1.3, spread: 0.20, gravity: 0.25,
     colors: [0xff8fc4, 0xff5f9e, 0xffd0e4]
   },
   {
-    id: 'rainbow', name: '무지개', cost: 500,
+    id: 'rainbow', name: '무지개', cost: 150,
     desc: '일곱 빛깔이 차례로 흘러나와요',
     shape: 'dot', size: 0.50, rate: 58, life: 1.15,
     rise: 1.0, spread: 0.26, gravity: 0.1,
