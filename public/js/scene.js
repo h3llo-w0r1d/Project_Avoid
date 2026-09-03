@@ -3,7 +3,7 @@ import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
   makeGrassTexture, makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture,
-  makeSnowTexture, makeSnowSkyTexture
+  makeSnowTexture, makeSnowSkyTexture, makeGalaxyTexture, makeGalaxySkyTexture
 } from './textures.js';
 
 // a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
@@ -510,14 +510,23 @@ function addPollen(scene) {
     geo.attributes.position.needsUpdate = true;
   };
 
-  // 꽃가루 ↔ 눈송이 전환. 색·크기·진하기까지 바꿔야 눈처럼 보인다.
-  pollen.userData.setSnow = (on) => {
-    pollen.userData.snow = on;
-    pollen.material.color.setHex(on ? 0xffffff : 0xffe2a0);
-    pollen.material.size = on ? 0.30 : 0.2;
-    pollen.material.opacity = on ? 0.75 : 0.32;
-    // 눈은 빛나는 게 아니라 하얀 알갱이다. 가산 합성이면 하늘에 녹아 사라진다.
-    pollen.material.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending;
+  // 떠다니는 입자의 성격을 바꾼다. 색·크기·진하기·합성 방식까지 같이 바꿔야
+  // 다른 물질로 보인다.
+  //   pollen — 금빛 꽃가루가 천천히 떠오른다(기본)
+  //   snow   — 흰 눈송이가 내린다. 가산 합성이면 흰 하늘에 녹아 사라지므로 일반 합성.
+  //   star   — 푸른 별가루가 떠오른다. 어두운 무대라 가산 합성으로 반짝이게.
+  pollen.userData.setMode = (kind) => {
+    const snow = kind === 'snow';
+    pollen.userData.snow = snow;
+    const M = {
+      pollen: { color: 0xffe2a0, size: 0.20, opacity: 0.32, add: true },
+      snow:   { color: 0xffffff, size: 0.30, opacity: 0.75, add: false },
+      star:   { color: 0xcfd8ff, size: 0.24, opacity: 0.85, add: true }
+    }[kind] ?? { color: 0xffe2a0, size: 0.20, opacity: 0.32, add: true };
+    pollen.material.color.setHex(M.color);
+    pollen.material.size = M.size;
+    pollen.material.opacity = M.opacity;
+    pollen.material.blending = M.add ? THREE.AdditiveBlending : THREE.NormalBlending;
     pollen.material.needsUpdate = true;
   };
 
@@ -597,13 +606,19 @@ const topTexCache = new Map();
 const skyTexCache = new Map();
 function skyTexture(kind) {
   if (!skyTexCache.has(kind)) {
-    skyTexCache.set(kind, kind === 'snow' ? makeSnowSkyTexture() : makeSkyTexture());
+    skyTexCache.set(kind,
+      kind === 'snow' ? makeSnowSkyTexture()
+        : kind === 'galaxy' ? makeGalaxySkyTexture()
+        : makeSkyTexture());
   }
   return skyTexCache.get(kind);
 }
 function topTexture(kind) {
   if (!topTexCache.has(kind)) {
-    topTexCache.set(kind, kind === 'snow' ? makeSnowTexture() : makeGrassTexture());
+    topTexCache.set(kind,
+      kind === 'snow' ? makeSnowTexture()
+        : kind === 'galaxy' ? makeGalaxyTexture()
+        : makeGrassTexture());
   }
   return topTexCache.get(kind);
 }
@@ -667,17 +682,27 @@ export function paintArena(deck, spec = {}) {
       }
     }
     if (scene.fog) scene.fog.color.setHex(spec.fog ?? COLORS.haze);
-    // 떠다니는 입자도 스킨에 맞춘다 — 눈밭엔 꽃가루 대신 눈이 내린다
-    scene.getObjectByName('pollen')?.userData.setSnow?.(!!spec.snowfall);
+    // 떠다니는 입자도 스킨에 맞춘다 — 눈밭엔 눈이 내리고, 은하수엔 별가루가 뜬다
+    scene.getObjectByName('pollen')?.userData.setMode?.(spec.particles ?? 'pollen');
   }
 
   // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를
   // 함께 세워 빈틈을 메운다(바위는 spec.stone 색으로 이미 하얗게 칠해진다).
-  const wantIce = spec.edge === 'ice';
+  // 가장자리 기둥은 하나를 돌려 쓴다. 설원은 얼음, 은하수는 보랏빛 수정 —
+  // 모양은 같아도 색과 빛이 다르면 다른 물건으로 보인다.
+  const wantIce = spec.edge === 'ice' || spec.edge === 'crystal';
   const ice = deck.getObjectByName('deck-ice');
   const snowy = deck.getObjectByName('deck-snowdeco');
-  if (ice) ice.visible = wantIce;
-  if (snowy) snowy.visible = wantIce;
+  if (ice) {
+    ice.visible = wantIce;
+    ice.traverse((m) => {
+      if (!m.material?.color) return;
+      m.material.color.setHex(spec.edgeColor ?? 0xdcefff);
+      m.material.emissive?.setHex(spec.edgeGlow ?? 0x2f5075);
+    });
+  }
+  // 눈더미·얼음조각은 설원만. 은하수 바닥은 무늬 자체가 볼거리라 비워 둔다.
+  if (snowy) snowy.visible = spec.edge === 'ice';
   // 바위는 어느 스킨에서도 남는다 — 무대 끝을 알려 주는 표시라 없으면
   // 어디서 떨어지는지 가늠하기 어렵다.
 }

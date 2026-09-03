@@ -96,6 +96,26 @@ export const ARENAS = [
     thumbSky: ['#1d3349', '#5b81a0', '#c6dbe9'],
     swatchTop: 0xf2f8ff, swatchSide: 0x9ec4e0, thumbEdge: 'ice'
   }
+,
+  {
+    // 은하수 — 코인으로 못 사고 오직 룰렛(1%)으로만 얻는 한정 스킨.
+    // 가나디라고라와 같은 급이다.
+    id: 'galaxy', name: '은하수', cost: 0,
+    rouletteOnly: true,
+    desc: '밟고 선 곳이 밤하늘. 룰렛으로만 얻을 수 있어요',
+    topMap: 'galaxy',
+    sky: 'galaxy',
+    fog: 0x140f2e,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
+    cliff: 0x5b4a86,         // 절벽은 보랏빛 암석
+    edge: 'crystal',         // 가장자리는 빛나는 수정 기둥
+    edgeColor: 0xd6c4ff, edgeGlow: 0x4a2a8a,
+    particles: 'star',       // 별가루가 떠오른다
+    hideTufts: true,
+    // 어두운 무대라 상판이 그냥 두면 새까맣게 죽는다. 은은히 빛나게.
+    topEmissive: 0x231a4a, topEmissiveIntensity: 0.5, topRoughness: 0.85,
+    thumbSky: ['#07061a', '#241a44', '#3a2452'],
+    swatchTop: 0x2b2050, swatchSide: 0x5b4a86, thumbEdge: 'ice'
+  }
 ];
 
 export const findArena = (id) => ARENAS.find((a) => a.id === id) ?? null;

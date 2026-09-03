@@ -180,7 +180,11 @@ export class ShopUI {
   }
 
   // 이 항목에서 이 물건을 가지고 있나. 공짜 기본값과 관리자는 늘 가진 것으로 본다.
+  //
+  // 룰렛 전용은 값이 0 이지만 '공짜' 가 아니다 — 값을 매기지 않았을 뿐,
+  // 룰렛으로 따야 가진 것이 된다. 여기서 걸러 주지 않으면 누구나 쓸 수 있다.
   #owns(cat, item) {
+    if (item.rouletteOnly) return this.isAdmin() || wallet.isOwnedIn(cat.kind, item.id);
     return this.isAdmin() || item.cost === 0 || item.id === cat.free
       || wallet.isOwnedIn(cat.kind, item.id);
   }
@@ -240,7 +244,10 @@ export class ShopUI {
         ? (item.plain
           ? '<span class="shop-state dim">누르면 끕니다</span>'
           : '<span class="shop-state">누르면 사용</span>')
-        : `<span class="shop-cost${afford ? '' : ' short'}">🪙 ${item.cost}${afford ? '' : ' 필요'}</span>`;
+        // 룰렛 전용은 값을 매기지 않는다 — 코인으로는 살 수 없다.
+        : item.rouletteOnly
+          ? '<span class="shop-cost roul">🎰 룰렛 전용</span>'
+          : `<span class="shop-cost${afford ? '' : ' short'}">🪙 ${item.cost}${afford ? '' : ' 필요'}</span>`;
 
     if (cat.tallSwatch) el.classList.add('tall');
     el.innerHTML = `
@@ -263,6 +270,8 @@ export class ShopUI {
       this.paint();
       return;
     }
+    // 룰렛 전용은 구매창을 띄우지 않는다. 코인이 아무리 많아도 못 산다.
+    if (item.rouletteOnly) { this.#toast('룰렛에서만 얻을 수 있어요'); return; }
     this.#confirmBuy(cat, item);
   }
 

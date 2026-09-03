@@ -2980,3 +2980,6 @@ kbd {
 :root.force-landscape #rank-modal .modal-head h2 { font-size: 17px; }
 :root.force-landscape .rank-tabs button { padding: 6px 12px; font-size: 12.5px; }
 :root.force-landscape #rank-note { margin-top: 6px; font-size: 11px; }
+
+/* 룰렛으로만 얻는 항목 — 값 대신 이걸 띄운다 */
+.shop-cost.roul { color: #c9b6ff; }

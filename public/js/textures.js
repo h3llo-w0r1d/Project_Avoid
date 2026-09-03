@@ -558,3 +558,180 @@ export function makeSnowTexture(size = 1536) {
   tex.anisotropy = 16;
   return tex;
 }
+
+// ---------------------------------------------------------------- 은하수
+
+// 은하수 상판 — 밟고 선 곳이 밤하늘이다.
+//
+// 별만 흩뿌리면 검은 종이에 소금 뿌린 것처럼 보인다. 실제 은하 사진이
+// 그렇게 안 보이는 건 (1) 성운의 색 안개가 크게 깔려 있고 (2) 별이 한쪽으로
+// 몰린 띠가 가로지르고 (3) 밝기가 제각각인 별이 섞여 있기 때문이다.
+// 셋을 차례로 얹는다.
+//
+// 어두워야 붉은 전기선이 잘 보인다. 그래서 성운 색은 진하되 밝기는 낮게 쓴다.
+export function makeGalaxyTexture(size = 1536) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const g = cv.getContext('2d');
+  const c = size / 2;
+  const R = size / 2;
+
+  g.fillStyle = '#0a0a1c';
+  g.fillRect(0, 0, size, size);
+
+  // ── 1) 성운. 보라·청록·자주를 크게 겹쳐 깊이를 만든다.
+  const NEBULA = ['rgba(96, 54, 168, A)', 'rgba(38, 96, 170, A)',
+                  'rgba(150, 48, 132, A)', 'rgba(30, 120, 140, A)'];
+  for (let i = 0; i < 46; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * R;
+    const rad = rnd(size * 0.10, size * 0.30);
+    const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
+    const tone = NEBULA[(Math.random() * NEBULA.length) | 0];
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, tone.replace('A', rnd(0.10, 0.26).toFixed(2)));
+    gr.addColorStop(1, tone.replace('A', '0'));
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+  }
+
+  // ── 2) 은하 띠. 한쪽으로 비스듬히 가로지르는 밝은 강.
+  //     띠를 따라 별을 몰아 심어야 '은하수' 로 읽힌다.
+  const BAND = 0.7;                    // 띠 방향(라디안)
+  const bandAt = (t) => {              // t: -1~1, 띠 위의 한 점
+    const s = t * R * 1.2;
+    return [c + Math.cos(BAND) * s, c + Math.sin(BAND) * s];
+  };
+  for (let i = 0; i < 90; i++) {
+    const [bx, by] = bandAt(rnd(-1, 1));
+    const rad = rnd(size * 0.04, size * 0.13);
+    const off = rnd(-size * 0.06, size * 0.06);
+    const x = bx - Math.sin(BAND) * off, y = by + Math.cos(BAND) * off;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(190, 200, 255, ${rnd(0.05, 0.12)})`);
+    gr.addColorStop(1, 'rgba(190, 200, 255, 0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+  }
+
+  // ── 3) 별. 대부분은 아주 작고, 몇 개만 크고 밝다.
+  //     띠 근처에 60% 를 몰아 심는다.
+  const star = (x, y, rr, alpha, tint) => {
+    g.globalAlpha = alpha;
+    g.fillStyle = tint;
+    g.beginPath(); g.arc(x, y, rr, 0, Math.PI * 2); g.fill();
+  };
+  const TINT = ['#ffffff', '#dfe6ff', '#ffe9c9', '#cfe6ff', '#ffd9e6'];
+  for (let i = 0; i < 22000; i++) {
+    let x, y;
+    if (Math.random() < 0.6) {
+      const [bx, by] = bandAt(rnd(-1, 1));
+      const off = rnd(-size * 0.10, size * 0.10);
+      x = bx - Math.sin(BAND) * off; y = by + Math.cos(BAND) * off;
+    } else {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random()) * R;
+      x = c + Math.cos(a) * r; y = c + Math.sin(a) * r;
+    }
+    star(x, y, rnd(size * 0.0004, size * 0.0013), rnd(0.25, 0.95),
+      TINT[(Math.random() * TINT.length) | 0]);
+  }
+  // 큰 별 몇 개 — 십자 빛살을 달아 눈에 띄게
+  g.globalAlpha = 1;
+  for (let i = 0; i < 60; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * R * 0.95;
+    const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
+    const s = rnd(size * 0.0016, size * 0.0034);
+    const gr = g.createRadialGradient(x, y, 0, x, y, s * 5);
+    gr.addColorStop(0, 'rgba(255,255,255,0.9)');
+    gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, s * 5, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.55)';
+    g.lineWidth = s * 0.5;
+    g.beginPath();
+    g.moveTo(x - s * 4, y); g.lineTo(x + s * 4, y);
+    g.moveTo(x, y - s * 4); g.lineTo(x, y + s * 4);
+    g.stroke();
+  }
+  g.globalAlpha = 1;
+
+  // ── 4) 거리 띠. 다른 스킨과 같은 역할 — 중심에서 얼마나 떨어졌는지 잰다.
+  //     은하수에선 빛나는 고리로 보이게 한다.
+  g.save();
+  g.translate(c, c);
+  for (const rr of [0.32, 0.58, 0.80]) {
+    g.beginPath();
+    g.arc(0, 0, R * rr, 0, Math.PI * 2);
+    g.strokeStyle = 'rgba(150, 170, 255, 0.13)';
+    g.lineWidth = size * 0.010;
+    g.stroke();
+  }
+
+  // ── 5) 가장자리 — 빛이 잦아들며 어둠으로
+  const bandIn = R * 0.9;
+  g.beginPath();
+  g.arc(0, 0, R, 0, Math.PI * 2);
+  g.arc(0, 0, bandIn, 0, Math.PI * 2, true);
+  g.clip();
+  const edge = g.createRadialGradient(0, 0, bandIn, 0, 0, R);
+  edge.addColorStop(0, 'rgba(6, 6, 18, 0)');
+  edge.addColorStop(1, 'rgba(6, 6, 18, 0.9)');
+  g.fillStyle = edge;
+  g.fillRect(-R, -R, size, size);
+  g.restore();
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 16;
+  return tex;
+}
+
+// 은하수 하늘 — 무대와 이어지도록 같은 성운을 하늘에도 깐다.
+// 무대만 우주고 하늘은 평범하면 '바닥에 사진을 깔아 둔' 것처럼 보인다.
+export function makeGalaxySkyTexture(w = 1024, h = 512) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  const g = cv.getContext('2d');
+
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0.00, '#07061a');
+  grad.addColorStop(0.45, '#141034');
+  grad.addColorStop(0.78, '#241a44');
+  grad.addColorStop(1.00, '#3a2452');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, w, h);
+
+  const cloud = (x, y, rw, rh, tone, alpha) => {
+    const gr = g.createRadialGradient(x, y, 0, x, y, rw);
+    gr.addColorStop(0, tone.replace('A', alpha));
+    gr.addColorStop(1, tone.replace('A', '0'));
+    g.save(); g.translate(x, y); g.scale(1, rh / rw);
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rw, 0, Math.PI * 2); g.fill();
+    g.restore();
+  };
+  const TONES = ['rgba(120, 60, 200, A)', 'rgba(40, 100, 190, A)', 'rgba(170, 50, 150, A)'];
+  for (let i = 0; i < 40; i++) {
+    const x = Math.random() * w, y = rnd(h * 0.05, h * 0.9);
+    const rw = rnd(w * 0.08, w * 0.24), rh = rw * rnd(0.18, 0.5);
+    const tone = TONES[(Math.random() * TONES.length) | 0];
+    const alpha = rnd(0.06, 0.16).toFixed(2);
+    cloud(x, y, rw, rh, tone, alpha);
+    if (x < rw) cloud(x + w, y, rw, rh, tone, alpha);
+    if (x > w - rw) cloud(x - w, y, rw, rh, tone, alpha);
+  }
+  // 별
+  for (let i = 0; i < 2600; i++) {
+    g.globalAlpha = rnd(0.2, 0.95);
+    g.fillStyle = ['#ffffff', '#dfe6ff', '#ffe9c9'][(Math.random() * 3) | 0];
+    g.beginPath();
+    g.arc(Math.random() * w, Math.random() * h, rnd(0.4, 1.5), 0, Math.PI * 2);
+    g.fill();
+  }
+  g.globalAlpha = 1;
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
