@@ -115,6 +115,8 @@ export const CATEGORIES = [
     id: 'trail', kind: 'trail', name: '발자국 효과',
     hint: '움직일 때 발밑에 남는 효과예요 · 한 번에 하나만 켤 수 있어요',
     allowNone: true,
+    // 카드에는 이름과 색만. 설명은 살 때 확인창에서 보여 준다.
+    hideDesc: true,
     items: TRAILS,
     swatch: (s) => s.rainbow
       ? 'linear-gradient(90deg,#ff5f6d,#ffc371,#7ee8a2,#48c6ef,#b18cff)'
