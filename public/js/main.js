@@ -168,9 +168,18 @@ async function onAuthChange() {
   syncCharacterForAuth();
 }
 
+// 판이 도는 중인가. 이때 선물 창을 띄우면 화면을 가려서 그대로 죽는다.
+// (실제로 그렇게 죽었다는 제보가 있었다.) 다시보기도 화면을 다 쓰므로 같이 막는다.
+function inPlay() {
+  return state.phase === 'playing' || state.phase === 'countdown'
+    || state.mode === 'replay';
+}
+
 // 대기 코인을 한 번 받아 지갑에 넣고, 있으면 선물 팝업(관리자 멘트 포함)을 띄운다.
+// 판 중이면 아무것도 안 한다 — 서버에 그대로 남아 있다가, 판이 끝나면
+// finishGame/goHome 이 다시 불러 그때 받는다.
 async function claimCoinsNow() {
-  if (!auth.signedIn) return;
+  if (!auth.signedIn || inPlay()) return;
   try {
     const { amount, message } = await api.claimCoins();
     if (amount > 0) {
@@ -1614,6 +1623,7 @@ function goHome() {
   ui.showTitle();
   renderNotice();
   refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
+  claimCoinsNow();          // 판 중이라 미뤄 뒀던 선물이 있으면 여기서 받는다
 }
 
 // ── 다시보기 재생 ──────────────────────────────────────────
@@ -2090,6 +2100,9 @@ async function finishGame() {
     ui.setSubmitState(`기록 등록 실패: ${err.message}`, true);
     refreshLeaderboard(board);
   }
+
+  // 판 중이라 미뤄 뒀던 관리자 선물이 있으면 지금 받는다. 결과 화면 위로 뜬다.
+  claimCoinsNow();
 }
 
 // 랭킹은 세 가지다. 오래 버티기는 기록 저장소에서, 다승·승률은
@@ -2183,6 +2196,7 @@ function leaveVersus() {
   ui.showTitle();
   renderNotice();
   refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
+  claimCoinsNow();          // 판 중이라 미뤄 뒀던 선물이 있으면 여기서 받는다
 }
 
 function hideRival() {
