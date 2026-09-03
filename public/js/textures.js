@@ -855,16 +855,54 @@ export function makePlanetTexture(kind, tint, size = 512) {
       g.beginPath(); g.arc(x, y, cr * 0.78, 0, Math.PI * 2); g.fill();
     }
   } else {
-    // 얼음 행성 — 소용돌이치는 구름
-    for (let i = 0; i < 34; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const r = Math.sqrt(Math.random()) * R;
-      const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
-      const rw = rnd(R * 0.12, R * 0.5);
-      g.globalAlpha = rnd(0.16, 0.42);
-      g.fillStyle = Math.random() < 0.5 ? mix(tint, light, 0.5) : mix(tint, dark, 0.3);
-      g.save(); g.translate(x, y); g.rotate(rnd(-0.6, 0.6)); g.scale(1, rnd(0.16, 0.34));
+    // 얼음 행성. 처음엔 납작한 타원을 아무 데나 흩뿌렸더니 얼룩덜룩할 뿐
+    // 행성으로 안 보였다. 진짜 행성은 (1) 구름이 위도를 따라 가로로 흐르고
+    // (2) 극지방에 흰 모자가 있고 (3) 소용돌이가 몇 개 도드라진다.
+
+    // 위도를 따라 흐르는 구름 띠. 가운데(적도)일수록 길게 늘어난다.
+    for (let i = 0; i < 120; i++) {
+      const ny = rnd(-1, 1);                       // -1(남극) ~ 1(북극)
+      const y = c + ny * R;
+      const span = Math.sqrt(Math.max(0, 1 - ny * ny));   // 그 위도에서의 반지름
+      const x = c + rnd(-1, 1) * R * span;
+      const rw = R * span * rnd(0.10, 0.42);
+      const rh = R * rnd(0.012, 0.038);
+      g.globalAlpha = rnd(0.14, 0.4);
+      g.fillStyle = Math.random() < 0.45 ? mix(tint, light, rnd(0.35, 0.7))
+                                          : mix(tint, dark, rnd(0.15, 0.4));
+      g.save(); g.translate(x, y); g.scale(1, rh / rw);
       g.beginPath(); g.arc(0, 0, rw, 0, Math.PI * 2); g.fill();
+      g.restore();
+    }
+
+    // 극지방의 흰 모자. 위아래가 밝아야 축이 보이고 구처럼 읽힌다.
+    for (const s2 of [-1, 1]) {
+      const gr = g.createRadialGradient(c, c + s2 * R * 0.95, 0, c, c + s2 * R * 0.95, R * 0.62);
+      gr.addColorStop(0, 'rgba(255,255,255,0.55)');
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.globalAlpha = 1;
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(c, c + s2 * R * 0.95, R * 0.62, 0, Math.PI * 2); g.fill();
+    }
+
+    // 소용돌이 두엇 — 시선이 머물 곳
+    for (let i = 0; i < 3; i++) {
+      const ny = rnd(-0.55, 0.55);
+      const span = Math.sqrt(Math.max(0, 1 - ny * ny));
+      const x = c + rnd(-0.6, 0.6) * R * span, y = c + ny * R;
+      const rw = R * rnd(0.10, 0.20);
+      g.globalAlpha = 0.5;
+      g.strokeStyle = mix(tint, light, 0.75);
+      g.lineWidth = R * 0.022;
+      g.save(); g.translate(x, y); g.scale(1, 0.42);
+      // 안쪽으로 감기는 나선
+      g.beginPath();
+      for (let t = 0; t < Math.PI * 3.2; t += 0.16) {
+        const rr = rw * (1 - t / (Math.PI * 3.6));
+        const px = Math.cos(t) * rr, py = Math.sin(t) * rr;
+        t === 0 ? g.moveTo(px, py) : g.lineTo(px, py);
+      }
+      g.stroke();
       g.restore();
     }
   }

@@ -427,6 +427,35 @@ function buildEdgeOrbit() {
     ));
   }
 
+  // ── 무대 아래 소행성 무리. 화면 아래쪽이 휑해서 채운다.
+  //
+  // 큰 행성을 아래에 두는 것도 해 봤는데, 세로 화면에서는 그게 무대를 가려
+  // 버린다(가로에서 알맞은 크기가 세로에선 화면을 덮는다). 게임을 가리는 건
+  // 안 되므로 작은 조각을 여럿 흩는 쪽으로 갔다. 조각은 어느 비율에서도
+  // 작게 보이고, 전부 무대 아래(y < -4)라 판정 높이(0.38~0.82)와 무관하다.
+  const DEBRIS = 3;
+  for (let k = 0; k < DEBRIS; k++) {
+    const geo = new THREE.IcosahedronGeometry(1, 0);
+    rockify(geo, 0.5, 21 + k);
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x3e3860, roughness: 0.85, metalness: 0.15, flatShading: true,
+      emissive: 0x2a1c52, emissiveIntensity: 0.5
+    });
+    group.add(scatter(geo, mat, 26,
+      (i, pos, rot, scl) => {
+        const a = Math.random() * Math.PI * 2;
+        // 아래로 갈수록 넓게 퍼지게 — 깔때기처럼 흩어져야 깊이가 보인다
+        const depth = rnd(0.1, 1);
+        const r = ARENA_RADIUS * (0.35 + depth * 2.1) * rnd(0.7, 1.15);
+        const size = rnd(0.18, 0.95) * (0.6 + depth * 0.8);
+        pos.set(Math.cos(a) * r, -4 - depth * 30, Math.sin(a) * r);
+        rot.set(Math.random() * 6.3, Math.random() * 6.3, Math.random() * 6.3);
+        scl.set(size, size * rnd(0.6, 1.1), size * rnd(0.7, 1.2));
+      },
+      () => { const v = 0.7 + Math.random() * 0.45; return new THREE.Color(v * 0.92, v * 0.86, v); }
+    ));
+  }
+
   return group;
 }
 
