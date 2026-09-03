@@ -8,7 +8,9 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 
 // CircleGeometry 의 기본 UV 는 원이 정사각형 텍스처에 내접하도록 잡히므로,
 // 캔버스 중심을 무대 중심으로 두고 극좌표로 그리면 그대로 맞아떨어진다.
-export function makeGrassTexture(size = 1024) {
+// 크기를 키운 만큼 풀잎도 늘려야 한다. 넓은 캔버스에 같은 수를 그리면
+// 오히려 듬성듬성해진다.
+export function makeGrassTexture(size = 1536) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = size;
   const g = cv.getContext('2d');
@@ -36,25 +38,54 @@ export function makeGrassTexture(size = 1024) {
     g.fill();
   }
 
-  // 풀잎 — 짧은 선을 잔뜩 그어 결을 만든다
+  // 풀잎 — 짧은 선을 잔뜩 그어 결을 만든다.
+  //
+  // 방향을 완전히 무작위로 두면 결이 안 생겨 잔디가 '노이즈' 처럼 보인다.
+  // 자리마다 완만하게 도는 바람 방향을 정하고, 거기서 조금씩만 흩어 놓으면
+  // 실제 풀밭처럼 결이 흐른다.
   g.lineCap = 'round';
-  for (let i = 0; i < 9000; i++) {
+  for (let i = 0; i < 26000; i++) {
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * R;
     const x = c + Math.cos(a) * r;
     const y = c + Math.sin(a) * r;
-    const len = rnd(size * 0.004, size * 0.012);
-    const dir = rnd(0, Math.PI * 2);
-    const shade = ['#598f4c', '#2f5530', '#6aa257', '#456f3d'][(Math.random() * 4) | 0];
+    // 길이를 넓게 벌린다 — 짧은 잔풀과 웃자란 풀이 섞여야 깊이가 생긴다
+    const long = Math.random() < 0.18;
+    const len = long ? rnd(size * 0.010, size * 0.020) : rnd(size * 0.003, size * 0.009);
+    // 바람 결: 자리에 따라 천천히 도는 기준 방향 + 약간의 흩어짐
+    const wind = Math.sin(x * 0.004) + Math.cos(y * 0.0033) * 1.2;
+    const dir = wind + rnd(-0.55, 0.55);
+    const shade = ['#598f4c', '#2f5530', '#6aa257', '#456f3d', '#7ab55f', '#24421f'][(Math.random() * 6) | 0];
     g.strokeStyle = shade;
-    g.globalAlpha = rnd(0.25, 0.8);
-    g.lineWidth = rnd(size * 0.0012, size * 0.0028);
+    g.globalAlpha = rnd(0.22, 0.85);
+    g.lineWidth = rnd(size * 0.0009, size * 0.0022);
+    // 곧은 선 대신 살짝 휜다. 풀은 곧게 서 있지 않다.
+    const bend = rnd(-0.5, 0.5);
     g.beginPath();
     g.moveTo(x, y);
-    g.lineTo(x + Math.cos(dir) * len, y + Math.sin(dir) * len);
+    g.quadraticCurveTo(
+      x + Math.cos(dir + bend) * len * 0.55, y + Math.sin(dir + bend) * len * 0.55,
+      x + Math.cos(dir) * len, y + Math.sin(dir) * len
+    );
     g.stroke();
   }
   g.globalAlpha = 1;
+
+  // 볕이 드는 곳 — 넓고 아주 옅은 밝은 얼룩. 색 얼룩(어두운 쪽)만 있으면
+  // 전체가 가라앉아 보인다.
+  for (let i = 0; i < 26; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * R * 0.85;
+    const rad = rnd(size * 0.08, size * 0.20);
+    const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
+    const grad = g.createRadialGradient(x, y, 0, x, y, rad);
+    grad.addColorStop(0, 'rgba(150, 200, 120, 0.16)');
+    grad.addColorStop(1, 'rgba(150, 200, 120, 0)');
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(x, y, rad, 0, Math.PI * 2);
+    g.fill();
+  }
 
   // 밟혀서 흙이 드러난 자국 — 중심에서 얼마나 떨어졌는지 눈으로 재는 기준
   g.save();
@@ -81,7 +112,7 @@ export function makeGrassTexture(size = 1024) {
   }
 
   // 작은 들꽃
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 120; i++) {
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * R * 0.9;
     const x = Math.cos(a) * r;
@@ -115,7 +146,9 @@ export function makeGrassTexture(size = 1024) {
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
+  // 바닥을 비스듬히 내려다보는 화면이라, 멀리 있는 잔디가 흐려지는 정도를
+  // 이 값이 좌우한다. 16 은 요즘 기기에서 대부분 지원한다(초과하면 알아서 깎인다).
+  tex.anisotropy = 16;
   return tex;
 }
 

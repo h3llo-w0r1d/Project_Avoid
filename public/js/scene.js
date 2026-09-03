@@ -147,7 +147,7 @@ function buildEdgeStones() {
     // 면을 한 번 더 쪼갠 뒤 찌그러뜨린다. 쪼개지 않으면 찌그러뜨려도
     // 면이 커서 각진 사탕처럼 보인다.
     const geo = new THREE.DodecahedronGeometry(1, 1);
-    jitter(geo, 0.34 + k * 0.06);
+    rockify(geo, 0.5 + k * 0.12, k + 1);
     // 납작 셰이딩 — 면이 또렷해야 저폴리 바위처럼 보인다(무대 그림체와 맞다)
     const mat = new THREE.MeshStandardMaterial({
       color: 0xa89e8c, roughness: 0.92, metalness: 0.04, flatShading: true
@@ -275,6 +275,38 @@ function buildUnderside() {
   // 느낌은 아래로 좁아지는 흙덩어리만으로 충분해서 둘 다 걷어냈다.
 
   return under;
+}
+
+// 바위처럼 울퉁불퉁하게. jitter 와 달리 면이 찢어지지 않는다.
+//
+// 다면체 지오메트리는 인덱스가 없어서 삼각형마다 정점을 따로 갖는다
+// (정십이면체 1단계 쪼갬 = 정점 432개인데 실제 자리는 74곳, 한 자리에
+// 최대 7개가 겹친다). 그 겹친 정점들을 제각각 밀면 서로 다른 방향으로
+// 흩어져 면이 갈라진다 — 돌이 아니라 잎사귀 뭉치처럼 보였다.
+//
+// 그래서 '자리'로 값을 뽑는다. 같은 자리의 정점은 같은 값을 얻어 함께
+// 움직이므로 표면이 붙어 있는 채로 울퉁불퉁해진다.
+// 미는 방향도 중심에서 바깥(반지름 방향)이라 바위 덩어리 느낌이 산다.
+function rockify(geometry, amount, seed = 1) {
+  const pos = geometry.attributes.position;
+  const v = new THREE.Vector3();
+  // 자리 → 0~1. 소수점을 잘라 겹친 정점이 반드시 같은 값을 받게 한다.
+  const noise = (x, y, z) => {
+    const n = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719 + seed * 4.1) * 43758.5453;
+    return n - Math.floor(n);
+  };
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    const qx = Math.round(v.x * 1e4) / 1e4;
+    const qy = Math.round(v.y * 1e4) / 1e4;
+    const qz = Math.round(v.z * 1e4) / 1e4;
+    // 큰 덩어리감 + 잔 요철을 겹친다
+    const k = noise(qx, qy, qz) * 0.7 + noise(qz * 2.3, qx * 2.3, qy * 2.3) * 0.3;
+    v.multiplyScalar(1 + (k - 0.5) * amount);
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  pos.needsUpdate = true;
+  geometry.computeVertexNormals();
 }
 
 // 정점을 무작위로 밀어 매끈한 도형을 자연물처럼 만든다.
