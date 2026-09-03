@@ -349,14 +349,14 @@ export function makeGrassTuftTexture(size = 128) {
 
 // 눈밭. 잔디 텍스처를 색만 바꿔서는 만들 수 없다 — 재질 색은 무늬에 '곱해'
 // 지므로 초록을 흰색으로 밝게 만들 방법이 없다(곱셈은 어둡게만 한다).
-// 그래서 무늬 자체를 따로 그린다.
 //
-// 처음엔 잔디처럼 짙은 얼룩을 넣었더니 밤 조명 아래에서 잿빛 자갈밭처럼
-// 보였다. 눈은 거의 흰색이고, 굴곡은 아주 옅은 푸른 그늘로만 드러난다.
-// 그래서 대비를 크게 낮추고 밝은 쪽으로 몰았다.
+// 두 번 헤맸다. 처음엔 잔디처럼 짙은 얼룩을 넣어 잿빛 자갈밭이 됐고, 그걸
+// 피하려 대비를 낮췄더니 이번엔 색종이처럼 밋밋했다.
 //
-// 잔디와 같은 규약: 정사각형 캔버스에 극좌표로 그리면 CircleGeometry 의
-// 기본 UV 에 그대로 맞아떨어진다. 가운데가 무대 중심이다.
+// 눈은 '어둡게' 가 아니라 '입체로' 보여야 한다. 그래서 빛 방향을 하나로
+// 정하고(왼쪽 위), 눈언덕마다 볕 드는 쪽에 흰 테를, 그늘 쪽에 푸른 그늘을
+// 짝지어 그린다. 대비는 낮아도 방향이 일정하면 굴곡으로 읽힌다.
+// 여기에 잔 알갱이를 촘촘히 깔아 단색으로 안 보이게 한다.
 export function makeSnowTexture(size = 1536) {
   const cv = document.createElement('canvas');
   cv.width = cv.height = size;
@@ -364,101 +364,116 @@ export function makeSnowTexture(size = 1536) {
   const c = size / 2;
   const R = size / 2;
 
-  g.fillStyle = '#f7fbff';
+  // 빛은 왼쪽 위에서. 아래 모든 굴곡이 이 방향을 따른다.
+  const LX = -0.62, LY = -0.78;
+
+  g.fillStyle = '#f2f7fd';
   g.fillRect(0, 0, size, size);
 
-  // 눈언덕의 옅은 그늘. 아주 약하게, 넓게. 진하면 곧바로 '얼룩'이 된다.
-  for (let i = 0; i < 42; i++) {
+  // ── 1) 눈언덕. 볕 쪽 흰 테 + 그늘 쪽 푸른 그늘을 짝지어 그린다.
+  for (let i = 0; i < 90; i++) {
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * R;
-    const rad = rnd(size * 0.09, size * 0.24);
+    const rad = rnd(size * 0.05, size * 0.17);
     const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
-    const grad = g.createRadialGradient(x, y, 0, x, y, rad);
-    grad.addColorStop(0, `rgba(176, 200, 226, ${rnd(0.10, 0.20)})`);
-    grad.addColorStop(1, 'rgba(176, 200, 226, 0)');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.arc(x, y, rad, 0, Math.PI * 2);
-    g.fill();
+    const off = rad * 0.34;
+
+    // 그늘(빛 반대쪽)
+    let gr = g.createRadialGradient(x - LX * off, y - LY * off, 0, x - LX * off, y - LY * off, rad);
+    gr.addColorStop(0, `rgba(150, 178, 210, ${rnd(0.16, 0.30)})`);
+    gr.addColorStop(1, 'rgba(150, 178, 210, 0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x - LX * off, y - LY * off, rad, 0, Math.PI * 2); g.fill();
+
+    // 볕(빛 쪽)
+    gr = g.createRadialGradient(x + LX * off, y + LY * off, 0, x + LX * off, y + LY * off, rad * 0.9);
+    gr.addColorStop(0, `rgba(255, 255, 255, ${rnd(0.5, 0.9)})`);
+    gr.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x + LX * off, y + LY * off, rad * 0.9, 0, Math.PI * 2); g.fill();
   }
 
-  // 볕이 닿아 더 하얀 자리 — 그늘만 있으면 전체가 가라앉는다
-  for (let i = 0; i < 34; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * R;
-    const rad = rnd(size * 0.07, size * 0.19);
-    const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
-    const grad = g.createRadialGradient(x, y, 0, x, y, rad);
-    grad.addColorStop(0, `rgba(255, 255, 255, ${rnd(0.35, 0.7)})`);
-    grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    g.fillStyle = grad;
-    g.beginPath();
-    g.arc(x, y, rad, 0, Math.PI * 2);
-    g.fill();
-  }
-
-  // 바람이 쓸고 간 결. 눈밭을 눈밭처럼 보이게 하는 건 이 결이다.
-  // 원을 따라 길게 흐르고, 그늘 쪽과 볕 쪽을 나란히 그어 이랑을 만든다.
+  // ── 2) 바람이 쓸고 간 이랑. 눈밭을 눈밭으로 만드는 결.
+  //     그늘 줄과 볕 줄을 나란히 그어 골과 마루를 만든다.
   g.lineCap = 'round';
-  for (let i = 0; i < 900; i++) {
+  for (let i = 0; i < 1500; i++) {
     const a = Math.random() * Math.PI * 2;
-    const r = Math.sqrt(Math.random()) * R * 0.97;
+    const r = Math.sqrt(Math.random()) * R * 0.98;
     const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
-    const len = rnd(size * 0.04, size * 0.16);
-    const dir = a + Math.PI / 2 + rnd(-0.35, 0.35);
-    const lift = Math.random() < 0.5;
-    g.globalAlpha = lift ? rnd(0.18, 0.4) : rnd(0.06, 0.15);
-    g.strokeStyle = lift ? '#ffffff' : '#b8cee4';
-    g.lineWidth = rnd(size * 0.0015, size * 0.004);
-    g.beginPath();
-    g.moveTo(x, y);
-    g.quadraticCurveTo(
-      x + Math.cos(dir + 0.25) * len * 0.5, y + Math.sin(dir + 0.25) * len * 0.5,
-      x + Math.cos(dir) * len, y + Math.sin(dir) * len
-    );
-    g.stroke();
+    const len = rnd(size * 0.03, size * 0.14);
+    const dir = a + Math.PI / 2 + rnd(-0.4, 0.4);
+    const w = rnd(size * 0.0014, size * 0.0038);
+    const nx = -Math.sin(dir) * w * 1.6, ny = Math.cos(dir) * w * 1.6;
+    const draw = (dx, dy, style, alpha) => {
+      g.globalAlpha = alpha;
+      g.strokeStyle = style;
+      g.lineWidth = w;
+      g.beginPath();
+      g.moveTo(x + dx, y + dy);
+      g.quadraticCurveTo(
+        x + dx + Math.cos(dir + 0.22) * len * 0.5, y + dy + Math.sin(dir + 0.22) * len * 0.5,
+        x + dx + Math.cos(dir) * len, y + dy + Math.sin(dir) * len
+      );
+      g.stroke();
+    };
+    // 마루(볕)와 골(그늘)을 빛 방향에 맞춰 나란히
+    draw(LX * w, LY * w, '#ffffff', rnd(0.30, 0.6));
+    draw(nx - LX * w, ny - LY * w, '#a9c4de', rnd(0.10, 0.22));
   }
   g.globalAlpha = 1;
 
-  // 눈 결정 반짝임. 작고 촘촘해야 '가루' 로 보인다.
-  for (let i = 0; i < 14000; i++) {
+  // ── 3) 잔 알갱이. 단색으로 안 보이게 하는 건 결국 이 촘촘한 결이다.
+  //     밝은 알갱이만 찍으면 안개처럼 뿌예져서, 어두운 알갱이도 섞는다.
+  for (let i = 0; i < 30000; i++) {
     const a = Math.random() * Math.PI * 2;
     const r = Math.sqrt(Math.random()) * R;
     const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
-    g.globalAlpha = rnd(0.18, 0.75);
-    g.fillStyle = '#ffffff';
+    const up = Math.random() < 0.62;
+    g.globalAlpha = up ? rnd(0.14, 0.5) : rnd(0.05, 0.16);
+    g.fillStyle = up ? '#ffffff' : '#b6cee6';
     g.beginPath();
-    g.arc(x, y, rnd(size * 0.0005, size * 0.0014), 0, Math.PI * 2);
+    g.arc(x, y, rnd(size * 0.0004, size * 0.0013), 0, Math.PI * 2);
     g.fill();
   }
   g.globalAlpha = 1;
 
-  // 거리 기준선. 잔디의 '밟힌 자국' 과 같은 역할 — 스킨이 바뀌어도
-  // 중심에서 얼마나 떨어졌는지 눈으로 잴 수 있어야 한다.
+  // ── 4) 밟혀 다져진 자국. 넓고 아주 옅게 — 사람이 지나다닌 흔적.
+  for (let i = 0; i < 16; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.sqrt(Math.random()) * R * 0.8;
+    const rad = rnd(size * 0.03, size * 0.08);
+    const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(168, 192, 220, ${rnd(0.10, 0.20)})`);
+    gr.addColorStop(0.7, 'rgba(168, 192, 220, 0.05)');
+    gr.addColorStop(1, 'rgba(168, 192, 220, 0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+  }
+
+  // ── 5) 거리 기준선. 잔디의 '밟힌 자국' 과 같은 역할 — 스킨이 바뀌어도
+  //     중심에서 얼마나 떨어졌는지 눈으로 잴 수 있어야 한다.
   g.save();
   g.translate(c, c);
-  for (const [rr, alpha] of [[0.3, 0.13], [0.55, 0.11], [0.77, 0.13]]) {
+  for (const [rr, alpha] of [[0.3, 0.16], [0.55, 0.13], [0.77, 0.16]]) {
     g.beginPath();
     g.arc(0, 0, R * rr, 0, Math.PI * 2);
-    g.strokeStyle = `rgba(150, 178, 206, ${alpha})`;
+    g.strokeStyle = `rgba(140, 170, 202, ${alpha})`;
     g.lineWidth = size * 0.012;
     g.setLineDash([size * 0.05, size * 0.03]);
     g.stroke();
   }
   g.setLineDash([]);
-  g.restore();
 
-  // 가장자리 — 눈이 끝나며 언 바위가 드러나는 띠(잔디의 맨흙 띠와 같은 역할)
-  g.save();
-  g.translate(c, c);
+  // ── 6) 가장자리 — 눈이 끝나며 언 바위가 드러나는 띠
   const bandIn = R * 0.92;
   g.beginPath();
   g.arc(0, 0, R, 0, Math.PI * 2);
   g.arc(0, 0, bandIn, 0, Math.PI * 2, true);
   g.clip();
   const edge = g.createRadialGradient(0, 0, bandIn, 0, 0, R);
-  edge.addColorStop(0, 'rgba(150, 175, 200, 0)');
-  edge.addColorStop(1, 'rgba(126, 152, 180, 0.75)');
+  edge.addColorStop(0, 'rgba(146, 172, 200, 0)');
+  edge.addColorStop(1, 'rgba(120, 146, 176, 0.8)');
   g.fillStyle = edge;
   g.fillRect(-R, -R, size, size);
   g.restore();

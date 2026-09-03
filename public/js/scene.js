@@ -254,46 +254,59 @@ function mergeTwo(a, b) {
 // 있고, 얼음은 뾰족하게 위로 솟는다. 그래야 스킨을 바꿨을 때 '색만 바뀐 게
 // 아니라' 는 느낌이 든다.
 //
-// 안쪽으로 살짝 눕혀 무대를 감싸는 울타리처럼 보이게 한다.
+// 처음엔 바위처럼 둘레에 고르게 한 줄로 세웠더니 띄엄띄엄해서 허전했다.
+// 얼음은 원래 무리 지어 솟는다. 그래서 '무리' 를 잡고 그 언저리에 크고 작은
+// 조각을 몰아 심는다. 무리와 무리 사이가 비어야 오히려 뭉친 데가 도드라진다.
+// 큰 기둥 사이의 빈 곳은 낮은 조각으로 메워 바닥이 허전하지 않게 한다.
 function buildEdgeIce() {
   const group = new THREE.Group();
-  const KINDS = 2;
-  const count = 44;
-  const per = count / KINDS;
 
-  for (let k = 0; k < KINDS; k++) {
-    // 밑이 넓고 위가 뾰족한 오각 기둥. 살짝 찌그러뜨려 깎인 결정처럼.
-    const geo = new THREE.ConeGeometry(0.5, 1.6, 5 + k);
-    rockify(geo, 0.16 + k * 0.06, 7 + k);
+  // 무리의 중심 각도. 고르게 두되 조금씩 흔들어 기계적이지 않게.
+  const CLUSTERS = 26;
+  const centers = [];
+  for (let i = 0; i < CLUSTERS; i++) {
+    centers.push((i / CLUSTERS) * Math.PI * 2 + (Math.random() - 0.5) * 0.14);
+  }
+
+  // 큰 기둥 · 중간 · 낮은 조각 세 층으로 쌓는다.
+  //   spread : 무리 중심에서 얼마나 벌어지나(라디안)
+  //   inset  : 무대 안쪽으로 얼마나 들어오나
+  const LAYERS = [
+    { seg: 5, n: 2, h: [0.55, 1.15], w: [0.26, 0.44], spread: 0.055, inset: 0.10, rough: 0.24 },
+    { seg: 6, n: 2, h: [0.30, 0.62], w: [0.20, 0.34], spread: 0.100, inset: 0.22, rough: 0.30 },
+    { seg: 5, n: 3, h: [0.14, 0.34], w: [0.16, 0.30], spread: 0.150, inset: 0.34, rough: 0.36 }
+  ];
+
+  LAYERS.forEach((L, li) => {
+    const geo = new THREE.ConeGeometry(0.5, 1.6, L.seg);
+    rockify(geo, L.rough * 0.6, 7 + li);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0xdcefff, roughness: 0.28, metalness: 0.06,
+      color: 0xdcefff, roughness: 0.26, metalness: 0.06,
       flatShading: true,
       // 밤이라 그냥 두면 시커멓게 죽는다. 얼음이 스스로 은은히 빛나게 한다.
-      emissive: 0x2b4a6b, emissiveIntensity: 0.55
+      emissive: 0x2f5075, emissiveIntensity: 0.6
     });
 
-    group.add(scatter(geo, mat, per,
+    const count = CLUSTERS * L.n;
+    group.add(scatter(geo, mat, count,
       (i, pos, rot, scl) => {
-        const idx = i * KINDS + k;
-        const a = (idx / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.07;
-        const h = 0.42 + Math.random() * 0.62;          // 키를 크게 벌린다
-        const w = 0.30 + Math.random() * 0.26;
-        pos.set(
-          Math.cos(a) * (ARENA_RADIUS - 0.12),
-          -0.1 + h * 0.5,                                // 밑동을 바닥에 묻는다
-          Math.sin(a) * (ARENA_RADIUS - 0.12)
-        );
-        // 안쪽으로 살짝 기울이고, 축을 돌려 결이 제각각 보이게
-        rot.set((Math.random() - 0.5) * 0.34, Math.random() * 6.3, (Math.random() - 0.5) * 0.34);
+        const a = centers[i % CLUSTERS] + (Math.random() - 0.5) * L.spread * 2;
+        const h = rnd(L.h[0], L.h[1]);
+        const w = rnd(L.w[0], L.w[1]);
+        const rr = ARENA_RADIUS - L.inset - Math.random() * 0.1;
+        pos.set(Math.cos(a) * rr, -0.12 + h * 0.5, Math.sin(a) * rr);
+        // 안쪽으로 살짝 눕히고 축을 돌려 결이 제각각 보이게
+        rot.set((Math.random() - 0.5) * 0.40, Math.random() * 6.3, (Math.random() - 0.5) * 0.40);
         scl.set(w, h * 1.5, w);
       },
-      // 기둥마다 푸른 기를 조금씩 달리 — 맑은 얼음과 흐린 얼음이 섞이게
+      // 조각마다 푸른 기를 조금씩 — 맑은 얼음과 흐린 얼음이 섞이게
       () => {
-        const v = 0.82 + Math.random() * 0.26;
-        return new THREE.Color(v * (0.90 + Math.random() * 0.08), v * (0.95 + Math.random() * 0.05), v);
+        const v = 0.80 + Math.random() * 0.28;
+        return new THREE.Color(v * (0.88 + Math.random() * 0.10), v * (0.94 + Math.random() * 0.06), v);
       }
     ));
-  }
+  });
+
   return group;
 }
 
