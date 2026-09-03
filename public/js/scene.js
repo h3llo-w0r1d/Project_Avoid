@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
-  makeGrassTexture, makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture
+  makeGrassTexture, makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture,
+  makeSnowTexture
 } from './textures.js';
 
 const SOFT_DOT = makeSoftDotTexture();
@@ -75,7 +76,7 @@ function addArena(scene) {
   // 상판 — 잔디
   const top = new THREE.Mesh(
     new THREE.CircleGeometry(ARENA_RADIUS, 96),
-    new THREE.MeshStandardMaterial({ map: makeGrassTexture(), roughness: 0.95, metalness: 0 })
+    new THREE.MeshStandardMaterial({ map: topTexture('grass'), roughness: 0.95, metalness: 0 })
   );
   top.name = 'deck-top';
   top.rotation.x = -Math.PI / 2;
@@ -93,7 +94,9 @@ function addArena(scene) {
   cliff.position.y = -1.7;
   group.add(cliff);
 
-  group.add(buildEdgeStones());
+  const stones = buildEdgeStones();
+  stones.name = 'deck-stones';
+  group.add(stones);
   const tufts = buildGrassTufts();
   tufts.name = 'deck-tufts';
   group.add(tufts);
@@ -388,24 +391,51 @@ export function fitCamera(camera, renderer) {
   placeAt(camera, hi, tilt);
 }
 
-// 경기장 스킨 — 상판·절벽·풀포기의 색을 바꾼다.
+// 상판 무늬는 한 번 구워 두고 돌려 쓴다. 1024x1024 를 매번 다시 그리면
+// 스킨을 고를 때마다 몇십 ms 씩 멈춘다.
+const topTexCache = new Map();
+function topTexture(kind) {
+  if (!topTexCache.has(kind)) {
+    topTexCache.set(kind, kind === 'snow' ? makeSnowTexture() : makeGrassTexture());
+  }
+  return topTexCache.get(kind);
+}
+
+// 경기장 스킨을 입힌다.
 //
-// 무늬(텍스처)는 그대로 두고 색만 곱한다. 스킨마다 텍스처를 새로 구우면
-// 고를 때마다 몇십 ms 씩 멈추는데, 색만 바꾸면 즉시 반영되고 같은 무늬가
-// 계절이 바뀐 것처럼 보인다. 무늬 자체를 갈아야 하는 스킨이 생기면
-// 그때 spec 에 map 을 받아 여기서 갈아 끼우면 된다.
+// 색만 바꾸는 스킨과 무늬까지 바꾸는 스킨이 있다. 재질 색은 무늬에 '곱해'
+// 지므로 곱셈으로는 어둡게만 할 수 있다 — 초록 잔디를 흰 눈으로 만들 수는
+// 없어서, 그런 스킨은 무늬를 따로 그려 갈아 끼운다(spec.topMap).
 //
-// spec 이 비었으면(기본 스킨) 원래 색으로 되돌린다.
+// spec 이 비었으면(기본 스킨) 원래 잔디로 되돌린다.
+//   topMap    : 상판 무늬 종류 ('grass' | 'snow')
+//   top/cliff/stone/tuft : 그 부분에 곱할 색 (없으면 원래 색)
+//   hideTufts : 풀포기를 감춘다. 눈밭에 초록 풀이 서 있으면 어색하다.
 export function paintArena(deck, spec = {}) {
   if (!deck) return;
-  const put = (name, hex) => {
+
+  const tint = (name, hex) => {
     const o = deck.getObjectByName(name);
     if (!o) return;
-    // 풀포기는 그룹이라 안쪽 메시들을 훑는다
     o.traverse?.((m) => { if (m.material?.color) m.material.color.setHex(hex ?? 0xffffff); });
     if (o.material?.color) o.material.color.setHex(hex ?? 0xffffff);
   };
-  put('deck-top', spec.top);
-  put('deck-cliff', spec.cliff);
-  put('deck-tufts', spec.tuft);
+
+  // 상판은 무늬부터 맞춘 뒤 색을 곱한다
+  const top = deck.getObjectByName('deck-top');
+  if (top) {
+    const want = topTexture(spec.topMap ?? 'grass');
+    if (top.material.map !== want) {
+      top.material.map = want;
+      top.material.needsUpdate = true;
+    }
+    top.material.color.setHex(spec.top ?? 0xffffff);
+  }
+
+  tint('deck-cliff', spec.cliff);
+  tint('deck-stones', spec.stone);
+  tint('deck-tufts', spec.tuft);
+
+  const tufts = deck.getObjectByName('deck-tufts');
+  if (tufts) tufts.visible = !spec.hideTufts;
 }

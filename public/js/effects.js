@@ -77,6 +77,15 @@ export const ARENAS = [
     id: 'grass', name: '풀숲', cost: 0,
     desc: '처음부터 쓰던 초록 들판',
     swatchTop: 0x6f9e4a, swatchSide: 0x7a5a3a
+  },
+  {
+    id: 'snow', name: '설원', cost: 300,
+    desc: '눈 덮인 벌판. 붉은 전기선이 또렷하게 보여요',
+    topMap: 'snow',          // 상판 무늬를 눈으로 갈아 끼운다
+    cliff: 0xa9bccd,         // 절벽은 차갑게 — 눈 밑 언 바위
+    stone: 0xcfdcea,         // 가장자리 돌도 서리 낀 느낌
+    hideTufts: true,         // 눈밭에 초록 풀포기가 서 있으면 어색하다
+    swatchTop: 0xe9f1fa, swatchSide: 0x8fa6bb
   }
 ];
 
