@@ -243,24 +243,66 @@ export function makeSkyTexture(h = 512) {
 }
 
 // 설원용 하늘. 기본 하늘은 밤빛(짙은 남색 → 흙빛 지평선)이라 흰 눈밭 위에
-// 두면 무대만 뜬금없이 하얗다. 눈 내린 흐린 날처럼 위아래로 옅게 간다.
+// 두면 무대만 뜬금없이 하얗다.
 //
-// 완전히 흰색으로 채우면 무대와 하늘이 붙어 버려 섬이 떠 있는 게 안 보인다.
-// 위쪽은 차분한 청회색으로 눌러 두고, 지평선 쪽만 밝게 열어 준다.
-export function makeSnowSkyTexture(h = 512) {
+// 처음엔 아주 밝게 뽑았더니 이번엔 하늘까지 하얘져 무대와 배경이 붙어 버렸다.
+// 흰 무대가 도드라지려면 하늘은 오히려 어두워야 한다. 그래서 위쪽을 짙은
+// 청색으로 눌러 두고, 지평선 쪽만 눈빛이 번지듯 열어 준다.
+//
+// 세로 4px 짜리 띠로 만들면 위아래 그라데이션밖에 못 넣는다. 폭을 줘서
+// 구름 결을 그린다 — 밋밋한 그라데이션 하늘은 종이처럼 보인다.
+// 왼쪽·오른쪽 끝이 이어져야 하므로 가장자리에 걸친 구름은 반대쪽에도 그린다.
+export function makeSnowSkyTexture(w = 1024, h = 512) {
   const cv = document.createElement('canvas');
-  cv.width = 4;
+  cv.width = w;
   cv.height = h;
   const g = cv.getContext('2d');
 
   const grad = g.createLinearGradient(0, 0, 0, h);
-  grad.addColorStop(0.00, '#5b7791');   // 꼭대기 — 눈구름 낀 하늘
-  grad.addColorStop(0.38, '#88a5bd');
-  grad.addColorStop(0.62, '#b9cfe0');
-  grad.addColorStop(0.82, '#dcebf5');
-  grad.addColorStop(1.00, '#eef6fb');   // 지평선 — 눈밭에 스며드는 흰빛
+  grad.addColorStop(0.00, '#1d3349');   // 꼭대기 — 깊은 겨울 하늘
+  grad.addColorStop(0.34, '#2f5175');
+  grad.addColorStop(0.60, '#5b81a0');
+  grad.addColorStop(0.82, '#93b4cb');
+  grad.addColorStop(1.00, '#c6dbe9');   // 지평선 — 눈빛이 번진다
   g.fillStyle = grad;
-  g.fillRect(0, 0, 4, h);
+  g.fillRect(0, 0, w, h);
+
+  // 구름 띠. 가로로 길게 눌린 타원을 겹쳐 흐린 하늘을 만든다.
+  const band = (x, y, rw, rh, color, alpha) => {
+    const gr = g.createRadialGradient(x, y, 0, x, y, rw);
+    gr.addColorStop(0, color.replace('ALPHA', alpha));
+    gr.addColorStop(1, color.replace('ALPHA', '0'));
+    g.save();
+    g.translate(x, y);
+    g.scale(1, rh / rw);
+    g.fillStyle = gr;
+    g.beginPath();
+    g.arc(0, 0, rw, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  };
+
+  for (let i = 0; i < 60; i++) {
+    const x = Math.random() * w;
+    const y = rnd(h * 0.10, h * 0.78);
+    const rw = rnd(w * 0.06, w * 0.20);
+    const rh = rw * rnd(0.10, 0.26);
+    // 위쪽은 밝은 구름, 아래쪽은 옅은 회청색 그늘
+    const up = y < h * 0.5;
+    const color = up ? 'rgba(190, 214, 234, ALPHA)' : 'rgba(120, 152, 180, ALPHA)';
+    const alpha = rnd(0.08, 0.22);
+    band(x, y, rw, rh, color, alpha);
+    // 끝에 걸치면 반대쪽에도 그려 이음매를 없앤다
+    if (x < rw) band(x + w, y, rw, rh, color, alpha);
+    if (x > w - rw) band(x - w, y, rw, rh, color, alpha);
+  }
+
+  // 지평선 근처의 옅은 빛. 눈밭에서 올라오는 반사광 같은 느낌.
+  const glow = g.createLinearGradient(0, h * 0.72, 0, h);
+  glow.addColorStop(0, 'rgba(226, 240, 250, 0)');
+  glow.addColorStop(1, 'rgba(226, 240, 250, 0.5)');
+  g.fillStyle = glow;
+  g.fillRect(0, h * 0.72, w, h * 0.28);
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;

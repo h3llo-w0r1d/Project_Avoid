@@ -488,15 +488,37 @@ function addPollen(scene) {
   pollen.name = 'pollen';
   pollen.frustumCulled = false;
 
-  // 천천히 위로 떠오르다가 꼭대기에 닿으면 아래에서 다시 시작
+  // 기본은 꽃가루 — 천천히 위로 떠오르다가 꼭대기에 닿으면 아래에서 다시.
+  // 설원에선 같은 입자를 눈송이로 바꿔 쓴다(아래로 내린다). 통을 따로 만들지
+  // 않는 건, 두 개를 동시에 띄울 일이 없어서다.
+  pollen.userData.snow = false;
   pollen.userData.animate = (dt, t) => {
     const arr = geo.attributes.position.array;
+    const down = pollen.userData.snow;
     for (let i = 0; i < count; i++) {
-      arr[i * 3 + 1] += speed[i] * dt;
-      arr[i * 3] += Math.sin(t * 0.6 + i) * dt * 0.25;
-      if (arr[i * 3 + 1] > 15) arr[i * 3 + 1] = -1;
+      if (down) {
+        arr[i * 3 + 1] -= speed[i] * 1.6 * dt;              // 눈은 조금 빠르게 내린다
+        arr[i * 3] += Math.sin(t * 0.5 + i) * dt * 0.5;     // 좌우로 하늘하늘
+        arr[i * 3 + 2] += Math.cos(t * 0.4 + i * 1.7) * dt * 0.35;
+        if (arr[i * 3 + 1] < -1) arr[i * 3 + 1] = 15;
+      } else {
+        arr[i * 3 + 1] += speed[i] * dt;
+        arr[i * 3] += Math.sin(t * 0.6 + i) * dt * 0.25;
+        if (arr[i * 3 + 1] > 15) arr[i * 3 + 1] = -1;
+      }
     }
     geo.attributes.position.needsUpdate = true;
+  };
+
+  // 꽃가루 ↔ 눈송이 전환. 색·크기·진하기까지 바꿔야 눈처럼 보인다.
+  pollen.userData.setSnow = (on) => {
+    pollen.userData.snow = on;
+    pollen.material.color.setHex(on ? 0xffffff : 0xffe2a0);
+    pollen.material.size = on ? 0.30 : 0.2;
+    pollen.material.opacity = on ? 0.75 : 0.32;
+    // 눈은 빛나는 게 아니라 하얀 알갱이다. 가산 합성이면 하늘에 녹아 사라진다.
+    pollen.material.blending = on ? THREE.NormalBlending : THREE.AdditiveBlending;
+    pollen.material.needsUpdate = true;
   };
 
   scene.add(pollen);
@@ -645,6 +667,8 @@ export function paintArena(deck, spec = {}) {
       }
     }
     if (scene.fog) scene.fog.color.setHex(spec.fog ?? COLORS.haze);
+    // 떠다니는 입자도 스킨에 맞춘다 — 눈밭엔 꽃가루 대신 눈이 내린다
+    scene.getObjectByName('pollen')?.userData.setSnow?.(!!spec.snowfall);
   }
 
   // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를

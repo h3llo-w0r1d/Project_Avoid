@@ -87,7 +87,8 @@ export const ARENAS = [
     topEmissive: 0x33506e, topEmissiveIntensity: 0.42, topRoughness: 0.72,
     cliff: 0xa9bccd,         // 절벽은 차갑게 — 눈 밑 언 바위
     sky: 'snow',             // 하늘도 눈 내린 흐린 날로
-    fog: 0xc7d9e6,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
+    fog: 0x9fbcd2,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
+    snowfall: true,          // 눈이 내린다(떠다니는 꽃가루를 눈송이로)
     edge: 'ice',             // 가장자리에 얼음 기둥을 더한다
     hideTufts: true,         // 눈밭에 초록 풀포기가 서 있으면 어색하다
     swatchTop: 0xf2f8ff, swatchSide: 0x9ec4e0
