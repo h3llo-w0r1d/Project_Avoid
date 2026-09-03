@@ -32,11 +32,74 @@ export function createWorld(canvas) {
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
 
   addSky(scene);
+  addSpaceProps(scene);
   addLights(scene);
   const deck = addArena(scene);
   addPollen(scene);
 
   return { renderer, scene, camera, deck };
+}
+
+// 은하수 스킨용 배경물 — 멀리 떠 있는 행성들.
+//
+// 하늘 무늬에 그려도 되지만, 카메라가 무대를 내려다보는 각도라 하늘 구
+// 대부분이 화면 밖이다. 실제로 그려 넣었더니 거의 안 보였다. 그래서 진짜
+// 구체를 씬에 띄운다 — 카메라가 +Z 위쪽에 있으므로 무대 뒤(-Z) 높은 곳이다.
+//
+// 안개(fog)를 끈다. 60~220 구간에서 흐려지도록 맞춰 둔 안개라, 켜 두면
+// 멀리 있는 행성이 배경색에 녹아 사라진다.
+function addSpaceProps(scene) {
+  const group = new THREE.Group();
+  group.name = 'space-props';
+  group.visible = false;
+
+  // [x, y, z, 반지름, 겉색, 빛색, 고리]
+  //
+  // 자리를 눈대중으로 잡으면 안 된다. 카메라가 무대를 내려다보는 각도라
+  // 멀리 있는 -z 는 화면 위로 확 밀려난다 — 처음엔 y 를 높이 잡았다가 다섯 개
+  // 전부 화면 밖으로 나갔다. 그래서 카메라로 투영해 자리를 찾아 넣었다.
+  //
+  // 가로(16:9)와 세로(9:16)는 기울기도 거리도 달라, 한 자리로 둘 다 만족시킬
+  // 수 없다. 가로에서 잘 보이는 자리는 세로에선 화면 밖이고, 세로에서 잘
+  // 보이는 자리는 가로에선 무대 뒤에 가린다. 그래서 나눠 뒀다 —
+  // 가로용 셋, 세로용 둘. 어느 화면에서든 두세 개는 보인다.
+  const PLANETS = [
+    // 가로 화면용 (세로에선 화면 밖)
+    [ -93,  -62, -154, 20, 0x6b4fa8, 0x2a1a4e, true ],   // 고리 달린 큰 보라 행성
+    [ 109,  -79, -174, 14, 0x3f7fa8, 0x14304a, false],   // 푸른 얼음 행성
+    [-152, -113, -163, 11, 0xc98a6b, 0x4a2a1e, false],   // 붉은 행성
+    // 세로 화면용 (가로에선 무대 뒤라 안 보인다)
+    [ -38, -115, -159, 18, 0x8f6fc8, 0x2e1e52, true ],   // 고리 달린 연보라
+    [  44, -132, -183, 12, 0x8fb0d8, 0x24344a, false]    // 창백한 위성
+  ];
+
+  for (const [x, y, z, r, color, glow, ring] of PLANETS) {
+    const planet = new THREE.Mesh(
+      new THREE.SphereGeometry(r, 28, 20),
+      new THREE.MeshStandardMaterial({
+        color, roughness: 0.9, metalness: 0.05,
+        emissive: glow, emissiveIntensity: 0.9, fog: false
+      })
+    );
+    planet.position.set(x, y, z);
+    // 밝은 쪽이 위를 향하게 살짝 돌려 둔다(빛이 어디서 오는지 일관되게)
+    planet.rotation.set(0.3, Math.random() * 6.3, 0.15);
+    group.add(planet);
+
+    if (!ring) continue;
+    const rg = new THREE.Mesh(
+      new THREE.TorusGeometry(r * 1.85, r * 0.10, 8, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0xd9c8ff, transparent: true, opacity: 0.45,
+        blending: THREE.AdditiveBlending, depthWrite: false, fog: false
+      })
+    );
+    rg.position.copy(planet.position);
+    rg.rotation.set(Math.PI / 2 - 0.34, 0.2, 0.42);
+    group.add(rg);
+  }
+
+  scene.add(group);
 }
 
 function addSky(scene) {
@@ -768,6 +831,9 @@ export function paintArena(deck, spec = {}) {
   }
   if (snowy) snowy.visible = spec.edge === 'ice';
   if (orbit) orbit.visible = spec.edge === 'orbit';
+  // 멀리 떠 있는 행성들(씬에 붙어 있어 무대 밖이다)
+  const props = deck.parent?.getObjectByName('space-props');
+  if (props) props.visible = !!spec.space;
   // 바위는 무대 끝을 알려 주는 표시라 웬만하면 남긴다. 은하수처럼 대신할
   // 표시(빛나는 고리)가 있는 스킨만 감춘다.
   if (stones) stones.visible = !spec.hideStones;

@@ -111,6 +111,7 @@ export const ARENAS = [
     edge: 'orbit',
     hideStones: true,
     particles: 'star',       // 별가루가 떠오른다
+    space: true,             // 멀리 떠 있는 행성들
     hideTufts: true,
     // 어두운 무대라 상판이 그냥 두면 새까맣게 죽는다. 은은히 빛나게.
     topEmissive: 0x231a4a, topEmissiveIntensity: 0.5, topRoughness: 0.85,
