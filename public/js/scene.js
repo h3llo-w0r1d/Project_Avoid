@@ -3,8 +3,7 @@ import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
   makeGrassTexture, makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture,
-  makeSnowTexture, makeSnowSkyTexture, makeGalaxyTexture, makeGalaxySkyTexture,
-  makePlanetTexture, makePlanetRingTexture
+  makeSnowTexture, makeSnowSkyTexture, makeGalaxyTexture, makeGalaxySkyTexture
 } from './textures.js';
 
 // a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
@@ -33,73 +32,11 @@ export function createWorld(canvas) {
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
 
   addSky(scene);
-  addSpaceProps(scene);
   addLights(scene);
   const deck = addArena(scene);
   addPollen(scene);
 
   return { renderer, scene, camera, deck };
-}
-
-// 은하수 스킨용 배경물 — 멀리 떠 있는 행성들.
-//
-// 처음엔 구체 메시로 만들었는데 '색칠한 공' 처럼 보였다. 조명이 무대를 향해
-// 맞춰져 있어 행성에는 엉뚱하게 떨어지고, 표면에 무늬가 없었기 때문이다.
-// 아주 멀리 있어 카메라가 움직여도 모양이 거의 안 변하므로, 2D 로 정성껏
-// 그려(makePlanetTexture) 판에 붙인다. 훨씬 낫고 훨씬 싸다.
-//
-// 자리는 눈대중으로 잡으면 안 된다. 카메라가 무대를 내려다보는 각도라
-// 멀리 있는 -z 는 화면 위로 확 밀려난다 — 처음엔 다섯 개 전부 화면 밖이었다.
-// 가로(16:9)와 세로(9:16)는 기울기도 거리도 달라 한 자리로 둘 다 만족시킬 수
-// 없어서, 가로용 셋 · 세로용 둘로 나눴다. 어느 화면에서든 두세 개는 보인다.
-function addSpaceProps(scene) {
-  const group = new THREE.Group();
-  group.name = 'space-props';
-  group.visible = false;
-
-  // [x, y, z, 화면에 보일 크기, 무늬 종류, 색, 고리]
-  //
-  // 자리는 카메라로 투영해 하나씩 찾아 넣었다. 눈대중으로는 못 잡는다 —
-  // 무대를 내려다보는 각도라 멀리 있는 -z 는 화면 위로 확 밀려나서,
-  // 처음엔 다섯 개 전부 화면 밖이었다.
-  //
-  // 가로(16:9)와 세로(9:16)는 기울기도 거리도 달라 한 자리로 둘 다 만족시킬
-  // 수 없다. 가로에서 잘 보이는 자리는 세로에선 화면 밖이고, 세로에서 잘
-  // 보이는 자리는 가로에선 무대 뒤에 가린다. 그래서 나눠 뒀다.
-  const PLANETS = [
-    // ── 가로 화면 위쪽 (세로에선 화면 밖)
-    [ -93,  -62, -154, 48, 'gas',  0xa07ad8, true ],   // 고리 달린 큰 보라
-    [ 109,  -79, -174, 34, 'ice',  0x6fb0d8, false],   // 푸른 얼음 행성
-    [-152, -113, -163, 26, 'rock', 0xc98a6b, false],   // 붉은 바위 행성
-    // ── 가로 화면 좌우 아래 (휑하다는 지적을 받은 자리)
-    //
-    // 처음엔 넷을 넣었다가 둘을 뺐다. 왼쪽 가장자리 얼음 행성은 바로 옆
-    // 바위 행성과 겹쳐 보였고, 오른쪽 아래 고리 행성은 위쪽 얼음 행성과
-    // 색·고리가 너무 닮아 같은 걸 두 번 놓은 것처럼 보였다.
-    // 배경물은 수보다 '서로 달라 보이는가' 가 중요하다.
-    [-108, -127,  -91, 30, 'rock', 0x9a7fb8, false],   // 왼쪽 아래
-    [ 122,  -85, -102, 16, 'rock', 0xb89a7f, false],   // 오른쪽 가장자리
-    // ── 세로 화면용 (가로에선 무대 뒤라 안 보인다)
-    [ -38, -115, -159, 44, 'gas',  0x8f6fc8, true ],
-    [  44, -132, -183, 30, 'rock', 0x9fb4cc, false]
-  ];
-
-  const put = (map, x, y, z, size) => {
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-      map, transparent: true, depthWrite: false, fog: false, opacity: 0.95
-    }));
-    sp.position.set(x, y, z);
-    sp.scale.set(size, size, 1);
-    group.add(sp);
-  };
-
-  for (const [x, y, z, size, kind, tint, ring] of PLANETS) {
-    put(makePlanetTexture(kind, tint), x, y, z, size);
-    // 고리는 행성보다 넓게, 살짝 앞에 둔다(뒤쪽 반이 가려져 보이는 건 감수)
-    if (ring) put(makePlanetRingTexture(0xe0d0ff), x, y, z + 0.5, size * 1.15);
-  }
-
-  scene.add(group);
 }
 
 function addSky(scene) {
@@ -860,9 +797,6 @@ export function paintArena(deck, spec = {}) {
   }
   if (snowy) snowy.visible = spec.edge === 'ice';
   if (orbit) orbit.visible = spec.edge === 'orbit';
-  // 멀리 떠 있는 행성들(씬에 붙어 있어 무대 밖이다)
-  const props = deck.parent?.getObjectByName('space-props');
-  if (props) props.visible = !!spec.space;
   // 바위는 무대 끝을 알려 주는 표시라 웬만하면 남긴다. 은하수처럼 대신할
   // 표시(빛나는 고리)가 있는 스킨만 감춘다.
   if (stones) stones.visible = !spec.hideStones;
