@@ -15,49 +15,50 @@
 
 import * as THREE from 'three';
 
-const MAX = 140;   // 입자 통 크기. 다 쓰면 제일 오래된 걸 되쓴다.
+const MAX = 260;   // 입자 통 크기. 다 쓰면 제일 오래된 걸 되쓴다.
+                   // 양을 늘린 만큼 동시에 살아 있는 수도 늘어 넉넉히 잡는다.
 
 // 살 수 있는 발자국 효과들. cost 는 코인.
 export const TRAILS = [
   {
     id: 'sparkle', name: '반짝이', cost: 150,
     desc: '걸을 때마다 발밑에서 별가루가 반짝여요',
-    shape: 'star', size: 0.30, rate: 26, life: 0.62,
+    shape: 'star', size: 0.46, rate: 52, life: 0.90,
     rise: 0.9, spread: 0.30, gravity: -0.4,
     colors: [0xfff6c8, 0xffd76a, 0xffffff]
   },
   {
     id: 'bubble', name: '비눗방울', cost: 200,
     desc: '동글동글한 비눗방울이 떠올라요',
-    shape: 'ring', size: 0.40, rate: 14, life: 1.25,
+    shape: 'ring', size: 0.58, rate: 26, life: 1.60,
     rise: 1.5, spread: 0.22, gravity: 0.35,
     colors: [0x9fe6ff, 0xc9f2ff, 0x7ec8ff]
   },
   {
     id: 'flame', name: '불꽃', cost: 300,
     desc: '지나간 자리에 불티가 흩날려요',
-    shape: 'dot', size: 0.32, rate: 34, life: 0.5,
+    shape: 'dot', size: 0.48, rate: 64, life: 0.72,
     rise: 1.5, spread: 0.24, gravity: 0.6,
     colors: [0xffb03a, 0xff5e2a, 0xffe08a]
   },
   {
     id: 'snow', name: '눈꽃', cost: 250,
     desc: '차가운 눈송이가 천천히 내려앉아요',
-    shape: 'star', size: 0.26, rate: 16, life: 1.6,
+    shape: 'star', size: 0.42, rate: 32, life: 2.0,
     rise: 0.5, spread: 0.42, gravity: -0.55,
     colors: [0xffffff, 0xd6f0ff, 0xaadcff]
   },
   {
     id: 'heart', name: '하트', cost: 350,
     desc: '작은 하트가 퐁퐁 피어나요',
-    shape: 'heart', size: 0.38, rate: 12, life: 1.1,
+    shape: 'heart', size: 0.56, rate: 24, life: 1.5,
     rise: 1.3, spread: 0.20, gravity: 0.25,
     colors: [0xff8fc4, 0xff5f9e, 0xffd0e4]
   },
   {
     id: 'rainbow', name: '무지개', cost: 500,
     desc: '일곱 빛깔이 차례로 흘러나와요',
-    shape: 'dot', size: 0.34, rate: 30, life: 0.85,
+    shape: 'dot', size: 0.50, rate: 58, life: 1.15,
     rise: 1.0, spread: 0.26, gravity: 0.1,
     rainbow: true, colors: [0xffffff]
   }
@@ -253,7 +254,7 @@ export class TrailFX {
     // 뿌리는 양은 속도에 따라. 서 있으면 아주 조금만(살아 있는 느낌은 남게).
     // 공중에서도 뿌린다 — 점프가 이 효과의 제일 예쁜 순간이다.
     const move = Math.min(1, speed / 6);
-    const rate = s.rate * (0.18 + move * 0.82) * (grounded ? 1 : 0.75);
+    const rate = s.rate * (0.35 + move * 0.65) * (grounded ? 1 : 0.85);
     this.acc += rate * dt;
     const foot = pos.y + 0.03;   // 바닥과 겹쳐 깜빡이지 않게 살짝 위
     while (this.acc >= 1) {
@@ -275,9 +276,12 @@ export class TrailFX {
       this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
       this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
 
-      // 태어날 때 반짝 밝았다가 서서히 꺼진다
+      // 태어날 때 반짝 밝았다가 서서히 꺼진다.
+      // 예전엔 t 의 제곱이라 반쯤 살았을 때 이미 21% 밝기로 떨어져 잘 안
+      // 보였다. 완만하게 바꿔 같은 시점에 39% 로 남는다 — 가산 합성에서는
+      // 밝기가 곧 '얼마나 잘 보이는가' 다.
       const t = this.life[i] / this.born[i];
-      const f = t * t * (0.7 + 0.3 * t);
+      const f = t * (0.55 + 0.45 * t);
       this.col[i * 3] = this.base[i * 3] * f;
       this.col[i * 3 + 1] = this.base[i * 3 + 1] * f;
       this.col[i * 3 + 2] = this.base[i * 3 + 2] * f;
