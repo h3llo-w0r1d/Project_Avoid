@@ -14,10 +14,8 @@
 // 수명이 다해 갈수록 색을 어둡게 깎으면 자연스럽게 사라진다.
 
 import * as THREE from 'three';
-import { PLAYER } from './config.js';
 
-const MAX = 140;                 // 입자 통 크기. 다 쓰면 제일 오래된 걸 되쓴다.
-const FOOT = PLAYER.height / 2;  // 몸 한가운데에서 발바닥까지
+const MAX = 140;   // 입자 통 크기. 다 쓰면 제일 오래된 걸 되쓴다.
 
 // 살 수 있는 발자국 효과들. cost 는 코인.
 export const TRAILS = [
@@ -242,7 +240,10 @@ export class TrailFX {
     this.points.geometry.attributes.color.needsUpdate = true;
   }
 
-  // pos: 캐릭터 몸 한가운데. speed: 가로 속도. grounded: 바닥에 닿아 있나.
+  // pos: 캐릭터 위치. y 는 '발바닥 높이' 다(player-physics.js 의 규약 —
+  // 몸 한가운데가 아니다). 여기서 몸 절반을 빼면 입자가 바닥 1m 아래에
+  // 생겨 무대에 가려 하나도 안 보인다. 실제로 그래서 안 보였다.
+  // speed: 가로 속도. grounded: 바닥에 닿아 있나.
   update(dt, pos, speed, grounded) {
     if (!this.spec || !this.points || dt <= 0) return;
     const s = this.spec;
@@ -254,7 +255,7 @@ export class TrailFX {
     const move = Math.min(1, speed / 6);
     const rate = s.rate * (0.18 + move * 0.82) * (grounded ? 1 : 0.75);
     this.acc += rate * dt;
-    const foot = pos.y - FOOT;
+    const foot = pos.y + 0.03;   // 바닥과 겹쳐 깜빡이지 않게 살짝 위
     while (this.acc >= 1) {
       this.acc -= 1;
       this.#spawn(pos.x, foot, pos.z);
