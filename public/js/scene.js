@@ -6,6 +6,9 @@ import {
   makeSnowTexture
 } from './textures.js';
 
+// a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
+const rnd = (a, b) => a + Math.random() * (b - a);
+
 const SOFT_DOT = makeSoftDotTexture();
 
 // 해질녘 숲속 빈터. 게임 로직과 무관한 볼거리를 전부 여기서 만든다.
