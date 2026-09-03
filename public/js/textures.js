@@ -242,6 +242,31 @@ export function makeSkyTexture(h = 512) {
   return tex;
 }
 
+// 설원용 하늘. 기본 하늘은 밤빛(짙은 남색 → 흙빛 지평선)이라 흰 눈밭 위에
+// 두면 무대만 뜬금없이 하얗다. 눈 내린 흐린 날처럼 위아래로 옅게 간다.
+//
+// 완전히 흰색으로 채우면 무대와 하늘이 붙어 버려 섬이 떠 있는 게 안 보인다.
+// 위쪽은 차분한 청회색으로 눌러 두고, 지평선 쪽만 밝게 열어 준다.
+export function makeSnowSkyTexture(h = 512) {
+  const cv = document.createElement('canvas');
+  cv.width = 4;
+  cv.height = h;
+  const g = cv.getContext('2d');
+
+  const grad = g.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0.00, '#5b7791');   // 꼭대기 — 눈구름 낀 하늘
+  grad.addColorStop(0.38, '#88a5bd');
+  grad.addColorStop(0.62, '#b9cfe0');
+  grad.addColorStop(0.82, '#dcebf5');
+  grad.addColorStop(1.00, '#eef6fb');   // 지평선 — 눈밭에 스며드는 흰빛
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 4, h);
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 // ---------------------------------------------------------------- 빛망울
 
 // 가장자리로 갈수록 사라지는 둥근 점. 안 쓰면 Points 가 네모로 찍혀서

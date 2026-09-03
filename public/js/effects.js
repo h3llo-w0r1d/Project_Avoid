@@ -86,7 +86,9 @@ export const ARENAS = [
     // 빛나게 해야 '눈' 으로 보인다. 반질함도 조금 올려 표면이 살짝 반사되게.
     topEmissive: 0x33506e, topEmissiveIntensity: 0.42, topRoughness: 0.72,
     cliff: 0xa9bccd,         // 절벽은 차갑게 — 눈 밑 언 바위
-    edge: 'ice',             // 가장자리는 바위 대신 얼음 기둥
+    sky: 'snow',             // 하늘도 눈 내린 흐린 날로
+    fog: 0xc7d9e6,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
+    edge: 'ice',             // 가장자리에 얼음 기둥을 더한다
     hideTufts: true,         // 눈밭에 초록 풀포기가 서 있으면 어색하다
     swatchTop: 0xf2f8ff, swatchSide: 0x9ec4e0
   }

@@ -3,7 +3,7 @@ import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
   makeGrassTexture, makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture,
-  makeSnowTexture
+  makeSnowTexture, makeSnowSkyTexture
 } from './textures.js';
 
 // a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
@@ -46,6 +46,7 @@ function addSky(scene) {
       map: makeSkyTexture(), side: THREE.BackSide, depthWrite: false, fog: false
     })
   );
+  sky.name = 'sky';
   sky.renderOrder = -1;
   scene.add(sky);
 }
@@ -321,7 +322,7 @@ function buildEdgeIce() {
   return group;
 }
 
-// 설원 바닥 장식 — 눈더미 · 작은 얼음조각 · 눈 쓴 전나무.
+// 설원 바닥 장식 — 눈더미와 작은 얼음조각.
 //
 // 잔디에는 풀포기가 깔려 있어 바닥이 살아 보인다. 눈밭은 그 풀포기를 감추니
 // 매끈한 흰 접시가 됐다. 그림자를 드리우는 '무언가' 가 바닥에 있어야
@@ -373,39 +374,7 @@ function buildSnowDetail() {
     () => { const v = 0.85 + Math.random() * 0.2; return new THREE.Color(v * 0.92, v * 0.97, v); }
   ));
 
-  // ── 눈 쓴 전나무. 가장자리 안쪽에 몇 그루만 — 많으면 시야를 가린다.
-  //    잎(짙은 초록)과 그 위에 얹힌 눈을 따로 심어 두 층으로 보이게 한다.
-  const TREES = 13;
-  const angles = [];
-  for (let i = 0; i < TREES; i++) angles.push((i / TREES) * Math.PI * 2 + rnd(-0.16, 0.16));
-  const rr = [];
-  for (let i = 0; i < TREES; i++) rr.push(ARENA_RADIUS * rnd(0.82, 0.94));
-  const hh = [];
-  for (let i = 0; i < TREES; i++) hh.push(rnd(0.5, 0.95));
-
-  group.add(scatter(new THREE.ConeGeometry(0.5, 1.5, 7),
-    new THREE.MeshStandardMaterial({
-      color: 0x2f5f46, roughness: 0.85, flatShading: true,
-      emissive: 0x0f2a20, emissiveIntensity: 0.5
-    }), TREES,
-    (i, pos, rot, scl) => {
-      pos.set(Math.cos(angles[i]) * rr[i], -0.05 + hh[i] * 0.55, Math.sin(angles[i]) * rr[i]);
-      rot.set(0, Math.random() * 6.3, 0);
-      scl.set(hh[i] * 0.62, hh[i] * 1.25, hh[i] * 0.62);
-    }
-  ));
-  // 나무 위에 얹힌 눈
-  group.add(scatter(new THREE.ConeGeometry(0.5, 1.5, 7),
-    new THREE.MeshStandardMaterial({
-      color: 0xf6fbff, roughness: 0.55, flatShading: true,
-      emissive: 0x2a4763, emissiveIntensity: 0.35
-    }), TREES,
-    (i, pos, rot, scl) => {
-      pos.set(Math.cos(angles[i]) * rr[i], -0.05 + hh[i] * 0.92, Math.sin(angles[i]) * rr[i]);
-      rot.set(0, Math.random() * 6.3, 0);
-      scl.set(hh[i] * 0.44, hh[i] * 0.62, hh[i] * 0.44);
-    }
-  ));
+  // 전나무도 심어 봤는데, 멀리서 보면 초록 얼룩처럼 보여 걷어냈다.
 
   return group;
 }
@@ -603,6 +572,13 @@ export function fitCamera(camera, renderer) {
 // 상판 무늬는 한 번 구워 두고 돌려 쓴다. 1024x1024 를 매번 다시 그리면
 // 스킨을 고를 때마다 몇십 ms 씩 멈춘다.
 const topTexCache = new Map();
+const skyTexCache = new Map();
+function skyTexture(kind) {
+  if (!skyTexCache.has(kind)) {
+    skyTexCache.set(kind, kind === 'snow' ? makeSnowSkyTexture() : makeSkyTexture());
+  }
+  return skyTexCache.get(kind);
+}
 function topTexture(kind) {
   if (!topTexCache.has(kind)) {
     topTexCache.set(kind, kind === 'snow' ? makeSnowTexture() : makeGrassTexture());
@@ -655,6 +631,21 @@ export function paintArena(deck, spec = {}) {
 
   const tufts = deck.getObjectByName('deck-tufts');
   if (tufts) tufts.visible = !spec.hideTufts;
+
+  // 하늘과 안개. 무대만 하얗고 하늘이 밤빛이면 눈밭이 뜬금없어 보인다.
+  // 안개 색은 곧 지평선 색이라, 하늘 아래쪽과 맞춰야 경계가 안 생긴다.
+  const scene = deck.parent;
+  if (scene) {
+    const sky = scene.getObjectByName('sky');
+    if (sky) {
+      const want = skyTexture(spec.sky ?? 'night');
+      if (sky.material.map !== want) {
+        sky.material.map = want;
+        sky.material.needsUpdate = true;
+      }
+    }
+    if (scene.fog) scene.fog.color.setHex(spec.fog ?? COLORS.haze);
+  }
 
   // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를
   // 함께 세워 빈틈을 메운다(바위는 spec.stone 색으로 이미 하얗게 칠해진다).
