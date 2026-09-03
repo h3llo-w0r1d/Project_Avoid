@@ -2869,3 +2869,57 @@ kbd {
   /* vh 로 잡힌 안쪽 목록들은 flex 가 높이를 정하게 풀어 준다 */
   .board-list, .patch-list { max-height: none; }
 }
+
+/* ---------- 강제 가로(아이폰)도 갤럭시와 같은 정리 ---------- */
+/*
+   아이폰은 화면을 90도 돌려 쓴다(:root.force-landscape). 그래서 바로 위의
+   '세로가 짧은 가로 화면' 미디어쿼리가 안 걸린다 — 뷰포트는 여전히 세로라
+   orientation:landscape 가 거짓이기 때문이다. 같은 처방을 여기 한 번 더 쓴다.
+
+   돌린 화면에서는 세로·가로 축이 바뀐다. '세로 높이'는 100vw 다.
+   아이폰 14 기준 돌린 무대는 약 844×390 이라 갤럭시(915×412)와 거의 같다. */
+
+/* 메뉴는 위에서부터 자란다. 가운데 정렬로 두면 항목이 늘 때마다 아래로 밀려
+   내려와 왼쪽 아래 탑 버튼과 겹친다('상점'이 늘면서 실제로 겹쳤다). */
+:root.force-landscape #side-menu {
+  top: 44px; transform: none;
+  left: max(10px, env(safe-area-inset-top));
+  padding-left: 13px; gap: 3px;
+}
+:root.force-landscape #side-menu button {
+  padding: 5px 9px; gap: 8px;
+  font-size: 12.5px; line-height: 1.25;
+}
+:root.force-landscape #side-menu .sm-ico { font-size: 14px; line-height: 1.25; }
+
+/* 탑 버튼은 왼쪽 아래 구석에 작게 */
+:root.force-landscape #tower-btn { left: 8px; bottom: 6px; width: 66px; height: 66px; }
+:root.force-landscape .tower-label { font-size: 10px; }
+
+/* 공지는 위에 바짝 붙이고 한 줄로. 패널이 그 아래에서 시작하게 위 여백을 맞춘다. */
+:root.force-landscape #notice-banner {
+  top: 6px;
+  max-width: min(560px, 66vh);
+  padding: 5px 14px;
+  font-size: 11px;
+}
+:root.force-landscape .screen {
+  padding: 42px 14px 10px max(152px, calc(env(safe-area-inset-top) + 140px));
+  gap: 10px;
+}
+
+/* 창(모달) — 돌린 화면의 '세로 높이'는 100vw 다. dvw 는 지금 실제로 보이는
+   폭을 재므로, 주소창이 걸쳐 있어도 창이 화면 밖으로 넘치지 않는다. */
+:root.force-landscape .modal { padding: 10px; }
+:root.force-landscape .modal-card { max-height: 92vw; max-height: 92dvw; }
+:root.force-landscape #board-modal .modal-card { max-height: 92vw; max-height: 92dvw; }
+:root.force-landscape #board-modal .modal-head h2 { font-size: 17px; }
+:root.force-landscape .board-tabs { margin-top: 8px; padding-bottom: 4px; gap: 6px; }
+:root.force-landscape .board-write { margin: 8px 0; padding: 8px; }
+:root.force-landscape .board-write textarea { min-height: 34px; font-size: 13px; }
+:root.force-landscape .board-comment-form textarea { min-height: 32px; }
+/* 목록이 0 으로 눌려 굴릴 게 없어지는 걸 막는다 */
+:root.force-landscape #board-modal .board-list,
+:root.force-landscape #board-modal .board-detail { min-height: 96px; }
+:root.force-landscape .board-list,
+:root.force-landscape .patch-list { max-height: none; }
