@@ -108,7 +108,7 @@ function addArena(scene) {
 
 // 같은 모양을 여러 번 놓을 때 쓴다. 메시를 따로 만들면 개수만큼
 // 드로우콜이 늘지만, 인스턴싱하면 몇 개를 놓든 한 번에 그린다.
-function scatter(geo, mat, count, place) {
+function scatter(geo, mat, count, place, color = null) {
   const mesh = new THREE.InstancedMesh(geo, mat, count);
   const m = new THREE.Matrix4();
   const pos = new THREE.Vector3();
@@ -120,8 +120,10 @@ function scatter(geo, mat, count, place) {
     place(i, pos, rot, scl);
     quat.setFromEuler(rot);
     mesh.setMatrixAt(i, m.compose(pos, quat, scl));
+    if (color) mesh.setColorAt(i, color(i));
   }
   mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   // 그림자는 끈다. 가장자리 장식이라 그림자가 거의 보이지도 않는데
   // 켜면 그림자 맵을 굽는 패스에 전부 다시 그려진다.
   mesh.castShadow = false;
@@ -129,24 +131,55 @@ function scatter(geo, mat, count, place) {
 }
 
 // 가장자리를 두른 돌. 어디서 떨어지는지 한눈에 보이게 밝은 돌을 쓴다.
+//
+// 하나짜리 정십이면체를 그대로 쓰면 46개가 전부 똑같이 생긴 공이라 인조물처럼
+// 보인다. 그렇다고 돌마다 메시를 따로 만들면 드로우콜이 46번이다.
+// 절충: 서로 다르게 찌그러뜨린 바위 3종을 만들어 나눠 심는다(드로우콜 3번).
+// 여기에 돌마다 색을 조금씩 달리해(instanceColor) 같은 모양이 반복돼도
+// 눈에 덜 띄게 한다.
 function buildEdgeStones() {
-  const count = 46;
-  return scatter(
-    new THREE.DodecahedronGeometry(1, 0),
-    new THREE.MeshStandardMaterial({ color: 0xa89e8c, roughness: 0.85, metalness: 0.05 }),
-    count,
-    (i, pos, rot, scl) => {
-      const a = (i / count) * Math.PI * 2 + Math.random() * 0.05;
-      const size = 0.3 + Math.random() * 0.26;
-      pos.set(
-        Math.cos(a) * (ARENA_RADIUS - 0.15),
-        -0.06 + Math.random() * 0.1,
-        Math.sin(a) * (ARENA_RADIUS - 0.15)
-      );
-      rot.set(Math.random(), Math.random() * 3, Math.random());
-      scl.set(size * (0.8 + Math.random() * 0.6), size * (0.6 + Math.random() * 0.4), size);
-    }
-  );
+  const group = new THREE.Group();
+  const KINDS = 3;
+  const count = 48;
+  const per = count / KINDS;
+
+  for (let k = 0; k < KINDS; k++) {
+    // 면을 한 번 더 쪼갠 뒤 찌그러뜨린다. 쪼개지 않으면 찌그러뜨려도
+    // 면이 커서 각진 사탕처럼 보인다.
+    const geo = new THREE.DodecahedronGeometry(1, 1);
+    jitter(geo, 0.34 + k * 0.06);
+    // 납작 셰이딩 — 면이 또렷해야 저폴리 바위처럼 보인다(무대 그림체와 맞다)
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xa89e8c, roughness: 0.92, metalness: 0.04, flatShading: true
+    });
+
+    group.add(scatter(geo, mat, per,
+      (i, pos, rot, scl) => {
+        // 종류를 번갈아 심어야 같은 모양이 몰려 있지 않다
+        const idx = i * KINDS + k;
+        const a = (idx / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.06;
+        const size = 0.28 + Math.random() * 0.30;
+        pos.set(
+          Math.cos(a) * (ARENA_RADIUS - 0.15),
+          -0.08 + Math.random() * 0.13,
+          Math.sin(a) * (ARENA_RADIUS - 0.15)
+        );
+        rot.set(Math.random() * 0.6, Math.random() * 6.3, Math.random() * 0.6);
+        // 가로로 눕거나 세로로 선 돌이 섞이게 축마다 따로 흔든다
+        scl.set(
+          size * (0.75 + Math.random() * 0.7),
+          size * (0.55 + Math.random() * 0.6),
+          size * (0.75 + Math.random() * 0.7)
+        );
+      },
+      // 돌마다 밝기·색기를 조금씩 — 이끼 낀 것, 볕에 바랜 것이 섞인 느낌
+      () => {
+        const v = 0.78 + Math.random() * 0.30;
+        return new THREE.Color(v, v * (0.97 + Math.random() * 0.05), v * (0.92 + Math.random() * 0.08));
+      }
+    ));
+  }
+  return group;
 }
 
 // 바닥에 심는 풀포기. 전기선은 y 0.6 에 있으므로 그보다 훨씬 낮게 유지한다.
@@ -237,34 +270,9 @@ function buildUnderside() {
   tip.scale.y = 0.7;
   under.add(tip);
 
-  // 떨어져 나온 흙덩이 몇 개
-  under.add(scatter(
-    new THREE.DodecahedronGeometry(1, 0), soil, 9,
-    (i, pos, rot, scl) => {
-      const a = Math.random() * Math.PI * 2;
-      const r = ARENA_RADIUS * (0.5 + Math.random() * 0.7);
-      const s = 0.4 + Math.random() * 1.1;
-      pos.set(Math.cos(a) * r, -3 - Math.random() * 11, Math.sin(a) * r);
-      rot.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
-      scl.set(s, s * 0.7, s);
-    }
-  ));
-
-  // 가장자리에서 늘어진 뿌리. 길이는 스케일로 준다.
-  const count = 26;
-  under.add(scatter(
-    new THREE.CylinderGeometry(0.05, 0.13, 1, 5),
-    new THREE.MeshStandardMaterial({ color: 0x53402c, roughness: 1 }),
-    count,
-    (i, pos, rot, scl) => {
-      const a = (i / count) * Math.PI * 2 + Math.random() * 0.2;
-      const len = 1.4 + Math.random() * 4.5;
-      const r = ARENA_RADIUS * (0.9 + Math.random() * 0.08);
-      pos.set(Math.cos(a) * r, -0.6 - len / 2, Math.sin(a) * r);
-      rot.set((Math.random() - 0.5) * 0.5, 0, (Math.random() - 0.5) * 0.5);
-      scl.set(1, len, 1);
-    }
-  ));
+  // 예전엔 떨어져 나온 흙덩이 9개와 늘어진 뿌리 26개를 매달아 뒀는데,
+  // 무대 아래에 검은 막대기와 돌덩이가 흩어져 보여 지저분했다. 섬이 떠 있는
+  // 느낌은 아래로 좁아지는 흙덩어리만으로 충분해서 둘 다 걷어냈다.
 
   return under;
 }
