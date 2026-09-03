@@ -748,9 +748,12 @@ const adminCoins = (() => {
     `<svg class="roulette-svg" viewBox="0 0 100 100" aria-hidden="true">${wedges}</svg>` +
     SEG.map((s, i) => {
       const a = i * ARC + ARC / 2;
-      // 노래 칸은 글씨가 길어 작게 세 줄로 넣는다.
+      // 특별 칸은 이름을 그대로, 코인 칸은 값에 아이콘을 붙인다.
+      // 마지막 갈래가 '코인이 없으면 꽝' 이라, 특별 칸을 여기 빠뜨리면
+      // 그 칸이 통째로 '꽝' 으로 찍힌다(은하수를 넣고 실제로 그랬다).
       const txt = s.song ? '개발자가<br>불러주는<br>노래'
         : s.lucky ? '가나디라고라<br><small>(룰렛 전용)</small>'
+        : s.arena ? '🌌 은하수<br><small>(룰렛 전용)</small>'
         : s.jackpot ? '💰300'
         : (s.coins ? `🪙${s.label}` : '꽝');
       const cls = (s.song || s.lucky || s.arena) ? 'roul-label roul-label-song' : 'roul-label';
