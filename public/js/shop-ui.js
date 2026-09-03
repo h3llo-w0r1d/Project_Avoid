@@ -1,6 +1,6 @@
 // 상점 — 코인으로 사는 꾸미기.
 //
-// 항목(발자국 효과·발밑 링…)을 위쪽 탭으로 나눠 둔다. 파는 게 늘어날 때
+// 항목(발자국 효과·경기장 스킨…)을 위쪽 탭으로 나눠 둔다. 파는 게 늘어날 때
 // 창을 새로 만들지 않고 CATEGORIES 에 한 줄만 더하면 되게 했다.
 //
 // 어느 항목이든 규칙은 같다: 산 것만 켤 수 있고, 한 번에 하나만 켠다.
@@ -9,7 +9,7 @@
 // 코인은 브라우저에 있다(wallet). 서버에는 '누가 뭘 샀다' 만 남긴다 —
 // 캐릭터 구매와 같은 방식이라 관리 화면에서 함께 볼 수 있다.
 
-import { TRAILS, RINGS, DEFAULT_RING } from './effects.js';
+import { TRAILS, ARENAS, DEFAULT_ARENA } from './effects.js';
 import { wallet } from './wallet.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g,
@@ -19,7 +19,7 @@ const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 
 // 파는 항목들. kind 는 wallet 이 '산 목록/켠 것' 을 담는 칸 이름이기도 하다.
 //
-//  allowNone : '사용 안 함' 칸을 맨 앞에 둘지. 링처럼 늘 하나는 켜져 있어야
+//  allowNone : '사용 안 함' 칸을 맨 앞에 둘지. 무대처럼 늘 하나는 켜져 있어야
 //              하는 항목은 false 로 두고, 대신 공짜 기본값을 하나 넣는다.
 //  free      : 살 필요 없이 처음부터 쓸 수 있는 id
 //  swatch    : 카드 위 색 미리보기. 사기 전에 무슨 색인지 보여 준다.
@@ -34,13 +34,13 @@ export const CATEGORIES = [
       : `linear-gradient(90deg,${s.colors.map(hex).join(',')})`
   },
   {
-    id: 'ring', kind: 'ring', name: '발밑 링',
-    hint: '캐릭터 발밑에서 빛나는 링의 색이에요 · 어두운 무대에서 늘 보여요',
+    id: 'arena', kind: 'arena', name: '경기장 스킨',
+    hint: '전기선을 피하는 무대의 모습이에요 · 새 스킨은 곧 추가됩니다',
     allowNone: false,
-    free: DEFAULT_RING,
-    items: RINGS,
-    // 링이니까 미리보기도 링 모양으로 — 색만 칠한 막대보다 뭘 사는지 분명하다.
-    swatch: (s) => `radial-gradient(circle at 50% 50%, transparent 34%, ${hex(s.color)} 38%, ${hex(s.color)} 52%, transparent 56%)`
+    free: DEFAULT_ARENA,
+    items: ARENAS,
+    // 위는 바닥, 아래는 절벽. 무대를 옆에서 본 모습처럼 보이게 한다.
+    swatch: (s) => `linear-gradient(180deg, ${hex(s.swatchTop ?? s.top ?? 0x6f9e4a)} 0 58%, ${hex(s.swatchSide ?? s.cliff ?? 0x7a5a3a)} 58% 100%)`
   }
 ];
 
@@ -164,7 +164,7 @@ export class ShopUI {
   #tap(cat, item, owned, on) {
     if (item.plain) { this.onEquip?.(cat.kind, null); this.paint(); return; }
     if (owned) {
-      // 끌 수 있는 항목이면, 켠 걸 다시 눌러 끈다. 링처럼 늘 하나는 켜져
+      // 끌 수 있는 항목이면, 켠 걸 다시 눌러 끈다. 무대처럼 늘 하나는 켜져
       // 있어야 하는 항목은 다시 눌러도 그대로 둔다.
       const next = (on && cat.allowNone) ? null : item.id;
       this.onEquip?.(cat.kind, next);

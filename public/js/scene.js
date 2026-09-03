@@ -77,6 +77,7 @@ function addArena(scene) {
     new THREE.CircleGeometry(ARENA_RADIUS, 96),
     new THREE.MeshStandardMaterial({ map: makeGrassTexture(), roughness: 0.95, metalness: 0 })
   );
+  top.name = 'deck-top';
   top.rotation.x = -Math.PI / 2;
   top.receiveShadow = true;
   group.add(top);
@@ -88,11 +89,14 @@ function addArena(scene) {
       map: makeSoilTexture(), roughness: 0.95, metalness: 0, side: THREE.DoubleSide
     })
   );
+  cliff.name = 'deck-cliff';
   cliff.position.y = -1.7;
   group.add(cliff);
 
   group.add(buildEdgeStones());
-  group.add(buildGrassTufts());
+  const tufts = buildGrassTufts();
+  tufts.name = 'deck-tufts';
+  group.add(tufts);
   group.add(buildUnderside());
 
   scene.add(group);
@@ -382,4 +386,26 @@ export function fitCamera(camera, renderer) {
     else lo = mid;
   }
   placeAt(camera, hi, tilt);
+}
+
+// 경기장 스킨 — 상판·절벽·풀포기의 색을 바꾼다.
+//
+// 무늬(텍스처)는 그대로 두고 색만 곱한다. 스킨마다 텍스처를 새로 구우면
+// 고를 때마다 몇십 ms 씩 멈추는데, 색만 바꾸면 즉시 반영되고 같은 무늬가
+// 계절이 바뀐 것처럼 보인다. 무늬 자체를 갈아야 하는 스킨이 생기면
+// 그때 spec 에 map 을 받아 여기서 갈아 끼우면 된다.
+//
+// spec 이 비었으면(기본 스킨) 원래 색으로 되돌린다.
+export function paintArena(deck, spec = {}) {
+  if (!deck) return;
+  const put = (name, hex) => {
+    const o = deck.getObjectByName(name);
+    if (!o) return;
+    // 풀포기는 그룹이라 안쪽 메시들을 훑는다
+    o.traverse?.((m) => { if (m.material?.color) m.material.color.setHex(hex ?? 0xffffff); });
+    if (o.material?.color) o.material.color.setHex(hex ?? 0xffffff);
+  };
+  put('deck-top', spec.top);
+  put('deck-cliff', spec.cliff);
+  put('deck-tufts', spec.tuft);
 }

@@ -17,7 +17,7 @@ const SECONDS_PER_SPIN = 80;            // 이만큼 쌓일 때마다 룰렛 1�
 // 이미 산 사람의 기록이 통째로 날아간다.
 const SHOP_KEYS = {
   trail: { owned: 'avoidarc.owned.fx',   equip: 'avoidarc.equip.fx' },
-  ring:  { owned: 'avoidarc.owned.ring', equip: 'avoidarc.equip.ring' }
+  arena: { owned: 'avoidarc.owned.arena', equip: 'avoidarc.equip.arena' }
 };
 
 function readOwned() {
@@ -74,7 +74,7 @@ export const wallet = {
   },
 
   // ── 상점에서 산 꾸미기 ──
-  // 항목(발자국·링…)마다 칸을 따로 쓴다. 한 칸에 섞으면 나중에 id 가 겹칠 때
+  // 항목(발자국·무대…)마다 칸을 따로 쓴다. 한 칸에 섞으면 나중에 id 가 겹칠 때
   // 하나를 산 사람에게 다른 게 딸려 오는 사고가 난다.
   // 항목이 늘면 SHOP_KEYS 에 한 줄만 더하면 된다.
   ownedIn(kind) {

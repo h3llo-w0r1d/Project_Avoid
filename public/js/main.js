@@ -1,5 +1,5 @@
 ﻿import * as THREE from 'three';
-import { createWorld, fitCamera } from './scene.js';
+import { createWorld, fitCamera, paintArena } from './scene.js';
 import { startOrientationManager } from './orientation.js';
 import { Player } from './player.js';
 import { Hazards } from './hazards.js';
@@ -22,7 +22,7 @@ import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
 import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
-import { TrailFX, findRing, DEFAULT_RING } from './effects.js';
+import { TrailFX, findArena, DEFAULT_ARENA } from './effects.js';
 import { ShopUI } from './shop-ui.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
@@ -80,7 +80,7 @@ function decodeReplay(b64) {
 
 const canvas = document.getElementById('stage');
 const world = createWorld(canvas);
-const { renderer, scene, camera } = world;
+const { renderer, scene, camera, deck } = world;
 
 // 고른 캐릭터는 브라우저에 저장한다. 해금 여부는 최고 기록으로 판단하므로
 // 저장할 필요가 없다 — 기록만 있으면 언제든 다시 계산된다.
@@ -226,12 +226,12 @@ const input = new Input();
 const trail = new TrailFX(scene);
 trail.setEffect(wallet.equippedIn('trail'));
 
-// 발밑 링 색(상점 '발밑 링'). 안 샀으면 기본 하늘색.
-function applyRing(id) {
-  const spec = findRing(id ?? DEFAULT_RING) ?? findRing(DEFAULT_RING);
-  player.halo.material.color.setHex(spec.color);
+// 경기장 스킨(상점 '경기장 스킨'). 안 골랐으면 원래 풀숲.
+function applyArena(id) {
+  const spec = findArena(id ?? DEFAULT_ARENA) ?? findArena(DEFAULT_ARENA);
+  paintArena(deck, spec);
 }
-applyRing(wallet.equippedIn('ring'));
+applyArena(wallet.equippedIn('arena'));
 
 // 발자국 효과 한 프레임. 혼자 하기·봇전·1v1 이 모두 이 한 줄만 부른다.
 // 죽고 나서까지 뿌리면 시체에서 반짝이므로 살아 있을 때만.
@@ -569,7 +569,7 @@ shop.onBuy = (item, cat) => {
 shop.onEquip = (kind, id) => {
   wallet.equipIn(kind, id);
   if (kind === 'trail') trail.setEffect(id);
-  else if (kind === 'ring') applyRing(id);
+  else if (kind === 'arena') applyArena(id);
 };
 document.getElementById('shop-btn')?.addEventListener('click', () => {
   if (isAdmin) shop.open();
