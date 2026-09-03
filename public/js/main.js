@@ -575,13 +575,11 @@ shop.onEquip = (kind, id) => {
   if (kind === 'trail') trail.setEffect(id);
   else if (kind === 'arena') applyArena(id);
 };
-document.getElementById('shop-btn')?.addEventListener('click', () => {
-  if (isAdmin) shop.open();
-  else comingSoon();
-});
+document.getElementById('shop-btn')?.addEventListener('click', () => shop.open());
 
 // 아직 여는 중인 기능을 눌렀을 때. 버튼은 보이게 두되(뭐가 올지 보이게)
 // 누르면 준비 중이라고만 알린다. 관리자는 그대로 쓸 수 있다.
+// (상점은 열었고, 지금은 층 오르기만 이걸 쓴다.)
 function comingSoon() {
   const t = document.createElement('div');
   t.className = 'shop-toast center';
