@@ -2843,4 +2843,29 @@ kbd {
   /* 탑 버튼은 메뉴 아래 구석으로. 작게 줄여야 패널과 안 부딪힌다. */
   #tower-btn { left: 8px; bottom: 6px; width: 66px; height: 66px; }
   .tower-label { font-size: 10px; }
+
+  /* --- 세로가 짧은 가로 화면의 창(모달) --- */
+  /* 게시판 카드는 스스로 스크롤하지 않는다(overflow:hidden). 머리글·탭·쓰기칸을
+     위에 고정하고 목록만 남은 자리에서 굴리는 구조라, 세로가 412px 밖에 안 되면
+     고정 부분이 카드를 다 먹어 목록 높이가 0 으로 눌린다. 그러면 굴릴 게 없어
+     '아래로 스크롤이 안 되는' 상태가 된다. 카드를 키우고 고정 부분을 줄인다. */
+  .modal { padding: 10px; }
+  /* dvh 를 쓴다. 안드로이드 크롬에서 vh 는 '주소창이 숨겨진' 큰 화면을 재기
+     때문에, vh 로 잡으면 카드가 실제로 보이는 높이보다 커져 아래쪽이 화면
+     밖으로 잘린다. 잘린 자리에 목록 아랫부분과 스크롤 여지가 통째로 들어가
+     '아래로 안 내려가는' 상태가 된다. dvh 는 지금 보이는 높이를 잰다.
+     구형 브라우저용으로 vh 를 먼저 두고, 지원하면 dvh 가 이긴다. */
+  .modal-card { max-height: 94vh; max-height: 94dvh; }
+  #board-modal .modal-card { max-height: 94vh; max-height: 94dvh; }
+  #board-modal .modal-head h2 { font-size: 17px; }
+  .board-tabs { margin-top: 8px; padding-bottom: 4px; gap: 6px; }
+  .board-write { margin: 8px 0; padding: 8px; }
+  .board-write textarea { min-height: 34px; font-size: 13px; }
+  .board-comment-form textarea { min-height: 32px; }
+  /* 목록에 최소 높이를 준다. 고정 부분이 예상보다 커져도 목록이 통째로
+     사라지지 않고, 그 안에서 굴릴 수 있게 남는다. */
+  #board-modal .board-list,
+  #board-modal .board-detail { min-height: 96px; }
+  /* vh 로 잡힌 안쪽 목록들은 flex 가 높이를 정하게 풀어 준다 */
+  .board-list, .patch-list { max-height: none; }
 }
