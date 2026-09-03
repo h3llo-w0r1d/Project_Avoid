@@ -567,6 +567,10 @@ shop.onBuy = (item, cat) => {
   return true;
 };
 shop.onEquip = (kind, id) => {
+  // 관리자는 상점에서 전부 열려 보이지만 '산 목록'에는 없다. 그대로 켜면
+  // wallet 이 '안 산 걸 켰다'고 보고 무시해서(equippedIn), 눌러도 아무 일이
+  // 없는 것처럼 보인다. 켜는 순간 산 목록에도 넣어 준다.
+  if (id && isAdmin) wallet.markOwnedIn(kind, id);
   wallet.equipIn(kind, id);
   if (kind === 'trail') trail.setEffect(id);
   else if (kind === 'arena') applyArena(id);
