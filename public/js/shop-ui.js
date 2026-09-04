@@ -10,6 +10,7 @@
 // 캐릭터 구매와 같은 방식이라 관리 화면에서 함께 볼 수 있다.
 
 import { TRAILS, ARENAS, DEFAULT_ARENA } from './effects.js';
+import { FX_LEVEL_AT } from './wallet.js';
 import { wallet } from './wallet.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g,
@@ -252,8 +253,9 @@ export class ShopUI {
 
     // 단계가 있는 항목(발자국)은 가진 것에 한해 단계와 진행도를 보여 준다.
     // 아직 안 산 것에까지 붙이면 살지 말지 정하는 데 방해만 된다.
+    // 지금 몇 단계로 쓰는지 + 다음 단계까지. 산 것에만 붙인다.
     const lvLine = (cat.levels && owned && !item.plain)
-      ? `<span class="shop-lv">${wallet.fxLevel(item.id)}단계${wallet.fxToNext(item.id) === null ? ' <em>최대</em>' : ` <em>다음까지 ${wallet.fxToNext(item.id)}초</em>`}</span>`
+      ? `<span class="shop-lv">${wallet.fxPick(item.id)}단계${wallet.fxLevel(item.id) > wallet.fxPick(item.id) ? ` <em>(${wallet.fxLevel(item.id)}단계까지 열림)</em>` : (wallet.fxToNext(item.id) === null ? ' <em>최대</em>' : ` <em>다음까지 ${wallet.fxToNext(item.id)}초</em>`)}</span>`
       : '';
     if (cat.tallSwatch) el.classList.add('tall');
     el.innerHTML = `
@@ -269,6 +271,9 @@ export class ShopUI {
 
   #tap(cat, item, owned, on) {
     if (item.plain) { this.onEquip?.(cat.kind, null); this.paint(); return; }
+    // 단계가 있는 항목은 눌렀을 때 몇 단계로 쓸지 고르게 한다.
+    // 3단계까지 열어도 1단계의 담백한 쪽이 취향일 수 있다.
+    if (owned && cat.levels && !item.plain) { this.#pickLevel(cat, item); return; }
     if (owned) {
       // 끌 수 있는 항목이면, 켠 걸 다시 눌러 끈다. 무대처럼 늘 하나는 켜져
       // 있어야 하는 항목은 다시 눌러도 그대로 둔다.
@@ -280,6 +285,50 @@ export class ShopUI {
     // 룰렛 전용은 구매창을 띄우지 않는다. 코인이 아무리 많아도 못 산다.
     if (item.rouletteOnly) { this.#toast('룰렛에서만 얻을 수 있어요'); return; }
     this.#confirmBuy(cat, item);
+  }
+
+  // 단계 고르는 창. 아직 안 열린 단계는 눌리지 않고, 얼마나 더 버티면
+  // 열리는지 알려 준다.
+  #pickLevel(cat, item) {
+    const max = wallet.fxLevel(item.id);
+    const now = wallet.fxPick(item.id);
+    const equipped = this.#current(cat) === item.id;
+
+    const ask = document.createElement('div');
+    ask.className = 'modal';
+    ask.style.zIndex = '70';
+    const rows = [1, 2, 3].map((lv) => {
+      const open = lv <= max;
+      const on = lv === now;
+      const need = open ? null : FX_LEVEL_AT[lv - 2] - wallet.fxTime(item.id);
+      const note = open ? ['담백하게', '넉넉하게', '가장 화려하게'][lv - 1]
+        : `${Math.ceil(need)}초 더 버티면 열려요`;
+      return `<button type="button" class="lv-row${on ? ' on' : ''}${open ? '' : ' locked'}"
+        data-lv="${lv}"${open ? '' : ' disabled'}><span class="lv-num">${lv}단계</span><span class="lv-note">${esc(note)}</span><span class="lv-state">${on ? '사용 중' : open ? '고르기' : '🔒'}</span></button>`;
+    }).join('');
+
+    ask.innerHTML = `
+      <div class="modal-card panel buy-card lv-card">
+        <p class="buy-msg"><b>${esc(item.name)}</b> 단계 고르기</p>
+        <p class="buy-note">단계가 높을수록 더 많고 화려해져요. 낮춰 써도 됩니다.</p>
+        <div class="lv-list">${rows}</div>
+        <div class="buy-actions"><button type="button" class="ghost small lv-close">닫기</button></div>
+      </div>`;
+    document.body.appendChild(ask);
+    const bye = () => ask.remove();
+    ask.querySelector('.lv-close').addEventListener('click', bye);
+    ask.addEventListener('click', (e) => { if (e.target === ask) bye(); });
+    for (const b of ask.querySelectorAll('.lv-row:not([disabled])')) {
+      b.addEventListener('click', () => {
+        wallet.setFxPick(item.id, Number(b.dataset.lv));
+        // 고르면 그 효과를 켠다. 이미 켠 것이면 단계만 바뀐다.
+        this.onEquip?.(cat.kind, item.id);
+        bye();
+        this.paint();
+      });
+    }
+    // 켠 적 없는 효과였다면, 창을 그냥 닫아도 켜지지 않는다(고를 때만 켠다)
+    void equipped;
   }
 
   #confirmBuy(cat, item) {

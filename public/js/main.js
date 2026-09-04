@@ -241,7 +241,8 @@ const trail = new TrailFX(scene);
 // 이걸 부르면 그 자리에서 화려해진다.
 function refreshTrail() {
   const id = wallet.equippedIn('trail');
-  trail.setEffect(id, id ? wallet.fxLevel(id) : 1);
+  // 고른 단계로 켠다. 안 골랐으면 열린 최고 단계다(wallet.fxPick).
+  trail.setEffect(id, id ? wallet.fxPick(id) : 1);
 }
 refreshTrail();
 

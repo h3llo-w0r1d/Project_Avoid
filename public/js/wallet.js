@@ -21,6 +21,12 @@ const OWNED_KEY = 'avoidarc.owned';   // 코인으로 산 캐릭터 id 목록
 const MERGED_KEY = (userId) => `avoidarc.merged.${userId}`;
 // 발자국 효과를 켠 채로 버틴 누적 시간(효과 id → 초). 단계를 올리는 값이다.
 const FXTIME_KEY = 'avoidarc.fx.time';
+// 효과마다 '몇 단계로 쓸지' 고른 값. 열린 단계 안에서 취향껏 낮춰 쓸 수 있다.
+//
+// 이건 자산이 아니라 취향이라 이 기기에만 둔다. 계정에 안 올리는 게 맞다 —
+// 잃어도 아쉬울 게 없고(다음 기기에선 열린 최고 단계로 시작한다), 그 대신
+// DB 칸과 합치기 규칙을 하나 안 늘려도 된다.
+const FXPICK_KEY = 'avoidarc.fx.pick';
 // 단계 문턱(누적 초). 오래 버틸수록 쌓이므로 바로 죽는 식으로는 안 오른다.
 export const FX_LEVEL_AT = [500, 1000];
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
@@ -201,6 +207,25 @@ export const wallet = {
     const t = this.fxTime(id);
     const need = FX_LEVEL_AT.find((v) => t < v);
     return need === undefined ? null : Math.ceil(need - t);
+  },
+
+  // 이 효과를 몇 단계로 쓸지 고른 값. 안 골랐으면 열린 최고 단계.
+  // 나중에 단계가 더 열리면 자동으로 그 단계까지 올라간다.
+  fxPick(id) {
+    const max = this.fxLevel(id);
+    try {
+      const m = JSON.parse(localStorage.getItem(FXPICK_KEY) || '{}');
+      const v = Math.floor(Number(m?.[id]));
+      return (v >= 1 && v <= max) ? v : max;
+    } catch { return max; }
+  },
+
+  setFxPick(id, level) {
+    if (!id) return;
+    let m = {};
+    try { m = JSON.parse(localStorage.getItem(FXPICK_KEY) || '{}') || {}; } catch { m = {}; }
+    m[id] = Math.min(this.fxLevel(id), Math.max(1, Math.floor(level)));
+    localStorage.setItem(FXPICK_KEY, JSON.stringify(m));
   },
 
   // 지금 켠 것. 없으면 null. 산 적 없는 걸 켜 두면 무시한다
