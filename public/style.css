@@ -1304,6 +1304,14 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   color: var(--muted);
 }
 
+/* '11,814초  3시간 16분' 처럼 단위 뒤에 다른 숫자가 붙는 경우.
+   그냥 두면 초와 시간이 한 덩어리로 읽혀서, 사이를 띄우고 옅은 금을 긋는다. */
+.secs .dim.apart {
+  margin-left: 9px;
+  padding-left: 9px;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
 /* ---------- 화면(시작 / 게임오버) ---------- */
 
 .screen {

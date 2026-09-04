@@ -50,7 +50,7 @@ const BOARDS = {
   },
   playtime: {
     empty: '아직 플레이 기록이 없습니다',
-    value: (e) => `${Number(e.seconds).toLocaleString('ko-KR')}<em>초</em> <span class="dim">${hms(e.seconds)}</span>`,
+    value: (e) => `${Number(e.seconds).toLocaleString('ko-KR')}<em>초</em> <span class="dim apart">${hms(e.seconds)}</span>`,
     mine: (me) => `내 순위 ${me.rank}위 · ${Number(me.seconds).toLocaleString('ko-KR')}초 (${hms(me.seconds)})`
   },
 };
