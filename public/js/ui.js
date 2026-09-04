@@ -680,6 +680,29 @@ export const api = {
   },
 
   // 도전모드(탑) 랭킹 — 누가 몇 층까지 올라갔나.
+  // ── 계정 지갑 (코인·산 것들). 로그인 계정만.
+  async getWallet() {
+    const res = await fetch('/api/me/wallet');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  async saveWallet(w) {
+    const res = await fetch('/api/me/wallet', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(w)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+  async mergeWallet(w) {
+    const res = await fetch('/api/me/wallet/merge', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(w)
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
   // 사이트 전체 누적 판수(혼자 하기·층 오르기·봇전·1v1 전부).
   // { total, since } — since 는 언제부터 센 숫자인지('YYYY-MM-DD').
   async playCount() {

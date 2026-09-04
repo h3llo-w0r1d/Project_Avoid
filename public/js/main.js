@@ -161,6 +161,17 @@ async function onAuthChange() {
       ui.setBest(p.best ? p.best.time : 0, p.hardcore ? p.hardcore.time : 0);
     } catch { /* 못 불러오면 로컬 유지 */ }
   }
+  // 지갑을 계정에 붙인다. 이 기기에만 있던 코인·구매를 계정으로 합치고
+  // (기기마다 한 번만), 그 뒤로는 어느 기기에서든 같은 지갑을 쓴다.
+  // 캐릭터 해금 판정이 지갑을 보므로 코인 수령보다 먼저 맞춰 둔다.
+  await wallet.attach(auth.user?.id ?? null, {
+    getWallet: () => api.getWallet(),
+    saveWallet: (w) => api.saveWallet(w),
+    mergeWallet: (w) => api.mergeWallet(w)
+  });
+  renderCoinHud();
+  if (characters.open$) characters.draw();
+
   // 관리자가 준 코인이 대기 중이면 받아 지갑에 넣는다. 로그인 상태면 폴링으로
   // 새로고침 없이도 10초 안에 받는다(아래 startCoinPolling).
   if (auth.signedIn) { await claimCoinsNow(); startCoinPolling(); }

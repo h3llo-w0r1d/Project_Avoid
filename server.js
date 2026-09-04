@@ -1040,6 +1040,33 @@ app.get('/api/play-ranks', (req, res) => {
   });
 });
 
+// ── 계정 지갑 ────────────────────────────────────────────
+// 코인과 산 것들은 원래 브라우저에만 있었다. 그래서 같은 계정이라도 기기를
+// 바꾸면 안 따라왔다("폰으로 들어오니 캐릭터가 사라져요" 제보). 계정에 붙인다.
+//
+// 값 자체는 여전히 클라가 계산해 알려 준다(코인·룰렛·구매가 원래 그 신뢰
+// 모델이다). 이 API 는 '기기 간에 같은 지갑을 쓰게' 하는 것이 목적이지
+// 조작을 막는 장치가 아니다.
+
+app.get('/api/me/wallet', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  res.json(users.byId(req.user.id)?.wallet ?? null);
+});
+
+// 지갑을 통째로 저장한다. 쓰거나 사면 줄어들 수도 있어야 해서 덮어쓴다.
+app.post('/api/me/wallet', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  res.json(users.saveWallet(req.user.id, req.body ?? {}));
+});
+
+// 이 기기에 있던 지갑을 계정에 합친다. 더하기와 합집합만 하므로 어느 쪽도
+// 잃지 않는다. 기기마다 한 번만 부르는 건 클라가 표시를 남겨 관리한다.
+app.post('/api/me/wallet/merge', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  res.json(users.mergeWallet(req.user.id, req.body ?? {}));
+});
+
+
 app.get('/api/tower-ranks', (req, res) => {
   const top = users.towerRanking(TOP_N);
   const me = req.user ? users.byId(req.user.id) : null;

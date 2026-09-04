@@ -3,12 +3,22 @@
 // 게임 중 맵에 뜨는 코인을 먹어 모으고, 그 코인으로 캐릭터를 해금한다.
 // 시간(버틴 초)으로 여는 해금과는 별개의 트랙이다.
 //
-// 지금은 브라우저(localStorage)에만 저장한다 — 기기마다 따로 쌓인다.
-// 나중에 로그인 계정은 서버에 저장해 기기 간 공유하도록 옮길 자리다.
-// (최고기록을 서버 기준으로 맞춘 것과 같은 이유.)
+// 로그인한 계정은 서버에도 같이 둔다. 브라우저에만 두면 같은 계정이라도
+// 기기를 바꿨을 때 코인과 산 것들이 안 따라온다("폰으로 들어오니 캐릭터가
+// 사라져요" 제보).
+//
+// 다만 localStorage 를 버리지는 않는다. 게임 곳곳이 지갑을 '기다리지 않고'
+// 바로 읽어 가므로(canUnlock, 코인 표시 등) 동기적으로 답할 수 있어야 한다.
+// 그래서 localStorage 를 손에 든 사본으로 쓰고, 서버와 맞춰 준다:
+//   로그인할 때  — 이 기기 것을 계정에 합치고(한 번만), 그 결과를 사본에 쓴다
+//   값이 바뀔 때  — 잠깐 모았다가 계정에 통째로 올린다
+// 사본을 지우지 않는 건 안전장치이기도 하다. 서버 쪽이 잘못돼도 원본이 남는다.
 
 const COINS_KEY = 'avoidarc.coins';
 const OWNED_KEY = 'avoidarc.owned';   // 코인으로 산 캐릭터 id 목록
+// 이 기기 지갑을 어느 계정에 합쳤는지. 한 번만 합치려고 남긴다 —
+// 두 번 합치면 코인이 부푼다.
+const MERGED_KEY = (userId) => `avoidarc.merged.${userId}`;
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
 const SPINUSED_KEY = 'avoidarc.spins.used';   // 지금까지 돌린 룰렛 횟수
 const SECONDS_PER_SPIN = 80;            // 이만큼 쌓일 때마다 룰렛 1회
@@ -25,7 +35,62 @@ function readOwned() {
   catch { return new Set(); }
 }
 
+// ── 서버와 맞추기 ────────────────────────────────────────
+let account = null;      // 로그인한 계정 id (없으면 게스트)
+let api = null;          // { getWallet, saveWallet, mergeWallet }
+let pushTimer = null;
+
+// 지갑 전체를 한 덩어리로. 서버와 주고받는 모양이다.
+function snapshot() {
+  return {
+    coins: wallet.coins(),
+    owned: [...readOwned()],
+    ownedFx: [...wallet.ownedIn('trail')],
+    ownedArena: [...wallet.ownedIn('arena')],
+    playtime: wallet.playtime(),
+    spinsUsed: wallet.spinsUsed()
+  };
+}
+
+// 서버가 준 지갑을 손에 든 사본에 적는다.
+function apply(w) {
+  if (!w) return;
+  localStorage.setItem(COINS_KEY, String(Math.max(0, Math.floor(w.coins ?? 0))));
+  localStorage.setItem(OWNED_KEY, JSON.stringify(w.owned ?? []));
+  localStorage.setItem(SHOP_KEYS.trail.owned, JSON.stringify(w.ownedFx ?? []));
+  localStorage.setItem(SHOP_KEYS.arena.owned, JSON.stringify(w.ownedArena ?? []));
+  localStorage.setItem(PLAY_KEY, String(Math.max(0, Number(w.playtime) || 0)));
+  localStorage.setItem(SPINUSED_KEY, String(Math.max(0, Math.floor(w.spinsUsed ?? 0))));
+}
+
+// 바뀔 때마다 곧장 올리면 룰렛 한 번에 여러 번 오간다. 잠깐 모아서 한 번에.
+function schedulePush() {
+  if (!account || !api) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => {
+    api.saveWallet(snapshot()).catch(() => { /* 실패해도 사본은 그대로 — 다음에 다시 올라간다 */ });
+  }, 700);
+}
+
 export const wallet = {
+  // 로그인/로그아웃이 정해지면 부른다. 게스트면 userId 를 비운다.
+  async attach(userId, hooks) {
+    account = userId ?? null;
+    api = hooks ?? null;
+    if (!account || !api) return;
+    try {
+      const mark = MERGED_KEY(account);
+      if (localStorage.getItem(mark)) {
+        // 이미 합친 기기 — 계정 것을 받아 사본을 맞춘다
+        apply(await api.getWallet());
+      } else {
+        // 처음 로그인한 기기 — 여기 있던 걸 계정에 합친다(더하기·합집합)
+        apply(await api.mergeWallet(snapshot()));
+        localStorage.setItem(mark, String(Date.now()));
+      }
+    } catch { /* 서버가 안 되면 사본을 그대로 쓴다 */ }
+  },
+
   // 지금 가진 코인
   coins() {
     return Math.max(0, Math.floor(Number(localStorage.getItem(COINS_KEY)) || 0));
@@ -35,6 +100,7 @@ export const wallet = {
   add(n) {
     const v = this.coins() + Math.max(0, Math.floor(n));
     localStorage.setItem(COINS_KEY, String(v));
+    schedulePush();
     return v;
   },
 
@@ -44,6 +110,7 @@ export const wallet = {
     const v = this.coins();
     if (v < n) return false;
     localStorage.setItem(COINS_KEY, String(v - n));
+    schedulePush();
     return true;
   },
 
@@ -53,6 +120,7 @@ export const wallet = {
   addPlaytime(sec) {
     const v = this.playtime() + Math.max(0, Number(sec) || 0);
     localStorage.setItem(PLAY_KEY, String(v));
+    schedulePush();
     return v;
   },
   // 지금까지 돌린 횟수 / 100초당 1회 규칙으로 남은 횟수.
@@ -60,7 +128,7 @@ export const wallet = {
   spinsAvailable() { return Math.max(0, Math.floor(this.playtime() / SECONDS_PER_SPIN) - this.spinsUsed()); },
   // 룰렛에 쓸 수 있는 초(전체 누적에서 이미 돌린 만큼 뺀 잔여 풀). 1회 돌리면 100초 준다.
   spendableSeconds() { return Math.max(0, this.playtime() - this.spinsUsed() * SECONDS_PER_SPIN); },
-  useSpin() { localStorage.setItem(SPINUSED_KEY, String(this.spinsUsed() + 1)); },
+  useSpin() { localStorage.setItem(SPINUSED_KEY, String(this.spinsUsed() + 1)); schedulePush(); },
   secondsPerSpin() { return SECONDS_PER_SPIN; },
 
   // 코인으로 산 캐릭터인가
@@ -71,6 +139,7 @@ export const wallet = {
     const s = readOwned();
     s.add(id);
     localStorage.setItem(OWNED_KEY, JSON.stringify([...s]));
+    schedulePush();
   },
 
   // ── 상점에서 산 꾸미기 ──
@@ -90,6 +159,7 @@ export const wallet = {
     const s = this.ownedIn(kind);
     s.add(id);
     localStorage.setItem(k.owned, JSON.stringify([...s]));
+    schedulePush();
   },
 
   // 지금 켠 것. 없으면 null. 산 적 없는 걸 켜 두면 무시한다
