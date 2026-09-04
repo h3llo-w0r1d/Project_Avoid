@@ -2234,6 +2234,10 @@ async function refreshLeaderboard(kind = 'time') {
     if (kind === 'plays') {   // 판수 — 누가 제일 많이 했나
       ui.renderLeaderboard(await api.playRanks(auth.displayName), null, kind);
       return;
+    if (kind === 'playtime') {   // 누적 시간 — 판마다의 초를 다 합친 것
+      ui.renderLeaderboard(await api.playRanks(auth.displayName, 'seconds'), null, kind);
+      return;
+    }
     }
     const data = await api.versus();
     ui.renderLeaderboard({

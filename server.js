@@ -1007,9 +1007,14 @@ app.get('/api/play-count', (req, res) => {
 // 딴 사람으로 갈라져 나온다(totalPlaysOf 와 같은 이유).
 // 게스트는 계정이 없어 이름으로 묶는다 — 같은 이름을 계속 쓰는 동안만 이어진다.
 // 관리자는 뺀다(집계에서 빼는 다른 곳과 같은 규칙).
+// ?sort=seconds 면 판수 대신 플레이 초 합계로 줄을 세운다(랭킹의 '누적 시간' 탭).
+// 줄을 세우는 기준만 다를 뿐 사람을 묶는 방법은 똑같아서, 한 곳에서 같이 낸다.
 app.get('/api/play-ranks', (req, res) => {
+  const bySeconds = String(req.query.sort ?? '') === 'seconds';
   const byUser = plays.countsByUser();
   const byName = plays.countsByName();
+  const secUser = plays.secondsByUser();
+  const secName = plays.secondsByName();
 
   // 계정이 이미 가져간 이름. 지금 닉네임뿐 아니라 '로그인 상태로 쓴 적 있는
   // 옛 닉네임' 까지 넣어야 한다 — 안 그러면 이름을 바꾼 사람이 옛 이름으로
@@ -1021,22 +1026,25 @@ app.get('/api/play-ranks', (req, res) => {
     if (!a.nickname || isAdminUser(a)) continue;
     claimed.add(a.nickname);
     const n = Math.max(byUser.get(a.id) ?? 0, byName.get(a.nickname) ?? 0);
-    if (n > 0) rows.push({ id: a.id, name: a.nickname, plays: n });
+    const s = Math.max(secUser.get(a.id) ?? 0, secName.get(a.nickname) ?? 0);
+    if (n > 0) rows.push({ id: a.id, name: a.nickname, plays: n, seconds: Math.round(s) });
   }
   for (const [name, n] of byName) {
     // 계정 몫으로 이미 센 이름은 건너뛴다.
     if (claimed.has(name) || n <= 0) continue;
-    rows.push({ id: null, name, plays: n });
+    rows.push({ id: null, name, plays: n, seconds: Math.round(secName.get(name) ?? 0) });
   }
-  rows.sort((a, b) => b.plays - a.plays);
+  rows.sort(bySeconds ? (a, b) => b.seconds - a.seconds : (a, b) => b.plays - a.plays);
 
   const myName = req.user?.nickname ?? String(req.query.name ?? '').trim();
   const at = rows.findIndex((r) => r.name === myName);
   res.json({
     season: seasonInfo(),
-    note: '시즌과 상관없는 통산 판수입니다 · 혼자 하기와 층 오르기를 셉니다',
+    note: bySeconds
+      ? '시즌과 상관없는 통산 플레이 시간입니다 · 혼자 하기와 층 오르기를 셉니다'
+      : '시즌과 상관없는 통산 판수입니다 · 혼자 하기와 층 오르기를 셉니다',
     top: rows.slice(0, TOP_N),
-    me: at >= 0 ? { name: rows[at].name, plays: rows[at].plays, rank: at + 1 } : null
+    me: at >= 0 ? { ...rows[at], rank: at + 1 } : null
   });
 });
 

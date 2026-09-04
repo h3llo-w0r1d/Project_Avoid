@@ -47,8 +47,23 @@ const BOARDS = {
     empty: '아직 판 기록이 없습니다',
     value: (e) => `${Number(e.plays).toLocaleString('ko-KR')}<em>판</em>`,
     mine: (me) => `내 순위 ${me.rank}위 · ${Number(me.plays).toLocaleString('ko-KR')}판`
-  }
+  },
+  playtime: {
+    empty: '아직 플레이 기록이 없습니다',
+    value: (e) => `${Number(e.seconds).toLocaleString('ko-KR')}<em>초</em> <span class="dim">${hms(e.seconds)}</span>`,
+    mine: (me) => `내 순위 ${me.rank}위 · ${Number(me.seconds).toLocaleString('ko-KR')}초 (${hms(me.seconds)})`
+  },
 };
+
+// 초를 사람이 읽는 꼴로. 12345 → '3시간 25분'
+function hms(sec) {
+  const n = Math.max(0, Math.round(Number(sec) || 0));
+  const h = Math.floor(n / 3600);
+  const m = Math.floor((n % 3600) / 60);
+  if (h) return `${h}시간 ${m}분`;
+  if (m) return `${m}분`;
+  return `${n}초`;
+}
 
 // 기록 막대(1위 대비 비율)를 그릴 때 쓸 숫자값. 보드마다 무엇이 값인지 다르다.
 const METRIC = {
@@ -58,7 +73,8 @@ const METRIC = {
   voicehard: (e) => Number(e.time) || 0,
   wins: (e) => Number(e.wins) || 0,
   tower: (e) => Number(e.floor) || 0,
-  plays: (e) => Number(e.plays) || 0
+  plays: (e) => Number(e.plays) || 0,
+  playtime: (e) => Number(e.seconds) || 0
 };
 
 export class UI {
@@ -712,8 +728,9 @@ export const api = {
   },
 
   // 판수 랭킹 — 누가 제일 많이 했나. 게스트도 이름으로 함께 줄을 선다.
-  async playRanks(name) {
-    const res = await fetch(`/api/play-ranks?name=${encodeURIComponent(name ?? '')}`);
+  async playRanks(name, sort) {
+    const q = sort ? `&sort=${encodeURIComponent(sort)}` : '';
+    const res = await fetch(`/api/play-ranks?name=${encodeURIComponent(name ?? '')}${q}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   },
