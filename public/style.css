@@ -875,8 +875,10 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 }
 .board-write textarea {
   width: 100%;
+  /* 세로로 늘려 쓸 수 있게 두되, 처음부터 몇 줄은 보이게 한다.
+     44px 은 두 줄이라 두어 문장만 써도 위가 잘려 답답했다. */
   resize: vertical;
-  min-height: 44px;
+  min-height: 116px;
   padding: 9px 11px;
   font: inherit;
   font-size: 14px;
@@ -1008,7 +1010,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   border-top: 1px solid rgba(120, 170, 255, 0.14);
 }
 .board-comment-form textarea {
-  width: 100%; resize: vertical; min-height: 42px; padding: 9px 11px;
+  width: 100%; resize: vertical; min-height: 84px; padding: 9px 11px;
   font: inherit; font-size: 14px; color: var(--text);
   background: rgba(0, 0, 0, 0.25); border: 1px solid var(--stroke); border-radius: 8px;
 }
@@ -2860,8 +2862,8 @@ kbd {
   #board-modal .modal-head h2 { font-size: 17px; }
   .board-tabs { margin-top: 8px; padding-bottom: 4px; gap: 6px; }
   .board-write { margin: 8px 0; padding: 8px; }
-  .board-write textarea { min-height: 34px; font-size: 13px; }
-  .board-comment-form textarea { min-height: 32px; }
+  .board-write textarea { min-height: 62px; font-size: 13px; }
+  .board-comment-form textarea { min-height: 52px; }
   /* 목록에 최소 높이를 준다. 고정 부분이 예상보다 커져도 목록이 통째로
      사라지지 않고, 그 안에서 굴릴 수 있게 남는다. */
   #board-modal .board-list,
@@ -2916,8 +2918,8 @@ kbd {
 :root.force-landscape #board-modal .modal-head h2 { font-size: 17px; }
 :root.force-landscape .board-tabs { margin-top: 8px; padding-bottom: 4px; gap: 6px; }
 :root.force-landscape .board-write { margin: 8px 0; padding: 8px; }
-:root.force-landscape .board-write textarea { min-height: 34px; font-size: 13px; }
-:root.force-landscape .board-comment-form textarea { min-height: 32px; }
+:root.force-landscape .board-write textarea { min-height: 62px; font-size: 13px; }
+:root.force-landscape .board-comment-form textarea { min-height: 52px; }
 /* 목록이 0 으로 눌려 굴릴 게 없어지는 걸 막는다 */
 :root.force-landscape #board-modal .board-list,
 :root.force-landscape #board-modal .board-detail { min-height: 96px; }
