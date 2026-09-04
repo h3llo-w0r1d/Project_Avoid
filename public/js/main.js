@@ -774,7 +774,7 @@ const adminCoins = (() => {
       // 마지막 갈래가 '코인이 없으면 꽝' 이라, 특별 칸을 여기 빠뜨리면
       // 그 칸이 통째로 '꽝' 으로 찍힌다(은하수를 넣고 실제로 그랬다).
       const txt = s.song ? '개발자가<br>불러주는<br>노래'
-        : s.lucky ? '가나디라고라<br><small>(룰렛 전용)</small>'
+        : s.lucky ? '🐶 가나디라고라<br><small>(룰렛 전용)</small>'
         : s.arena ? '🌌 은하수<br><small>(룰렛 전용)</small>'
         : s.jackpot ? '💰300'
         : (s.coins ? `🪙${s.label}` : '꽝');
@@ -966,7 +966,7 @@ const adminCoins = (() => {
       if (w.song) return { label: '🎵 개발자가 불러주는 노래', ord: 1000, special: true };
       if (w.arena) return { label: '🌌 은하수 (한정 경기장)', ord: 997, special: true };
       if (w.jackpot) return { label: '💰 코인 300 잭팟', ord: 999, special: true };
-      if (w.lucky) return { label: '가나디라고라 (한정 캐릭터)', ord: 998, special: true };
+      if (w.lucky) return { label: '🐶 가나디라고라 (한정 캐릭터)', ord: 998, special: true };
       if (w.coins) return { label: `🪙 ${w.coins}코인`, ord: w.coins, special: false };
       return { label: '꽝', ord: -1, special: false };
     };
