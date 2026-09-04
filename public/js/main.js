@@ -582,6 +582,8 @@ for (const btn of document.querySelectorAll('#side-menu [data-forward]')) {
 const shop = new ShopUI();
 shop.isAdmin = () => isAdmin;
 shop.onBuy = (item, cat) => {
+  // 게스트는 못 산다. 버튼에서 이미 막지만, 사는 길은 한 번 더 막아 둔다.
+  if (!auth.signedIn && !isAdmin) return false;
   if (isAdmin) { wallet.markOwnedIn(cat.kind, item.id); return true; }   // 관리자는 코인 무한
   if (wallet.isOwnedIn(cat.kind, item.id)) return true;
   if (!wallet.spend(item.cost)) return false;
@@ -600,7 +602,38 @@ shop.onEquip = (kind, id) => {
   if (kind === 'trail') refreshTrail();
   else if (kind === 'arena') applyArena(id);
 };
-document.getElementById('shop-btn')?.addEventListener('click', () => shop.open());
+document.getElementById('shop-btn')?.addEventListener('click', () => {
+  // 게스트는 못 쓰게 막는다. 산 것이 계정에 저장되므로, 게스트로 사면
+  // 그 브라우저에만 남아 기기를 바꾸는 순간 사라진 것처럼 보인다
+  // (실제로 그 제보를 받고 지갑을 계정으로 옮겼다). 애초에 막는 게 낫다.
+  if (!auth.signedIn) { showShopLoginPrompt(); return; }
+  shop.open();
+});
+
+// 게스트가 상점을 눌렀을 때. 칭호 안내와 같은 연출을 쓴다.
+function showShopLoginPrompt() {
+  const overlay = document.createElement('div');
+  overlay.className = 'unlock-overlay';
+  overlay.innerHTML =
+    '<div class="unlock-card">' +
+    '<div class="unlock-kicker">🔒 로그인이 필요해요</div>' +
+    '<div class="unlock-lockface">🛍️</div>' +
+    '<div class="unlock-name">상점</div>' +
+    '<div class="unlock-hint">산 것은 계정에 저장돼요 · 로그인하면 기기를 바꿔도 그대로예요</div>' +
+    '<button type="button" class="unlock-login">구글로 로그인</button>' +
+    '<div class="unlock-hint dim-hint">화면을 누르면 닫혀요</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  const close = () => {
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 260);
+  };
+  overlay.querySelector('.unlock-login').addEventListener('click', (e) => {
+    e.stopPropagation();
+    location.href = '/auth/google';
+  });
+  overlay.addEventListener('click', close);
+}
 
 // 아직 여는 중인 기능을 눌렀을 때. 버튼은 보이게 두되(뭐가 올지 보이게)
 // 누르면 준비 중이라고만 알린다. 관리자는 그대로 쓸 수 있다.
