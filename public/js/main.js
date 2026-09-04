@@ -22,7 +22,7 @@ import { Net } from './net.js';
 import { Audio } from './audio.js';
 import { voiceStore } from './voice-store.js';
 import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
-import { TrailFX, findArena, DEFAULT_ARENA } from './effects.js';
+import { TrailFX, findTrail, findArena, DEFAULT_ARENA } from './effects.js';
 import { ShopUI } from './shop-ui.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
@@ -142,6 +142,7 @@ function syncCharacterForAuth() {
     characters.paintButton(DEFAULT_CHARACTER);
     net.send({ type: 'character', id: DEFAULT_CHARACTER });
   }
+  refreshTrail();          // 계정에 쌓인 단계가 반영되게
   if (characters.open$) characters.draw();
 }
 
@@ -235,7 +236,14 @@ const input = new Input();
 // 상점에서 산 발자국 효과. 꾸미기라 판정에는 아무 영향이 없다.
 // 지금 켠 것만 그린다(안 샀거나 껐으면 setEffect(null) 로 통째로 끈다).
 const trail = new TrailFX(scene);
-trail.setEffect(wallet.equippedIn('trail'));
+
+// 발자국 효과를 지금 상태(켠 것 + 그 단계)로 맞춘다. 단계가 올랐을 때도
+// 이걸 부르면 그 자리에서 화려해진다.
+function refreshTrail() {
+  const id = wallet.equippedIn('trail');
+  trail.setEffect(id, id ? wallet.fxLevel(id) : 1);
+}
+refreshTrail();
 
 // 경기장 스킨(상점 '경기장 스킨'). 안 골랐으면 원래 풀숲.
 function applyArena(id) {
@@ -586,7 +594,7 @@ shop.onEquip = (kind, id) => {
   // 없는 것처럼 보인다. 켜는 순간 산 목록에도 넣어 준다.
   if (id && isAdmin) wallet.markOwnedIn(kind, id);
   wallet.equipIn(kind, id);
-  if (kind === 'trail') trail.setEffect(id);
+  if (kind === 'trail') refreshTrail();
   else if (kind === 'arena') applyArena(id);
 };
 document.getElementById('shop-btn')?.addEventListener('click', () => shop.open());
@@ -1561,7 +1569,7 @@ function endBotMatch(win) {
   if (win) audio.stageUp?.(); else audio.death?.();
   const secs = state.elapsed;
   // 봇전도 논 시간만큼 룰렛 누적 초가 쌓인다(관리자는 룰렛 무제한이라 제외).
-  if (!isAdmin) wallet.addPlaytime(secs);
+  if (!isAdmin) { wallet.addPlaytime(secs); addTrailTime(secs); }
   hideRival();
   api.recordBotMatch(state.botTier, win, secs, auth.signedIn ? undefined : auth.displayName);
   showBotResult(win, secs, state.botTier);
@@ -2025,6 +2033,35 @@ function showTitleLoginPrompt(names) {
   setTimeout(close, 5200);        // 읽을 시간은 주되 알아서 사라지게
 }
 
+// 켠 발자국 효과에 이번 판에서 버틴 시간을 쌓는다.
+//
+// 판수가 아니라 '버틴 초' 로 세는 게 핵심이다. 바로 죽고 다시 하는 식으로는
+// 거의 안 쌓이고 오래 버틸수록 빨리 오른다 — 따로 막을 규칙이 필요 없다.
+function addTrailTime(seconds) {
+  const id = wallet.equippedIn('trail');
+  if (!id || !(seconds > 0)) return;
+  const before = wallet.fxLevel(id);
+  wallet.addFxTime(id, seconds);
+  const after = wallet.fxLevel(id);
+  if (after > before) {
+    refreshTrail();
+    showFxLevelUp(findTrail(id)?.name ?? '발자국 효과', after);
+  }
+}
+
+// 단계가 올랐을 때 한 번 알려 준다.
+function showFxLevelUp(name, level) {
+  const t = document.createElement('div');
+  t.className = 'shop-toast center';
+  t.innerHTML = `✨ 「${name}」 ${level}단계!<br><small>발자국이 더 화려해졌어요</small>`;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 240);
+  }, 2600);
+}
+
 // 이 초 이상 버텨야 그 판에 먹은 코인을 인정한다(먹고 바로 죽는 파밍 방지).
 const MIN_COIN_SECONDS = 10;
 
@@ -2041,7 +2078,7 @@ async function finishGame() {
     const f = state.challenge;
     state.challenge = null;
     voiceMeter.hide();
-    if (!isAdmin) wallet.addPlaytime(score);   // 도전모드도 룰렛 초가 쌓인다
+    if (!isAdmin) { wallet.addPlaytime(score); addTrailTime(score); }   // 도전모드도 쌓인다
     api.recordChallenge(f.floor, f.goal, false, score,
       auth.signedIn ? undefined : auth.displayName);
     showTowerResult(false, f, `${score.toFixed(2)}초 버팀`);
@@ -2050,7 +2087,7 @@ async function finishGame() {
 
   // 이번 판 시간을 누적 게임 시간에 더한다(룰렛 횟수의 원천). 관리자는 룰렛이
   // 무제한이라 쌓을 필요가 없다.
-  if (!isAdmin) wallet.addPlaytime(score);
+  if (!isAdmin) { wallet.addPlaytime(score); addTrailTime(score); }
 
   // 이번 판으로 새로 열린 캐릭터가 있으면, 결과창 전에 해금 연출을 띄운다.
   // 최고기록은 showGameOver 가 갱신하므로, 지금 읽으면 '이전' 최고기록이다.

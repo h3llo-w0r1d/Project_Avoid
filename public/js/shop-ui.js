@@ -113,10 +113,11 @@ function arenaThumb(spec) {
 export const CATEGORIES = [
   {
     id: 'trail', kind: 'trail', name: '발자국 효과',
-    hint: '움직일 때 발밑에 남는 효과예요 · 한 번에 하나만 켤 수 있어요',
+    hint: '움직일 때 발밑에 남는 효과예요 · 켠 채로 오래 버티면 단계가 올라 더 화려해져요',
     allowNone: true,
     // 카드에는 이름과 색만. 설명은 살 때 확인창에서 보여 준다.
     hideDesc: true,
+    levels: true,   // 카드에 단계와 다음 단계까지 남은 시간을 보여 준다
     items: TRAILS,
     swatch: (s) => s.rainbow
       ? 'linear-gradient(90deg,#ff5f6d,#ffc371,#7ee8a2,#48c6ef,#b18cff)'
@@ -249,10 +250,16 @@ export class ShopUI {
           ? '<span class="shop-cost roul">🎰 룰렛 전용</span>'
           : `<span class="shop-cost${afford ? '' : ' short'}">🪙 ${item.cost}${afford ? '' : ' 필요'}</span>`;
 
+    // 단계가 있는 항목(발자국)은 가진 것에 한해 단계와 진행도를 보여 준다.
+    // 아직 안 산 것에까지 붙이면 살지 말지 정하는 데 방해만 된다.
+    const lvLine = (cat.levels && owned && !item.plain)
+      ? `<span class="shop-lv">${wallet.fxLevel(item.id)}단계${wallet.fxToNext(item.id) === null ? ' <em>최대</em>' : ` <em>다음까지 ${wallet.fxToNext(item.id)}초</em>`}</span>`
+      : '';
     if (cat.tallSwatch) el.classList.add('tall');
     el.innerHTML = `
       ${bar}
       <span class="shop-name">${esc(item.name)}</span>
+      ${lvLine}
       ${cat.hideDesc ? '' : `<span class="shop-desc">${esc(item.desc ?? '')}</span>`}
       ${foot}`;
 

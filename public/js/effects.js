@@ -15,7 +15,10 @@
 
 import * as THREE from 'three';
 
-const MAX = 260;   // 입자 통 크기. 다 쓰면 제일 오래된 걸 되쓴다.
+// 입자 통 크기. 다 쓰면 제일 오래된 걸 되쓴다.
+// 3단계는 양과 수명이 함께 늘어 동시에 살아 있는 수가 크게 는다.
+// 통이 모자라면 오래된 입자가 갑자기 사라져 깜빡여 보인다.
+const MAX = 420;
                    // 양을 늘린 만큼 동시에 살아 있는 수도 늘어 넉넉히 잡는다.
 
 // 살 수 있는 발자국 효과들. cost 는 코인.
@@ -65,6 +68,17 @@ export const TRAILS = [
 ];
 
 export const findTrail = (id) => TRAILS.find((t) => t.id === id) ?? null;
+
+// 단계별 화려함. 켠 채로 오래 버티면 오른다(wallet.fxLevel).
+//
+// 양(rate)을 제일 크게 올린다 — 눈에 제일 먼저 들어오는 게 '얼마나 많은가'
+// 이기 때문이다. 크기는 조금만 키운다. 너무 키우면 화면을 가려 전기선을
+// 놓친다(꾸미기가 난이도를 건드리면 안 된다). 수명도 늘려 자취가 길게 남게.
+export const FX_LEVELS = [
+  { rate: 1.00, size: 1.00, life: 1.00, spread: 1.00 },   // 1단계
+  { rate: 1.65, size: 1.10, life: 1.18, spread: 1.15 },   // 2단계
+  { rate: 2.20, size: 1.20, life: 1.35, spread: 1.30 }    // 3단계
+];
 
 // 경기장 스킨. 지금은 원래 풀숲 하나뿐이고, 팔 스킨은 아직 안 정했다.
 //
@@ -202,12 +216,18 @@ export class TrailFX {
     this.life = new Float32Array(MAX);
     this.born = new Float32Array(MAX);
     this.base = new Float32Array(MAX * 3);   // 수명 다해 갈 때 깎기 전의 원래 색
+    this.level = 1;
+    this.mul = FX_LEVELS[0];
   }
 
   // id 가 null 이거나 없는 효과면 끈다.
-  setEffect(id) {
+  // id 가 null 이거나 없는 효과면 끈다. level 은 1~3.
+  setEffect(id, level = 1) {
+    const lv = Math.min(FX_LEVELS.length, Math.max(1, Math.floor(level)));
     const spec = id ? findTrail(id) : null;
-    if (spec === this.spec) return;
+    if (spec === this.spec && lv === this.level) return;
+    this.level = lv;
+    this.mul = FX_LEVELS[lv - 1];
     this.dispose();
     this.spec = spec;
     if (!spec) return;
@@ -220,7 +240,7 @@ export class TrailFX {
 
     this.points = new THREE.Points(geo, new THREE.PointsMaterial({
       map: shapeTexture(spec.shape),
-      size: spec.size,
+      size: spec.size * this.mul.size,
       vertexColors: true,
       transparent: true,
       depthWrite: false,           // 서로 가리지 않게
@@ -256,7 +276,7 @@ export class TrailFX {
     this.n = (this.n + 1) % MAX;
 
     const a = Math.random() * Math.PI * 2;
-    const r = Math.random() * s.spread;
+    const r = Math.random() * s.spread * this.mul.spread;
     this.pos[i * 3] = x + Math.cos(a) * r;
     this.pos[i * 3 + 1] = y + Math.random() * 0.12;
     this.pos[i * 3 + 2] = z + Math.sin(a) * r;
@@ -270,7 +290,7 @@ export class TrailFX {
     else c.setHex(s.colors[(Math.random() * s.colors.length) | 0]);
     this.base[i * 3] = c.r; this.base[i * 3 + 1] = c.g; this.base[i * 3 + 2] = c.b;
 
-    const life = s.life * (0.75 + Math.random() * 0.5);
+    const life = s.life * this.mul.life * (0.75 + Math.random() * 0.5);
     this.life[i] = life;
     this.born[i] = life;
   }
@@ -293,7 +313,7 @@ export class TrailFX {
     // 뿌리는 양은 속도에 따라. 서 있으면 아주 조금만(살아 있는 느낌은 남게).
     // 공중에서도 뿌린다 — 점프가 이 효과의 제일 예쁜 순간이다.
     const move = Math.min(1, speed / 6);
-    const rate = s.rate * (0.35 + move * 0.65) * (grounded ? 1 : 0.85);
+    const rate = s.rate * this.mul.rate * (0.35 + move * 0.65) * (grounded ? 1 : 0.85);
     this.acc += rate * dt;
     const foot = pos.y + 0.03;   // 바닥과 겹쳐 깜빡이지 않게 살짝 위
     while (this.acc >= 1) {

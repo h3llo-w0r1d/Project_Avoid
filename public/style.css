@@ -2985,3 +2985,9 @@ kbd {
 
 /* 룰렛으로만 얻는 항목 — 값 대신 이걸 띄운다 */
 .shop-cost.roul { color: #c9b6ff; }
+
+/* 발자국 효과 카드의 단계 표시 */
+.shop-lv {
+  font-size: 11.5px; font-weight: 800; color: #ffd76a;
+}
+.shop-lv em { font-style: normal; font-weight: 600; color: var(--muted); }

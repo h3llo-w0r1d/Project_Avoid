@@ -19,6 +19,10 @@ const OWNED_KEY = 'avoidarc.owned';   // 코인으로 산 캐릭터 id 목록
 // 이 기기 지갑을 어느 계정에 합쳤는지. 한 번만 합치려고 남긴다 —
 // 두 번 합치면 코인이 부푼다.
 const MERGED_KEY = (userId) => `avoidarc.merged.${userId}`;
+// 발자국 효과를 켠 채로 버틴 누적 시간(효과 id → 초). 단계를 올리는 값이다.
+const FXTIME_KEY = 'avoidarc.fx.time';
+// 단계 문턱(누적 초). 오래 버틸수록 쌓이므로 바로 죽는 식으로는 안 오른다.
+export const FX_LEVEL_AT = [500, 1000];
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
 const SPINUSED_KEY = 'avoidarc.spins.used';   // 지금까지 돌린 룰렛 횟수
 const SECONDS_PER_SPIN = 80;            // 이만큼 쌓일 때마다 룰렛 1회
@@ -48,7 +52,8 @@ function snapshot() {
     ownedFx: [...wallet.ownedIn('trail')],
     ownedArena: [...wallet.ownedIn('arena')],
     playtime: wallet.playtime(),
-    spinsUsed: wallet.spinsUsed()
+    spinsUsed: wallet.spinsUsed(),
+    fxTime: wallet.fxTimes()
   };
 }
 
@@ -61,6 +66,7 @@ function apply(w) {
   localStorage.setItem(SHOP_KEYS.arena.owned, JSON.stringify(w.ownedArena ?? []));
   localStorage.setItem(PLAY_KEY, String(Math.max(0, Number(w.playtime) || 0)));
   localStorage.setItem(SPINUSED_KEY, String(Math.max(0, Math.floor(w.spinsUsed ?? 0))));
+  localStorage.setItem(FXTIME_KEY, JSON.stringify(w.fxTime ?? {}));
 }
 
 // 바뀔 때마다 곧장 올리면 룰렛 한 번에 여러 번 오간다. 잠깐 모아서 한 번에.
@@ -160,6 +166,41 @@ export const wallet = {
     s.add(id);
     localStorage.setItem(k.owned, JSON.stringify([...s]));
     schedulePush();
+  },
+
+  // ── 발자국 효과 단계 ──
+  // 그 효과를 켠 채로 버틴 시간이 쌓이면 단계가 오른다(1 → 2 → 3).
+  // 판수가 아니라 '버틴 초' 인 게 중요하다 — 바로 죽고 다시 하는 식으로는
+  // 거의 안 쌓이고, 오래 버틸수록 빨리 오른다.
+  fxTimes() {
+    try {
+      const v = JSON.parse(localStorage.getItem(FXTIME_KEY) || '{}');
+      return (v && typeof v === 'object' && !Array.isArray(v)) ? v : {};
+    } catch { return {}; }
+  },
+  fxTime(id) { return Math.max(0, Number(this.fxTimes()[id]) || 0); },
+
+  // 이 효과를 켠 채로 sec 초를 버텼다.
+  addFxTime(id, sec) {
+    const n = Number(sec);
+    if (!id || !Number.isFinite(n) || n <= 0) return;
+    const m = this.fxTimes();
+    m[id] = Math.round(((m[id] ?? 0) + n) * 100) / 100;
+    localStorage.setItem(FXTIME_KEY, JSON.stringify(m));
+    schedulePush();
+  },
+
+  // 1 · 2 · 3 단계
+  fxLevel(id) {
+    const t = this.fxTime(id);
+    return 1 + FX_LEVEL_AT.filter((need) => t >= need).length;
+  },
+
+  // 다음 단계까지 남은 초. 이미 3단계면 null.
+  fxToNext(id) {
+    const t = this.fxTime(id);
+    const need = FX_LEVEL_AT.find((v) => t < v);
+    return need === undefined ? null : Math.ceil(need - t);
   },
 
   // 지금 켠 것. 없으면 null. 산 적 없는 걸 켜 두면 무시한다
