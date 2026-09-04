@@ -3013,3 +3013,19 @@ kbd {
 .lv-note { flex: 1; font-size: 12px; color: var(--muted); }
 .lv-state { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
 .lv-row.locked .lv-state { color: var(--muted); }
+
+/* 누적 판수 카드의 '지금 접속자'. 살아 있는 숫자라 초록으로, 점은 깜빡인다. */
+.pc-sub { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pc-online {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 800; color: #3fe08a; white-space: nowrap;
+}
+.pc-online::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: #3fe08a; box-shadow: 0 0 8px #3fe08a;
+  animation: onlinePulse 2s ease-in-out infinite;
+}
+@keyframes onlinePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.45; transform: scale(0.8); }
+}
