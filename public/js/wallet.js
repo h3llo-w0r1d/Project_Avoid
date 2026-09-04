@@ -27,6 +27,10 @@ const FXTIME_KEY = 'avoidarc.fx.time';
 // 잃어도 아쉬울 게 없고(다음 기기에선 열린 최고 단계로 시작한다), 그 대신
 // DB 칸과 합치기 규칙을 하나 안 늘려도 된다.
 const FXPICK_KEY = 'avoidarc.fx.pick';
+
+// 관리자는 단계를 전부 열린 것으로 본다. 관리자 판은 집계에서 빠져
+// 시간이 안 쌓이므로, 이게 없으면 3단계가 어떻게 보이는지 확인할 수 없다.
+let adminAll = false;
 // 단계 문턱(누적 초). 오래 버틸수록 쌓이므로 바로 죽는 식으로는 안 오른다.
 export const FX_LEVEL_AT = [500, 1000];
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
@@ -86,6 +90,9 @@ function schedulePush() {
 
 export const wallet = {
   // 로그인/로그아웃이 정해지면 부른다. 게스트면 userId 를 비운다.
+  // 관리자 여부를 알려 준다(단계 확인용).
+  setAdminAll(on) { adminAll = !!on; },
+
   async attach(userId, hooks) {
     account = userId ?? null;
     api = hooks ?? null;
@@ -198,6 +205,7 @@ export const wallet = {
 
   // 1 · 2 · 3 단계
   fxLevel(id) {
+    if (adminAll) return FX_LEVEL_AT.length + 1;
     const t = this.fxTime(id);
     return 1 + FX_LEVEL_AT.filter((need) => t >= need).length;
   },

@@ -290,7 +290,9 @@ export class ShopUI {
   // 단계 고르는 창. 아직 안 열린 단계는 눌리지 않고, 얼마나 더 버티면
   // 열리는지 알려 준다.
   #pickLevel(cat, item) {
-    const max = wallet.fxLevel(item.id);
+    // 관리자는 단계를 전부 열어 둔다. 실제로 500·1000초를 버티지 않고도
+    // 어떻게 보이는지 확인할 수 있어야 한다.
+    const max = this.isAdmin() ? 3 : wallet.fxLevel(item.id);
     const now = wallet.fxPick(item.id);
     const equipped = this.#current(cat) === item.id;
 
@@ -301,8 +303,7 @@ export class ShopUI {
       const open = lv <= max;
       const on = lv === now;
       const need = open ? null : FX_LEVEL_AT[lv - 2] - wallet.fxTime(item.id);
-      const note = open ? ['담백하게', '넉넉하게', '가장 화려하게'][lv - 1]
-        : `${Math.ceil(need)}초 더 버티면 열려요`;
+      const note = open ? '' : `${Math.ceil(need)}초 더 버티면 열려요`;
       return `<button type="button" class="lv-row${on ? ' on' : ''}${open ? '' : ' locked'}"
         data-lv="${lv}"${open ? '' : ' disabled'}><span class="lv-num">${lv}단계</span><span class="lv-note">${esc(note)}</span><span class="lv-state">${on ? '사용 중' : open ? '고르기' : '🔒'}</span></button>`;
     }).join('');

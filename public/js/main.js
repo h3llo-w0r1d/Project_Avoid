@@ -435,6 +435,8 @@ const adminReady = api.amIAdmin()
     if (yes) {
       setupNoticeAdmin();
       adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기
+      wallet.setAdminAll(true);   // 발자국 단계를 전부 열어 확인할 수 있게
+      refreshTrail();
       renderCoinHud();       // 코인 표시를 ∞ 로
       // 관리자로 확정되면 전부 해금 상태로 화면을 다시 맞춘다.
       syncCharacterForAuth();
