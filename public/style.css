@@ -3015,10 +3015,12 @@ kbd {
 .lv-row.locked .lv-state { color: var(--muted); }
 
 /* 누적 판수 카드의 '지금 접속자'. 살아 있는 숫자라 초록으로, 점은 깜빡인다. */
-.pc-sub { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+/* 카드 맨 윗줄: 왼쪽에 제목, 오른쪽에 지금 접속자 */
+.pc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .pc-online {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 12px; font-weight: 800; color: #3fe08a; white-space: nowrap;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.14em;
+  color: #3fe08a; white-space: nowrap;
 }
 .pc-online::before {
   content: ''; width: 7px; height: 7px; border-radius: 50%;

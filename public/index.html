@@ -408,9 +408,9 @@
     <!-- 오른쪽 빈 자리에 두는 누적 판수 카드. 이 사이트에서 지금까지 몇 판이
          돌았는지 보여 준다. 숫자는 js/main.js 가 채운다(못 받으면 카드를 숨긴다). -->
     <aside id="play-count" class="hidden" aria-label="누적 판수">
-      <div class="pc-kicker">TOTAL PLAYS</div>
+      <div class="pc-top"><span class="pc-kicker">TOTAL PLAYS</span><span id="play-count-online" class="pc-online hidden"></span></div>
       <div class="pc-num"><span id="play-count-num">0</span><span class="pc-unit">판</span></div>
-      <div class="pc-sub"><span><span id="play-count-since"></span> ~</span><span id="play-count-online" class="pc-online hidden"></span></div>
+      <div class="pc-sub"><span id="play-count-since"></span> ~</div>
     </aside>
   </div>
 
@@ -567,7 +567,7 @@
             if (!d || typeof d.online !== 'number') return;
             var el = document.getElementById('play-count-online');
             if (!el) return;
-            el.textContent = d.online + '명 접속 중';
+            el.textContent = 'Online ' + d.online;
             el.classList.toggle('hidden', d.online <= 0);
           })
           .catch(function () {});
