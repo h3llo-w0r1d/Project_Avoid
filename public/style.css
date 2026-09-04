@@ -835,6 +835,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 /* 칸 색. 뱃지·카드 강조에 함께 쓴다. */
 .cat-patch { --cat: #7c9bff; }
 .cat-chat  { --cat: #9aa4bf; }
+.cat-idea  { --cat: #ffd54a; }
 .cat-bug   { --cat: #ff9f43; }
 .cat-qna   { --cat: #57d18a; }
 
@@ -920,6 +921,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 
 /* 칸별 왼쪽 강조선. 패치노트(운영자 글)는 배경까지 살짝 띄워 눈에 띄게. */
 .board-post.cat-patch,
+.board-post.cat-idea,
 .board-post.cat-bug,
 .board-post.cat-qna {
   border-left: 3px solid var(--cat);
@@ -930,6 +932,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   background: color-mix(in srgb, var(--cat) 9%, transparent);
 }
 .board-detail-post.cat-patch,
+.board-detail-post.cat-idea,
 .board-detail-post.cat-bug,
 .board-detail-post.cat-qna { border-left: 3px solid var(--cat); padding-left: 12px; }
 

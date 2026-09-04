@@ -20,8 +20,18 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
 const CATS = {
   patch: { label: '패치노트', icon: '📢', cls: 'cat-patch' },
   chat: { label: '잡담', icon: '💬', cls: 'cat-chat' },
+  idea: { label: '건의사항', icon: '💡', cls: 'cat-idea' },
   bug: { label: '버그 제보', icon: '🐞', cls: 'cat-bug' },
   qna: { label: 'Q&A', icon: '❓', cls: 'cat-qna' }
+};
+
+// 칸마다 입력칸에 뜨는 안내 문구.
+const PLACEHOLDER = {
+  patch: '패치노트를 적으세요. 글자를 선택하고 색을 눌러 색을 입힐 수 있어요.',
+  chat: '자유롭게 남겨 보세요 (200자)',
+  idea: '이런 게 있으면 좋겠어요! 하고 싶은 걸 편하게 적어 주세요 (200자)',
+  bug: '어떤 상황에서 생겼는지 적어 주시면 고치는 데 큰 도움이 됩니다 (200자)',
+  qna: '궁금한 점을 물어보세요 (200자)'
 };
 
 // 이름 색 → 실제 색(화이트리스트). 임의 CSS 주입을 막는다.
@@ -177,9 +187,9 @@ export class BoardUI {
     const isPatch = this.writeCat === 'patch';
     this.el.colors.classList.toggle('hidden', !isPatch);
     this.el.input.maxLength = isPatch ? 6000 : 200;
-    this.el.input.placeholder = isPatch
-      ? '패치노트를 적으세요. 글자를 선택하고 색을 눌러 색을 입힐 수 있어요.'
-      : '자유롭게 남겨 보세요 (200자)';
+    // 칸마다 안내 문구를 달리한다. 무엇을 쓰는 곳인지 한눈에 보이면
+    // 엉뚱한 칸에 올리는 일이 줄어든다.
+    this.el.input.placeholder = PLACEHOLDER[this.writeCat] ?? PLACEHOLDER.chat;
     this.el.count.textContent = `${[...this.el.input.value].length} / ${this.el.input.maxLength}`;
   }
 
