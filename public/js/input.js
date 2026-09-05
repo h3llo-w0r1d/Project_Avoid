@@ -153,8 +153,17 @@ export class Input {
       x /= len;
       y /= len;
     }
-    this.move.x = x;
-    this.move.y = y;
+    // dt 와 같은 이유로 float32 로 깎아서 내보낸다. 다시보기는 이 값을
+    // float32 로 저장하는데(encodeReplay), 판이 돌 때 float64 로 굴리면
+    // 저장된 값과 6e-8 쯤 어긋난다. 전기선 시뮬은 그보다 훨씬 예민해서,
+    // 그 정도 차이로도 죽는 시점이 통째로 갈린다 — 실제로 이 오차만큼
+    // 흔들어 보니 정상 기록 50개 중 3개(6%)가 다른 결말로 바뀌었고,
+    // 실제 어긋나던 비율(3/53)과 정확히 같았다.
+    //
+    // 키보드로 상하좌우만 누르면 -1/0/1 이라 float32 로도 정확해서 멀쩡했다.
+    // 대각선(1/√2)이나 터치 스틱처럼 어중간한 값일 때만 어긋났다.
+    this.move.x = Math.fround(x);
+    this.move.y = Math.fround(y);
 
     this.jumpPressed = this.jumpQueued;
     this.jumpQueued = false;

@@ -1713,6 +1713,7 @@ const replayBar = (() => {
     '<div class="replay-row">' +
       '<span class="replay-tag">▶ 다시보기</span>' +
       '<span id="replay-who"></span>' +
+      '<span id="replay-warn" class="replay-warn hidden"></span>' +
       '<span id="replay-time" class="replay-time">0.00 / 0.00초</span>' +
       '<button id="replay-exit" type="button">나가기</button>' +
     '</div>' +
@@ -1720,6 +1721,7 @@ const replayBar = (() => {
     'aria-label="재생 위치" />';
   document.body.appendChild(el);
   const who = el.querySelector('#replay-who');
+  const warn = el.querySelector('#replay-warn');
   const timeEl = el.querySelector('#replay-time');
   const seek = el.querySelector('#replay-seek');
 
@@ -1738,8 +1740,11 @@ const replayBar = (() => {
   addEventListener('pointerup', endScrub);
 
   return {
-    show(data) {
+    // realTime 을 주면 "재현이 어긋난다" 고 알린다(0 이면 안 띄운다).
+    show(data, realTime = 0) {
       who.textContent = data.name ?? '';
+      warn.classList.toggle('hidden', !realTime);
+      if (realTime) warn.textContent = `⚠ 실제 기록은 ${realTime.toFixed(2)}초 · 옛 방식이라 재현이 어긋납니다`;
       el.classList.remove('hidden');
     },
     // 재생 위치 표시 갱신(드래그 중이 아닐 때만 바를 움직인다).
@@ -1750,6 +1755,29 @@ const replayBar = (() => {
     hide() { el.classList.add('hidden'); }
   };
 })();
+
+// 렌더 없이 끝까지 한 번 돌려서 '몇 초에 죽는지'만 본다. 기록한 시간과
+// 다르면 그 기록은 재현이 어긋나는 것이다(위 startReplay 의 주석 참고).
+// 실제 재생과 같은 객체를 쓰므로, 끝나면 부른 쪽이 다시 reset 한다.
+function dryRunReplay(frames, seed, hardcore) {
+  hazards.reset(seed);
+  if (hardcore) floorHoles.reset(seed);
+  player.reset();
+  let t = 0;
+  for (let i = 0; i < frames.n; i++) {
+    const d = frames.dt[i];
+    t += d;
+    player.body.step(d, { moveX: frames.x[i], moveY: frames.y[i], jump: frames.j[i] > 0.5 });
+    hazards.sim.update(d, t);
+    if (hazards.sim.hitTest(player.body.x, player.body.z, player.body.feetY, player.body.headY)) return t;
+    if (player.body.droppedOff) return t;
+    if (hardcore) {
+      floorHoles.update(d);
+      if (floorHoles.isOpenAt(player.body.x, player.body.z)) return t;
+    }
+  }
+  return null;   // 끝까지 안 죽음 — 이것도 어긋난 것이다
+}
 
 function startReplay(data) {
   const frames = decodeReplay(data.data);   // data.data = base64 입력 버퍼(개수는 data.frames)
@@ -1771,9 +1799,20 @@ function startReplay(data) {
   let total = 0;
   for (let i = 0; i < frames.n; i++) total += frames.dt[i];
 
+  // 옛 기록은 재현이 어긋날 수 있다. 2026-09-05 까지는 이동 입력을 float64 로
+  // 굴려 놓고 float32 로 저장해서, 저장된 값이 판을 돌릴 때 쓴 값과 6e-8 쯤
+  // 달랐다(dt 도 09-03 까지 같은 문제였다). 전기선 시뮬은 그보다 훨씬 예민해서
+  // 그 정도 차이로도 죽는 시점이 통째로 갈린다.
+  //
+  // 그런 기록은 여기서 엉뚱한 데서 죽는데, 그게 진짜 그 판인 줄 알면 헷갈린다.
+  // 렌더 없이 미리 한 번 돌려 보고, 기록한 시간과 다르면 알려 준다(몇 ms).
+  const check = dryRunReplay(frames, data.seed, state.hardcore);
+  const off = check === null || Math.abs(check - total) > 0.15;
+
   setArenaVisible(true);
   hazards.reset(data.seed);
   player.reset();
+  if (state.hardcore) floorHoles.reset(data.seed);   // 미리 돌린 흔적을 지운다
   state.replay = {
     f: frames, n: frames.n, seed: data.seed, total,
     i: 0, consumed: 0, clock: 0, sim: 0,
@@ -1781,7 +1820,7 @@ function startReplay(data) {
   };
   state.elapsed = 0;
   state.cause = 'zap';
-  replayBar.show(data);
+  replayBar.show(data, off ? total : 0);
   replayBar.tick(0, total, false);
 }
 
