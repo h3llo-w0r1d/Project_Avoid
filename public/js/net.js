@@ -165,13 +165,15 @@ export class Net {
         this.localBody.vx = p.vx;
         this.localBody.vy = p.vy;
         this.localBody.vz = p.vz;
+        this.localBody.kx = p.kx ?? 0;
+        this.localBody.kz = p.kz ?? 0;
         this.localBody.grounded = !!p.g;
         this.localBody.jumpsLeft = p.j;
         this.localAlive = p.alive;
       } else {
         // 상대: 받은 위치를 시간과 함께 쌓아 두고 조금 과거를 그린다
         this.remote.alive = p.alive;
-        this.remote.buffer.push({ t: performance.now() / 1000, x: p.x, y: p.y, z: p.z, vx: p.vx, vz: p.vz });
+        this.remote.buffer.push({ t: performance.now() / 1000, x: p.x, y: p.y, z: p.z, vx: p.vx, vz: p.vz, kx: p.kx ?? 0, kz: p.kz ?? 0 });
         if (this.remote.buffer.length > 20) this.remote.buffer.shift();
       }
     }
@@ -217,6 +219,8 @@ export class Net {
     body.z = a.z + (b.z - a.z) * f;
     body.vx = b.vx;
     body.vz = b.vz;
+    body.kx = b.kx;
+    body.kz = b.kz;
     body.grounded = body.y <= 0.001;
   }
 }

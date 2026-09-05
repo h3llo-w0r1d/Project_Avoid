@@ -20,6 +20,9 @@ export class PlayerBody {
     this.vx = 0;
     this.vy = 0;
     this.vz = 0;
+    // 부딪혀 밀려난 속도. vx/vz 와 따로 두어 마찰과 최고 속도 제한을 피한다.
+    this.kx = 0;
+    this.kz = 0;
     this.jumpsLeft = this.maxJumps;
     this.grounded = true;
     this.airTime = 0;
@@ -37,6 +40,14 @@ export class PlayerBody {
     const wantX = input.moveX;
     const wantZ = -input.moveY;
 
+    // 밀려나는 동안엔 발이 덜 붙는다. 이게 없으면 맞는 쪽이 방향키를 상대
+    // 쪽으로 잡고 있는 것만으로 밀림이 거의 상쇄된다 — 전속력으로 박아도
+    // 2칸이었다. 밀림이 잦아들면서 조작도 같이 돌아온다.
+    const knock = Math.hypot(this.kx, this.kz);
+    const grip = knock > 0
+      ? Math.max(PLAYER.pushGrip, 1 - (1 - PLAYER.pushGrip) * (knock / PLAYER.pushMax))
+      : 1;
+
     // 수평 가속 / 마찰
     if (wantX || wantZ) {
       // 지금 가는 방향과 반대로 눌렀으면 더 세게 민다.
@@ -48,8 +59,9 @@ export class PlayerBody {
       this.vz += wantZ * accel * dt;
 
       const speed = Math.hypot(this.vx, this.vz);
-      if (speed > PLAYER.speed) {
-        const k = PLAYER.speed / speed;
+      const cap = PLAYER.speed * grip;
+      if (speed > cap) {
+        const k = cap / speed;
         this.vx *= k;
         this.vz *= k;
       }
@@ -80,9 +92,22 @@ export class PlayerBody {
 
     this.vy -= PLAYER.gravity * dt;
 
-    this.x += this.vx * dt;
+    this.x += (this.vx + this.kx) * dt;
     this.y += this.vy * dt;
-    this.z += this.vz * dt;
+    this.z += (this.vz + this.kz) * dt;
+
+    // 밀려난 속도. 위의 vx/vz 와 따로 두는 이유는 config 의 push* 주석에 있다.
+    // 방향키로 어느 정도 버틸 수는 있어도(최고 11.5 대 밀림 13~24) 완전히
+    // 멈추지는 못한다. 맞고도 손을 놓지 않은 느낌이 남게.
+    const left = Math.hypot(this.kx, this.kz);
+    if (left > 1e-4) {
+      const drop = Math.min(left, PLAYER.pushDecay * dt);
+      this.kx -= (this.kx / left) * drop;
+      this.kz -= (this.kz / left) * drop;
+    } else {
+      this.kx = 0;
+      this.kz = 0;
+    }
 
     const onDeck = Math.hypot(this.x, this.z) <= ARENA_RADIUS;
     const wasAirborne = !this.grounded;
@@ -139,14 +164,15 @@ export function resolvePush(a, b, dt) {
   b.z += nz * half;
 
   // 부딪힌 세기만큼 서로를 밀어낸다. 달려와서 박으면 크게 밀린다.
-  const relative = (b.vx - a.vx) * nx + (b.vz - a.vz) * nz;
+  // 다가오는 속도는 밀려서 미끄러지는 중인 것도 포함해 센다(총 속도).
+  const relative = ((b.vx + b.kx) - (a.vx + a.kx)) * nx + ((b.vz + b.kz) - (a.vz + a.kz)) * nz;
   const impact = Math.max(0, -relative);
-  const shove = PLAYER.pushBase + impact * PLAYER.pushScale;
+  const shove = Math.min(PLAYER.pushMax, PLAYER.pushBase + impact * PLAYER.pushScale);
 
-  a.vx -= nx * shove;
-  a.vz -= nz * shove;
-  b.vx += nx * shove;
-  b.vz += nz * shove;
+  a.kx -= nx * shove;
+  a.kz -= nz * shove;
+  b.kx += nx * shove;
+  b.kz += nz * shove;
 
   void dt;
   return true;
