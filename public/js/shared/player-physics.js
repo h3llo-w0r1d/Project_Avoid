@@ -30,6 +30,7 @@ export class PlayerBody {
     // 이번 스텝에 일어난 일. 소리·연출을 붙이는 쪽에서 읽는다.
     this.justJumped = 0;   // 0 없음 / 1 일반 / 2 2단
     this.justLanded = false;
+
   }
 
   // input = { moveX, moveY, jump } — moveY 는 화면 위쪽이 양수
@@ -37,16 +38,20 @@ export class PlayerBody {
     this.justJumped = 0;
     this.justLanded = false;
 
-    const wantX = input.moveX;
-    const wantZ = -input.moveY;
-
-    // 밀려나는 동안엔 발이 덜 붙는다. 이게 없으면 맞는 쪽이 방향키를 상대
-    // 쪽으로 잡고 있는 것만으로 밀림이 거의 상쇄된다 — 전속력으로 박아도
-    // 2칸이었다. 밀림이 잦아들면서 조작도 같이 돌아온다.
+    // 밀리는 동안 남는 조작력. 갓 밀려난 순간(pushBase)엔 pushGrip 까지
+    // 떨어졌다가, 밀림이 잦아들면서 1 로 돌아온다(끝물에 몰아서 돌아오게
+    // 제곱근을 쓴다 — 그래야 버티든 말든 밀려나는 거리가 비슷하다).
+    // 방향키를 상대 쪽으로 잡고 있는 것만으로 밀림을 거의 상쇄해 버려서,
+    // 같은 세기로 밀어도 밀려나는 거리가 상황마다 제각각이 된다.
     const knock = Math.hypot(this.kx, this.kz);
     const grip = knock > 0
-      ? Math.max(PLAYER.pushGrip, 1 - (1 - PLAYER.pushGrip) * (knock / PLAYER.pushMax))
+      ? Math.max(PLAYER.pushGrip, 1 - (1 - PLAYER.pushGrip) * Math.sqrt(knock / PLAYER.pushBase))
       : 1;
+
+    // 밀리는 동안에는 이동 입력이 먹지 않는다(pushGrip 0). 버티든 말든
+    // 똑같이 밀려나야 거리가 상황마다 달라지지 않는다. 점프는 그대로 된다.
+    const wantX = input.moveX * grip;
+    const wantZ = -input.moveY * grip;
 
     // 수평 가속 / 마찰
     if (wantX || wantZ) {
@@ -169,11 +174,29 @@ export function resolvePush(a, b, dt) {
   const impact = Math.max(0, -relative);
   const shove = Math.min(PLAYER.pushMax, PLAYER.pushBase + impact * PLAYER.pushScale);
 
+  // 부딪힌 순간 둘 다 하던 걸음을 멈춘다. 달려오던 속도가 그대로 얹히면
+  // 같은 세기로 밀어도 거리가 제각각이 된다.
+  a.vx = 0; a.vz = 0;
+  b.vx = 0; b.vz = 0;
+
   a.kx -= nx * shove;
   a.kz -= nz * shove;
   b.kx += nx * shove;
   b.kz += nz * shove;
 
+  // 연달아 부딪히면 밀림이 겹쳐 쌓인다. 거기에만 상한을 둔다.
+  clampKnock(a);
+  clampKnock(b);
+
   void dt;
   return true;
+}
+
+// 밀림이 겹쳐 쌓였을 때 상한을 씌운다.
+function clampKnock(p) {
+  const k = Math.hypot(p.kx, p.kz);
+  if (k <= PLAYER.pushMax) return;
+  const s = PLAYER.pushMax / k;
+  p.kx *= s;
+  p.kz *= s;
 }
