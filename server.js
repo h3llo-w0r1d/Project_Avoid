@@ -1093,7 +1093,8 @@ app.get('/api/challenge', (req, res) => {
     return res.status(403).json({ error: '도전모드는 준비 중입니다.' });
   }
   const me = users.byId(req.user.id);
-  res.json({ signedIn: true, ...describeChallenge(me?.challenge ?? 0) });
+  // 관리자는 확인용이라 전부 열어 준다(진행도 자체는 그대로 쌓인다).
+  res.json({ signedIn: true, ...describeChallenge(me?.challenge ?? 0, true) });
 });
 
 // 한 층을 깼다고 알린다. 순서대로만(지금 층 +1) 인정한다.
