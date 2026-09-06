@@ -2526,135 +2526,193 @@ kbd {
 :root.force-landscape #play-count { display: none; }
 
 /* 탑 화면 — 둥둥 뜬 땅이 아래(1층)부터 위로 이어지고, 그 위를 올라간다 */
-.tower-card { width: min(1100px, 96vw); max-width: none; max-height: 94vh; }
-.tower-list { margin-top: 10px; }
-/* 한 화면에 5층만 보이는 창. 안쪽 트랙을 밀어 다음 5층으로 넘어간다. */
-.tower-view { position: relative; overflow: hidden; }
-.tower-track {
-  display: flex; flex-direction: column;
-  transition: transform 0.55s cubic-bezier(0.22, 0.8, 0.3, 1);
-}
-/* 층 넘기기 버튼 */
-.tower-pager {
-  display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px;
-}
-.tower-pager button {
-  width: 44px; height: 34px; margin: 0; padding: 0; border-radius: 10px;
-  color: #ffd9a1; background: rgba(255, 150, 60, 0.12);
-  border: 1px solid rgba(255, 150, 60, 0.45); cursor: pointer; font-size: 13px;
-}
-.tower-pager button:hover:not(:disabled) { background: rgba(255, 150, 60, 0.24); }
-.tower-pager button:disabled { opacity: 0.3; cursor: default; }
-.tower-page-now { font-size: 13px; font-weight: 800; color: var(--muted); min-width: 74px; text-align: center; }
+/* ---------- 층 오르기 — 고압 송전탑 ---------- */
+/* 철탑 하나가 위로 이어지고, 깬 층까지 전류가 흐른다.
+   층은 철탑에서 뻗은 가로대 끝의 명판이고 10층마다 구간 표지판이 붙는다.
+   색은 강철(회청)과 통전(주황) 둘만 쓴다 — 게임의 붉은 전기선과 같은 계열. */
 
-/* 왼쪽 아래 → 오른쪽 위로 대각선으로 오른다(들여쓰기는 JS 가 층마다 준다). */
-.tower-floor { position: relative; display: flex; align-items: center; justify-content: flex-start; }
+.tower-card { width: min(760px, 96vw); max-width: none; max-height: 92vh; }
+.tower-meter {
+  margin-left: auto; margin-right: 12px;
+  font-size: 13px; font-weight: 900; letter-spacing: 0.08em; color: #ffb066;
+}
+.tower-hint { margin-top: 2px; }
 
-.tower-node {
-  width: auto; margin: 0; padding: 0 8px; background: none; border: 0;
-  display: flex; align-items: center; gap: 16px; cursor: pointer;
-  animation: towerFloat 3.6s ease-in-out infinite;   /* 둥둥 */
+.pylon-scroll {
+  position: relative; margin-top: 12px;
+  height: min(62vh, 560px); overflow-y: auto; overflow-x: hidden;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(6, 8, 16, 0.9), rgba(10, 13, 24, 0.72));
+  border: 1px solid rgba(120, 150, 200, 0.14);
+  scroll-behavior: smooth;
 }
-.tower-floor:nth-child(even) .tower-node { animation-delay: -1.8s; }
-.tower-node:disabled { cursor: default; }
-@keyframes towerFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
-}
+.pylon { position: relative; padding: 26px 18px 26px 152px; }
 
-/* 떠 있는 땅덩이 — 잔디 윗면 + 아래로 뾰족한 바위 */
-.tower-stage { position: relative; display: block; width: 150px; height: 52px; flex: none; }
-/* 공중에 떠 있는 느낌을 내는 부드러운 그림자(뾰족한 바위 대신) */
-.tower-stage::after {
-  content: ''; position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
-  width: 68%; height: 14px; border-radius: 50%; z-index: 0;
-  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 70%);
-  filter: blur(3px);
-}
-/* 흙 바닥 — 잔디 밑으로 살짝 드러나는 테두리(두께감) */
-.tower-stage::before {
-  content: ''; position: absolute; z-index: 0; left: 50%; top: 8px;
-  transform: translateX(-50%); width: 101%; height: 100%; border-radius: 50%;
+/* 철탑 기둥 — 좌우 주각 + 사선 격자 + 가로 브레이스. 전부 그라디언트라 이미지가 없다. */
+.pylon-mast {
+  position: absolute; left: 28px; top: 0; bottom: 0; width: 66px;
   background:
-    radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.22) 0 12%, transparent 13%),
-    radial-gradient(circle at 72% 55%, rgba(0, 0, 0, 0.18) 0 9%, transparent 10%),
-    radial-gradient(ellipse at 50% 30%, #9a6438 0%, #74472a 58%, #4a2d1b 100%);
-  box-shadow: inset 0 -7px 12px rgba(0, 0, 0, 0.5);
+    repeating-linear-gradient(45deg, rgba(140, 162, 200, 0.42) 0 2px, transparent 2px 20px),
+    repeating-linear-gradient(-45deg, rgba(140, 162, 200, 0.42) 0 2px, transparent 2px 20px),
+    repeating-linear-gradient(0deg, rgba(140, 162, 200, 0.26) 0 2px, transparent 2px 40px),
+    linear-gradient(90deg, rgba(168, 190, 226, 0.7) 0 4px, rgba(10, 13, 22, 0.35) 4px calc(100% - 4px), rgba(168, 190, 226, 0.7) calc(100% - 4px) 100%);
 }
-/* 잔디 언덕 — 얼룩진 잔디 + 위에서 드는 빛 */
-.tower-island {
-  position: absolute; inset: 0; z-index: 1; border-radius: 50%;
+/* 아래에서부터 차오르는 전류. 깬 만큼만 밝다. */
+.pylon-live {
+  position: absolute; left: -4px; right: -4px; bottom: 0;
   background:
-    /* 밝은 잔디 뭉치 */
-    radial-gradient(circle at 24% 36%, rgba(196, 245, 160, 0.40) 0 7%, transparent 8%),
-    radial-gradient(circle at 63% 28%, rgba(196, 245, 160, 0.32) 0 6%, transparent 7%),
-    radial-gradient(circle at 84% 44%, rgba(196, 245, 160, 0.24) 0 5%, transparent 6%),
-    /* 짙은 그늘 뭉치 */
-    radial-gradient(circle at 44% 66%, rgba(22, 66, 32, 0.34) 0 8%, transparent 9%),
-    radial-gradient(circle at 74% 68%, rgba(22, 66, 32, 0.28) 0 6%, transparent 7%),
-    radial-gradient(circle at 14% 60%, rgba(22, 66, 32, 0.26) 0 5%, transparent 6%),
-    /* 윗면 광 */
-    radial-gradient(ellipse 55% 48% at 34% 22%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 62%),
-    /* 기본 잔디 */
-    radial-gradient(ellipse at 50% 34%, #7fdd85 0%, #52ac5b 55%, #2e7038 100%);
-  box-shadow:
-    inset 0 -10px 16px rgba(0, 0, 0, 0.40),       /* 아래쪽 흙 그늘 */
-    inset 0 4px 8px rgba(255, 255, 255, 0.26),    /* 윗면 광 */
-    0 12px 22px rgba(0, 0, 0, 0.45);
-}
-/* 깬 층은 색이 바래고, 잠긴 층은 회색 바위만 */
-/* 깬 층 — 더 무성하고 밝은 잔디 */
-.tower-floor.done .tower-island {
-  background:
-    radial-gradient(circle at 24% 36%, rgba(214, 250, 180, 0.45) 0 7%, transparent 8%),
-    radial-gradient(circle at 63% 28%, rgba(214, 250, 180, 0.36) 0 6%, transparent 7%),
-    radial-gradient(circle at 84% 44%, rgba(214, 250, 180, 0.28) 0 5%, transparent 6%),
-    radial-gradient(circle at 44% 66%, rgba(30, 84, 42, 0.30) 0 8%, transparent 9%),
-    radial-gradient(circle at 74% 68%, rgba(30, 84, 42, 0.24) 0 6%, transparent 7%),
-    radial-gradient(ellipse 55% 48% at 34% 22%, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(ellipse at 50% 34%, #a3edaa 0%, #6cc477 55%, #3f8b4c 100%);
-}
-/* 잠긴 층 — 이끼 없는 회색 바위 */
-.tower-floor.lock .tower-island {
-  background:
-    radial-gradient(circle at 26% 38%, rgba(255, 255, 255, 0.10) 0 8%, transparent 9%),
-    radial-gradient(circle at 70% 62%, rgba(0, 0, 0, 0.22) 0 7%, transparent 8%),
-    radial-gradient(circle at 46% 30%, rgba(0, 0, 0, 0.16) 0 6%, transparent 7%),
-    radial-gradient(ellipse 55% 48% at 34% 22%, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 62%),
-    radial-gradient(ellipse at 50% 34%, #737a8a 0%, #545a67 55%, #3a3e48 100%);
-}
-.tower-floor.lock .tower-stage::before {
-  background:
-    radial-gradient(circle at 30% 40%, rgba(0, 0, 0, 0.24) 0 12%, transparent 13%),
-    radial-gradient(ellipse at 50% 30%, #5f6470, #464b56 58%, #2f333b 100%);
-}
-.tower-floor.lock .tower-node { opacity: 0.5; animation: none; }
-.tower-floor.open .tower-island {
-  box-shadow: 0 14px 26px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(255, 170, 70, 0.75),
-    0 0 26px rgba(255, 150, 50, 0.45);
+    linear-gradient(180deg, rgba(255, 140, 60, 0) 0%, rgba(255, 120, 50, 0.18) 12%, rgba(255, 105, 40, 0.3) 100%),
+    repeating-linear-gradient(45deg, rgba(255, 186, 120, 0.62) 0 2px, transparent 2px 20px),
+    repeating-linear-gradient(-45deg, rgba(255, 186, 120, 0.62) 0 2px, transparent 2px 20px),
+    repeating-linear-gradient(0deg, rgba(255, 186, 120, 0.34) 0 2px, transparent 2px 40px),
+    linear-gradient(90deg, rgba(255, 200, 140, 0.9) 0 4px, transparent 4px calc(100% - 4px), rgba(255, 200, 140, 0.9) calc(100% - 4px) 100%);
+  box-shadow: 0 0 34px rgba(255, 120, 50, 0.32);
+  border-top: 2px solid rgba(255, 200, 140, 0.9);
 }
 
-/* 층 번호·목표 */
-.tower-label { display: flex; flex-direction: column; text-align: left; }
-.tower-num { font-size: 20px; font-weight: 900; color: var(--text); }
-.tower-goal { font-size: 13px; font-weight: 700; font-style: normal; color: var(--muted); }
-.tower-floor.done .tower-goal { color: #8fe0a5; }
-.tower-floor.open .tower-num { color: #ffd9a1; }
-.tower-floor.open .tower-goal { color: #ffc07a; }
-
-/* 지금 도전할 층 땅 위에 서 있는 내 캐릭터 */
-.tower-me {
-  position: absolute; z-index: 2; left: 50%; bottom: 62%; transform: translateX(-50%);
-  width: 66px; height: 66px; pointer-events: none;
-  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.55));
+/* 통전 경계에서 깜박이는 불꽃 */
+.pylon-live::after {
+  content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ffd9a1; box-shadow: 0 0 14px 4px rgba(255, 170, 90, 0.85);
+  animation: pylonSpark 2.4s ease-in-out infinite;
+}
+@keyframes pylonSpark {
+  0%, 100% { opacity: 0.35; transform: translate(-50%, 0) scale(0.8); }
+  50% { opacity: 1; transform: translate(-50%, -3px) scale(1.15); }
 }
 
+/* 구간 표지판 — 10층마다. 왼쪽에 노랑·검정 빗금(실제 경고 명판처럼). */
+.pz {
+  position: relative; margin: 22px 0 22px -104px; padding: 9px 14px 9px 58px;
+  border-radius: 8px; border: 1px solid rgba(150, 172, 210, 0.22);
+  background: linear-gradient(90deg, rgba(24, 28, 42, 0.95), rgba(16, 20, 32, 0.7));
+  display: flex; align-items: baseline; gap: 10px;
+}
+.pz::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 44px;
+  border-radius: 7px 0 0 7px; opacity: 0.55;
+  background: repeating-linear-gradient(-45deg, #f0b429 0 7px, #16181f 7px 14px);
+}
+.pz.lit::before { opacity: 1; }
+.pz-range { font-size: 12px; font-weight: 900; letter-spacing: 0.1em; color: #ffb066; }
+.pz-name { font-size: 15px; font-weight: 900; color: var(--text); }
+.pz-note { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+/* 한 층 */
+.pf { position: relative; height: 74px; display: flex; align-items: center; }
+
+/* 철탑에서 뻗어 나온 가로대 — 기둥과 같은 격자 무늬라 한 구조로 읽힌다 */
+.pf-arm {
+  position: absolute; left: -62px; top: 50%; width: 62px; height: 18px;
+  transform: translateY(-50%);
+  border-top: 2px solid rgba(160, 182, 220, 0.55);
+  border-bottom: 2px solid rgba(160, 182, 220, 0.32);
+  background: repeating-linear-gradient(45deg, rgba(140, 162, 200, 0.34) 0 1.5px, transparent 1.5px 13px);
+}
+/* 가로대 끝의 볼트 이음 */
+.pf-ins {
+  position: absolute; left: -13px; top: 50%; transform: translateY(-50%);
+  width: 13px; height: 13px; border-radius: 50%;
+  background: #3d4457; border: 2px solid rgba(180, 200, 232, 0.6);
+  box-shadow: inset 0 0 0 2px rgba(10, 13, 22, 0.6);
+}
+
+
+.pf-hit {
+  position: relative; width: auto; margin: 0; padding: 0; border: 0;
+  background: none; cursor: pointer; display: block; flex: 1;
+}
+.pf-hit:disabled { cursor: default; }
+
+.pf-plate {
+  position: relative; display: flex; align-items: center; gap: 14px;
+  padding: 12px 18px; border-radius: 10px;
+  border: 1px solid rgba(150, 172, 210, 0.2);
+  background: linear-gradient(140deg, rgba(30, 36, 52, 0.9), rgba(18, 22, 34, 0.75));
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+.pf-num {
+  font-size: 21px; font-weight: 900; color: var(--text);
+  min-width: 62px; text-align: left; letter-spacing: -0.02em;
+}
+.pf-num i { font-size: 13px; font-style: normal; opacity: 0.55; margin-left: 2px; }
+.pf-goal { flex: 1; font-size: 13px; font-weight: 700; color: var(--muted); text-align: left; line-height: 1.35; }
+
+/* 오른쪽 끝 상태 배지 */
+.pf-state {
+  flex: none;
+  font-size: 11.5px; font-weight: 900; letter-spacing: 0.04em;
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid rgba(150, 172, 210, 0.24); color: var(--muted);
+}
+
+/* 깬 층 — 전류가 흐른다 */
+.pf.done .pf-arm {
+  border-top-color: rgba(255, 200, 140, 0.8);
+  border-bottom-color: rgba(255, 180, 110, 0.45);
+  background: repeating-linear-gradient(45deg, rgba(255, 186, 120, 0.5) 0 1.5px, transparent 1.5px 13px);
+}
+.pf.done .pf-ins { background: #6b4526; border-color: rgba(255, 200, 140, 0.75); }
+.pf.done .pf-plate { border-color: rgba(255, 150, 80, 0.32); background: linear-gradient(140deg, rgba(48, 34, 26, 0.85), rgba(22, 18, 26, 0.7)); }
+.pf.done .pf-num { color: #ffc490; }
+.pf.done .pf-goal { color: #d09a6a; }
+.pf.done .pf-state { color: #ffb066; border-color: rgba(255, 150, 80, 0.4); }
+
+/* 잠긴 층 — 전기가 안 들어온 강철 */
+.pf.lock { opacity: 0.4; }
+.pf.lock .pf-plate { background: rgba(16, 19, 28, 0.6); }
+
+/* 지금 도전할 층 */
+.pf.here .pf-plate {
+  border-color: rgba(255, 200, 120, 0.6);
+  background: linear-gradient(140deg, rgba(62, 44, 26, 0.95), rgba(28, 22, 30, 0.8));
+  box-shadow: 0 0 0 1px rgba(255, 190, 110, 0.25), 0 10px 30px rgba(255, 130, 50, 0.16);
+}
+.pf.here .pf-num { color: #ffd9a1; }
+.pf.here .pf-goal { color: #ffc07a; }
+.pf.here .pf-state { color: #12151f; background: #ffc07a; border-color: transparent; }
+.pf-hit:not(:disabled):hover .pf-plate { transform: translateX(4px); border-color: rgba(255, 190, 110, 0.5); }
+
+
+/* 지금 층 명판에 서 있는 내 캐릭터. 겹쳐 놓으면 상태 배지를 가려서
+   목록의 한 칸으로 끼워 넣는다. */
+.pf-me {
+  flex: none; width: 42px; height: 42px; margin: -8px 2px -8px 0;
+  pointer-events: none; filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.6));
+}
+
+/* 좁은 화면 — 철탑 장식이 가로를 많이 먹어 글씨가 잘게 쪼개진다.
+   기둥은 가는 띠로 줄이고 가로대는 없앤다. '아래부터 통전된다'는 핵심은
+   기둥 하나로도 그대로 읽힌다. */
 @media (max-width: 720px) {
-  .tower-stage { width: 108px; height: 40px; }
-  .tower-me { width: 48px; height: 48px; }
-  .tower-num { font-size: 16px; }
-  .tower-goal { font-size: 11px; }
+  .pylon { padding: 18px 12px 18px 56px; }
+  .pylon-mast { left: 14px; width: 30px; }
+  .pf { height: 58px; }
+  .pf-arm { left: -26px; width: 26px; height: 10px; }
+  .pf-arm::after { display: none; }
+  .pf-ins { display: none; }
+  .pf-plate { padding: 8px 10px; gap: 8px; border-radius: 8px; }
+  .pf-num { font-size: 16px; min-width: 42px; }
+  .pf-num i { font-size: 10px; }
+  .pf-goal { font-size: 11px; line-height: 1.3; }
+  .pf-state { font-size: 10px; padding: 3px 7px; }
+  .pf-me { width: 28px; height: 28px; margin: -4px 0; }
+  .pz { margin: 14px 0 14px -44px; padding: 7px 10px 7px 34px; gap: 7px; flex-wrap: wrap; }
+  .pz::before { width: 26px; }
+  .pz-range { font-size: 10.5px; }
+  .pz-name { font-size: 13px; }
+  .pz-note { display: none; }
 }
+/* 더 좁으면(회전한 폰) 상태 배지까지 뺀다 — 색만으로도 구분된다 */
+@media (max-width: 480px) {
+  .pylon { padding-left: 46px; }
+  .pylon-mast { left: 10px; width: 24px; }
+  .pf-arm { left: -20px; width: 20px; }
+  .pf.lock .pf-state, .pf.done .pf-state { display: none; }
+  .pf-goal { font-size: 10.5px; }
+}
+
 
 /* 봇전 | 온라인 1v1 을 반반 나눠 놓는 줄 */
 .split-row { display: flex; gap: 10px; margin-top: 10px; }

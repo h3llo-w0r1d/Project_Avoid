@@ -1350,81 +1350,26 @@ function startGame() {
 }
 
 // ── 도전모드(탑) ────────────────────────────────────────────
-// 잔디·바위 텍스처를 캔버스로 한 번 그려 두고 섬 배경으로 쓴다. 그라데이션만으론
-// 단색으로 밋밋해서, 잎을 수천 개 그려 진짜 잔디처럼 보이게 한다.
-let grassTex = null, stoneTex = null;
-function makeGrassTexture(dark = false) {
-  const w = 512, h = 200;
-  const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
-  const g = cv.getContext('2d');
-  // 바탕: 위는 볕든 잔디, 아래로 갈수록 그늘
-  const base = g.createLinearGradient(0, 0, 0, h);
-  base.addColorStop(0, dark ? '#4f9a52' : '#63b45e');
-  base.addColorStop(0.6, dark ? '#3c7f42' : '#4a9a4e');
-  base.addColorStop(1, dark ? '#24552b' : '#2c6733');
-  g.fillStyle = base; g.fillRect(0, 0, w, h);
-  // 잔디 잎 — 짧은 곡선을 빽빽하게. 위쪽일수록 밝게 해 빛 방향을 준다.
-  g.lineCap = 'round';
-  for (let i = 0; i < 3200; i++) {
-    const x = Math.random() * w, y = Math.random() * h;
-    const len = 7 + Math.random() * 15;
-    const lean = (Math.random() - 0.5) * 9;
-    const light = 0.6 + (1 - y / h) * 0.55;
-    const hue = 92 + Math.random() * 32;
-    const sat = 38 + Math.random() * 32;
-    const lum = Math.min(72, (24 + Math.random() * 26) * light);
-    g.strokeStyle = `hsl(${hue} ${sat}% ${lum}%)`;
-    g.lineWidth = 0.8 + Math.random() * 1.5;
-    g.beginPath();
-    g.moveTo(x, y);
-    g.quadraticCurveTo(x + lean * 0.5, y - len * 0.6, x + lean, y - len);
-    g.stroke();
-  }
-  return cv.toDataURL('image/png');
-}
-function makeStoneTexture() {
-  const w = 512, h = 200;
-  const cv = document.createElement('canvas');
-  cv.width = w; cv.height = h;
-  const g = cv.getContext('2d');
-  const base = g.createLinearGradient(0, 0, 0, h);
-  base.addColorStop(0, '#767d8c'); base.addColorStop(1, '#3a3e48');
-  g.fillStyle = base; g.fillRect(0, 0, w, h);
-  // 자잘한 돌 얼룩
-  for (let i = 0; i < 1400; i++) {
-    const x = Math.random() * w, y = Math.random() * h;
-    const r = 1 + Math.random() * 5;
-    const v = Math.random() < 0.5 ? 255 : 0;
-    g.fillStyle = `rgba(${v},${v},${v},${0.03 + Math.random() * 0.09})`;
-    g.beginPath(); g.ellipse(x, y, r, r * 0.7, Math.random() * 3, 0, 6.3); g.fill();
-  }
-  return cv.toDataURL('image/png');
-}
-// 섬 배경 스타일(윗면 광 그라데이션을 잔디 텍스처 위에 얹는다).
-function islandStyle(state) {
-  if (!grassTex) { grassTex = makeGrassTexture(false); stoneTex = makeStoneTexture(); }
-  const tex = state === 'lock' ? stoneTex : grassTex;
-  const glow = state === 'lock'
-    ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.34)';
-  // 깬 층은 살짝 밝은 초록을 덧입혀 더 무성해 보이게.
-  const tint = state === 'done'
-    ? 'linear-gradient(rgba(180,255,180,0.18),rgba(180,255,180,0.10)),' : '';
-  return `background-image:${tint}radial-gradient(ellipse 55% 48% at 34% 22%,${glow},rgba(255,255,255,0) 62%),url(${tex});` +
-    `background-size:cover;background-position:center;`;
-}
 
-// 1층부터 한 층씩. 층 정의·진행도는 서버가 갖고 있고(계정에 저장), 여기선
-// 그걸 받아 그리고 클리어를 보고한다.
+// 층 오르기 — 고압 송전탑.
+//
+// 예전엔 떠 있는 잔디 섬이 지그재그로 이어졌는데, 흔한 레벨 선택 화면이라
+// 이 게임(붉은 고압 전기선을 피한다)과 아무 상관이 없었다. 60층으로 늘리고
+// 나니 5층씩 12페이지를 넘겨야 하는 것도 문제였다.
+//
+// 지금은 철탑 하나가 위로 이어지고, 깬 층까지 전류가 흐른다(통전). 층은
+// 철탑에서 뻗어 나온 가로대 끝에 달린 명판이고, 10층마다 구간 표지판이
+// 붙는다. 스크롤 한 번으로 1층부터 60층까지 이어 본다.
 async function openTower() {
   const overlay = document.createElement('div');
   overlay.className = 'modal tower-modal';
   overlay.innerHTML =
     '<div class="modal-card panel tower-card">' +
     '<div class="modal-head"><h2>층 오르기</h2>' +
+    '<span class="tower-meter"></span>' +
     '<button type="button" class="icon-btn tower-close" aria-label="닫기">✕</button></div>' +
     '<p class="board-hint tower-hint">불러오는 중…</p>' +
-    '<div class="tower-list"></div></div>';
+    '<div class="pylon-scroll"></div></div>';
   document.body.appendChild(overlay);
   const close = () => overlay.remove();
   overlay.querySelector('.tower-close').addEventListener('click', close);
@@ -1436,74 +1381,64 @@ async function openTower() {
 
   const hint = overlay.querySelector('.tower-hint');
   hint.textContent = data.signedIn
-    ? `${data.cleared} / ${data.top}층 클리어`
+    ? `${data.cleared}층까지 통전됐어요`
     : '🔒 로그인하면 도전모드를 할 수 있어요';
+  overlay.querySelector('.tower-meter').textContent = `${data.cleared} / ${data.top}F`;
 
-  // 한 화면에 5층씩. 위로 갈수록 땅이 커지고, 5층을 넘기면 화면이 위로 넘어간다.
-  const PER_PAGE = 5, ROW = 124;
   let face = '';
   try { face = characters.preview(player.characterId); } catch { /* 미리보기 실패는 무시 */ }
-  const cur = Math.min(data.top, data.cleared + 1);
-  const pages = Math.max(1, Math.ceil(data.top / PER_PAGE));
-  let page = Math.min(pages, Math.ceil(Math.max(1, cur) / PER_PAGE));
+  const cur = Math.min(data.top, data.cleared + 1);   // 지금 도전할 층
+  const zones = data.zones ?? [];
 
-  // 1층이 맨 아래로 오게 뒤집어 그린다.
-  const rows = [...data.floors].reverse().map((f) => {
-    const state = f.done ? 'done' : (f.open ? 'open' : 'lock');
+  // 60층이 맨 위, 1층이 맨 아래. 그래서 위에서부터 거꾸로 그린다.
+  const parts = [];
+  for (const f of [...data.floors].reverse()) {
+    // 구간의 맨 위 층 앞에 표지판을 세운다(위에서 내려오며 만나는 순서).
+    const z = zones.find((x) => x.to === f.floor);
+    if (z) {
+      parts.push(
+        `<div class="pz${data.cleared >= z.to ? ' lit' : ''}">` +
+        `<span class="pz-range">${z.from}–${z.to}F</span>` +
+        `<span class="pz-name">${z.name}</span>` +
+        `<span class="pz-note">${z.note}</span></div>`);
+    }
+    const st = f.done ? 'done' : (f.open ? 'open' : 'lock');
+    const here = f.floor === cur && data.signedIn;
     const canGo = f.open && data.signedIn;
-    // 섬 크기는 층마다 같다. 예전엔 위층일수록 넓혔는데(105 + 층×14),
-    // 60층까지 늘리고 나니 위쪽이 화면을 넘어 서로 겹쳤다(60층이면 945px).
-    // 한 화면(5층) 안에서 대각선으로 오른다. 한 화면을 다 오르면 방향을
-    // 뒤집어 지그재그로 이어 간다 (1~5층 →, 6~10층 ←, 11~15층 → …).
-    // 뒤집는 편이 화면이 넘어가는 자리에서 자연스럽다 — 5층이 오른쪽 끝에서
-    // 끝나면 6층도 오른쪽 끝에서 시작해 길이 끊기지 않고 이어진다.
-    const band = Math.floor((f.floor - 1) / PER_PAGE);   // 몇 번째 5층 묶음인지
-    const raw = (f.floor - 1) % PER_PAGE;
-    const step = band % 2 === 0 ? raw : PER_PAGE - 1 - raw;
-    const me = (f.floor === cur && data.signedIn && face)
-      ? `<img class="tower-me" src="${face}" alt="">` : '';
-    return `<div class="tower-floor ${state}" data-floor="${f.floor}"` +
-      ` style="height:${ROW}px;padding-left:${5 + step * 15}%">` +
-      `<button type="button" class="tower-node"${canGo ? '' : ' disabled'}>` +
-      '<span class="tower-stage">' +
-      `${me}<span class="tower-island" style="${islandStyle(state)}"></span></span>` +
-      `<span class="tower-label"><b class="tower-num">${f.floor}층</b>` +
-      `<em class="tower-goal">${f.done ? '✔ 클리어' : f.goal}</em></span>` +
-      '</button></div>';
-  }).join('');
+    const me = here && face ? `<img class="pf-me" src="${face}" alt="">` : '';
+    parts.push(
+      `<div class="pf ${st}${here ? ' here' : ''}" data-floor="${f.floor}">` +
+      `<button type="button" class="pf-hit"${canGo ? '' : ' disabled'}>` +
+      '<span class="pf-arm"></span><span class="pf-ins"></span>' +
+      `<span class="pf-plate">` +
+      `<b class="pf-num">${f.floor}<i>F</i></b>` +
+      `<span class="pf-goal">${f.done ? '통전 완료' : f.goal}</span>` +
+      me +
+      `<span class="pf-state">${f.done ? '통전' : here ? '도전' : f.open ? '열림' : '잠김'}</span>` +
+      '</span></button></div>');
+  }
 
-  const list = overlay.querySelector('.tower-list');
-  list.innerHTML =
-    `<div class="tower-view" style="height:${PER_PAGE * ROW}px">` +
-    `<div class="tower-track">${rows}</div></div>` +
-    '<div class="tower-pager">' +
-    '<button type="button" class="tower-page up" aria-label="위층">▲</button>' +
-    '<span class="tower-page-now"></span>' +
-    '<button type="button" class="tower-page down" aria-label="아래층">▼</button>' +
-    '</div>';
+  // 통전된 높이 = 깬 층 / 전체. 아래에서부터 차오른다.
+  const lit = Math.max(0, Math.min(1, data.cleared / data.top));
+  const box = overlay.querySelector('.pylon-scroll');
+  box.innerHTML =
+    '<div class="pylon">' +
+    `<div class="pylon-mast"><span class="pylon-live" style="height:${(lit * 100).toFixed(2)}%"></span></div>` +
+    parts.join('') + '</div>';
 
-  const track = list.querySelector('.tower-track');
-  const nowEl = list.querySelector('.tower-page-now');
-  // page 1 = 아래(1~5층). 트랙을 밀어 그 구간만 보이게 한다.
-  const showPage = (p) => {
-    page = Math.max(1, Math.min(pages, p));
-    track.style.transform = `translateY(${-(data.top - page * PER_PAGE) * ROW}px)`;
-    nowEl.textContent = `${(page - 1) * PER_PAGE + 1}~${Math.min(data.top, page * PER_PAGE)}층`;
-    list.querySelector('.tower-page.up').disabled = page >= pages;
-    list.querySelector('.tower-page.down').disabled = page <= 1;
-  };
-  list.querySelector('.tower-page.up').addEventListener('click', () => showPage(page + 1));
-  list.querySelector('.tower-page.down').addEventListener('click', () => showPage(page - 1));
-  showPage(page);
-
-  for (const b of list.querySelectorAll('.tower-node:not([disabled])')) {
+  for (const b of box.querySelectorAll('.pf-hit:not([disabled])')) {
     b.addEventListener('click', () => {
-      const n = Number(b.closest('.tower-floor').dataset.floor);
+      const n = Number(b.closest('.pf').dataset.floor);
       const f = data.floors.find((x) => x.floor === n);
       close();
       startChallenge(f);
     });
   }
+
+  // 지금 도전할 층이 화면 가운데 오게 스크롤을 맞춘다. 60층을 위에서부터
+  // 훑어 내려오게 두면 내가 어디까지 왔는지 찾는 데만 한참 걸린다.
+  const now = box.querySelector('.pf.here') ?? box.querySelector('.pf.open');
+  if (now) box.scrollTop = now.offsetTop - box.clientHeight / 2 + now.offsetHeight / 2;
 }
 
 
