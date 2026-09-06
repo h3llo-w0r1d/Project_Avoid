@@ -1447,11 +1447,12 @@ async function openTower() {
   const pages = Math.max(1, Math.ceil(data.top / PER_PAGE));
   let page = Math.min(pages, Math.ceil(Math.max(1, cur) / PER_PAGE));
 
-  // 1층이 맨 아래로 오게 뒤집어 그린다. 섬 크기는 층이 올라갈수록 커진다.
+  // 1층이 맨 아래로 오게 뒤집어 그린다.
   const rows = [...data.floors].reverse().map((f) => {
     const state = f.done ? 'done' : (f.open ? 'open' : 'lock');
     const canGo = f.open && data.signedIn;
-    const w = 105 + f.floor * 14;                // 위층일수록 넓은 땅
+    // 섬 크기는 층마다 같다. 예전엔 위층일수록 넓혔는데(105 + 층×14),
+    // 60층까지 늘리고 나니 위쪽이 화면을 넘어 서로 겹쳤다(60층이면 945px).
     // 한 화면(5층) 안에서 대각선으로 오른다. 한 화면을 다 오르면 방향을
     // 뒤집어 지그재그로 이어 간다 (1~5층 →, 6~10층 ←, 11~15층 → …).
     // 뒤집는 편이 화면이 넘어가는 자리에서 자연스럽다 — 5층이 오른쪽 끝에서
@@ -1464,7 +1465,7 @@ async function openTower() {
     return `<div class="tower-floor ${state}" data-floor="${f.floor}"` +
       ` style="height:${ROW}px;padding-left:${5 + step * 15}%">` +
       `<button type="button" class="tower-node"${canGo ? '' : ' disabled'}>` +
-      `<span class="tower-stage" style="width:${w}px;height:${Math.round(w * 0.35)}px">` +
+      '<span class="tower-stage">' +
       `${me}<span class="tower-island" style="${islandStyle(state)}"></span></span>` +
       `<span class="tower-label"><b class="tower-num">${f.floor}층</b>` +
       `<em class="tower-goal">${f.done ? '✔ 클리어' : f.goal}</em></span>` +
