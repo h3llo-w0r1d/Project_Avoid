@@ -24,6 +24,7 @@ import { voiceStore } from './voice-store.js';
 import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
 import { TrailFX, findTrail, findArena, DEFAULT_ARENA } from './effects.js';
 import { ShopUI } from './shop-ui.js';
+import { SafeZone, Pads } from './challenge-extras.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
 // 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
@@ -231,6 +232,11 @@ const coins = new Coins(scene, () => {
   runCoins++;
   audio.coin?.();
 });
+// 도전모드 전용 장치. 평소엔 꺼져 있어 아무것도 안 그리고 판정도 안 한다.
+const safeZone = new SafeZone(scene);
+const pads = new Pads(scene);
+const chalHud = document.getElementById('challenge-hud');
+
 const input = new Input();
 
 // 상점에서 산 발자국 효과. 꾸미기라 판정에는 아무 영향이 없다.
@@ -1285,6 +1291,7 @@ function setArenaVisible(visible) {
 }
 
 function startGame() {
+  clearChallengeGear();   // 지난 층의 물리 변형·안전지대가 남지 않게
   state.mode = 'solo';
   state.botAI = null;      // 봇전·도전모드 흔적을 지운다(일반 판)
   state.challenge = null;
@@ -1498,17 +1505,181 @@ async function openTower() {
   }
 }
 
+
+// ── 도전모드 진행 ──────────────────────────────────────────
+// state.challenge 가 '무엇을 해야 하나'(서버가 준 층 정의)라면,
+// 이쪽 chal 은 '지금 얼마나 했나'다. 층을 시작할 때 세우고 끝나면 지운다.
+//
+// 여기 있는 규칙(점프 배급·물리 변형·정지 금지·안전지대·발판)은 전부
+// 도전모드에서만 켠다. 전기선 시뮬과 물리 계산 자체는 손대지 않으므로
+// 일반 판·1v1·다시보기는 아무 영향을 받지 않는다.
+let chal = null;
+
+// 물리 변형 preset. PLAYER 의 값 중 바꿀 것만 적는다.
+const PHYS_TUNE = {
+  // 미끄럽다 — 멈추는 데 오래 걸리고 방향도 늦게 바뀐다.
+  slip: { friction: 26, accel: 78 },
+  // 무겁다 — 점프 높이는 비슷한데 체공이 짧아(0.75초 → 0.55초) 빔을 점프로 넘기기 어렵다.
+  heavy: { gravity: 52, jumpSpeed: 14.2 },
+  // 빠르다 — 좁은 무대에서 과속해 가장자리로 미끄러져 나간다.
+  fast: { speed: 16.5, accel: 190 },
+  slipheavy: { friction: 26, accel: 78, gravity: 52, jumpSpeed: 14.2 }
+};
+
+// 코인 층에서만 쓰는 스폰 속도. 평소(7~12초에 하나)로는 15개를 모으는 데
+// 3분이 걸려서 층이 성립하지 않는다.
+const CHAL_COIN_RATE = { min: 1.2, max: 2.2, field: 4, life: 6 };
+
+// 이 층의 제한 시간(초). 없으면 null(시간 제한 없음).
+function chalLimit(f) {
+  if (f.kind === 'survive') return null;      // 버티기는 '오래' 가 목표라 제한이 없다
+  return f.limit ?? null;
+}
+
+// 층을 시작할 때 장치를 세운다. startGame/startBotMatch 뒤에 부른다.
+function applyChallenge(f) {
+  state.challenge = f;
+  chal = {
+    f,
+    jumpsLeft: f.jumps ?? Infinity,
+    pads: 0,
+    coins: 0,
+    still: 0,                       // 제자리에 머문 시간
+    ax: player.body.x, az: player.body.z,   // 정지 판정용 기준점
+    limit: chalLimit(f)
+  };
+
+  player.body.setTune(PHYS_TUNE[f.phys] ?? null);
+
+  // 안전지대는 이 층이 목표로 하는 길이에 걸쳐 좁아진다.
+  if (f.zone) safeZone.start(f.seconds ?? f.limit ?? 40);
+  else safeZone.stop();
+
+  if (f.kind === 'circuit') pads.start(); else pads.stop();
+
+  if (f.kind === 'coins') {
+    coins.setRate(CHAL_COIN_RATE);
+    coins.setActive(true);
+  } else {
+    coins.setActive(false);   // 코인 층이 아니면 목표와 무관한 코인은 안 띄운다
+  }
+  renderChalHud();
+}
+
+// 도전모드 흔적을 싹 지운다. 일반 판·봇전·타이틀로 갈 때 반드시 부른다 —
+// 안 그러면 다음 판이 미끄럽거나 안전지대가 남는다.
+function clearChallengeGear() {
+  chal = null;
+  player.body.setTune(null);
+  safeZone.stop();
+  pads.stop();
+  coins.setRate(null);
+  chalHud?.classList.add('hidden');
+}
+
+// 도전모드 한 프레임. 'win' | 'lose' | null 을 돌려주고, 끝내는 방법은
+// 부른 쪽이 정한다(혼자 하기면 죽는 연출, 봇전이면 패배 처리).
+function stepChallenge(dt) {
+  const f = chal.f;
+
+  // 1) 점프 배급 — 다 쓰면 더는 못 뛴다(입력은 frame 에서 막는다).
+  if (player.body.justJumped && chal.jumpsLeft !== Infinity) chal.jumpsLeft--;
+
+  // 2) 정지 금지 — 기준점에서 거의 안 움직이면 시간이 쌓인다.
+  if (f.still) {
+    const moved = Math.hypot(player.body.x - chal.ax, player.body.z - chal.az);
+    if (moved > 0.9) { chal.ax = player.body.x; chal.az = player.body.z; chal.still = 0; }
+    else chal.still += dt;
+    if (chal.still >= f.still) return 'lose';
+  }
+
+  // 3) 좁아지는 안전지대 — 붉은 쪽에 서 있으면 죽는다.
+  if (f.zone) {
+    safeZone.update(state.elapsed);
+    if (safeZone.isOutside(player.body.x, player.body.z)) return 'lose';
+  }
+
+  // 4) 발판 순회
+  if (f.kind === 'circuit') {
+    if (pads.update(dt, player.body.x, player.body.z)) {
+      chal.pads++;
+      audio.coin?.();
+    }
+    if (chal.pads >= f.n) return 'win';
+  }
+
+  // 5) 코인 수집 — 먹은 수는 runCoins 가 세 준다.
+  if (f.kind === 'coins') {
+    chal.coins = runCoins;
+    if (chal.coins >= f.n) return 'win';
+  }
+
+  // 6) 시간 다 됨 — 제한이 있는 층에서 못 채웠으면 실패.
+  if (chal.limit !== null && state.elapsed >= chal.limit) return 'lose';
+
+  // 7) 버티기는 시간을 채우면 성공. (봇 층은 봇이 죽어야 끝나므로 여기 없다.)
+  if (f.kind === 'survive' && state.elapsed >= f.seconds) return 'win';
+
+  renderChalHud();
+  return null;
+}
+
+// 화면 위쪽에 지금 뭘 해야 하는지와 진행 상황을 띄운다.
+function renderChalHud() {
+  if (!chalHud || !chal) return;
+  const f = chal.f;
+  const bits = [`<b>${f.floor}층</b>`];
+
+  if (f.kind === 'survive') bits.push(`${Math.min(state.elapsed, f.seconds).toFixed(1)} / ${f.seconds}초`);
+  else if (f.kind === 'circuit') bits.push(`발판 ${chal.pads} / ${f.n}`);
+  else if (f.kind === 'coins') bits.push(`코인 ${chal.coins} / ${f.n}`);
+  else if (f.kind === 'bot') bits.push('봇보다 오래 버티기');
+
+  if (chal.limit !== null) {
+    bits.push(`남은 ${Math.max(0, chal.limit - state.elapsed).toFixed(1)}초`);
+  }
+  if (chal.jumpsLeft !== Infinity) {
+    bits.push(`<i class="${chal.jumpsLeft <= 1 ? 'low' : ''}">점프 ${Math.max(0, chal.jumpsLeft)}</i>`);
+  }
+  if (f.phys) bits.push(PHYS_LABEL[f.phys] ?? '');
+  if (f.still) bits.push('정지 금지');
+
+  chalHud.innerHTML = bits.filter(Boolean).join('<span class="sep">·</span>');
+  chalHud.classList.remove('hidden');
+}
+
+const PHYS_LABEL = {
+  slip: '미끄러움', heavy: '무거움', fast: '과속', slipheavy: '미끄러움+무거움'
+};
 // 그 층에 도전한다. 일반 판과 같은 게임이지만 목표를 채우면 바로 클리어.
 function startChallenge(f) {
-  startGame();
-  state.challenge = f;
-  ui.setSubmitState?.(`${f.floor}층 — ${f.goal}`);
+  // 봇 층은 봇전으로, 나머지는 평소 혼자 하기로 판을 연다.
+  // 둘 다 판을 세운 '뒤에' 층 조건을 얹는다 — startGame/startBotMatch 가
+  // 물리와 점프를 원래대로 되돌리기 때문이다.
+  if (f.kind === 'bot') startBotMatch(f.tier);
+  else startGame();
+  applyChallenge(f);
+}
+
+// 층 실패. 혼자 하기(빔에 맞음·시간 초과)와 봇 층(먼저 죽음) 둘 다 여기로 온다.
+// 랭킹엔 안 올리고 진행도도 그대로 — 다시 도전하면 된다.
+function challengeFailed(secs, why = '', addTime = true) {
+  const f = state.challenge;
+  state.challenge = null;
+  voiceMeter.hide();
+  // 봇 층은 endBotMatch 가 이미 더했다. 두 번 더하면 룰렛 횟수가 공짜로 는다.
+  if (addTime && !isAdmin) { wallet.addPlaytime(secs); addTrailTime(secs); }
+  api.recordChallenge(f.floor, f.goal, false, secs,
+    auth.signedIn ? undefined : auth.displayName);
+  clearChallengeGear();
+  showTowerResult(false, f, why || `${secs.toFixed(2)}초 버팀`);
 }
 
 // 목표를 채웠다. 서버에 보고하고 결과창을 띄운다.
 async function challengeCleared() {
   const f = state.challenge;
   state.challenge = null;
+  clearChallengeGear();
   state.phase = 'over';
   input.enabled = false;
   voiceMeter.hide();
@@ -1550,6 +1721,7 @@ function showTowerResult(win, f, msg) {
 // 봇이랑 나란히 같은 빔을 피하다가 오래 버티는 쪽이 승리. 서버·랭킹과 무관한
 // 연습 모드다. 난이도(초보~고인물)는 봇 AI 의 실력만 바꾼다.
 function startBotMatch(tier) {
+  clearChallengeGear();
   state.mode = 'bot';
   state.hardcore = false;
   state.voice = false;
@@ -1608,6 +1780,12 @@ function endBotMatch(win) {
   if (!isAdmin) { wallet.addPlaytime(secs); addTrailTime(secs); }
   hideRival();
   api.recordBotMatch(state.botTier, win, secs, auth.signedIn ? undefined : auth.displayName);
+  // 도전모드의 봇 층이면 봇전 결과창 대신 층 결과창으로 보낸다.
+  if (state.challenge) {
+    if (win) challengeCleared();
+    else challengeFailed(secs, `봇에게 먼저 죽었습니다 · ${secs.toFixed(2)}초`, false);
+    return;
+  }
   showBotResult(win, secs, state.botTier);
 }
 
@@ -1693,6 +1871,7 @@ function goHome() {
   voiceMeter.hide();
   floorHoles.setActive(false);
   coins.setActive(false);
+  clearChallengeGear();
   setArenaVisible(false);
   ui.showTitle();
   renderNotice();
@@ -2150,13 +2329,7 @@ async function finishGame() {
 
   // 도전모드 중 죽었으면 그 층 실패. 랭킹엔 올리지 않는다.
   if (state.challenge) {
-    const f = state.challenge;
-    state.challenge = null;
-    voiceMeter.hide();
-    if (!isAdmin) { wallet.addPlaytime(score); addTrailTime(score); }   // 도전모드도 쌓인다
-    api.recordChallenge(f.floor, f.goal, false, score,
-      auth.signedIn ? undefined : auth.displayName);
-    showTowerResult(false, f, `${score.toFixed(2)}초 버팀`);
+    challengeFailed(score);
     return;
   }
 
@@ -2528,6 +2701,9 @@ function frame() {
 
     // 입력은 한 번만 읽어(기록과 시뮬이 같은 값을 쓰게), 다시보기용으로 남긴다.
     const control = input.poll();
+    // 점프 배급을 다 쓴 층에서는 점프가 안 먹는다. 기록(rec)에 넣기 전에
+    // 꺼야 다시보기도 실제 판과 같은 입력으로 재현된다.
+    if (chal && chal.jumpsLeft <= 0) control.jumpPressed = false;
     if (rec && rec.dt.length < REC_CAP) {
       rec.dt.push(dt); rec.x.push(control.move.x);
       rec.y.push(control.move.y); rec.j.push(control.jumpPressed ? 1 : 0);
@@ -2556,9 +2732,15 @@ function frame() {
     const playerDead = hazards.hitTest(player) || player.body.droppedOff
       || (state.hardcore && floorHoles.isOpenAt(player.body.x, player.body.z));
 
-    if (state.challenge && state.challenge.kind === 'survive'
-        && state.elapsed >= state.challenge.seconds) {
-      challengeCleared();                          // 도전모드: 목표 달성
+    // 도전모드 규칙(점프 배급·정지 금지·안전지대·발판·코인·제한시간)을 굴린다.
+    // 성패만 돌려주고, 끝내는 방법은 판 종류에 따라 아래에서 정한다.
+    const verdict = chal && !playerDead ? stepChallenge(dt) : null;
+
+    if (verdict === 'win') {
+      challengeCleared();
+    } else if (verdict === 'lose') {
+      // 봇 층이면 패배 처리, 아니면 평소처럼 죽는 연출을 태운다.
+      if (state.botAI) endBotMatch(false); else killPlayer('zap');
     } else if (state.botAI) {
       if (playerDead) endBotMatch(false);          // 내가 먼저 죽음 → 패배
       else if (!state.botAlive) endBotMatch(true);  // 봇이 먼저 죽음 → 승리

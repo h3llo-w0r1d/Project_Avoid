@@ -9,8 +9,20 @@ export class PlayerBody {
   constructor() {
     // 점프 가능 횟수. 기본은 설정값(2단). 하드코어 모드에서 1 로 낮춰 1단만 쓴다.
     // 인스턴스마다 따로 두므로 1v1(서버·상대)은 기본값 그대로다.
+    // 이 몸만 다르게 굴릴 값. null 이면 PLAYER 를 그대로 쓴다.
+    // 도전모드에서 층마다 미끄럽게/무겁게/빠르게 바꾸는 데 쓴다.
+    // 서버(1v1)와 혼자 하기는 건드리지 않으므로 null 그대로다 — 그래야
+    // 다시보기가 저장된 판과 한 치도 안 어긋난다.
+    this.tune = null;
+
     this.maxJumps = PLAYER.maxJumps;
     this.reset();
+  }
+
+  // over = { speed, friction, gravity, jumpSpeed, ... } 중 바꿀 것만.
+  // null 을 주면 원래대로 돌아온다.
+  setTune(over) {
+    this.tune = over ? { ...PLAYER, ...over } : null;
   }
 
   reset(x = 0, z = 0) {
@@ -35,6 +47,8 @@ export class PlayerBody {
 
   // input = { moveX, moveY, jump } — moveY 는 화면 위쪽이 양수
   step(dt, input) {
+    // 이 판에 쓸 물리값. tune 이 없으면 PLAYER 그 자체라 계산이 안 달라진다.
+    const P = this.tune ?? PLAYER;
     this.justJumped = 0;
     this.justLanded = false;
 
@@ -45,7 +59,7 @@ export class PlayerBody {
     // 같은 세기로 밀어도 밀려나는 거리가 상황마다 제각각이 된다.
     const knock = Math.hypot(this.kx, this.kz);
     const grip = knock > 0
-      ? Math.max(PLAYER.pushGrip, 1 - (1 - PLAYER.pushGrip) * Math.sqrt(knock / PLAYER.pushBase))
+      ? Math.max(P.pushGrip, 1 - (1 - P.pushGrip) * Math.sqrt(knock / P.pushBase))
       : 1;
 
     // 밀리는 동안에는 이동 입력이 먹지 않는다(pushGrip 0). 버티든 말든
@@ -58,13 +72,13 @@ export class PlayerBody {
       // 지금 가는 방향과 반대로 눌렀으면 더 세게 민다.
       // 그냥 같은 가속도를 쓰면 최고 속도에서 반대로 꺾는 데 두 배가 걸려 답답하다.
       const opposing = wantX * this.vx + wantZ * this.vz < 0;
-      const accel = opposing ? PLAYER.accel * PLAYER.turnBoost : PLAYER.accel;
+      const accel = opposing ? P.accel * P.turnBoost : P.accel;
 
       this.vx += wantX * accel * dt;
       this.vz += wantZ * accel * dt;
 
       const speed = Math.hypot(this.vx, this.vz);
-      const cap = PLAYER.speed * grip;
+      const cap = P.speed * grip;
       if (speed > cap) {
         const k = cap / speed;
         this.vx *= k;
@@ -72,7 +86,7 @@ export class PlayerBody {
       }
     } else {
       const speed = Math.hypot(this.vx, this.vz);
-      const drop = Math.min(speed, PLAYER.friction * dt);
+      const drop = Math.min(speed, P.friction * dt);
       if (speed > 1e-4) {
         this.vx -= (this.vx / speed) * drop;
         this.vz -= (this.vz / speed) * drop;
@@ -81,21 +95,21 @@ export class PlayerBody {
 
     // 점프 — 지면을 막 벗어난 직후에도 1단 점프를 인정한다(코요테 타임)
     if (input.jump) {
-      const canGroundJump = this.grounded || this.airTime < PLAYER.coyoteTime;
+      const canGroundJump = this.grounded || this.airTime < P.coyoteTime;
       if (canGroundJump && this.jumpsLeft === this.maxJumps) {
-        this.vy = PLAYER.jumpSpeed;
+        this.vy = P.jumpSpeed;
         this.jumpsLeft--;
         this.grounded = false;
         this.justJumped = 1;
       } else if (this.jumpsLeft > 0) {
         // 2단 점프는 낙하 중이어도 항상 같은 높이가 나오도록 속도를 덮어쓴다
-        this.vy = PLAYER.jumpSpeed * 0.92;
+        this.vy = P.jumpSpeed * 0.92;
         this.jumpsLeft--;
         this.justJumped = 2;
       }
     }
 
-    this.vy -= PLAYER.gravity * dt;
+    this.vy -= P.gravity * dt;
 
     this.x += (this.vx + this.kx) * dt;
     this.y += this.vy * dt;
@@ -106,7 +120,7 @@ export class PlayerBody {
     // 멈추지는 못한다. 맞고도 손을 놓지 않은 느낌이 남게.
     const left = Math.hypot(this.kx, this.kz);
     if (left > 1e-4) {
-      const drop = Math.min(left, PLAYER.pushDecay * dt);
+      const drop = Math.min(left, P.pushDecay * dt);
       this.kx -= (this.kx / left) * drop;
       this.kz -= (this.kz / left) * drop;
     } else {

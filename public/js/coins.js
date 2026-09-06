@@ -61,7 +61,17 @@ export class Coins {
 
     this.coins = [];   // { mesh, glow, x, z, t, phase }
     this.active = false;
+    // 스폰 간격·동시 개수·수명. 도전모드의 코인 층은 훨씬 자주 나와야 해서
+    // 판마다 갈아끼운다(기본값은 위 상수 그대로 = 평소 혼자 하기).
+    this.rate = { min: SPAWN_MIN, max: SPAWN_MAX, field: MAX_ON_FIELD, life: LIFETIME };
     this.spawnTimer = 1.5;
+  }
+
+  // over = { min, max, field, life } 중 바꿀 것만. null 이면 평소대로.
+  setRate(over) {
+    this.rate = over
+      ? { min: SPAWN_MIN, max: SPAWN_MAX, field: MAX_ON_FIELD, life: LIFETIME, ...over }
+      : { min: SPAWN_MIN, max: SPAWN_MAX, field: MAX_ON_FIELD, life: LIFETIME };
   }
 
   setActive(on) {
@@ -106,9 +116,9 @@ export class Coins {
     if (!this.active) return;
 
     this.spawnTimer -= dt;
-    if (this.spawnTimer <= 0 && this.coins.length < MAX_ON_FIELD) {
+    if (this.spawnTimer <= 0 && this.coins.length < this.rate.field) {
       this.#spawn(px, pz);
-      this.spawnTimer = SPAWN_MIN + Math.random() * (SPAWN_MAX - SPAWN_MIN);
+      this.spawnTimer = this.rate.min + Math.random() * (this.rate.max - this.rate.min);
     }
 
     const now = performance.now() / 1000;
@@ -130,7 +140,7 @@ export class Coins {
         continue;
       }
       // 수명이 다하면 사라진다(끝에 잠깐 페이드).
-      if (c.t >= LIFETIME) {
+      if (c.t >= this.rate.life) {
         this.group.remove(c.mesh);
         this.coins.splice(i, 1);
       }
