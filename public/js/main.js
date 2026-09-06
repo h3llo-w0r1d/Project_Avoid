@@ -1545,8 +1545,6 @@ function applyChallenge(f) {
     jumpsLeft: f.jumps ?? Infinity,
     pads: 0,
     coins: 0,
-    still: 0,                       // 제자리에 머문 시간
-    ax: player.body.x, az: player.body.z,   // 정지 판정용 기준점
     limit: chalLimit(f)
   };
 
@@ -1586,21 +1584,13 @@ function stepChallenge(dt) {
   // 1) 점프 배급 — 다 쓰면 더는 못 뛴다(입력은 frame 에서 막는다).
   if (player.body.justJumped && chal.jumpsLeft !== Infinity) chal.jumpsLeft--;
 
-  // 2) 정지 금지 — 기준점에서 거의 안 움직이면 시간이 쌓인다.
-  if (f.still) {
-    const moved = Math.hypot(player.body.x - chal.ax, player.body.z - chal.az);
-    if (moved > 0.9) { chal.ax = player.body.x; chal.az = player.body.z; chal.still = 0; }
-    else chal.still += dt;
-    if (chal.still >= f.still) return 'lose';
-  }
-
-  // 3) 좁아지는 안전지대 — 붉은 쪽에 서 있으면 죽는다.
+  // 2) 좁아지는 안전지대 — 붉은 쪽에 서 있으면 죽는다.
   if (f.zone) {
     safeZone.update(state.elapsed);
     if (safeZone.isOutside(player.body.x, player.body.z)) return 'lose';
   }
 
-  // 4) 발판 순회
+  // 3) 발판 순회
   if (f.kind === 'circuit') {
     if (pads.update(dt, player.body.x, player.body.z)) {
       chal.pads++;
@@ -1609,16 +1599,16 @@ function stepChallenge(dt) {
     if (chal.pads >= f.n) return 'win';
   }
 
-  // 5) 코인 수집 — 먹은 수는 runCoins 가 세 준다.
+  // 4) 코인 수집 — 먹은 수는 runCoins 가 세 준다.
   if (f.kind === 'coins') {
     chal.coins = runCoins;
     if (chal.coins >= f.n) return 'win';
   }
 
-  // 6) 시간 다 됨 — 제한이 있는 층에서 못 채웠으면 실패.
+  // 5) 시간 다 됨 — 제한이 있는 층에서 못 채웠으면 실패.
   if (chal.limit !== null && state.elapsed >= chal.limit) return 'lose';
 
-  // 7) 버티기는 시간을 채우면 성공. (봇 층은 봇이 죽어야 끝나므로 여기 없다.)
+  // 6) 버티기는 시간을 채우면 성공. (봇 층은 봇이 죽어야 끝나므로 여기 없다.)
   if (f.kind === 'survive' && state.elapsed >= f.seconds) return 'win';
 
   renderChalHud();
@@ -1643,7 +1633,6 @@ function renderChalHud() {
     bits.push(`<i class="${chal.jumpsLeft <= 1 ? 'low' : ''}">점프 ${Math.max(0, chal.jumpsLeft)}</i>`);
   }
   if (f.phys) bits.push(PHYS_LABEL[f.phys] ?? '');
-  if (f.still) bits.push('정지 금지');
 
   chalHud.innerHTML = bits.filter(Boolean).join('<span class="sep">·</span>');
   chalHud.classList.remove('hidden');
