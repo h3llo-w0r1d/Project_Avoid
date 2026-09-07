@@ -127,6 +127,25 @@ export class UI {
 
     $('start-btn').addEventListener('click', () => handlers.onStart());
     $('retry-btn').addEventListener('click', () => handlers.onStart());
+
+    // 게임오버 화면에서 스페이스(엔터)로 바로 다시 시작. 마우스로 버튼을
+    // 찾아 누르는 것보다 빠르다.
+    //
+    // e.repeat 을 거르는 게 핵심이다. 죽는 순간 점프하려고 스페이스를 누르고
+    // 있었으면, 누른 채로는 repeat 만 오고 새 keydown 은 안 온다 — 그래서
+    // 손을 뗐다 다시 눌러야 시작된다. 안 그러면 죽자마자 다음 판이 시작된다.
+    addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      if (e.code !== 'Space' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
+      if (this.el.over.classList.contains('hidden')) return;       // 결과 화면일 때만
+      // 글을 쓰는 중이거나 창이 떠 있으면 그쪽이 먼저다.
+      const el = document.activeElement;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      if (document.querySelector('.modal:not(.hidden), .unlock-overlay')) return;
+      e.preventDefault();
+      el?.blur?.();      // 버튼에 초점이 남아 있으면 다음 스페이스가 두 번 먹는다
+      handlers.onStart();
+    });
     // 타이틀로 돌아가는 길은 한 곳으로 모은다. 여기서 showTitle() 만
     // 부르면 무대를 감추는 처리가 빠져 뒤에 그대로 비친다.
     $('home-btn').addEventListener('click', () => handlers.onHome());

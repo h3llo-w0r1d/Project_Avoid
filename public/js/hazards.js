@@ -8,12 +8,17 @@ import { Hazards as HazardRules } from './shared/beams.js';
 
 // ---------------------------------------------------------------- 렌더링
 
-// 회전 빔 예열 때 바닥에 띄우는 '도는 방향' 화살표.
-// XZ 평면(y 위)에 곡선 띠 + 화살촉을 직접 짜 넣는다. 전기선 팔과 똑같은
-// (cosθ, sinθ)→(x, z) 매핑을 써서, 카메라가 기울어도 팔이 도는 쪽과
-// 화살표가 감기는 쪽이 항상 일치한다. dir=+1 기준으로 만들고, dir=-1 은
-// mesh.scale.z = -1 로 좌우 뒤집어 반대 방향을 표현한다.
-function makeTurnArrow() {
+// 회전 빔의 도는 방향을 알려 주는 굽은 화살표.
+//
+// 예전엔 하나만 만들어 두고 반대 방향일 때 scale.z = -1 로 좌우를 뒤집었다.
+// 그러면 띠까지 같이 뒤집혀서 화살표가 매번 다른 쪽에 나타난다 — 방향을
+// 읽기 전에 화살표부터 찾아야 했다("레이저가 생기는 방향으로 표시가 되어서
+// 알아보기 어렵다"는 제보가 이거였다).
+//
+// 그래서 방향마다 하나씩 만들어 둔다. 굽은 띠는 두 개가 완전히 같은 자리에
+// 있고, 화살촉만 이쪽 끝이냐 저쪽 끝이냐로 갈린다. 화살표는 늘 같은 자리에
+// 있으니 어느 쪽 끝이 뾰족한지만 보면 된다.
+function makeTurnArrow(dir) {
   const r = 2.0;            // 화살표 반지름(무대 중앙 근처)
   const half = 0.17;        // 띠 두께의 절반
   const a0 = -2.0;          // 시작각(rad)
@@ -25,7 +30,7 @@ function makeTurnArrow() {
   const verts = [];
   const push = (p) => verts.push(p[0], p[1], p[2]);
 
-  // 곡선 띠 — 안/바깥 두 줄을 잇는 삼각형들
+  // 곡선 띠 — 안/바깥 두 줄을 잇는 삼각형들. 방향과 무관하게 늘 같은 자리.
   for (let i = 0; i < N; i++) {
     const t0 = a0 + (i / N) * sweep;
     const t1 = a0 + ((i + 1) / N) * sweep;
@@ -34,11 +39,12 @@ function makeTurnArrow() {
     push(inA); push(outA); push(outB);
     push(inA); push(outB); push(inB);
   }
-  // 화살촉 — 띠 끝(a0+sweep)에서 진행 방향(+θ)으로 뾰족하게
-  const aEnd = a0 + sweep;
-  push(P(r - 0.5, aEnd));   // 안쪽 밑동
-  push(P(r + 0.5, aEnd));   // 바깥쪽 밑동
-  push(P(r, aEnd + 0.5));   // 촉 끝
+  // 화살촉 — 도는 쪽 끝에 붙는다. 시계면 띠의 끝, 반시계면 띠의 시작.
+  const at = dir > 0 ? a0 + sweep : a0;
+  const tip = dir > 0 ? at + 0.6 : at - 0.6;
+  push(P(r - 0.62, at));    // 안쪽 밑동
+  push(P(r + 0.62, at));    // 바깥쪽 밑동
+  push(P(r, tip));          // 촉 끝
 
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
@@ -50,7 +56,8 @@ const GEO = {
   rod: new THREE.CylinderGeometry(1, 1, 1, 8, 1, true),
   strip: new THREE.PlaneGeometry(1, 1),
   node: new THREE.SphereGeometry(0.3, 14, 10),
-  turnArrow: makeTurnArrow()
+  turnArrowCW: makeTurnArrow(1),      // 시계 방향
+  turnArrowCCW: makeTurnArrow(-1)     // 반시계 방향
 };
 
 // 번개 코어 — 길이 방향 SEG 마디, 각 마디마다 네 점짜리 마름모 단면.
@@ -146,7 +153,7 @@ class BeamVisual {
     this.group = g;
 
     // 회전 방향 화살표 — 축(월드 원점)에 놓이므로 빔 그룹과 따로 둔다.
-    this.arrow = new THREE.Mesh(GEO.turnArrow, new THREE.MeshBasicMaterial({
+    this.arrow = new THREE.Mesh(GEO.turnArrowCW, new THREE.MeshBasicMaterial({
       color: COLORS.warn, transparent: true, opacity: 0,
       blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
     }));
@@ -209,7 +216,8 @@ class BeamVisual {
     if (spin) {
       this.arrow.visible = true;
       this.arrow.position.set(spin.cx, 0, spin.cz);
-      this.arrow.scale.z = spin.dir;              // -1 이면 좌우 뒤집어 반대 방향
+      // 뒤집지 않고 모양만 바꾼다 — 띠는 늘 같은 자리, 촉만 반대쪽 끝으로.
+      this.arrow.geometry = spin.dir > 0 ? GEO.turnArrowCW : GEO.turnArrowCCW;
       this.arrow.material.opacity = 0.35 + 0.4 * k;  // 발사가 가까울수록 또렷하게
     } else {
       this.arrow.visible = false;
