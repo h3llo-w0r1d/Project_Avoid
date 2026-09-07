@@ -2597,7 +2597,6 @@ kbd {
 .pz.lit::before { opacity: 1; }
 .pz-range { font-size: 12px; font-weight: 900; letter-spacing: 0.1em; color: #ffb066; }
 .pz-name { font-size: 15px; font-weight: 900; color: var(--text); }
-.pz-note { font-size: 12px; font-weight: 700; color: var(--muted); }
 
 /* 한 층 */
 .pf { position: relative; height: 74px; display: flex; align-items: center; }
@@ -2702,7 +2701,6 @@ kbd {
   .pz::before { width: 26px; }
   .pz-range { font-size: 10.5px; }
   .pz-name { font-size: 13px; }
-  .pz-note { display: none; }
 }
 /* 더 좁으면(회전한 폰) 상태 배지까지 뺀다 — 색만으로도 구분된다 */
 @media (max-width: 480px) {

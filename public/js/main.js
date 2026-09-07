@@ -1400,7 +1400,7 @@ async function openTower() {
         `<div class="pz${data.cleared >= z.to ? ' lit' : ''}">` +
         `<span class="pz-range">${z.from}–${z.to}F</span>` +
         `<span class="pz-name">${z.name}</span>` +
-        `<span class="pz-note">${z.note}</span></div>`);
+        '</div>');
     }
     const st = f.done ? 'done' : (f.open ? 'open' : 'lock');
     const here = f.floor === cur && data.signedIn;
