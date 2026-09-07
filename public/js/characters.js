@@ -349,7 +349,7 @@ export const CHARACTERS = [
     name: '자본이라고라',
     unlockAt: Infinity,       // 시간으론 안 열린다 — 코인 전용
     coinCost: 1000,
-    previewZoom: 0.86,        // 왕관과 금화까지 들어와야 해서 조금 넓게 잡는다
+    previewZoom: 0.84,        // 왕관·날개·금화까지 다 들어와야 한다
     body: 0xe8b53c,           // 잘 닦인 금
     bodyTop: 0xffe28a,        // 위는 빛을 받아 밝게
     bodyBottom: 0x8a5b10,     // 아래로 갈수록 깊은 청동빛
@@ -382,8 +382,9 @@ export const CHARACTERS = [
       gem: 0xe8434f, gemAlt: 0x53d0ff, pearl: 0xfff6e0,
       points: 5, height: 0.40, radius: 0.40
     },
+    plumes: { y: 0.46, spread: 0.20, sweep: 0.40 },
     coins: { count: 4, radius: 1.06, y: 0.34, size: 0.2, tilt: 0.3 },
-    sparkles: { count: 7 }
+    sparkles: { count: 10 }
   },
   {
     // 럭키라고라 — 돈으로 못 사고 오직 룰렛 대박(0.1%)으로만 얻는 한정 캐릭터.

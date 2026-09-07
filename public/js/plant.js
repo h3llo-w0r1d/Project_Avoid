@@ -1539,6 +1539,81 @@ function addSparkles(root, ruler, spec) {
   return out;
 }
 
+
+// 금빛 깃털 날개 — 자본이라고라 전용.
+//
+// 천사·악마의 날개(addWings)는 그림 한 장을 세워 둔 것이라 옆에서 보면 종이처럼
+// 얇다. 이건 깃털을 하나하나 세워 세 겹으로 쌓는다.
+//
+// 깃털을 한 점에서 부채처럼 펼치면 날개가 아니라 햇살처럼 보인다(처음에 그렇게
+// 만들었다가 되돌렸다). 진짜 날개는 어깨에서 위·뒤로 뻗은 '팔'이 있고, 깃털은
+// 그 팔을 따라 줄줄이 매달려 아래·뒤로 처진다. 그래서 팔 위에 밑동을 늘어놓고
+// 바깥으로 갈수록 길어지게 한다.
+function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
+  const {
+    // [깃털 수, 팔 길이, 깃털 길이(안→밖), 색, 폭, 깊이]
+    rows = [
+      [6, 0.74, [0.40, 0.74], 0xc98d16, 0.46, 0.00],   // 앞 덮깃 — 짧고 진하다
+      [8, 1.04, [0.56, 1.14], 0xecbb45, 0.54, -0.11],  // 가운데
+      [9, 1.30, [0.72, 1.56], 0xffdd7a, 0.60, -0.22]   // 뒤 — 길고 밝다
+    ],
+    armAngle = 52,        // 어깨에서 팔이 뻗는 각(위·바깥)
+    droopFrom = -20,      // 밑동 쪽 깃털이 처지는 각
+    droopTo = -58,        // 끝 쪽 깃털이 처지는 각
+    y = 0.5, spread = 0.26, sweep = 0.40
+  } = spec || {};
+
+  const shoulderY = ruler.at(y);
+  const backZ = -ruler.radiusAt(shoulderY) - 0.04;
+  const rad = (d) => (d * Math.PI) / 180;
+
+  // 깃털 한 장 — 납작하고 끝이 뾰족한 타원. 밑동이 원점에 오게 옮겨 둔다.
+  const featherGeo = new THREE.SphereGeometry(0.5, 12, 8);
+  featherGeo.scale(1, 0.46, 0.16);
+  featherGeo.translate(0.5, 0, 0);
+  featherGeo.computeVertexNormals();
+
+  const wings = [];
+  for (const dir of [-1, 1]) {
+    const wing = new THREE.Group();
+    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.32 + spread * 0.5), shoulderY, backZ);
+    wing.rotation.y = dir * sweep;      // 뒤로 젖혀 옆에서도 두께가 보이게
+    wing.scale.x = dir;                 // 왼쪽은 좌우 반전
+
+    for (const [count, armLen, [shortLen, longLen], color, wide, dz] of rows) {
+      const mat = toon(color);
+      for (let i = 0; i < count; i++) {
+        const t = count > 1 ? i / (count - 1) : 0;
+        // 밑동은 팔 위에. 바깥으로 갈수록 어깨에서 멀어진다.
+        const ax = Math.cos(rad(armAngle)) * armLen * t;
+        const ay = Math.sin(rad(armAngle)) * armLen * t;
+        const f = new THREE.Mesh(featherGeo, mat);
+        const len = shortLen + (longLen - shortLen) * t;
+        f.scale.set(len, wide, wide);
+        f.rotation.z = rad(droopFrom + (droopTo - droopFrom) * t);
+        f.position.set(ax, ay, dz - 0.012 * i);
+        f.castShadow = true;
+        wing.add(f);
+        addOutline(f, 0.018 * oW, outlineMat);
+      }
+    }
+
+    // 어깨 이음새 — 깃털 밑동이 뜬 것처럼 보이지 않게 덮는다.
+    const hub = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), toon(0xd6a02a));
+    hub.scale.set(1, 1.1, 0.8);
+    hub.position.z = -0.06;
+    wing.add(hub);
+    addOutline(hub, 0.016 * oW, outlineMat);
+
+    wing.userData.base = wing.rotation.z;
+    wing.userData.dir = dir;
+    wing.userData.sweep = sweep;
+    root.add(wing);
+    wings.push(wing);
+  }
+  return wings;
+}
+
 const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, crown: addCrown, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
@@ -1931,6 +2006,7 @@ export function buildPlant(id, opts = {}) {
   if (spec.cross) addCross(root, ruler, outlineMat);                  // 천사 십자가(손)
   if (spec.tail) addTail(root, ruler, spec.tail, outlineMat, oW);     // 강아지 꼬리
   // 금화·반짝임은 계속 움직인다. 아래 animate 에서 돌리려고 목록을 받아 둔다.
+  const plumes = spec.plumes ? addPlumes(root, ruler, spec.plumes, outlineMat, oW) : [];
   const orbiting = spec.coins ? addCoins(root, ruler, spec.coins, outlineMat, oW) : [];
   const twinkling = spec.sparkles ? addSparkles(root, ruler, spec.sparkles) : [];
 
@@ -1987,6 +2063,13 @@ export function buildPlant(id, opts = {}) {
 
     // 금화 — 축을 돌려 공전시키고, 동전 자체도 자전시킨다. 서 있을 때도
     // 계속 돌아 이 캐릭터만 살아 있는 느낌이 난다.
+    // 날개 — 가만히 있어도 천천히 펄럭이고, 움직이면 더 크게 젓는다.
+    for (const w of plumes) {
+      const d = w.userData.dir;
+      w.rotation.z = w.userData.base + Math.sin(t * 1.9) * (0.09 + move * 0.16);
+      w.rotation.y = d * (w.userData.sweep + Math.sin(t * 1.9 + 0.6) * (0.05 + move * 0.1));
+    }
+
     for (const pivot of orbiting) {
       const orbit = pivot.userData.phase + t * 0.85;
       pivot.rotation.y = orbit;
