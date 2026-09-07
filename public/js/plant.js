@@ -232,6 +232,24 @@ function makeBodyTexture(spec, size = 512) {
       g.fillStyle = sh;
       g.fillRect(size * x, 0, size * w, size);
     }
+
+    // 5) 각진 몸이면 면과 면이 만나는 자리에 모서리 선을 긋는다.
+    //    툰 음영은 단계가 넷뿐이라, 면을 각지게 깎아도 이웃한 면이 같은
+    //    밝기 칸에 묶여 모서리가 안 보인다. 선을 직접 그어야 깎인 티가 난다.
+    //    회전체의 uv 는 u 가 몸을 한 바퀴 도므로 면 경계는 정확히 1/N 마다다.
+    if (spec.facets) {
+      for (let k = 0; k < spec.facets; k++) {
+        const x = (k / spec.facets) * size;
+        g.strokeStyle = deep(0.55);            // 골(그늘)
+        g.lineWidth = size * 0.009;
+        g.beginPath(); g.moveTo(x, 0); g.lineTo(x, size); g.stroke();
+        g.strokeStyle = gold(0.55);            // 그 옆 능선(빛)
+        g.lineWidth = size * 0.005;
+        g.beginPath();
+        g.moveTo(x + size * 0.009, 0); g.lineTo(x + size * 0.009, size);
+        g.stroke();
+      }
+    }
   } else if (spec.skin === 'speckle') {
     // 감자의 반점과 눈.
     // 몸을 한 바퀴 감으므로 좌우 끝에서 무늬가 이어져야 한다. 가장자리에
@@ -1822,9 +1840,17 @@ export function buildPlant(id, opts = {}) {
   // ---- 몸통 -------------------------------------------------------------
   // 반 바퀴만 돌려 한쪽 반만 만든다. phi=0 은 앞(+Z), π/2 는 오른(+X), π 는 뒤(-Z),
   // 3π/2 는 왼(-X). 오른쪽은 phi 0→π(x≥0), 왼쪽은 phi π→2π(x≤0).
+  // 몸통은 회전체다. 면 수를 48 로 두면 매끈한 곡면이 되고, spec.facets 로
+  // 확 낮추면(예: 10) 각진 다면체가 된다 — 깎은 보석처럼. 면이 적을수록
+  // 면마다 빛을 따로 받아 번쩍인다(flatShading 을 같이 켜야 모서리가 산다).
+  //
+  // facetTwist 로 반 칸 돌려 '면'이 정면에 오게 맞춘다. 모서리가 정면에 오면
+  // 얼굴 한가운데로 세로 능선이 지나가 눈·입이 갈라져 보인다.
+  const facets = spec.facets ?? 48;
+  const twist = spec.facets ? (spec.facetTwist ?? Math.PI / facets) : 0;
   const bodyGeo = new THREE.LatheGeometry(
     spec.profile.map(([y, r]) => new THREE.Vector2(r, y)),
-    48, leftHalf ? Math.PI : 0, half ? Math.PI : Math.PI * 2
+    facets, (leftHalf ? Math.PI : 0) + twist, half ? Math.PI : Math.PI * 2
   );
   if (spec.lumpy) roughen(bodyGeo, spec.lumpy);
   // 망고처럼 살짝 휘게. 아웃라인이 이 지오메트리를 복사하므로 반드시 먼저 휜다.
@@ -1836,6 +1862,7 @@ export function buildPlant(id, opts = {}) {
   const outlineMat = newOutlineMaterial(spec.outlineColor);
   const oW = spec.outlineWidth ?? 1;
   const body = new THREE.Mesh(bodyGeo, new THREE.MeshToonMaterial({
+    flatShading: !!spec.facets,   // 각진 몸은 모서리가 살아야 보석처럼 보인다
     map: makeBodyTexture(spec), gradientMap: GRADIENT
   }));
   body.name = 'body';   // 히트박스와 견주어 보려고 이름을 달아 둔다
