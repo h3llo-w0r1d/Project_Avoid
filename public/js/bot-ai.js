@@ -45,13 +45,13 @@ const BASE = { perceive: 7.0, horizon: 0.30, looks: [0.8, 1.6, 2.4], jumpLead: 0
 // 회피 실력(react·jumpSkill·noise…)은 그대로 티어마다 다르게 둔다. 생존
 // 시간은 스케줄이 정하지만, 움직임 자체는 위 티어일수록 깔끔해 보여야 한다.
 export const BOT_TIERS = {
-  // TODO(임시): 왕초보 이름 뒤의 (발명) 은 잠깐 넣어 둔 장난이다. 뺄 때는
-  //             아래 줄에서 ' (발명)' 여섯 글자만 지우면 된다.
-  rookie: { name: '왕초보 (발명)', perceive: 4.0, horizon: 0.14, looks: [1.8], jumpLead: 0.16,
+  rookie: { name: '왕초보', perceive: 4.0, horizon: 0.14, looks: [1.8], jumpLead: 0.16,
     react: 0.32, jumpSkill: 0.55, noise: 0.66, speed: 0.84, floor: 10 },
   novice: { name: '초보', perceive: 5.0, horizon: 0.18, looks: [1.6], jumpLead: 0.18,
     react: 0.24, jumpSkill: 0.68, noise: 0.50, speed: 0.90, floor: 25 },
-  mid: { name: '중수', perceive: 6.0, horizon: 0.24, looks: [1.2, 2.4], jumpLead: 0.20,
+  // TODO(임시): 중수 이름 뒤의 (발명) 은 잠깐 넣어 둔 장난이다. 뺄 때는
+  //             아래 줄에서 ' (발명)' 여섯 글자만 지우면 된다.
+  mid: { name: '중수 (발명)', perceive: 6.0, horizon: 0.24, looks: [1.2, 2.4], jumpLead: 0.20,
     react: 0.13, jumpSkill: 0.86, noise: 0.27, speed: 0.96, floor: 35 },
   expert: { ...BASE, name: '고수', react: 0.07, jumpSkill: 0.94, noise: 0.14, floor: 50 },
   master: { ...BASE, name: '초고수', react: 0.04, jumpSkill: 0.98, noise: 0.07, floor: 65 },
