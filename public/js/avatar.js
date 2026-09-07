@@ -123,6 +123,32 @@ function fetchModel(url) {
   return modelPending.get(url);
 }
 
+// 모델을 밝게 들어올린다.
+//
+// 무대가 어둡고 렌더러가 ACES 톤매핑을 쓰는 탓에, 그림에서 쨍하던 색이
+// 게임 안에서는 칙칙해진다. 도형 캐릭터는 그걸 감안해 색을 골랐지만
+// 불러온 모델은 원본 텍스처 그대로라 유독 어둡게 보인다.
+//
+// color 를 곱하면 밝은 부분만 더 밝아져 그늘은 그대로 어둡다. 텍스처를
+// 그대로 emissiveMap 으로 한 번 더 얹으면 조명과 무관한 바닥값이 생겨
+// 그늘이 먼저 들리고, 그림의 원래 색조도 같이 살아난다.
+//
+// 재질은 캐시한 원본과 공유하므로 한 번만 손댄다(여러 번 해도 같은 결과).
+function brighten(model, k) {
+  if (!k) return;
+  model.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const m of [o.material].flat().filter(Boolean)) {
+      if (m.userData.brightened === k) continue;
+      m.emissiveMap = m.map;
+      m.emissive = new THREE.Color(0xffffff);
+      m.emissiveIntensity = k;
+      m.userData.brightened = k;
+      m.needsUpdate = true;
+    }
+  });
+}
+
 // 불러온 gltf 를 게임 규약(원점이 몸 한가운데, 키 PLAYER.height)에 맞춰 조립한다.
 function assemble(gltf, spec) {
   // 원본을 그대로 씌우면 두 사람이 같은 메시를 공유해 한쪽 회전이 옮는다.
@@ -142,6 +168,8 @@ function assemble(gltf, spec) {
       o.frustumCulled = false;   // 스키닝 메시는 경계 상자가 어긋나 사라질 수 있다
     }
   });
+
+  brighten(model, spec.brighten ?? 0);
 
   const root = new THREE.Group();
   root.add(model);
