@@ -1777,6 +1777,38 @@ function endBotMatch(win) {
   showBotResult(win, secs, state.botTier);
 }
 
+// 결과 오버레이에서 스페이스(엔터)로 바로 다시 하기.
+// 일반 게임의 결과 화면(ui.js 의 keydown)과 같은 감각으로 맞춘다.
+//
+// ui.js 쪽 핸들러는 '.unlock-overlay' 가 떠 있으면 물러난다. 봇전 결과창이
+// 바로 그 오버레이라, 여기서 따로 듣지 않으면 스페이스가 아무 일도 안 한다.
+//
+// e.repeat 을 거르는 게 핵심이다. 죽는 순간 점프하려고 스페이스를 누르고
+// 있었으면, 누른 채로는 repeat 만 오고 새 keydown 은 안 온다 — 안 거르면
+// 결과창이 뜨자마자 다음 판이 시작된다. 손을 뗐다 다시 눌러야 한다.
+//
+// 떼는 함수를 돌려준다. 창을 닫을 때 반드시 불러야 한다 — 안 그러면
+// 창이 사라진 뒤에도 스페이스가 판을 시작시킨다.
+function spaceToRestart(overlay, run) {
+  const onKey = (e) => {
+    if (e.repeat) return;
+    if (e.code !== 'Space' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
+    if (!overlay.isConnected) return;
+    // 이 위에 창이 더 떠 있으면(선물 창 등) 그쪽이 먼저다.
+    const overlays = document.querySelectorAll('.unlock-overlay');
+    if (overlays[overlays.length - 1] !== overlay) return;
+    if (document.querySelector('.modal:not(.hidden)')) return;
+    // 글을 쓰는 중이면 그쪽이 먼저다.
+    const el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+    e.preventDefault();
+    el?.blur?.();      // 버튼에 초점이 남아 있으면 다음 스페이스가 두 번 먹는다
+    run();
+  };
+  addEventListener('keydown', onKey);
+  return () => removeEventListener('keydown', onKey);
+}
+
 // 봇전 결과 오버레이(승리/패배 + 버틴 시간 + 다시/나가기).
 function showBotResult(win, secs, tier) {
   const tname = BOT_TIERS[tier]?.name ?? '';
@@ -1794,8 +1826,15 @@ function showBotResult(win, secs, tier) {
     '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
-  const close = () => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); };
-  overlay.querySelector('.bot-again').addEventListener('click', () => { close(); startBotMatch(tier); });
+  let stopKeys = null;
+  const close = () => {
+    stopKeys?.();
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  const again = () => { close(); startBotMatch(tier); };
+  stopKeys = spaceToRestart(overlay, again);
+  overlay.querySelector('.bot-again').addEventListener('click', again);
   overlay.querySelector('.bot-exit').addEventListener('click', () => { close(); goHome(); });
 }
 
