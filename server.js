@@ -650,7 +650,9 @@ app.post('/api/challenge-log', (req, res) => {
   const floor = Math.max(0, Math.min(999, Math.floor(Number(req.body?.floor) || 0)));
   const goal = typeof req.body?.goal === 'string' ? req.body.goal.slice(0, 60) : '';
   const ok = req.body?.ok ? 1 : 0;
-  const seconds = Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0));
+  // 소수점 둘째 자리까지만. 기록 제출 쪽과 같은 정밀도로 맞춘다 —
+  // 안 그러면 관리 화면에 15.366599659435451초 같은 게 그대로 뜬다.
+  const seconds = Math.round(Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0)) * 100) / 100;
   try {
     modeLogs.challenge.add({ name: who.name, userId: req.user?.id ?? null, floor, goal, ok, seconds });
     // 판수에도 넣는다. 층 오르기도 엄연히 한 판이다.
@@ -669,7 +671,9 @@ app.post('/api/bot-log', (req, res) => {
   if (who.error) return res.status(400).json({ error: who.error });
   const tier = typeof req.body?.tier === 'string' ? req.body.tier.slice(0, 20) : '';
   const win = req.body?.win ? 1 : 0;
-  const seconds = Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0));
+  // 소수점 둘째 자리까지만. 기록 제출 쪽과 같은 정밀도로 맞춘다 —
+  // 안 그러면 관리 화면에 15.366599659435451초 같은 게 그대로 뜬다.
+  const seconds = Math.round(Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0)) * 100) / 100;
   try {
     modeLogs.bot.add({ name: who.name, userId: req.user?.id ?? null, tier, win, seconds });
     // 판수에도 넣는다.
