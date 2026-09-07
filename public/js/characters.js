@@ -378,7 +378,7 @@ export const CHARACTERS = [
     mouth: 'smile',
     top: {
       kind: 'crown',
-      gold: 0xf7cb55, deep: 0xa8760f,
+      gold: 0xf7cb55, deep: 0xa8760f, bright: 0xffe89a,
       gem: 0xe8434f, gemAlt: 0x53d0ff, pearl: 0xfff6e0,
       points: 5, height: 0.40, radius: 0.40
     },

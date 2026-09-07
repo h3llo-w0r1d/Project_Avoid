@@ -1392,16 +1392,22 @@ function addTail(root, ruler, spec, outlineMat, oW = 1) {
 
 
 // 보석 왕관 — 자본이라고라의 머리. 잎 대신 쓴다.
-// 테 + 뿔 다섯 + 뿔마다 보석 + 정면에 박은 큰 보석 + 아래를 두르는 진주.
+//
+// 값이 로스터 최고가라 잔장식을 아끼지 않았다. 왕관이 왕관처럼 보이는 건
+// 큰 뿔이 아니라 이런 잔것들이다 — 위아래 두 줄 진주, 테에 박은 보석,
+// 큰 뿔 사이를 메우는 작은 뿔, 그리고 꼭대기의 구슬 장식.
 function addCrown(root, ruler, spec, outlineMat, oW = 1) {
   const {
-    gold = 0xf3c34a, deep = 0xb07d14,
+    gold = 0xf3c34a, deep = 0xb07d14, bright = 0xffe89a,
     gem = 0xe8434f, gemAlt = 0x4fc9ff, pearl = 0xfff3d6,
     points = 5, height = 0.42, radius = 0.42
   } = spec || {};
   const baseY = ruler.top - 0.10;
   const goldMat = toon(gold);
   const deepMat = toon(deep);
+  const brightMat = toon(bright);
+  const pearlMat = toon(pearl);
+  const bandTop = baseY + height * 0.42;
 
   // 테 — 머리를 두르는 금띠. 위아래로 살짝 벌어진다.
   const band = new THREE.Mesh(
@@ -1413,17 +1419,29 @@ function addCrown(root, ruler, spec, outlineMat, oW = 1) {
   root.add(band);
   addOutline(band, 0.016 * oW, outlineMat);
 
-  // 테 아래를 두르는 진주. 왕관을 왕관처럼 보이게 하는 건 이런 잔장식이다.
-  const pearlGeo = new THREE.SphereGeometry(0.036, 10, 8);
-  const pearlMat = toon(pearl);
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2;
-    const b = new THREE.Mesh(pearlGeo, pearlMat);
-    b.position.set(Math.cos(a) * radius, baseY + 0.012, Math.sin(a) * radius);
-    root.add(b);
+  // 위아래를 두르는 진주 두 줄. 아래는 굵게, 위는 잘게.
+  for (const [n, r, yy, size] of [[14, radius, baseY + 0.012, 0.036], [18, radius * 1.01, bandTop, 0.026]]) {
+    const geo = new THREE.SphereGeometry(size, 10, 8);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const b = new THREE.Mesh(geo, pearlMat);
+      b.position.set(Math.cos(a) * r, yy, Math.sin(a) * r);
+      root.add(b);
+    }
   }
 
-  // 뿔 — 테 위로 솟는 삼각뿔. 끝마다 보석을 얹는다. 정면 하나만 크게.
+  // 테에 박은 보석 — 빨강·하늘색을 번갈아 둘러 박는다.
+  const setGeo = new THREE.OctahedronGeometry(0.052, 0);
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 + Math.PI / 10;
+    const j = new THREE.Mesh(setGeo, toon(i % 2 ? gemAlt : gem));
+    j.position.set(Math.cos(a) * radius * 1.02, baseY + height * 0.21, Math.sin(a) * radius * 1.02);
+    j.scale.set(0.75, 1.15, 0.55);
+    j.lookAt(Math.cos(a) * radius * 4, baseY + height * 0.21, Math.sin(a) * radius * 4);
+    root.add(j);
+  }
+
+  // 뿔 — 큰 것 다섯. 정면 하나는 더 크게. 끝마다 보석을 얹는다.
   const spikeGeo = new THREE.ConeGeometry(radius * 0.24, height, 4);
   const gemGeo = new THREE.SphereGeometry(0.078, 12, 10);
   for (let i = 0; i < points; i++) {
@@ -1434,7 +1452,7 @@ function addCrown(root, ruler, spec, outlineMat, oW = 1) {
     const z = Math.sin(a) * radius * 0.92;
 
     const sp = new THREE.Mesh(spikeGeo, goldMat);
-    sp.position.set(x, baseY + height * 0.42 + h / 2, z);
+    sp.position.set(x, bandTop + h / 2, z);
     sp.scale.set(1, h / height, 1);
     sp.rotation.y = a;
     sp.castShadow = true;
@@ -1442,10 +1460,26 @@ function addCrown(root, ruler, spec, outlineMat, oW = 1) {
     addOutline(sp, 0.014 * oW, outlineMat);
 
     const jewel = new THREE.Mesh(gemGeo, toon(mid ? gem : gemAlt));
-    jewel.position.set(x, baseY + height * 0.42 + h + 0.03, z);
+    jewel.position.set(x, bandTop + h + 0.03, z);
     jewel.scale.setScalar(mid ? 1.3 : 1);
     root.add(jewel);
     addOutline(jewel, 0.012 * oW, outlineMat);
+  }
+
+  // 작은 뿔 — 큰 뿔 사이를 메운다. 이게 있어야 테 위가 비어 보이지 않는다.
+  const smallGeo = new THREE.ConeGeometry(radius * 0.15, height * 0.44, 4);
+  for (let i = 0; i < points; i++) {
+    const a = ((i + 0.5) / points) * Math.PI * 2 - Math.PI / 2;
+    const x = Math.cos(a) * radius * 0.95;
+    const z = Math.sin(a) * radius * 0.95;
+    const sp = new THREE.Mesh(smallGeo, brightMat);
+    sp.position.set(x, bandTop + height * 0.22, z);
+    sp.rotation.y = a;
+    root.add(sp);
+    addOutline(sp, 0.012 * oW, outlineMat);
+    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.036, 10, 8), pearlMat);
+    bead.position.set(x, bandTop + height * 0.46, z);
+    root.add(bead);
   }
 
   // 정면에 박은 큰 보석 — 마름모로 깎아 빛을 받게. 둘레에 금테를 두른다.
@@ -1458,6 +1492,14 @@ function addCrown(root, ruler, spec, outlineMat, oW = 1) {
   rim.position.copy(big.position);
   rim.position.z -= 0.01;
   root.add(rim);
+
+  // 꼭대기 구슬 장식 — 가운데 큰 뿔 위에 구슬 하나와 작은 첨탑.
+  const topY = bandTop + height * 1.35 + 0.03;
+  const orb = new THREE.Mesh(new THREE.SphereGeometry(0.062, 12, 10), brightMat);
+  orb.position.set(Math.cos(-Math.PI / 2) * radius * 0.92, topY + 0.09,
+    Math.sin(-Math.PI / 2) * radius * 0.92);
+  root.add(orb);
+  addOutline(orb, 0.012 * oW, outlineMat);
   return [];
 }
 
@@ -1542,23 +1584,27 @@ function addSparkles(root, ruler, spec) {
 
 // 금빛 깃털 날개 — 자본이라고라 전용. 이집트 부조(호루스·이시스) 양식이다.
 //
-// 천사 날개처럼 위로 솟지 않는다. 좌우로 거의 수평하게 쫙 펼치고, 짧고 둥근
-// 덮깃이 위에 층층이 쌓인 뒤 맨 아래에서 길고 곧은 주깃이 뻗어 나간다.
-// 층이 가로띠로 또렷하게 갈리는 게 이 양식의 핵심이라, 겹을 z 가 아니라
-// y 로 쌓는다(위아래로 나란히 놓아야 띠가 보인다).
+// 천사 날개처럼 위로 솟지 않는다. 좌우로 거의 수평하게 쫙 펼치고, 짧고 진한
+// 덮깃이 위에 층층이 쌓인 뒤 맨 아래에서 길고 밝은 주깃이 뻗는다. 층이
+// 가로띠로 갈리는 게 이 양식의 핵심이라 겹을 z 가 아니라 y 로 쌓는다.
+//
+// 색은 깃털마다 다르게 섞는다. 겹마다 한 색씩만 쓰면 금색 띠 세 개로 뭉쳐
+// 보여서 값싸 보인다. 밑동(진한 청동)에서 끝(밝은 금)으로 이어지게 섞고,
+// 겹끼리도 범위를 겹쳐 두면 서른 장이 하나의 금붙이처럼 이어진다.
 //
 // 앞서 두 번 헛디뎠다. 깃털을 한 점에서 부채처럼 펼치면 날개가 아니라 햇살이
-// 되고, 폭이 길이의 1/20 이면 발톱처럼 보인다. 밑동을 '팔' 위에 늘어놓고
-// 폭을 길이의 1/4 쯤 줘야 비로소 깃털 뭉치로 읽힌다.
+// 되고, 밖으로만 뻗게 두면 층이 겹쳐 한 덩어리 칼날이 된다. 안쪽은 아래로
+// 처지고 바깥으로 갈수록 수평이 돼야 그 곡선이 나온다.
 function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
   const {
-    // [깃털 수, 팔 길이, [안쪽 길이, 바깥 길이], 색, 폭, y 오프셋, 처짐(안), 처짐(바깥)]
+    // [깃털 수, 팔 길이, [안쪽 길이, 바깥 길이], [밑동색, 끝색], 폭, y, 처짐(안), 처짐(밖)]
     rows = [
-      [8, 0.56, [0.30, 0.50], 0xa8740c, 0.40, 0.30, -34, -6],    // 맨 위 덮깃 — 짧고 진하다
-      [10, 0.92, [0.46, 0.90], 0xd89e24, 0.44, 0.10, -48, -9],   // 가운데
-      [11, 1.30, [0.64, 1.50], 0xffdc78, 0.46, -0.14, -58, -11]  // 맨 아래 주깃 — 길고 밝다
+      [8, 0.56, [0.30, 0.50], [0x8a5c08, 0xc98f1c], 0.40, 0.30, -34, -6],
+      [10, 0.92, [0.46, 0.90], [0xb07c12, 0xefc251], 0.44, 0.10, -48, -9],
+      [11, 1.30, [0.64, 1.50], [0xd9a52c, 0xfff0ad], 0.46, -0.14, -58, -11]
     ],
     armAngle = 7,         // 팔이 뻗는 각. 거의 수평이라야 부조처럼 보인다
+    quill = 0x6b4405,     // 깃대(중심선) 색
     y = 0.52, spread = 0.16, sweep = 0.18
   } = spec || {};
 
@@ -1571,6 +1617,22 @@ function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
   featherGeo.scale(1, 0.46, 0.15);
   featherGeo.translate(0.5, 0, 0);
   featherGeo.computeVertexNormals();
+  // 깃대 — 깃털 가운데를 타고 흐르는 가는 선. 있으면 한 장 한 장이 또렷해진다.
+  const quillGeo = new THREE.SphereGeometry(0.5, 8, 6);
+  quillGeo.scale(1, 0.1, 0.06);
+  quillGeo.translate(0.5, 0, 0);
+  quillGeo.computeVertexNormals();
+  const quillMat = toon(quill);
+
+  // 색을 미리 섞어 둔다(깃털마다 재질을 새로 만들지 않게).
+  const mats = rows.map(([count, , , [c0, c1]]) => {
+    const a = new THREE.Color(c0);
+    const b = new THREE.Color(c1);
+    return Array.from({ length: count }, (_, i) => {
+      const t = count > 1 ? i / (count - 1) : 0;
+      return toon(a.clone().lerp(b, t).getHex());
+    });
+  });
 
   const wings = [];
   for (const dir of [-1, 1]) {
@@ -1579,25 +1641,36 @@ function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
     wing.rotation.y = dir * sweep;      // 살짝만 젖힌다 — 많이 젖히면 부조 느낌이 깨진다
     wing.scale.x = dir;                 // 왼쪽은 좌우 반전
 
-    for (const [count, armLen, [shortLen, longLen], color, wide, dy, dFrom, dTo] of rows) {
-      const mat = toon(color);
+    rows.forEach(([count, armLen, [shortLen, longLen], , wide, dy, dFrom, dTo], r) => {
       for (let i = 0; i < count; i++) {
         const t = count > 1 ? i / (count - 1) : 0;
         // 밑동은 팔 위에. 바깥으로 갈수록 어깨에서 멀어진다.
         const ax = Math.cos(rad(armAngle)) * armLen * t;
         const ay = Math.sin(rad(armAngle)) * armLen * t + dy;
-        const f = new THREE.Mesh(featherGeo, mat);
-        f.scale.set(shortLen + (longLen - shortLen) * t, wide, wide);
-        f.rotation.z = rad(dFrom + (dTo - dFrom) * t);
+        const len = shortLen + (longLen - shortLen) * t;
+        const ang = rad(dFrom + (dTo - dFrom) * t);
+
+        const f = new THREE.Mesh(featherGeo, mats[r][i]);
+        f.scale.set(len, wide, wide);
+        f.rotation.z = ang;
         f.position.set(ax, ay, -0.01 * i);
         f.castShadow = true;
         wing.add(f);
         addOutline(f, 0.026 * oW, outlineMat);
+
+        // 깃대는 맨 아래(긴) 깃털에만. 짧은 덮깃에까지 넣으면 지저분하다.
+        if (r === rows.length - 1) {
+          const q = new THREE.Mesh(quillGeo, quillMat);
+          q.scale.set(len * 0.94, wide, wide);
+          q.rotation.z = ang;
+          q.position.set(ax, ay, -0.01 * i + wide * 0.05);
+          wing.add(q);
+        }
       }
-    }
+    });
 
     // 어깨 이음새 — 깃털 밑동이 뜬 것처럼 보이지 않게 덮는다.
-    const hub = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), toon(0xd6a02a));
+    const hub = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), toon(0xc48d18));
     hub.scale.set(0.9, 1.5, 0.8);
     hub.position.set(0, 0.08, -0.05);
     wing.add(hub);
