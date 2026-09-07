@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { PLAYABLE, playableFor, isUnlocked, isCoinChar, isRouletteChar, findCharacter } from './characters.js';
-import { buildFallbackAvatar, buildModelAvatarSync, modelSpecOf, preloadModel } from './avatar.js';
+import { buildFallbackAvatar, buildModelAvatarSync, modelReady, modelSpecOf, preloadModel } from './avatar.js';
 
 const $ = (id) => document.getElementById(id);
 const SIZE = 132;
@@ -37,7 +37,7 @@ function snapshot(characterId) {
   shot.holder.clear();
   // .glb 를 이미 받아 뒀으면 그걸 찍는다. 아직이면 도형으로 찍어 두고,
   // 다 받은 뒤에 preview() 가 이 카드만 다시 찍는다.
-  const skin = buildModelAvatarSync(characterId)
+  const skin = buildModelAvatarSync(characterId, { preview: true })
     ?? buildFallbackAvatar({ characterId, preview: true });
   shot.holder.add(skin);
 
@@ -111,7 +111,7 @@ export class CharacterUI {
   // 도착한 뒤에 바꿔 끼우는 편이 빈 칸을 띄우는 것보다 낫다.
   ensureModel(id) {
     if (this.modelAsked.has(id) || !modelSpecOf(id)) return;
-    if (buildModelAvatarSync(id)) return;        // 이미 받아 둔 모델
+    if (modelReady(id)) return;                  // 이미 받아 둔 모델
     this.modelAsked.add(id);
     preloadModel(id).then((ok) => {
       if (!ok) return;

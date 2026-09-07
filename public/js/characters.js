@@ -420,7 +420,10 @@ export const CHARACTERS = [
       brighten: 0.35,
       // 그림 한 장에서 만든 모델이라 앞뒤가 눌려 있다. 옆에서 봐도
       // 종잇장처럼 안 보이게 깊이만 부풀린다.
-      depth: 1.3
+      depth: 1.3,
+      // 카메라가 위에서 내려다봐서 똑바로 서면 얼굴이 눌린다. 뒤로 눕혀
+      // 얼굴을 카메라 쪽으로 든다.
+      pitch: 'camera'
     },
     unlockAt: Infinity,      // 시간으로도 코인으로도 안 열린다
     previewZoom: 0.92,       // 귀가 길어 위가 잘리지 않게 조금 뺀다

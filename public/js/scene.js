@@ -629,9 +629,15 @@ function addPollen(scene) {
 // 카메라 고각 — 무대를 얼마나 위에서 내려다볼지. 낮으면 멋있고, 높으면 판단이 쉽다.
 // 세로로 긴 화면은 가로가 좁아 거리를 많이 벌려야 하므로, 더 위에서 내려다봐
 // 남는 세로 공간을 쓰고 전기선 위치도 읽기 쉽게 한다.
+// 마지막으로 쓴 고각. 캐릭터 모델을 이 각도만큼 눕히면 카메라를
+// 정면으로 마주 보게 된다(char-ui 의 미리보기 카드와 같은 각도).
+let lastTilt = THREE.MathUtils.degToRad(CAMERA.tiltWide);
+export const cameraTilt = () => lastTilt;
+
 function tiltFor(aspect) {
   const k = THREE.MathUtils.clamp((aspect - 0.55) / (1.5 - 0.55), 0, 1);
-  return THREE.MathUtils.degToRad(THREE.MathUtils.lerp(CAMERA.tiltTall, CAMERA.tiltWide, k));
+  lastTilt = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(CAMERA.tiltTall, CAMERA.tiltWide, k));
+  return lastTilt;
 }
 
 // 프레임 안에 반드시 들어와야 하는 지점들 — 무대 테두리와 그 위 공간.

@@ -4,6 +4,7 @@ import { MeshoptDecoder } from './vendor/jsm/libs/meshopt_decoder.module.js';
 import { AVATAR, PLAYER } from './config.js';
 import { buildPlant } from './plant.js';
 import { DEFAULT_CHARACTER, findCharacter } from './characters.js';
+import { cameraTilt } from './scene.js';
 
 // 캐릭터 겉모습을 만든다.
 // AVATAR.url 이 있으면 .glb 를 불러오고, 없거나 실패하면 만드라고라를 쓴다.
@@ -150,7 +151,7 @@ function brighten(model, k) {
 }
 
 // 불러온 gltf 를 게임 규약(원점이 몸 한가운데, 키 PLAYER.height)에 맞춰 조립한다.
-function assemble(gltf, spec) {
+function assemble(gltf, spec, preview = false) {
   // 원본을 그대로 씌우면 두 사람이 같은 메시를 공유해 한쪽 회전이 옮는다.
   const model = gltf.scene.clone(true);
   model.rotation.y = spec.yaw ?? AVATAR.yaw;
@@ -162,6 +163,20 @@ function assemble(gltf, spec) {
   // 정하고 좌우 중심을 다시 잡는데, 나중에 z 만 늘리면 그 계산이 어긋난다.
   // 깊이는 키에 영향이 없으니 먼저 걸어도 크기는 그대로다.
   model.scale.z = spec.depth ?? 1;
+
+  // 게임 카메라는 위에서 내려다본다. 똑바로 선 모델은 그 각도에서
+  // 정수리만 크게 보이고 얼굴이 눌린다. pitch 로 뒤로 눕혀 얼굴을
+  // 카메라 쪽으로 들어 올린다(라디안, + 가 뒤로).
+  //
+  // 깊이와 마찬가지로 크기를 맞추기 전에 건다. 눕히면 높이가 줄어드는데,
+  // 그 뒤에 키를 맞춰야 발이 바닥에 제대로 붙는다.
+  // 눕히는 건 게임 카메라가 내려다보는 각도를 지우려는 것이다. 미리보기
+  // 카드는 카메라가 수평이라 지울 게 없다 — 거기서 눕히면 되레 누워 보인다.
+  // 'camera' 면 지금 카메라 고각을 그대로 쓴다. 고각은 화면 비율에 따라
+  // 38~55도로 달라지므로 값을 박아 두면 세로 화면에서 어긋난다.
+  const want = spec.pitch ?? 0;
+  const pitch = preview ? 0 : (want === 'camera' ? cameraTilt() : want);
+  model.rotation.x = -pitch;
 
   const ok = normalizeToPlayerBox(model, true,
     spec.scale ?? AVATAR.scale, spec.yOffset ?? AVATAR.yOffset);
@@ -202,10 +217,16 @@ function assemble(gltf, spec) {
 
 // 받아 둔 모델이 있으면 바로 조립해 돌려준다(아직이면 null).
 // 미리보기 카드처럼 기다릴 수 없는 곳에서 쓴다.
-export function buildModelAvatarSync(characterId) {
+// 모델을 이미 받아 뒀는지만 본다. 조립까지 하면 clone 이 헛돈다.
+export function modelReady(characterId) {
+  const spec = modelSpecOf(characterId);
+  return !!spec && modelCache.has(spec.url);
+}
+
+export function buildModelAvatarSync(characterId, { preview = false } = {}) {
   const spec = modelSpecOf(characterId);
   if (!spec || !modelCache.has(spec.url)) return null;
-  return assemble(modelCache.get(spec.url), spec);
+  return assemble(modelCache.get(spec.url), spec, preview);
 }
 
 // 미리 받아 둔다. 다 받으면 true. 모델이 없는 캐릭터면 false.
