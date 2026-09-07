@@ -653,6 +653,9 @@ app.post('/api/challenge-log', (req, res) => {
   const seconds = Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0));
   try {
     modeLogs.challenge.add({ name: who.name, userId: req.user?.id ?? null, floor, goal, ok, seconds });
+    // 판수에도 넣는다. 층 오르기도 엄연히 한 판이다.
+    plays.add({ name: who.name, seconds, userId: req.user?.id ?? null,
+      mobile: isMobile(req.get('user-agent')), mode: 'tower' });
     res.json({ ok: true });
   } catch (err) {
     console.error('도전 기록 저장 실패:', err);
@@ -669,6 +672,9 @@ app.post('/api/bot-log', (req, res) => {
   const seconds = Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0));
   try {
     modeLogs.bot.add({ name: who.name, userId: req.user?.id ?? null, tier, win, seconds });
+    // 판수에도 넣는다.
+    plays.add({ name: who.name, seconds, userId: req.user?.id ?? null,
+      mobile: isMobile(req.get('user-agent')), mode: 'bot' });
     res.json({ ok: true });
   } catch (err) {
     console.error('봇전 기록 저장 실패:', err);
@@ -1041,8 +1047,8 @@ app.get('/api/play-ranks', (req, res) => {
   res.json({
     season: seasonInfo(),
     note: bySeconds
-      ? '시즌과 상관없는 통산 플레이 시간입니다 · 혼자 하기와 층 오르기를 셉니다'
-      : '시즌과 상관없는 통산 판수입니다 · 혼자 하기와 층 오르기를 셉니다',
+      ? '시즌과 상관없는 통산 플레이 시간입니다 · 모든 모드를 셉니다'
+      : '시즌과 상관없는 통산 판수입니다 · 혼자 하기·층 오르기·봇전·1대1 을 모두 셉니다',
     top: rows.slice(0, TOP_N),
     me: at >= 0 ? { ...rows[at], rank: at + 1 } : null
   });
@@ -1348,4 +1354,4 @@ const httpServer = app.listen(PORT, () => {
 
 // 1v1 은 같은 HTTP 서버에 WebSocket 으로 얹는다.
 // 포트를 따로 쓰면 배포할 때 프록시 설정이 하나 더 늘어난다.
-const lobby = attachLobby(httpServer, users, matchLog);
+const lobby = attachLobby(httpServer, users, matchLog, plays);
