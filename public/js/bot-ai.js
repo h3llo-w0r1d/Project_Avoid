@@ -32,30 +32,47 @@ function segAt(b, h, out) {
 // 회피 성능은 실험으로 찾은 최적값(horizon 0.3 / looks 0.8·1.6·2.4 / jumpLead 0.22)을
 // 상위 티어가 공통으로 쓴다.
 const BASE = { perceive: 7.0, horizon: 0.30, looks: [0.8, 1.6, 2.4], jumpLead: 0.22, speed: 1.0 };
+
+// floor = 이 시간까지는 무슨 일이 있어도 안 죽는다(확정 보호).
+//         넘기면 보호가 사라져 다음에 빔에 닿는 순간 죽고,
+//         그래도 안 죽으면 floor + 5~10초에 강제로 끝난다(doomAt).
+//
+// 예전엔 lo/hi 구간에 확률(0.97)을 깔아 뒀는데, 확률이라 운에 따라 초보가
+// 30초를 버티고 고수가 10초에 죽는 일이 생겼다. 실측해 보니 초보는 lo·hi 가
+// 0 이라 보호가 아예 없었고, 사람이 먼저 죽어 티어 구분도 무의미했다.
+// 그래서 "여기까지는 확정, 그 뒤 5~10초 안에 종료"로 계약을 못 박는다.
+//
+// 회피 실력(react·jumpSkill·noise…)은 그대로 티어마다 다르게 둔다. 생존
+// 시간은 스케줄이 정하지만, 움직임 자체는 위 티어일수록 깔끔해 보여야 한다.
 export const BOT_TIERS = {
-  // 하위 티어는 회피 자체를 약하게(시야 좁고 굼뜨고 점프 실수), 상위 티어는
-  // 최적 회피 + 위기탈출(save)로 오래 버틴다.
-  // target = 목표 평균 생존시간. lo/hi = 위기탈출 보호 구간(lo 까지 거의 안 죽고,
-  // hi 를 넘으면 보호 없음). 보호가 끝난 뒤에도 AI 가 스스로 조금 더 버티므로
-  // lo/hi 는 목표보다 앞에 둔다(실측으로 맞춘 값).
+  rookie: { name: '왕초보', perceive: 4.0, horizon: 0.14, looks: [1.8], jumpLead: 0.16,
+    react: 0.32, jumpSkill: 0.55, noise: 0.66, speed: 0.84, floor: 10 },
   novice: { name: '초보', perceive: 5.0, horizon: 0.18, looks: [1.6], jumpLead: 0.18,
-    react: 0.24, jumpSkill: 0.68, noise: 0.50, speed: 0.90, target: 20, lo: 0, hi: 0 },
+    react: 0.24, jumpSkill: 0.68, noise: 0.50, speed: 0.90, floor: 25 },
   mid: { name: '중수', perceive: 6.0, horizon: 0.24, looks: [1.2, 2.4], jumpLead: 0.20,
-    react: 0.13, jumpSkill: 0.86, noise: 0.27, speed: 0.96, target: 40, lo: 20, hi: 34 },
-  expert:   { ...BASE, name: '고수',   react: 0.05, jumpSkill: 0.96, noise: 0.10, target: 60, lo: 42, hi: 62 },
-  godwater: { ...BASE, name: '고인물', react: 0.02, jumpSkill: 1.00, noise: 0.02, target: 80, lo: 62, hi: 92 }
+    react: 0.13, jumpSkill: 0.86, noise: 0.27, speed: 0.96, floor: 35 },
+  expert: { ...BASE, name: '고수', react: 0.07, jumpSkill: 0.94, noise: 0.14, floor: 50 },
+  master: { ...BASE, name: '초고수', react: 0.04, jumpSkill: 0.98, noise: 0.07, floor: 65 },
+  godwater: { ...BASE, name: '고인물', react: 0.02, jumpSkill: 1.00, noise: 0.02, floor: 85 }
 };
 
-// 위기탈출 확률을 '경과 시간'으로 스케줄한다. 목표 시간 전엔 잘 버티고, 목표를
-// 넘기면 보호가 사라진다 → 티어마다 자기 목표 근처에서 끝나 구간 겹침이 줄어든다.
-// (매번 확률만 굴리면 운에 따라 초보가 30초, 고수가 30초에 끝나는 일이 생긴다.)
+// 바닥 시간을 넘기고 나서 몇 초 안에 끝낼지.
+export const DOOM_MIN = 5;
+export const DOOM_MAX = 10;
+
+// 위기탈출 — 바닥 시간 전에는 무조건 살아난다(1), 넘기면 보호가 없다(0).
 export function saveChanceAt(tier, elapsed) {
   const t = BOT_TIERS[tier];
   if (!t) return 0;
-  const lo = t.lo, hi = t.hi;
-  if (elapsed <= lo) return 0.97;
-  if (elapsed >= hi) return 0;
-  return 0.97 * (1 - (elapsed - lo) / (hi - lo));
+  return elapsed < t.floor ? 1 : 0;
+}
+
+// 이 판의 강제 종료 시각. 판이 시작될 때 한 번 굴려 둔다.
+// 보호가 풀린 뒤에도 봇이 용케 빔을 다 피하면 끝이 안 나므로 시한을 둔다.
+export function doomAt(tier, rand = Math.random) {
+  const t = BOT_TIERS[tier];
+  if (!t) return Infinity;
+  return t.floor + DOOM_MIN + rand() * (DOOM_MAX - DOOM_MIN);
 }
 
 export class BotAI {

@@ -3,7 +3,7 @@ import { createWorld, fitCamera, paintArena } from './scene.js';
 import { startOrientationManager } from './orientation.js';
 import { Player } from './player.js';
 import { Hazards } from './hazards.js';
-import { BotAI, BOT_TIERS, saveChanceAt } from './bot-ai.js';
+import { BotAI, BOT_TIERS, saveChanceAt, doomAt } from './bot-ai.js';
 import { FloorHoles } from './floor-holes.js';
 import { Coins } from './coins.js';
 import { wallet } from './wallet.js';
@@ -1675,6 +1675,10 @@ function startBotMatch(tier) {
   state.botAlive = true;
   state.botTier = tier;
   state.botInvuln = 0;
+  // 봇은 티어의 바닥 시간까지 무조건 버티고, 그 뒤 5~10초 안에 끝난다.
+  // 보호가 풀린 뒤에도 용케 다 피하면 끝이 안 나므로 시한을 정해 둔다.
+  state.botDoom = doomAt(tier);
+  state.botFloor = BOT_TIERS[tier]?.floor ?? 0;   // 이때까지는 무슨 일이 있어도 안 죽는다
 
   setArenaVisible(true);
   hazards.reset(seed);
@@ -2645,10 +2649,26 @@ function frame() {
       const bc = state.botAI.think(dt, rival.body, hazards.sim);
       rival.update(dt, bc);
       if (state.botInvuln > 0) state.botInvuln -= dt;
-      if (rival.body.droppedOff) {
+      // 바닥 시간 전에는 낙사도 막는다. 빔은 위기탈출로 살려 주는데 가장자리로
+      // 걸어 나가 떨어지면 보장이 깨진다. 무대 밖으로 나가려 하면 안쪽으로
+      // 붙잡아 둔다 — 봇이 발끝에서 멈칫하는 것처럼 보인다.
+      if (state.elapsed < state.botFloor && !rival.body.droppedOff) {
+        const d = Math.hypot(rival.body.x, rival.body.z);
+        const edge = ARENA_RADIUS - 0.6;
+        if (d > edge) {
+          const k = edge / d;
+          rival.body.x *= k;
+          rival.body.z *= k;
+          rival.body.vx *= 0.2;
+          rival.body.vz *= 0.2;
+        }
+      }
+      if (state.elapsed >= state.botDoom) {
+        state.botAlive = false;              // 시한 종료
+      } else if (rival.body.droppedOff) {
         state.botAlive = false;
       } else if (hazards.hitTest(rival) && state.botInvuln <= 0) {
-        // 목표 시간 전엔 잘 빠져나가고, 목표를 넘기면 보호가 사라진다.
+        // 바닥 시간 전엔 무조건 살아나고(1), 넘기면 보호가 없다(0).
         if (Math.random() < saveChanceAt(state.botTier, state.elapsed)) state.botInvuln = 0.6;
         else state.botAlive = false;
       }
