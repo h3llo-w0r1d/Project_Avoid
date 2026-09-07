@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { PLAYABLE, playableFor, isUnlocked, isCoinChar, isRouletteChar, findCharacter } from './characters.js';
-import { buildFallbackAvatar } from './avatar.js';
+import { buildFallbackAvatar, buildModelAvatarSync, modelSpecOf, preloadModel } from './avatar.js';
 
 const $ = (id) => document.getElementById(id);
 const SIZE = 132;
@@ -35,7 +35,10 @@ function snapshot(characterId) {
 
   // 이전 캐릭터를 치우고 새로 얹는다
   shot.holder.clear();
-  const skin = buildFallbackAvatar({ characterId, preview: true });
+  // .glb 를 이미 받아 뒀으면 그걸 찍는다. 아직이면 도형으로 찍어 두고,
+  // 다 받은 뒤에 preview() 가 이 카드만 다시 찍는다.
+  const skin = buildModelAvatarSync(characterId)
+    ?? buildFallbackAvatar({ characterId, preview: true });
   shot.holder.add(skin);
 
   // 캐릭터마다 키가 달라서, 화면에 꽉 차게 카메라를 맞춘다
@@ -67,6 +70,7 @@ export class CharacterUI {
       btn: $('char-btn')
     };
     this.previews = new Map();
+    this.modelAsked = new Set();   // 모델을 이미 받으라고 시킨 캐릭터
 
     this.el.btn.addEventListener('click', () => this.open());
     // 첫 그림은 미리 그려 둔다. 창을 한 번도 안 열어도 버튼에 보여야 한다.
@@ -95,8 +99,26 @@ export class CharacterUI {
   }
 
   preview(id) {
-    if (!this.previews.has(id)) this.previews.set(id, snapshot(id));
+    if (!this.previews.has(id)) {
+      this.previews.set(id, snapshot(id));
+      this.ensureModel(id);
+    }
     return this.previews.get(id);
+  }
+
+  // 모델(.glb)을 쓰는 캐릭터면 받아 두고, 다 받으면 그 그림을 다시 찍는다.
+  // 카드를 그리는 건 동기라서 기다릴 수가 없다 — 도형으로 먼저 보여 주고
+  // 도착한 뒤에 바꿔 끼우는 편이 빈 칸을 띄우는 것보다 낫다.
+  ensureModel(id) {
+    if (this.modelAsked.has(id) || !modelSpecOf(id)) return;
+    if (buildModelAvatarSync(id)) return;        // 이미 받아 둔 모델
+    this.modelAsked.add(id);
+    preloadModel(id).then((ok) => {
+      if (!ok) return;
+      this.previews.delete(id);
+      if (this.open$) this.draw();
+      if (this.h.selected() === id) this.paintButton(id);
+    });
   }
 
   // 버튼에 지금 쓰는 캐릭터를 얹는다. 이모지보다 "내 캐릭터를 고르는

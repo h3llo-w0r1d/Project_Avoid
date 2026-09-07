@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from './vendor/jsm/libs/meshopt_decoder.module.js';
 import { AVATAR, PLAYER } from './config.js';
 import { buildPlant } from './plant.js';
 import { DEFAULT_CHARACTER, findCharacter } from './characters.js';
@@ -22,13 +23,13 @@ import { DEFAULT_CHARACTER, findCharacter } from './characters.js';
 // recenterXZ: 좌우 중심을 원점으로 끌어올지. 불러온 모델은 원점이
 // 어디일지 몰라 켜야 하지만, 직접 조립한 캐릭터는 이미 Y축 위에 서 있다.
 // 켜면 잎처럼 비대칭인 장식까지 계산에 들어가 몸통이 축에서 밀려난다.
-function normalizeToPlayerBox(object, recenterXZ) {
+function normalizeToPlayerBox(object, recenterXZ, scale = AVATAR.scale, yOffset = AVATAR.yOffset) {
   const box = new THREE.Box3().setFromObject(object);
   const size = new THREE.Vector3();
   box.getSize(size);
   if (!(size.y > 1e-4)) return false;
 
-  object.scale.multiplyScalar((PLAYER.height * AVATAR.scale) / size.y);
+  object.scale.multiplyScalar((PLAYER.height * scale) / size.y);
 
   const scaled = new THREE.Box3().setFromObject(object);
   if (recenterXZ) {
@@ -39,7 +40,7 @@ function normalizeToPlayerBox(object, recenterXZ) {
   }
   // 발바닥을 히트박스 바닥에 맞춘다. 남는 키는 위로 삐져나가는데,
   // 전기선이 y 0.38~0.82 에만 있어서 머리 위쪽은 판정에 닿지 않는다.
-  object.position.y -= scaled.min.y + PLAYER.height / 2 - AVATAR.yOffset;
+  object.position.y -= scaled.min.y + PLAYER.height / 2 - yOffset;
   return true;
 }
 
@@ -83,25 +84,55 @@ function normalizeByBody(object, sizeMul = 1) {
   object.position.y -= whole.min.y + PLAYER.height / 2 - AVATAR.yOffset;
 }
 
-// .glb 를 불러와 크기·위치를 게임 규약에 맞춘다.
-// 성공하면 { root, mixer }, 실패하면 null 을 돌려준다.
-export async function loadModelAvatar() {
-  if (!AVATAR.url) return null;
+// ── 캐릭터 모델(.glb) ────────────────────────────────────────────────
+//
+// 캐릭터 스펙에 model 이 있으면 도형 조립 대신 그 .glb 를 쓴다.
+// 없으면 예전처럼 AVATAR.url 을 보고, 그것도 없으면 도형으로 조립한다.
+//
+// 파일 하나를 여러 곳(내 캐릭터·상대·미리보기 카드)에서 쓰기 때문에
+// URL 마다 한 번만 받아서 clone 해 나눠 준다. 안 그러면 같은 파일을
+// 사람 수만큼 내려받는다.
+const modelCache = new Map();    // url → gltf (다 받은 것)
+const modelPending = new Map();  // url → Promise (받는 중)
 
-  let gltf;
-  try {
-    gltf = await new GLTFLoader().loadAsync(AVATAR.url);
-  } catch (err) {
-    // 파일이 없거나 형식이 안 맞아도 게임은 계속 돌아가야 한다.
-    console.warn(`캐릭터 모델을 불러오지 못해 기본 캐릭터를 씁니다 (${AVATAR.url}):`, err.message);
-    return null;
+// 캐릭터의 모델 설정을 꺼낸다. 없으면 null.
+export function modelSpecOf(characterId) {
+  const spec = findCharacter(characterId)?.model;
+  if (spec) return typeof spec === 'string' ? { url: spec } : spec;
+  return AVATAR.url ? { url: AVATAR.url, yaw: AVATAR.yaw, scale: AVATAR.scale } : null;
+}
+
+// meshopt 로 압축한 .glb 도 읽을 수 있게 디코더를 끼운 로더.
+// 압축을 안 쓴 파일에도 아무 영향이 없다.
+let loader = null;
+const gltfLoader = () => (loader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder));
+
+function fetchModel(url) {
+  if (modelCache.has(url)) return Promise.resolve(modelCache.get(url));
+  if (!modelPending.has(url)) {
+    modelPending.set(url, gltfLoader().loadAsync(url).then((gltf) => {
+      modelCache.set(url, gltf);
+      return gltf;
+    }).catch((err) => {
+      // 파일이 없거나 형식이 안 맞아도 게임은 계속 돌아가야 한다.
+      console.warn('캐릭터 모델을 불러오지 못해 기본 캐릭터를 씁니다: ' + url, err.message);
+      modelPending.delete(url);
+      return null;
+    }));
   }
+  return modelPending.get(url);
+}
 
-  const model = gltf.scene;
-  model.rotation.y = AVATAR.yaw;
+// 불러온 gltf 를 게임 규약(원점이 몸 한가운데, 키 PLAYER.height)에 맞춰 조립한다.
+function assemble(gltf, spec) {
+  // 원본을 그대로 씌우면 두 사람이 같은 메시를 공유해 한쪽 회전이 옮는다.
+  const model = gltf.scene.clone(true);
+  model.rotation.y = spec.yaw ?? AVATAR.yaw;
 
-  if (!normalizeToPlayerBox(model, true)) {
-    console.warn('모델 높이를 잴 수 없어 기본 캐릭터를 씁니다:', AVATAR.url);
+  const ok = normalizeToPlayerBox(model, true,
+    spec.scale ?? AVATAR.scale, spec.yOffset ?? AVATAR.yOffset);
+  if (!ok) {
+    console.warn('모델 높이를 잴 수 없어 기본 캐릭터를 씁니다:', spec.url);
     return null;
   }
 
@@ -119,16 +150,42 @@ export async function loadModelAvatar() {
   let mixer = null;
   if (gltf.animations?.length) {
     mixer = new THREE.AnimationMixer(model);
-    const clip = AVATAR.animation
-      ? THREE.AnimationClip.findByName(gltf.animations, AVATAR.animation)
+    const want = spec.animation ?? AVATAR.animation;
+    const clip = want
+      ? THREE.AnimationClip.findByName(gltf.animations, want)
       : gltf.animations[0];
-    if (clip) {
-      mixer.clipAction(clip).play();
-    } else {
-      console.warn(`'${AVATAR.animation}' 클립이 없습니다. 들어 있는 클립:`,
-        gltf.animations.map((a) => a.name));
-    }
+    if (clip) mixer.clipAction(clip).play();
+    else console.warn('클립을 못 찾았습니다: ' + want, gltf.animations.map((a) => a.name));
   }
+  root.userData.mixer = mixer;
+  // 캐시한 원본과 지오메트리·재질을 공유한다(clone 은 참조만 복사).
+  // 갈아 끼울 때 지우면 같은 모델을 쓰는 다른 사람 것까지 깨진다.
+  root.userData.shared = true;
+  return root;
+}
 
-  return { root, mixer };
+// 받아 둔 모델이 있으면 바로 조립해 돌려준다(아직이면 null).
+// 미리보기 카드처럼 기다릴 수 없는 곳에서 쓴다.
+export function buildModelAvatarSync(characterId) {
+  const spec = modelSpecOf(characterId);
+  if (!spec || !modelCache.has(spec.url)) return null;
+  return assemble(modelCache.get(spec.url), spec);
+}
+
+// 미리 받아 둔다. 다 받으면 true. 모델이 없는 캐릭터면 false.
+export async function preloadModel(characterId) {
+  const spec = modelSpecOf(characterId);
+  if (!spec) return false;
+  return !!(await fetchModel(spec.url));
+}
+
+// .glb 를 불러와 크기·위치를 게임 규약에 맞춘다.
+// 성공하면 { root, mixer }, 실패하면 null 을 돌려준다.
+export async function loadModelAvatar(characterId) {
+  const spec = modelSpecOf(characterId);
+  if (!spec) return null;
+  const gltf = await fetchModel(spec.url);
+  if (!gltf) return null;
+  const root = assemble(gltf, spec);
+  return root ? { root, mixer: root.userData.mixer } : null;
 }

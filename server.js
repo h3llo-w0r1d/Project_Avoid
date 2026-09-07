@@ -229,6 +229,10 @@ for (const page of ['privacy', 'terms']) {
 // 벤더링한 three.js 는 거의 안 바뀌므로 길게 캐시한다.
 app.use('/js/vendor', express.static(join(root, 'public', 'js', 'vendor'), { maxAge: '7d' }));
 
+// 캐릭터 모델(.glb)도 안 바뀐다. 하나에 수백 KB 라 매번 재확인하면 아깝다.
+// 모델을 고칠 땐 파일 이름을 바꿔서 올린다(캐릭터 스펙의 url 도 같이).
+app.use('/models', express.static(join(root, 'public', 'models'), { maxAge: '7d' }));
+
 // 나머지(게임 코드·HTML·CSS)는 매번 서버에 물어보게 한다.
 // max-age 를 걸면 브라우저가 그 시간 동안 재확인조차 안 해서,
 // 코드를 고치고 새로고침해도 옛날 파일이 계속 돌아간다.

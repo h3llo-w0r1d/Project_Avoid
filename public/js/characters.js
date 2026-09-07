@@ -406,6 +406,16 @@ export const CHARACTERS = [
     id: 'invent',
     name: '발명',
     adminOnly: true,         // 고르는 화면에 관리자에게만 나온다
+    // 이 캐릭터만 도형 조립이 아니라 .glb 를 쓴다. 아래 profile·top·face 는
+    // 모델을 못 불러왔을 때를 위해 남겨 둔다(그때는 도형으로 나온다).
+    model: {
+      url: './models/invent.glb',
+      yaw: 0,        // 모델이 엉뚱한 곳을 보면 여기서 돌린다
+      // 히트박스는 캐릭터와 상관없이 고정이라, 겉모습이 크면 "닿았는데 안 죽는"
+      // 캐릭터가 된다. 가나디와 몸통 폭이 같아 보이는 값으로 맞췄다.
+      scale: 0.85,
+      yOffset: 0     // 발이 바닥에 안 붙을 때 미세 조정
+    },
     unlockAt: Infinity,      // 시간으로도 코인으로도 안 열린다
     previewZoom: 0.92,       // 귀가 길어 위가 잘리지 않게 조금 뺀다
     body: 0xf9a3c0,          // 원본의 분홍

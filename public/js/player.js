@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ARENA_RADIUS, PLAYER } from './config.js';
 import { PlayerBody } from './shared/player-physics.js';
-import { buildFallbackAvatar, loadModelAvatar } from './avatar.js';
+import { buildFallbackAvatar, loadModelAvatar, buildModelAvatarSync } from './avatar.js';
 import { makeLabelTexture } from './textures.js';
 
 const TWO_PI = Math.PI * 2;
@@ -20,6 +20,9 @@ const smoothstep = (t) => t * t * (3 - 2 * t);
 // 캐릭터를 갈아 끼울 때 옛 것을 정리한다. 안 하면 바꿀 때마다
 // 지오메트리와 텍스처가 GPU 에 쌓인다.
 function disposeTree(root) {
+  // 모델(.glb)에서 온 겉모습은 캐시한 원본과 지오메트리·재질을 공유한다.
+  // 지우면 같은 모델을 쓰는 다른 사람 것과 미리보기까지 깨진다.
+  if (root.userData?.shared) return;
   root.traverse((o) => {
     // InstancedMesh 는 인스턴스 행렬 버퍼를 따로 들고 있다
     if (o.isInstancedMesh) o.dispose();
@@ -61,15 +64,9 @@ export class Player {
     this.animTime = 0;
     this.characterId = options.characterId ?? null;
 
-    // .glb 가 지정돼 있으면 불러와서 교체한다. 불러오는 동안에도
-    // 기본 캐릭터로 게임을 할 수 있고, 실패하면 그대로 남는다.
-    loadModelAvatar().then((loaded) => {
-      if (!loaded) return;
-      this.rig.remove(this.skin);
-      this.skin = loaded.root;
-      this.rig.add(this.skin);
-      this.mixer = loaded.mixer;
-    });
+    // 이 캐릭터에 .glb 가 있으면 불러와서 교체한다. 불러오는 동안에도
+    // 도형 캐릭터로 게임을 할 수 있고, 실패하면 그대로 남는다.
+    this.swapInModel(this.characterId);
     scene.add(this.mesh);
 
     this.lean = 0;
@@ -121,10 +118,29 @@ export class Player {
     if (characterId === this.characterId) return;
     this.characterId = characterId;
 
+    this.useSkin(buildFallbackAvatar({ characterId }), characterId);
+    this.swapInModel(characterId);
+  }
+
+  // 겉모습만 갈아 끼운다. 그 사이 캐릭터가 또 바뀌었으면 버린다 —
+  // 모델은 늦게 도착하므로 순서가 뒤집힐 수 있다.
+  useSkin(root, characterId) {
+    if (characterId !== this.characterId) return;
     this.rig.remove(this.skin);
     disposeTree(this.skin);
-    this.skin = buildFallbackAvatar({ characterId });
-    this.rig.add(this.skin);
+    this.skin = root;
+    this.rig.add(root);
+    this.mixer = root.userData.mixer ?? null;
+  }
+
+  // 모델(.glb)이 있는 캐릭터면 갈아 끼운다. 없으면 아무 일도 안 한다.
+  swapInModel(characterId) {
+    // 이미 받아 둔 모델이면 기다리지 않고 바로 끼운다(깜빡임 방지)
+    const ready = buildModelAvatarSync(characterId);
+    if (ready) return this.useSkin(ready, characterId);
+    loadModelAvatar(characterId).then((loaded) => {
+      if (loaded) this.useSkin(loaded.root, characterId);
+    });
   }
 
   // 머리 위 이름표. 1v1 에서 누가 나인지 구분하려고 쓴다.
