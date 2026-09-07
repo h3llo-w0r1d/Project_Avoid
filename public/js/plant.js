@@ -1540,27 +1540,26 @@ function addSparkles(root, ruler, spec) {
 }
 
 
-// 금빛 깃털 날개 — 자본이라고라 전용.
+// 금빛 깃털 날개 — 자본이라고라 전용. 이집트 부조(호루스·이시스) 양식이다.
 //
-// 천사·악마의 날개(addWings)는 그림 한 장을 세워 둔 것이라 옆에서 보면 종이처럼
-// 얇다. 이건 깃털을 하나하나 세워 세 겹으로 쌓는다.
+// 천사 날개처럼 위로 솟지 않는다. 좌우로 거의 수평하게 쫙 펼치고, 짧고 둥근
+// 덮깃이 위에 층층이 쌓인 뒤 맨 아래에서 길고 곧은 주깃이 뻗어 나간다.
+// 층이 가로띠로 또렷하게 갈리는 게 이 양식의 핵심이라, 겹을 z 가 아니라
+// y 로 쌓는다(위아래로 나란히 놓아야 띠가 보인다).
 //
-// 깃털을 한 점에서 부채처럼 펼치면 날개가 아니라 햇살처럼 보인다(처음에 그렇게
-// 만들었다가 되돌렸다). 진짜 날개는 어깨에서 위·뒤로 뻗은 '팔'이 있고, 깃털은
-// 그 팔을 따라 줄줄이 매달려 아래·뒤로 처진다. 그래서 팔 위에 밑동을 늘어놓고
-// 바깥으로 갈수록 길어지게 한다.
+// 앞서 두 번 헛디뎠다. 깃털을 한 점에서 부채처럼 펼치면 날개가 아니라 햇살이
+// 되고, 폭이 길이의 1/20 이면 발톱처럼 보인다. 밑동을 '팔' 위에 늘어놓고
+// 폭을 길이의 1/4 쯤 줘야 비로소 깃털 뭉치로 읽힌다.
 function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
   const {
-    // [깃털 수, 팔 길이, 깃털 길이(안→밖), 색, 폭, 깊이]
+    // [깃털 수, 팔 길이, [안쪽 길이, 바깥 길이], 색, 폭, y 오프셋, 처짐(안), 처짐(바깥)]
     rows = [
-      [6, 0.74, [0.40, 0.74], 0xc98d16, 0.46, 0.00],   // 앞 덮깃 — 짧고 진하다
-      [8, 1.04, [0.56, 1.14], 0xecbb45, 0.54, -0.11],  // 가운데
-      [9, 1.30, [0.72, 1.56], 0xffdd7a, 0.60, -0.22]   // 뒤 — 길고 밝다
+      [8, 0.56, [0.30, 0.50], 0xa8740c, 0.40, 0.30, -34, -6],    // 맨 위 덮깃 — 짧고 진하다
+      [10, 0.92, [0.46, 0.90], 0xd89e24, 0.44, 0.10, -48, -9],   // 가운데
+      [11, 1.30, [0.64, 1.50], 0xffdc78, 0.46, -0.14, -58, -11]  // 맨 아래 주깃 — 길고 밝다
     ],
-    armAngle = 52,        // 어깨에서 팔이 뻗는 각(위·바깥)
-    droopFrom = -20,      // 밑동 쪽 깃털이 처지는 각
-    droopTo = -58,        // 끝 쪽 깃털이 처지는 각
-    y = 0.5, spread = 0.26, sweep = 0.40
+    armAngle = 7,         // 팔이 뻗는 각. 거의 수평이라야 부조처럼 보인다
+    y = 0.52, spread = 0.16, sweep = 0.18
   } = spec || {};
 
   const shoulderY = ruler.at(y);
@@ -1569,39 +1568,38 @@ function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
 
   // 깃털 한 장 — 납작하고 끝이 뾰족한 타원. 밑동이 원점에 오게 옮겨 둔다.
   const featherGeo = new THREE.SphereGeometry(0.5, 12, 8);
-  featherGeo.scale(1, 0.46, 0.16);
+  featherGeo.scale(1, 0.46, 0.15);
   featherGeo.translate(0.5, 0, 0);
   featherGeo.computeVertexNormals();
 
   const wings = [];
   for (const dir of [-1, 1]) {
     const wing = new THREE.Group();
-    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.32 + spread * 0.5), shoulderY, backZ);
-    wing.rotation.y = dir * sweep;      // 뒤로 젖혀 옆에서도 두께가 보이게
+    wing.position.set(dir * (ruler.radiusAt(shoulderY) * 0.30 + spread * 0.5), shoulderY, backZ);
+    wing.rotation.y = dir * sweep;      // 살짝만 젖힌다 — 많이 젖히면 부조 느낌이 깨진다
     wing.scale.x = dir;                 // 왼쪽은 좌우 반전
 
-    for (const [count, armLen, [shortLen, longLen], color, wide, dz] of rows) {
+    for (const [count, armLen, [shortLen, longLen], color, wide, dy, dFrom, dTo] of rows) {
       const mat = toon(color);
       for (let i = 0; i < count; i++) {
         const t = count > 1 ? i / (count - 1) : 0;
         // 밑동은 팔 위에. 바깥으로 갈수록 어깨에서 멀어진다.
         const ax = Math.cos(rad(armAngle)) * armLen * t;
-        const ay = Math.sin(rad(armAngle)) * armLen * t;
+        const ay = Math.sin(rad(armAngle)) * armLen * t + dy;
         const f = new THREE.Mesh(featherGeo, mat);
-        const len = shortLen + (longLen - shortLen) * t;
-        f.scale.set(len, wide, wide);
-        f.rotation.z = rad(droopFrom + (droopTo - droopFrom) * t);
-        f.position.set(ax, ay, dz - 0.012 * i);
+        f.scale.set(shortLen + (longLen - shortLen) * t, wide, wide);
+        f.rotation.z = rad(dFrom + (dTo - dFrom) * t);
+        f.position.set(ax, ay, -0.01 * i);
         f.castShadow = true;
         wing.add(f);
-        addOutline(f, 0.018 * oW, outlineMat);
+        addOutline(f, 0.026 * oW, outlineMat);
       }
     }
 
     // 어깨 이음새 — 깃털 밑동이 뜬 것처럼 보이지 않게 덮는다.
-    const hub = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 10), toon(0xd6a02a));
-    hub.scale.set(1, 1.1, 0.8);
-    hub.position.z = -0.06;
+    const hub = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), toon(0xd6a02a));
+    hub.scale.set(0.9, 1.5, 0.8);
+    hub.position.set(0, 0.08, -0.05);
     wing.add(hub);
     addOutline(hub, 0.016 * oW, outlineMat);
 
@@ -2066,7 +2064,7 @@ export function buildPlant(id, opts = {}) {
     // 날개 — 가만히 있어도 천천히 펄럭이고, 움직이면 더 크게 젓는다.
     for (const w of plumes) {
       const d = w.userData.dir;
-      w.rotation.z = w.userData.base + Math.sin(t * 1.9) * (0.09 + move * 0.16);
+      w.rotation.z = w.userData.base + Math.sin(t * 1.7) * (0.05 + move * 0.09);
       w.rotation.y = d * (w.userData.sweep + Math.sin(t * 1.9 + 0.6) * (0.05 + move * 0.1));
     }
 
