@@ -1702,7 +1702,41 @@ function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
   return wings;
 }
 
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, crown: addCrown, none: () => [] };
+
+// 고양이 귀 — 머리 위 양옆에 선 삼각 귀 한 쌍. 안쪽에 연한 삼각을 겹친다.
+// 기존 addEars(고라니)는 크고 둥글어서 고양이로는 안 읽힌다.
+function addCatEars(root, ruler, spec, outlineMat, oW = 1) {
+  const outer = toon(spec.color ?? 0xffffff);
+  const inner = toon(spec.inner ?? 0xf6a3b8);
+  const baseY = ruler.at(spec.y ?? 0.88);
+  const ringR = Math.max(0.16, ruler.radiusAt(baseY) * (spec.gap ?? 0.66));
+  const h = spec.height ?? 0.36;
+
+  // 원뿔을 앞뒤로 납작하게 눌러 삼각 귀로. 옆에서 봐도 얇게 보인다.
+  const earGeo = new THREE.ConeGeometry(spec.width ?? 0.2, h, 16);
+  earGeo.scale(1, 1, 0.42);
+  earGeo.computeVertexNormals();
+  const innerGeo = new THREE.ConeGeometry((spec.width ?? 0.2) * 0.52, h * 0.62, 16);
+  innerGeo.scale(1, 1, 0.42);
+  innerGeo.computeVertexNormals();
+
+  for (const dir of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(dir * ringR, baseY + h * 0.34, 0.02);
+    pivot.rotation.z = dir * -0.26;      // 바깥으로 살짝 벌린다
+    const ear = new THREE.Mesh(earGeo, outer);
+    ear.castShadow = true;
+    pivot.add(ear);
+    addOutline(ear, 0.02 * oW, outlineMat);
+    const pink = new THREE.Mesh(innerGeo, inner);
+    pink.position.set(0, -h * 0.1, 0.05);
+    pivot.add(pink);
+    root.add(pivot);
+  }
+  return [];
+}
+
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, catears: addCatEars, crown: addCrown, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
 

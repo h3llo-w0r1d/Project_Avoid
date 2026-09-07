@@ -9,6 +9,7 @@
 // skin:    몸통 표면 무늬 (fiber / grooves / ribs / speckle / 없으면 민무늬)
 // unlockAt: 이 초 이상 버틴 적이 있으면 열린다. 0 이면 처음부터.
 // wip:     아직 다듬는 중. 고르는 화면에 안 나오고 고를 수도 없다.
+// adminOnly: 관리자에게만 보인다. 아직 공개 안 한 캐릭터를 미리 써 볼 때.
 //          정의는 그대로 두었다가 마음에 들면 이 줄만 지우면 된다.
 
 export const CHARACTERS = [
@@ -395,6 +396,50 @@ export const CHARACTERS = [
     sparkles: { count: 10 }
   },
   {
+    // 발명 — 관리자에게만 보이는 캐릭터. 아직 공개 전이라 목록에서도 감춘다.
+    //
+    // 만드라고라 계열이 아니다. 뿌리 몸매도 잎도 안 쓰고, 가나디처럼 통통
+    // 둥근 덩어리에 고양이 귀와 선글라스를 얹었다.
+    id: 'invent',
+    name: '발명',
+    adminOnly: true,         // 고르는 화면에 관리자에게만 나온다
+    unlockAt: Infinity,      // 시간으로도 코인으로도 안 열린다
+    previewZoom: 1.02,
+    body: 0xfff4f6,          // 아주 옅은 분홍빛 흰색
+    bodyTop: 0xffffff,
+    bodyBottom: 0xf7dde4,    // 아래로 갈수록 분홍기가 돈다
+    outlineColor: 0xd4667f,  // 검정 대신 진한 분홍 테두리(스티커 그림체)
+    outlineWidth: 1.15,
+    // 통통 둥근 몸 + 뭉툭한 머리. 가나디와 같은 결이되 조금 더 동그랗다.
+    profile: [
+      [0.000, 0.00], [0.045, 0.34], [0.130, 0.50], [0.270, 0.59],
+      [0.450, 0.625], [0.630, 0.615], [0.800, 0.575], [0.930, 0.52],
+      [1.030, 0.46], [1.120, 0.38], [1.190, 0.28], [1.240, 0.16], [1.270, 0.00]
+    ],
+    top: { kind: 'catears', color: 0xfff4f6, inner: 0xf68ba6, y: 0.9, height: 0.34, width: 0.19 },
+    shades: true,            // 검은 선글라스 — 이 캐릭터의 얼굴이다
+    nose: 0xe4738d,          // 작은 분홍 코
+    mouth: 'cute',           // 코 아래 작은 ω 입(선만)
+    mouthScale: 0.95,
+    face: {
+      // 선글라스가 눈을 덮으므로 눈은 작고 단순하게 둔다.
+      eye: 0x000000, sclera: 0x000000,
+      eyeScale: [0.4, 0.4],
+      eyeAspect: 1.0,
+      eyeBulge: 1.2,
+      eyeGap: 0.27,
+      eyeY: 0.58,
+      mouthY: 0.24,
+      noseY: 0.32,
+      noseScale: 0.22,
+      noseFlat: 0.2,
+      glint: false,
+      brows: false,
+      blush: true            // 분홍 볼터치 — 원본 그림의 인상
+    },
+    sizeMul: 1.2
+  },
+  {
     // 럭키라고라 — 돈으로 못 사고 오직 룰렛 대박(0.1%)으로만 얻는 한정 캐릭터.
     // 파스텔 무지개빛으로 반짝인다.
     // 가나디라고라 — 룰렛으로만 얻는 한정 캐릭터. 만드라고라 체형 대신 통통
@@ -517,6 +562,11 @@ export const DEFAULT_CHARACTER = CHARACTERS[0].id;
 
 // 지금 고를 수 있는 것들. 화면에도 이것만 나온다.
 export const PLAYABLE = CHARACTERS.filter((c) => !c.wip);
+
+// 고르는 화면에 실제로 뿌릴 목록. adminOnly 캐릭터는 관리자에게만 보인다.
+// (일반 유저는 canUnlock 에서도 막히지만, 목록에 아예 안 나와야 깔끔하다.)
+export const playableFor = (admin) =>
+  admin ? PLAYABLE : PLAYABLE.filter((c) => !c.adminOnly);
 
 // 아직 다듬는 중인 캐릭터가 남아 있는가. 있으면 고르는 화면에 안내를 띄운다.
 export const HAS_WIP = CHARACTERS.some((c) => c.wip);

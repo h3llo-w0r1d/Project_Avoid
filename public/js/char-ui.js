@@ -4,7 +4,7 @@
 // 그림 파일을 따로 두지 않아도 되고, 캐릭터를 고치면 미리보기도 같이 바뀐다.
 
 import * as THREE from 'three';
-import { PLAYABLE, isUnlocked, isCoinChar, isRouletteChar, findCharacter } from './characters.js';
+import { PLAYABLE, playableFor, isUnlocked, isCoinChar, isRouletteChar, findCharacter } from './characters.js';
 import { buildFallbackAvatar } from './avatar.js';
 
 const $ = (id) => document.getElementById(id);
@@ -112,12 +112,15 @@ export class CharacterUI {
     // 게스트는 기본 캐릭터만. 해금은 로그인해야 된다(canUse 가 그걸 반영).
     const signedIn = this.h.signedIn ? this.h.signedIn() : true;
     const usable = (c) => (this.h.canUse ? this.h.canUse(c) : isUnlocked(c, best));
-    const locked = PLAYABLE.filter((c) => !usable(c));
+    // 관리자 전용 캐릭터는 관리자에게만 목록에 넣는다.
+    const isAdminNow = this.h.isAdmin ? this.h.isAdmin() : false;
+    const list = playableFor(isAdminNow);
+    const locked = list.filter((c) => !usable(c));
     // 코인 잔액. 상점 카드 판정(affordable)에도 쓰므로 함수 스코프에 둔다.
     const coins = this.h.coins ? this.h.coins() : 0;
 
     // 관리자는 모든 캐릭터가 열려 있고 코인도 의미가 없으니 힌트 줄을 숨긴다.
-    const admin = this.h.isAdmin ? this.h.isAdmin() : false;
+    const admin = isAdminNow;
     if (admin) {
       this.el.hint.textContent = '';
       this.el.hint.classList.add('hidden');
@@ -133,7 +136,7 @@ export class CharacterUI {
     }
 
     this.el.grid.innerHTML = '';
-    for (const c of PLAYABLE) {
+    for (const c of list) {
      try {
       const unlocked = usable(c);
       // 코인으로 사는(아직 안 산) 캐릭터인가 — 상점 카드로 공개한다.
