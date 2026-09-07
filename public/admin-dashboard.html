@@ -7,6 +7,22 @@
 <title>AvoidArc 관리</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🛠</text></svg>">
 <style>
+  /* 코인 아이콘. 이모지 🪙(U+1FA99)는 2019년에 생긴 문자라 오래된 기기의
+     글꼴에는 없어서 네모로 뜬다. 글꼴에 기대지 않게 직접 그린다.
+     (이 페이지는 style.css 를 안 써서 같은 규칙을 여기에도 둔다.) */
+  .coin-ico {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.13em;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%,
+      #fff6c8 0%, #ffe25a 40%, #f2b435 76%, #c98a1c 100%);
+    /* 안쪽 테두리는 두께감, 바깥 어두운 선은 노란 배경(50코인 칸 등) 위에서도
+       동전이 묻히지 않게 한다. */
+    box-shadow: inset 0 0 0 0.08em rgba(140, 88, 10, 0.55),
+                0 0 0 0.045em rgba(52, 32, 4, 0.55);
+  }
   :root {
     --bg: #05060f; --volt: #ff3a4e; --accent: #4fd6ff;
     --panel: rgba(10, 14, 30, 0.82); --stroke: rgba(120, 170, 255, 0.22);
@@ -805,7 +821,7 @@ async function drawPurchases() {
       return `<tr><td class="dim">${stamp(r.at)}</td>
         <td>${who}</td>
         <td>${esc(r.charName || r.character)}</td>
-        <td class="num">🪙 ${r.cost}</td>
+        <td class="num"><span class="coin-ico"></span> ${r.cost}</td>
         <td><button class="act" data-del="${r.id}">삭제</button></td></tr>`;
     }).join('');
     $('buy-table').innerHTML =
@@ -839,7 +855,7 @@ async function drawShopLog() {
         <td>${who}</td>
         <td>${badge}</td>
         <td class="name">${esc(nm)}</td>
-        <td class="num">🪙 ${r.cost}</td>
+        <td class="num"><span class="coin-ico"></span> ${r.cost}</td>
         <td><button class="act" data-del="${r.id}">삭제</button></td></tr>`;
     }).join('');
     $('shoplog-table').innerHTML =
@@ -883,7 +899,7 @@ async function drawSpins() {
       const got = r.prize
         ? `<span style="color:#c79bff;font-weight:800">${prizeIcon(r.prize)} ${esc(r.prize)}</span>`
         : r.reward > 0
-          ? `<span style="color:#57d18a">🪙 ${r.reward}</span>`
+          ? `<span style="color:#57d18a"><span class="coin-ico"></span> ${r.reward}</span>`
           : '<span class="dim">꽝</span>';
       return `<tr><td class="dim">${stamp(r.at)}</td>
         <td>${who}</td>

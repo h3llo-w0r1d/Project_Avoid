@@ -149,7 +149,8 @@ export class CharacterUI {
     } else {
       this.el.hint.classList.remove('hidden');
       // 코인 잔액도 같이 보여 준다(코인 상점 캐릭터가 있으니).
-      const coinTag = ` · 🪙 ${coins} 보유`;
+      // hint 는 textContent 라 그린 아이콘을 못 넣는다. 글자로만 쓴다.
+      const coinTag = ` · 코인 ${coins} 보유`;
       this.el.hint.textContent = (!signedIn
         ? '🔒 로그인하면 캐릭터를 해금할 수 있어요'
         : (locked.length
@@ -206,7 +207,7 @@ export class CharacterUI {
 
         const price = document.createElement('span');
         price.className = 'char-note price';
-        price.textContent = affordable ? `🪙 ${c.coinCost} 해금` : `🪙 ${c.coinCost} 필요`;
+        price.textContent = affordable ? `코인 ${c.coinCost} 해금` : `코인 ${c.coinCost} 필요`;
         card.appendChild(price);
       } else if (roul) {
         // 룰렛 전용: 모습·이름을 공개하고 '룰렛에서만' 이라고 알린다(구매 불가).
@@ -276,7 +277,7 @@ export class CharacterUI {
       overlay.className = 'modal buy-confirm';
       overlay.innerHTML = `
         <div class="modal-card panel">
-          <div class="buy-ico">🪙</div>
+          <div class="buy-ico"><span class="coin-ico"></span></div>
           <p class="buy-msg"><b>${spec.name}</b> 을(를)<br><b class="buy-cost">${spec.coinCost} 코인</b> 으로 구매할까요?</p>
           <div class="buy-row">
             <button type="button" class="ghost small buy-cancel">취소</button>

@@ -204,7 +204,7 @@ export class ShopUI {
     const on = this.#current(cat);
 
     this.overlay.querySelector('.shop-coins').innerHTML =
-      admin ? '<b>🪙 ∞</b>' : `<b>🪙 ${coins.toLocaleString('ko-KR')}</b>`;
+      admin ? '<b><span class="coin-ico"></span> ∞</b>' : `<b><span class="coin-ico"></span> ${coins.toLocaleString('ko-KR')}</b>`;
     this.overlay.querySelector('.shop-hint').textContent = cat.hint;
     for (const b of this.overlay.querySelectorAll('.shop-tabs button')) {
       b.classList.toggle('current', b.dataset.cat === cat.id);
@@ -249,7 +249,7 @@ export class ShopUI {
         // 룰렛 전용은 값을 매기지 않는다 — 코인으로는 살 수 없다.
         : item.rouletteOnly
           ? '<span class="shop-cost roul">🎰 룰렛 전용</span>'
-          : `<span class="shop-cost${afford ? '' : ' short'}">🪙 ${item.cost}${afford ? '' : ' 필요'}</span>`;
+          : `<span class="shop-cost${afford ? '' : ' short'}"><span class="coin-ico"></span> ${item.cost}${afford ? '' : ' 필요'}</span>`;
 
     // 단계가 있는 항목(발자국)은 가진 것에 한해 단계와 진행도를 보여 준다.
     // 아직 안 산 것에까지 붙이면 살지 말지 정하는 데 방해만 된다.

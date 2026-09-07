@@ -718,7 +718,7 @@ const adminCoins = (() => {
     list.innerHTML = rows.length
       ? rows.map((a) => `<li class="acgrant" data-id="${esc(a.id)}" data-name="${esc(a.nickname)}">
           <span class="acgrant-name">${esc(a.nickname)}</span>
-          ${a.pending ? `<span class="acgrant-pending">대기 🪙${a.pending}</span>` +
+          ${a.pending ? `<span class="acgrant-pending">대기 <span class="coin-ico"></span>${a.pending}</span>` +
             `<button type="button" class="acgrant-revoke" data-revoke="${esc(a.id)}">취소</button>` : ''}
           <span class="acgrant-go">지급 ▸</span></li>`).join('')
       : '<li class="board-empty">계정이 없습니다.</li>';
@@ -731,7 +731,7 @@ const adminCoins = (() => {
         e.stopPropagation();
         const id = b.dataset.revoke;
         const a = accounts.find((x) => x.id === id);
-        if (!confirm(`${a?.nickname ?? ''} 에게 준 대기 코인 🪙${a?.pending ?? 0} 을(를) 취소할까요?\n(이미 받아간 코인은 되돌릴 수 없습니다.)`)) return;
+        if (!confirm(`${a?.nickname ?? ''} 에게 준 대기 코인 ${a?.pending ?? 0} 을(를) 취소할까요?\n(이미 받아간 코인은 되돌릴 수 없습니다.)`)) return;
         try {
           await api.revokeCoins(id);
           if (a) a.pending = 0;
@@ -863,7 +863,7 @@ const adminCoins = (() => {
         : s.lucky ? '🐶 가나디라고라<br><small>(룰렛 전용)</small>'
         : s.arena ? '🌌 은하수<br><small>(룰렛 전용)</small>'
         : s.jackpot ? '💰300'
-        : (s.coins ? `🪙${s.label}` : '꽝');
+        : (s.coins ? `<span class="coin-ico"></span>${s.label}` : '꽝');
       const cls = (s.song || s.lucky || s.arena || s.custom) ? 'roul-label roul-label-song' : 'roul-label';
       return `<span class="${cls}" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
     }).join('');
@@ -1005,7 +1005,7 @@ const adminCoins = (() => {
         resultEl.textContent = '꽝! 다음 기회에…';
         resultEl.className = 'roulette-result lose';
       } else {
-        resultEl.textContent = `🪙 ${coins}코인 당첨!`;
+        resultEl.innerHTML = `<span class="coin-ico"></span> ${coins}코인 당첨!`;
         resultEl.className = 'roulette-result win' + (coins >= 50 ? ' jackpot' : '');
         audio.coin?.();
         if (coins >= 50) audio.stageUp?.();
@@ -1064,7 +1064,7 @@ const adminCoins = (() => {
       if (w.arena) return { label: '🌌 은하수 (한정 경기장)', ord: 997, special: true };
       if (w.jackpot) return { label: '💰 코인 300 잭팟', ord: 999, special: true };
       if (w.lucky) return { label: '🐶 가나디라고라 (한정 캐릭터)', ord: 998, special: true };
-      if (w.coins) return { label: `🪙 ${w.coins}코인`, ord: w.coins, special: false };
+      if (w.coins) return { label: `<span class="coin-ico"></span> ${w.coins}코인`, ord: w.coins, special: false };
       return { label: '꽝', ord: -1, special: false };
     };
     const rows = WEIGHTS.map((w) => ({ ...info(w), p: w.p })).sort((a, b) => b.ord - a.ord);
@@ -2110,7 +2110,7 @@ function showCoinLost(count) {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker">🪙 코인 ' + count + '개 무효</div>' +
+      '<div class="unlock-kicker"><span class="coin-ico"></span> 코인 ' + count + '개 무효</div>' +
       '<div class="unlock-lockface">⏱️</div>' +
       '<div class="unlock-name">10초 안에 끝났어요</div>' +
       '<div class="unlock-hint">10초 넘게 버텨야 코인이 쌓여요 · 화면을 누르면 넘어가요</div></div>';
@@ -2159,7 +2159,7 @@ function showCoinGift(count, message = '') {
     overlay.innerHTML =
       '<div class="unlock-card">' +
       '<div class="unlock-kicker">🎁 선물 도착!</div>' +
-      '<div class="unlock-lockface">🪙</div>' +
+      '<div class="unlock-lockface"><span class="coin-ico"></span></div>' +
       '<div class="unlock-name">코인 ' + count + '개를 받았어요</div>' +
       (message ? '<div class="coin-gift-msg">“' + esc(message) + '”</div>' : '') +
       '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
@@ -2181,8 +2181,8 @@ function showCoinLogin(count) {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker">🪙 코인 ' + count + '개 획득!</div>' +
-      '<div class="unlock-lockface">🪙</div>' +
+      '<div class="unlock-kicker"><span class="coin-ico"></span> 코인 ' + count + '개 획득!</div>' +
+      '<div class="unlock-lockface"><span class="coin-ico"></span></div>' +
       '<div class="unlock-name">게스트는 코인이 쌓이지 않아요</div>' +
       '<div class="unlock-hint">로그인하면 코인이 모여 캐릭터를 해금할 수 있어요 · 화면을 누르면 넘어가요</div></div>';
     document.body.appendChild(overlay);
