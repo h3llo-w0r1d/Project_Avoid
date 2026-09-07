@@ -167,6 +167,71 @@ function makeBodyTexture(spec, size = 512) {
       g.lineTo(x + size / ribs / 2, size);
       g.stroke();
     }
+  } else if (spec.skin === 'ornate') {
+    // 금세공 무늬 — 자본이라고라 전용. 다른 캐릭터의 살결(잔섬유·골·반점)이
+    // '자연물의 결'이라면 이건 '사람이 새긴 장식'이라 결이 완전히 다르다.
+    // 몸을 한 바퀴 감으므로 좌우 끝에서 무늬가 이어져야 한다.
+    const wrapped = (draw) => { draw(0); draw(-size); draw(size); };
+    const gold = (a) => `rgba(255, 240, 175, ${a})`;
+    const deep = (a) => `rgba(104, 58, 6, ${a})`;
+
+    // 1) 허리를 감는 굵은 금테 두 줄. 위아래를 나눠 훈장 같은 인상을 준다.
+    for (const [y, h] of [[0.40, 0.028], [0.66, 0.020]]) {
+      g.fillStyle = deep(0.55);
+      g.fillRect(0, size * y, size, size * h);
+      g.fillStyle = gold(0.75);
+      g.fillRect(0, size * y, size, size * h * 0.36);
+    }
+
+    // 2) 덩굴 당초무늬 — 좌우로 이어지는 소용돌이. 금세공의 핵심이다.
+    g.lineCap = 'round';
+    for (const [row, amp, alpha] of [[0.20, 0.055, 0.52], [0.52, 0.07, 0.58], [0.80, 0.05, 0.46]]) {
+      const yc = size * row;
+      for (let i = 0; i < 6; i++) {
+        const x0 = (i / 6) * size;
+        const w = size / 6;
+        wrapped((dx) => {
+          g.strokeStyle = deep(alpha);
+          g.lineWidth = size * 0.011;
+          g.beginPath();
+          g.moveTo(x0 + dx, yc);
+          g.bezierCurveTo(x0 + dx + w * 0.3, yc - size * amp,
+            x0 + dx + w * 0.7, yc + size * amp, x0 + dx + w, yc);
+          g.stroke();
+          // 소용돌이 끝동그라미
+          g.beginPath();
+          g.arc(x0 + dx + w * 0.5, yc + size * amp * 0.42, size * 0.016, 0, Math.PI * 2);
+          g.stroke();
+          // 위에 얹는 밝은 금빛(도드라져 보이게)
+          g.strokeStyle = gold(alpha * 0.7);
+          g.lineWidth = size * 0.005;
+          g.beginPath();
+          g.moveTo(x0 + dx, yc - size * 0.006);
+          g.bezierCurveTo(x0 + dx + w * 0.3, yc - size * amp - size * 0.006,
+            x0 + dx + w * 0.7, yc + size * amp - size * 0.006, x0 + dx + w, yc - size * 0.006);
+          g.stroke();
+        });
+      }
+    }
+
+    // 3) 마름모 격자 — 금테 사이를 채워 빈 데가 없게.
+    g.strokeStyle = deep(0.28);
+    g.lineWidth = size * 0.004;
+    for (let i = -10; i < 22; i++) {
+      const x = (i / 12) * size;
+      g.beginPath(); g.moveTo(x, size * 0.44); g.lineTo(x + size * 0.18, size * 0.63); g.stroke();
+      g.beginPath(); g.moveTo(x, size * 0.63); g.lineTo(x + size * 0.18, size * 0.44); g.stroke();
+    }
+
+    // 4) 세로 광택 — 금속이 빛을 받아 번쩍이는 띠.
+    for (const [x, w, a] of [[0.16, 0.05, 0.20], [0.62, 0.035, 0.14]]) {
+      const sh = g.createLinearGradient(size * x, 0, size * (x + w), 0);
+      sh.addColorStop(0, 'rgba(255,255,255,0)');
+      sh.addColorStop(0.5, `rgba(255,255,240,${a})`);
+      sh.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = sh;
+      g.fillRect(size * x, 0, size * w, size);
+    }
   } else if (spec.skin === 'speckle') {
     // 감자의 반점과 눈.
     // 몸을 한 바퀴 감으므로 좌우 끝에서 무늬가 이어져야 한다. 가장자리에
@@ -341,6 +406,59 @@ function makeLeafGeometry(width, length) {
   }
   geo.computeVertexNormals();
   return geo;
+}
+
+
+// 금화에 새기는 각인 — 둘레 테 + 가운데 원화 기호.
+function makeCoinMarkTexture(size = 128) {
+  const cv = canvas(size);
+  const g = cv.getContext('2d');
+  const cx = size / 2;
+  g.strokeStyle = 'rgba(120, 84, 10, 0.75)';
+  g.lineWidth = size * 0.05;
+  g.beginPath();
+  g.arc(cx, cx, size * 0.36, 0, Math.PI * 2);
+  g.stroke();
+  g.fillStyle = 'rgba(120, 84, 10, 0.85)';
+  g.font = '900 ' + (size * 0.5) + 'px system-ui, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('￦', cx, cx + size * 0.02);
+  return textureFrom(cv);
+}
+
+// 네 갈래로 뻗은 반짝임. 가운데가 희고 끝으로 갈수록 사라진다.
+function makeSparkTexture(size = 128) {
+  const cv = canvas(size);
+  const g = cv.getContext('2d');
+  const cx = size / 2;
+  const grd = g.createRadialGradient(cx, cx, 0, cx, cx, size * 0.14);
+  grd.addColorStop(0, 'rgba(255,255,255,1)');
+  grd.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = grd;
+  g.beginPath();
+  g.arc(cx, cx, size * 0.14, 0, Math.PI * 2);
+  g.fill();
+  // 십자로 뻗는 빛살 두 갈래
+  for (const rot of [0, Math.PI / 2]) {
+    g.save();
+    g.translate(cx, cx);
+    g.rotate(rot);
+    const gl = g.createLinearGradient(-size * 0.5, 0, size * 0.5, 0);
+    gl.addColorStop(0.0, 'rgba(255,255,255,0)');
+    gl.addColorStop(0.5, 'rgba(255,255,255,0.95)');
+    gl.addColorStop(1.0, 'rgba(255,255,255,0)');
+    g.fillStyle = gl;
+    g.beginPath();
+    g.moveTo(-size * 0.5, 0);
+    g.lineTo(0, -size * 0.055);
+    g.lineTo(size * 0.5, 0);
+    g.lineTo(0, size * 0.055);
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+  return textureFrom(cv);
 }
 
 // ---------------------------------------------------------------- 얼굴 그림
@@ -1272,7 +1390,156 @@ function addTail(root, ruler, spec, outlineMat, oW = 1) {
   addOutline(tail, 0.018 * oW, outlineMat);
 }
 
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, none: () => [] };
+
+// 보석 왕관 — 자본이라고라의 머리. 잎 대신 쓴다.
+// 테 + 뿔 다섯 + 뿔마다 보석 + 정면에 박은 큰 보석 + 아래를 두르는 진주.
+function addCrown(root, ruler, spec, outlineMat, oW = 1) {
+  const {
+    gold = 0xf3c34a, deep = 0xb07d14,
+    gem = 0xe8434f, gemAlt = 0x4fc9ff, pearl = 0xfff3d6,
+    points = 5, height = 0.42, radius = 0.42
+  } = spec || {};
+  const baseY = ruler.top - 0.10;
+  const goldMat = toon(gold);
+  const deepMat = toon(deep);
+
+  // 테 — 머리를 두르는 금띠. 위아래로 살짝 벌어진다.
+  const band = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 1.02, radius * 0.94, height * 0.42, 22, 1, true),
+    goldMat
+  );
+  band.position.y = baseY + height * 0.21;
+  band.castShadow = true;
+  root.add(band);
+  addOutline(band, 0.016 * oW, outlineMat);
+
+  // 테 아래를 두르는 진주. 왕관을 왕관처럼 보이게 하는 건 이런 잔장식이다.
+  const pearlGeo = new THREE.SphereGeometry(0.036, 10, 8);
+  const pearlMat = toon(pearl);
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2;
+    const b = new THREE.Mesh(pearlGeo, pearlMat);
+    b.position.set(Math.cos(a) * radius, baseY + 0.012, Math.sin(a) * radius);
+    root.add(b);
+  }
+
+  // 뿔 — 테 위로 솟는 삼각뿔. 끝마다 보석을 얹는다. 정면 하나만 크게.
+  const spikeGeo = new THREE.ConeGeometry(radius * 0.24, height, 4);
+  const gemGeo = new THREE.SphereGeometry(0.078, 12, 10);
+  for (let i = 0; i < points; i++) {
+    const a = (i / points) * Math.PI * 2 - Math.PI / 2;
+    const mid = i === 0;
+    const h = height * (mid ? 1.35 : 1);
+    const x = Math.cos(a) * radius * 0.92;
+    const z = Math.sin(a) * radius * 0.92;
+
+    const sp = new THREE.Mesh(spikeGeo, goldMat);
+    sp.position.set(x, baseY + height * 0.42 + h / 2, z);
+    sp.scale.set(1, h / height, 1);
+    sp.rotation.y = a;
+    sp.castShadow = true;
+    root.add(sp);
+    addOutline(sp, 0.014 * oW, outlineMat);
+
+    const jewel = new THREE.Mesh(gemGeo, toon(mid ? gem : gemAlt));
+    jewel.position.set(x, baseY + height * 0.42 + h + 0.03, z);
+    jewel.scale.setScalar(mid ? 1.3 : 1);
+    root.add(jewel);
+    addOutline(jewel, 0.012 * oW, outlineMat);
+  }
+
+  // 정면에 박은 큰 보석 — 마름모로 깎아 빛을 받게. 둘레에 금테를 두른다.
+  const big = new THREE.Mesh(new THREE.OctahedronGeometry(0.155, 0), toon(gem));
+  big.position.set(0, baseY + height * 0.22, radius);
+  big.scale.set(1, 1.25, 0.6);
+  root.add(big);
+  addOutline(big, 0.014 * oW, outlineMat);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.024, 8, 18), deepMat);
+  rim.position.copy(big.position);
+  rim.position.z -= 0.01;
+  root.add(rim);
+  return [];
+}
+
+// 둘레를 도는 금화. 가만히 서 있어도 계속 돌아서 다른 캐릭터와 한눈에 갈린다.
+// 공전(pivot)과 자전(coin)을 따로 돌리려고 축을 둘로 나눠 둔다.
+function addCoins(root, ruler, spec, outlineMat, oW = 1) {
+  const {
+    count = 3, color = 0xf6cb52, edge = 0xb98a16,
+    radius = 0.92, y = 0.55, size = 0.19, tilt = 0.22
+  } = spec || {};
+  const baseY = ruler.at(y);
+  const faceMat = toon(color);
+  const edgeMat = toon(edge);
+  // 원통의 축은 Y 다. 축을 앞뒤(Z)로 눕혀야 동전 면이 정면을 본다.
+  const geo = new THREE.CylinderGeometry(size, size, size * 0.17, 20);
+  const markGeo = new THREE.PlaneGeometry(size * 1.25, size * 1.25);
+  const markMat = new THREE.MeshBasicMaterial({ map: makeCoinMarkTexture(), transparent: true });
+  const pivots = [];
+
+  for (let i = 0; i < count; i++) {
+    const phase = (i / count) * Math.PI * 2;
+
+    // 축이 둘이다. 바깥(pivot)은 몸 둘레를 돌고, 안(holder)은 그만큼 되감아
+    // 동전이 늘 앞을 보게 한다. 하나로 하면 궤도를 돌다 옆으로 서서 막대처럼
+    // 보인다 — 썸네일은 멈춘 그림이라 그 순간이 그대로 찍힌다.
+    const pivot = new THREE.Group();
+    pivot.rotation.y = phase;
+    pivot.rotation.x = tilt;                  // 궤도를 살짝 기울여 평면으로 안 보이게
+    pivot.position.y = baseY;
+
+    const holder = new THREE.Group();
+    holder.position.set(radius, 0, 0);
+    holder.rotation.y = -phase;
+
+    const coin = new THREE.Mesh(geo, [edgeMat, faceMat, faceMat]);
+    coin.rotation.x = Math.PI / 2;            // 면이 정면을 보게
+    coin.castShadow = true;
+    addOutline(coin, 0.016 * oW, outlineMat);
+
+    // 앞뒤 양면에 새기는 각인(원통 로컬 기준이라 눕히기 전 축으로 잡는다)
+    for (const s of [1, -1]) {
+      const m = new THREE.Mesh(markGeo, markMat);
+      m.position.set(0, size * 0.095 * s, 0);
+      m.rotation.x = (-Math.PI / 2) * s;
+      if (s < 0) m.rotation.z = Math.PI;
+      coin.add(m);
+    }
+
+    holder.add(coin);
+    pivot.add(holder);
+    pivot.userData.holder = holder;
+    pivot.userData.phase = phase;
+    root.add(pivot);
+    pivots.push(pivot);
+  }
+  return pivots;
+}
+
+// 둘레에서 반짝이는 빛. 시간차로 커졌다 사라진다.
+function addSparkles(root, ruler, spec) {
+  const { count = 7, color = 0xfff0b8 } = spec || {};
+  const geo = new THREE.PlaneGeometry(0.3, 0.3);
+  const base = new THREE.MeshBasicMaterial({
+    map: makeSparkTexture(), color, transparent: true,
+    depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 + 0.7;
+    const y = ruler.at(0.25 + (((i * 5) % 7) / 7) * 0.75);
+    const r = ruler.radiusAt(y) + 0.22 + (i % 3) * 0.12;
+    const s = new THREE.Mesh(geo, base.clone());
+    s.position.set(Math.cos(a) * r, y, Math.sin(a) * r * 0.55 + 0.2);
+    s.userData.phase = (i / count) * Math.PI * 2;
+    s.userData.size = 0.7 + (i % 3) * 0.25;
+    root.add(s);
+    out.push(s);
+  }
+  return out;
+}
+
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, crown: addCrown, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
 
@@ -1663,6 +1930,9 @@ export function buildPlant(id, opts = {}) {
   if (spec.trident) addTrident(root, ruler, outlineMat);              // 악마 삼지창(손)
   if (spec.cross) addCross(root, ruler, outlineMat);                  // 천사 십자가(손)
   if (spec.tail) addTail(root, ruler, spec.tail, outlineMat, oW);     // 강아지 꼬리
+  // 금화·반짝임은 계속 움직인다. 아래 animate 에서 돌리려고 목록을 받아 둔다.
+  const orbiting = spec.coins ? addCoins(root, ruler, spec.coins, outlineMat, oW) : [];
+  const twinkling = spec.sparkles ? addSparkles(root, ruler, spec.sparkles) : [];
 
   // 뭐라고라: 머리 옆에 떠 있는 물음표 "?"
   if (spec.question) {
@@ -1713,6 +1983,26 @@ export function buildPlant(id, opts = {}) {
       foot.rotation.x = grounded
         ? Math.sin(stride + (d > 0 ? Math.PI : 0)) * move * 0.62
         : -0.42;
+    }
+
+    // 금화 — 축을 돌려 공전시키고, 동전 자체도 자전시킨다. 서 있을 때도
+    // 계속 돌아 이 캐릭터만 살아 있는 느낌이 난다.
+    for (const pivot of orbiting) {
+      const orbit = pivot.userData.phase + t * 0.85;
+      pivot.rotation.y = orbit;
+      // 안쪽 축으로 되감아 동전이 늘 앞을 본다. 살짝 흔들어 두께가 가끔 비치게.
+      pivot.userData.holder.rotation.y = -orbit + Math.sin(t * 1.6 + pivot.userData.phase) * 0.6;
+      if (pivot.userData.baseY === undefined) pivot.userData.baseY = pivot.position.y;
+      pivot.position.y = pivot.userData.baseY + Math.sin(t * 1.7 + pivot.userData.phase) * 0.05;
+    }
+
+    // 반짝임 — 시간차로 커졌다 사라진다.
+    for (const s of twinkling) {
+      const k = 0.5 + 0.5 * Math.sin(t * 2.4 + s.userData.phase);
+      s.material.opacity = 0.15 + k * 0.85;
+      const sc = s.userData.size * (0.55 + k * 0.75);
+      s.scale.set(sc, sc, 1);
+      s.rotation.z = t * 0.5 + s.userData.phase;
     }
 
     // 서 있을 때 숨쉬듯 부풀었다 줄었다
