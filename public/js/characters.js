@@ -349,7 +349,8 @@ export const CHARACTERS = [
     name: '자본이라고라',
     unlockAt: Infinity,       // 시간으론 안 열린다 — 코인 전용
     coinCost: 1000,
-    previewZoom: 1.02,        // 날개가 옆으로 넓어 가로를 꽉 채운다
+    previewZoom: 1.62,        // 날개가 가로로 넓어 카메라가 멀어진다. 당겨서 몸을
+                              // 다른 캐릭터만 하게 키운다(날개 끝 4%는 잘린다).
     body: 0xe8b53c,           // 잘 닦인 금
     bodyTop: 0xffe28a,        // 위는 빛을 받아 밝게
     bodyBottom: 0x8a5b10,     // 아래로 갈수록 깊은 청동빛
