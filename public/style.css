@@ -1424,6 +1424,7 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
   background: radial-gradient(circle at 50% 44%, rgba(255,255,255,0.16) 0%, transparent 66%);
   filter: drop-shadow(0 10px 34px rgba(0, 0, 0, 0.6));
 }
+
 .unlock-name {
   margin-top: 6px;
   font-size: 30px;

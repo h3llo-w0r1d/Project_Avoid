@@ -573,6 +573,21 @@ export const api = {
     return { amount: d.amount ?? 0, message: d.message ?? '' };
   },
 
+  // 개발자가 이 계정에 준 캐릭터 id 들. 서버만 쓰는 목록이라 위조가 안 된다.
+  async giftedCharacters() {
+    const res = await fetch('/api/me/gifts');
+    if (!res.ok) return [];
+    return (await res.json()).owned ?? [];
+  },
+
+  // 아직 선물 창을 안 띄운 캐릭터 선물을 받아 온다 → [{ charId, message }].
+  // 소유는 서버에 그대로 남으므로, 창을 못 봐도 캐릭터는 안 사라진다.
+  async claimCharacterGifts() {
+    const res = await fetch('/api/me/gifts/claim', { method: 'POST' });
+    if (!res.ok) return [];
+    return (await res.json()).gifts ?? [];
+  },
+
   // 코인으로 캐릭터를 샀다고 서버에 남긴다(관리자 참고용). 실패해도 조용히 넘어간다.
   recordPurchase(character, charName, cost, guestName) {
     fetch('/api/purchase', {

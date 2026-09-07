@@ -113,10 +113,15 @@ function bestSeconds() {
 // 게스트는 기본 캐릭터만 쓸 수 있다 — 해금은 로그인의 특전으로 남겨,
 // 로그인할 이유를 만든다. (auth 는 아래에서 선언되지만 이 함수는 실행 시점에
 // 만 불리므로 참조에 문제가 없다.)
+// 개발자가 이 계정에 준 캐릭터 id 들. 서버가 정답을 쥐고 있고(위조 불가),
+// 로그인 상태가 바뀔 때마다 다시 받아 온다. 로그아웃하면 빈 배열.
+let giftChars = [];
+
 function canUnlock(spec) {
   if (!spec) return false;
   if (isAdmin) return true;                     // 관리자는 전부 해금(기록이 집계 제외라 0으로 잡힘)
   if (spec.unlockAt === 0) return true;         // 기본 캐릭터는 누구나
+  if (giftChars.includes(spec.id)) return true; // 개발자가 준 캐릭터
   if (spec.rouletteOnly) return wallet.isOwned(spec.id); // 룰렛 전용은 룰렛으로 얻었으면
   if (isCoinChar(spec)) return wallet.isOwned(spec.id);  // 코인 캐릭터는 산 적 있으면
   return auth.signedIn && isUnlocked(spec, bestSeconds());
@@ -137,6 +142,20 @@ function buyCharacter(spec) {
 // 로그인 상태가 바뀌면(로그아웃/게스트 전환) 지금 쓰는 캐릭터가 아직 유효한지
 // 다시 본다. 게스트가 되며 못 쓰게 된 캐릭터는 기본으로 되돌린다.
 function syncCharacterForAuth() {
+  // 선물 캐릭터는 서버에 물어봐야 알 수 있어서, 첫 화면을 그릴 때는
+  // savedCharacter() 가 "못 쓰는 캐릭터" 로 보고 기본으로 시작한다.
+  // (코인으로 산 건 지갑이 브라우저에 있어 그 자리에서 바로 알 수 있다.)
+  // 로그인이 정해진 지금 다시 보고, 쓸 수 있으면 골라 뒀던 걸 되돌린다.
+  // 이게 없으면 선물 받은 사람이 새로고침할 때마다 선택이 풀린다.
+  const saved = localStorage.getItem(CHAR_KEY);
+  if (saved && saved !== player.characterId) {
+    const spec = findCharacter(saved);
+    if (spec && isPlayable(spec) && canUnlock(spec)) {
+      player.setCharacter(saved);
+      characters.paintButton(saved);
+      net.send({ type: 'character', id: saved });
+    }
+  }
   if (!canUnlock(findCharacter(player.characterId))) {
     localStorage.setItem(CHAR_KEY, DEFAULT_CHARACTER);
     player.setCharacter(DEFAULT_CHARACTER);
@@ -171,12 +190,14 @@ async function onAuthChange() {
     saveWallet: (w) => api.saveWallet(w),
     mergeWallet: (w) => api.mergeWallet(w)
   });
+  // 선물 캐릭터는 해금 판정이 보므로 syncCharacterForAuth 보다 먼저 받아 둔다.
+  giftChars = auth.signedIn ? await api.giftedCharacters().catch(() => []) : [];
   renderCoinHud();
   if (characters.open$) characters.draw();
 
   // 관리자가 준 코인이 대기 중이면 받아 지갑에 넣는다. 로그인 상태면 폴링으로
   // 새로고침 없이도 10초 안에 받는다(아래 startCoinPolling).
-  if (auth.signedIn) { await claimCoinsNow(); startCoinPolling(); }
+  if (auth.signedIn) { await claimCoinsNow(); await claimCharGiftsNow(); startCoinPolling(); }
   else stopCoinPolling();
   syncCharacterForAuth();
 }
@@ -204,12 +225,34 @@ async function claimCoinsNow() {
   } catch { /* 무시 */ }
 }
 
-// 로그인 상태면 10초마다 대기 코인을 확인해 자동 수령(화면이 보일 때만).
+// 아직 안 본 캐릭터 선물이 있으면 선물 창을 띄운다.
+//
+// 코인과 달리 창을 못 봐도 손해가 없다 — 소유는 서버에 남아 있고 창만
+// 다음 기회에 뜬다. 그래서 판 중이면 미루기만 하면 된다.
+async function claimCharGiftsNow() {
+  if (!auth.signedIn || inPlay()) return;
+  try {
+    const gifts = await api.claimCharacterGifts();
+    if (!gifts.length) return;
+    // 창을 띄우기 전에 목록을 갱신한다 — 창을 닫자마자 바로 고를 수 있어야 한다.
+    giftChars = await api.giftedCharacters().catch(() => giftChars);
+    if (characters.open$) characters.draw();
+    for (const g of gifts) {
+      const spec = findCharacter(g.charId);
+      if (spec) await showCharacterGift(spec, g.message);
+    }
+  } catch { /* 무시 */ }
+}
+
+// 로그인 상태면 10초마다 대기 중인 선물(코인·캐릭터)을 확인해 받는다(화면이 보일 때만).
 let coinPoll = null;
 function startCoinPolling() {
   if (coinPoll) return;
   coinPoll = setInterval(() => {
-    if (auth.signedIn && document.visibilityState === 'visible') claimCoinsNow();
+    if (auth.signedIn && document.visibilityState === 'visible') {
+      claimCoinsNow();
+      claimCharGiftsNow();
+    }
   }, 10000);
 }
 function stopCoinPolling() { if (coinPoll) { clearInterval(coinPoll); coinPoll = null; } }
@@ -1049,6 +1092,7 @@ const characters = new CharacterUI({
   canUse: (spec) => canUnlock(spec),
   signedIn: () => auth.signedIn,
   isAdmin: () => isAdmin,             // 관리자는 최고기록·코인 힌트를 숨긴다
+  gifts: () => giftChars,             // 개발자가 준 캐릭터(그 사람에게만 보인다)
 
   coins: () => wallet.coins(),        // 지금 가진 코인(상점 표시용)
   buy: (spec) => buyCharacter(spec),  // 코인으로 캐릭터 사기. 성공하면 true
@@ -1806,6 +1850,7 @@ function goHome() {
   renderNotice();
   refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
   claimCoinsNow();          // 판 중이라 미뤄 뒀던 선물이 있으면 여기서 받는다
+  claimCharGiftsNow();
 }
 
 // ── 다시보기 재생 ──────────────────────────────────────────
@@ -2065,6 +2110,31 @@ function showCoinLost(count) {
 }
 
 // 관리자가 준 코인을 받았을 때 띄우는 선물 안내.
+// 개발자가 준 캐릭터 선물 창. 코인 선물과 달리 캐릭터 그림을 함께 보여 준다 —
+// 이름만으로는 무엇을 받았는지 안 와닿는다.
+function showCharacterGift(spec, message = '') {
+  return new Promise((resolve) => {
+    const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">🎁 개발자의 선물입니다</div>' +
+      '<img class="unlock-face" src="' + characters.preview(spec.id) + '" alt="">' +
+      '<div class="unlock-name">「' + esc(spec.name) + '」 캐릭터를 받았어요</div>' +
+      (message ? '<div class="coin-gift-msg">“' + esc(message) + '”</div>' : '') +
+      '<div class="unlock-hint">캐릭터 창에서 바로 쓸 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const done = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    overlay.addEventListener('click', done);
+  });
+}
+
 function showCoinGift(count, message = '') {
   return new Promise((resolve) => {
     const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
@@ -2347,6 +2417,7 @@ async function finishGame() {
 
   // 판 중이라 미뤄 뒀던 관리자 선물이 있으면 지금 받는다. 결과 화면 위로 뜬다.
   claimCoinsNow();
+  claimCharGiftsNow();
 }
 
 // 랭킹은 세 가지다. 오래 버티기는 기록 저장소에서, 다승·승률은
@@ -2445,6 +2516,7 @@ function leaveVersus() {
   renderNotice();
   refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
   claimCoinsNow();          // 판 중이라 미뤄 뒀던 선물이 있으면 여기서 받는다
+  claimCharGiftsNow();
 }
 
 function hideRival() {

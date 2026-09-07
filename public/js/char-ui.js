@@ -136,7 +136,7 @@ export class CharacterUI {
     const usable = (c) => (this.h.canUse ? this.h.canUse(c) : isUnlocked(c, best));
     // 관리자 전용 캐릭터는 관리자에게만 목록에 넣는다.
     const isAdminNow = this.h.isAdmin ? this.h.isAdmin() : false;
-    const list = playableFor(isAdminNow);
+    const list = playableFor(isAdminNow, this.h.gifts ? this.h.gifts() : []);
     const locked = list.filter((c) => !usable(c));
     // 코인 잔액. 상점 카드 판정(affordable)에도 쓰므로 함수 스코프에 둔다.
     const coins = this.h.coins ? this.h.coins() : 0;

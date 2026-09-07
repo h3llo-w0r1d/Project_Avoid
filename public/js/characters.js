@@ -405,7 +405,8 @@ export const CHARACTERS = [
     //   · 가슴의 흰 뭉게구름, 둘레에 떠다니는 하트
     id: 'invent',
     name: '발명',
-    adminOnly: true,         // 고르는 화면에 관리자에게만 나온다
+    // 선물 받은 사람에게만 보인다. 아무에게도 안 줬으면 관리자만 본다.
+    giftOnly: true,
     // 이 캐릭터만 도형 조립이 아니라 .glb 를 쓴다. 아래 profile·top·face 는
     // 모델을 못 불러왔을 때를 위해 남겨 둔다(그때는 도형으로 나온다).
     model: {
@@ -589,8 +590,11 @@ export const PLAYABLE = CHARACTERS.filter((c) => !c.wip);
 
 // 고르는 화면에 실제로 뿌릴 목록. adminOnly 캐릭터는 관리자에게만 보인다.
 // (일반 유저는 canUnlock 에서도 막히지만, 목록에 아예 안 나와야 깔끔하다.)
-export const playableFor = (admin) =>
-  admin ? PLAYABLE : PLAYABLE.filter((c) => !c.adminOnly);
+// gifts: 개발자가 이 계정에 준 캐릭터 id 들(서버가 알려 준다).
+export const playableFor = (admin, gifts = []) => admin
+  ? PLAYABLE
+  : PLAYABLE.filter((c) =>
+      !c.adminOnly && (!c.giftOnly || gifts.includes(c.id)));
 
 // 아직 다듬는 중인 캐릭터가 남아 있는가. 있으면 고르는 화면에 안내를 띄운다.
 export const HAS_WIP = CHARACTERS.some((c) => c.wip);

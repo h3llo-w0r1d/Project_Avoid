@@ -23,6 +23,7 @@ import { openModeLogs } from './lib/modelogs.js';
 import { openReplaysStore } from './lib/replays.js';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { openCoinGrants } from './lib/coingrants.js';
+import { openCharGifts } from './lib/chargifts.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
@@ -129,6 +130,7 @@ const spins = openSpinsStore(db);           // 코인 룰렛 돌린 기록
 const modeLogs = openModeLogs(db);          // 도전모드·봇전 한 판 기록
 const replays = openReplaysStore(db);       // 최고기록 다시보기(입력 기록)
 const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 대기
+const charGifts = openCharGifts(db);         // 개발자가 특정 계정에 준 캐릭터
 
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
 const presence = openPresence();
@@ -1071,6 +1073,18 @@ app.get('/api/play-ranks', (req, res) => {
 // 값 자체는 여전히 클라가 계산해 알려 준다(코인·룰렛·구매가 원래 그 신뢰
 // 모델이다). 이 API 는 '기기 간에 같은 지갑을 쓰게' 하는 것이 목적이지
 // 조작을 막는 장치가 아니다.
+
+// 이 계정이 선물로 받은 캐릭터. 지갑과 달리 클라가 못 쓴다 — 읽기만 된다.
+app.get('/api/me/gifts', (req, res) => {
+  if (!req.user) return res.json({ owned: [] });
+  res.json({ owned: charGifts.ownedBy(req.user.id) });
+});
+
+// 아직 안 본 선물을 받아 간다(선물 창을 띄우려고). 소유는 그대로 남는다.
+app.post('/api/me/gifts/claim', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  res.json({ gifts: charGifts.claim(req.user.id) });
+});
 
 app.get('/api/me/wallet', (req, res) => {
   if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
