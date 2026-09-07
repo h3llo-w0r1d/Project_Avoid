@@ -1268,7 +1268,8 @@ app.post('/api/admin/bot-log/clear', requireAdmin, (req, res) => {
 app.get('/api/admin/plays', requireAdmin, (req, res) => {
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
   const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(plays.page(limit, offset));
+  // 봇전은 전용 패널(봇전 기록)이 따로 있어 여기서는 뺀다.
+  res.json(plays.page(limit, offset, true));
 });
 
 // 플레이 로그 비우기. 확인 문구를 요구한다.
