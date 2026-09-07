@@ -479,6 +479,24 @@ function makeSparkTexture(size = 128) {
   return textureFrom(cv);
 }
 
+
+// 하트 한 장. 둘레에 떠다니는 장식으로 쓴다.
+function makeHeartTexture(size = 128) {
+  const cv = canvas(size);
+  const g = cv.getContext('2d');
+  const s = size / 100;
+  g.translate(size * 0.5, size * 0.56);
+  g.scale(s, s);
+  g.beginPath();
+  g.moveTo(0, 28);
+  g.bezierCurveTo(-42, -2, -30, -40, 0, -22);
+  g.bezierCurveTo(30, -40, 42, -2, 0, 28);
+  g.closePath();
+  g.fillStyle = '#ffffff';
+  g.fill();
+  return textureFrom(cv);
+}
+
 // ---------------------------------------------------------------- 얼굴 그림
 
 // 벌린 입. 테두리·안쪽·혀를 한 장에 그린다.
@@ -547,6 +565,41 @@ function makeMouthTexture(kind = 'smile', size = 256) {
     shape();
     g.strokeStyle = '#161210';      // 굵은 검은 테두리(스티커 느낌)
     g.lineWidth = size * 0.055;
+    g.stroke();
+    return textureFrom(cv);
+  }
+
+  // 크게 벌리고 웃는 입 — 원본 그림처럼 시원하게 벌어진 붉은 입.
+  // 'grin' 은 윗니 한 줄이 보이는데, 이건 이 없이 붉은 안쪽과 혀만 보인다.
+  if (kind === 'laugh') {
+    const my = size * 0.44;
+    const halfW = size * 0.38;
+    const halfH = size * 0.22;
+    const shape = () => {
+      g.beginPath();
+      // 윗선은 거의 곧고, 아랫선이 크게 처져 활짝 벌어진 꼴
+      g.moveTo(cx - halfW, my - halfH * 0.5);
+      g.quadraticCurveTo(cx, my - halfH * 0.95, cx + halfW, my - halfH * 0.5);
+      g.quadraticCurveTo(cx, my + halfH * 2.05, cx - halfW, my - halfH * 0.5);
+      g.closePath();
+    };
+    shape();
+    g.fillStyle = '#c8102e';          // 붉은 입 안
+    g.fill();
+    g.save(); shape(); g.clip();
+    // 혀 — 아래쪽에 둥글게
+    g.fillStyle = '#f2607f';
+    g.beginPath();
+    g.ellipse(cx, my + halfH * 1.5, halfW * 0.62, halfH * 0.72, 0, 0, Math.PI * 2);
+    g.fill();
+    // 윗입술 안쪽의 어두운 그늘
+    g.fillStyle = 'rgba(90,10,25,0.5)';
+    g.fillRect(cx - halfW, my - halfH * 0.95, halfW * 2, halfH * 0.42);
+    g.restore();
+    shape();
+    g.strokeStyle = '#191013';
+    g.lineWidth = size * 0.055;
+    g.lineJoin = 'round';
     g.stroke();
     return textureFrom(cv);
   }
@@ -1736,7 +1789,92 @@ function addCatEars(root, ruler, spec, outlineMat, oW = 1) {
   return [];
 }
 
-const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, catears: addCatEars, crown: addCrown, none: () => [] };
+
+// 토끼 귀 — 위로 쭉 선 길쭉한 귀 한 쌍. 안쪽에 연한 색을 겹친다.
+// addEars(고라니)는 크고 둥글어서 토끼로 안 읽히고, addCatEars 는 짧다.
+function addBunnyEars(root, ruler, spec, outlineMat, oW = 1) {
+  const outer = toon(spec.color ?? 0xf48aa8);
+  const inner = toon(spec.inner ?? 0xfde3ea);
+  const baseY = ruler.at(spec.y ?? 0.88);
+  const gap = Math.max(0.14, ruler.radiusAt(baseY) * (spec.gap ?? 0.42));
+  const h = spec.height ?? 0.9;
+  const w = spec.width ?? 0.17;
+
+  // 길쭉한 타원을 세워 귀로. 밑동을 원점에 두고 피벗에서 기울인다.
+  const earGeo = new THREE.SphereGeometry(0.5, 16, 12);
+  earGeo.scale(w * 2, h, w * 1.1);
+  earGeo.translate(0, h * 0.5, 0);
+  earGeo.computeVertexNormals();
+  const innerGeo = new THREE.SphereGeometry(0.5, 14, 10);
+  innerGeo.scale(w * 1.1, h * 0.78, w * 0.8);
+  innerGeo.translate(0, h * 0.5, 0);
+  innerGeo.computeVertexNormals();
+
+  for (const dir of [-1, 1]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(dir * gap, baseY, 0);
+    pivot.rotation.z = dir * -(spec.tilt ?? 0.2);     // 살짝 바깥으로
+    pivot.rotation.x = -0.12;
+    const ear = new THREE.Mesh(earGeo, outer);
+    ear.castShadow = true;
+    pivot.add(ear);
+    addOutline(ear, 0.022 * oW, outlineMat);
+    const pink = new THREE.Mesh(innerGeo, inner);
+    pink.position.z = w * 0.5;
+    pivot.add(pink);
+    root.add(pivot);
+  }
+  return [];
+}
+
+// 가슴의 흰 뭉게구름 — 동그란 덩어리 여럿을 겹쳐 복슬복슬하게.
+// 분홍 몸에 흰 가슴털이 얹혀야 원본 그림처럼 보인다.
+function addFluff(root, ruler, spec, outlineMat, oW = 1) {
+  const mat = toon(spec.color ?? 0xffffff);
+  const y = ruler.at(spec.y ?? 0.34);
+  const r = ruler.radiusAt(y);
+  const s = spec.size ?? 1;
+  // [x, y, 크기] — 가운데가 크고 둘레로 작은 덩어리들
+  const blobs = [
+    [0, 0.02, 0.30], [-0.24, -0.06, 0.22], [0.24, -0.06, 0.22],
+    [-0.14, 0.18, 0.20], [0.15, 0.17, 0.19], [0, -0.19, 0.21]
+  ];
+  const geo = new THREE.SphereGeometry(1, 14, 12);
+  for (const [bx, by, br] of blobs) {
+    const m = new THREE.Mesh(geo, mat);
+    const yy = y + by * s;
+    m.position.set(bx * s, yy, ruler.surfaceZ(bx * s, yy) * 0.72 + r * 0.28);
+    m.scale.setScalar(br * s);
+    m.castShadow = true;
+    root.add(m);
+    addOutline(m, 0.024 * oW, outlineMat);
+  }
+}
+
+// 둘레에 떠다니는 하트. 원본 그림에서 캐릭터 주변에 흩뿌려진 것.
+function addHearts(root, ruler, spec) {
+  const { count = 7, color = 0xff4d7e } = spec || {};
+  const geo = new THREE.PlaneGeometry(0.34, 0.34);
+  const base = new THREE.MeshBasicMaterial({
+    map: makeHeartTexture(), color, transparent: true, depthWrite: false
+  });
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 + 0.5;
+    const y = ruler.at(0.35 + (((i * 3) % 5) / 5) * 0.8);
+    const r = ruler.radiusAt(y) + 0.3 + (i % 3) * 0.16;
+    const h = new THREE.Mesh(geo, base.clone());
+    h.position.set(Math.cos(a) * r, y, Math.sin(a) * r * 0.5 + 0.25);
+    h.userData.phase = (i / count) * Math.PI * 2;
+    h.userData.size = 0.7 + (i % 3) * 0.22;
+    h.userData.baseY = y;
+    root.add(h);
+    out.push(h);
+  }
+  return out;
+}
+
+const TOPS = { leaves: addLeaves, cap: addCap, acorn: addAcornCap, spikes: addSpikes, sprout: addSprouts, pleat: addPleat, ears: addEars, clover: addClover, dogears: addDogEars, catears: addCatEars, bunnyears: addBunnyEars, crown: addCrown, none: () => [] };
 
 // ---------------------------------------------------------------- 소품 (보스라고라)
 
@@ -2138,6 +2276,8 @@ export function buildPlant(id, opts = {}) {
   if (spec.tail) addTail(root, ruler, spec.tail, outlineMat, oW);     // 강아지 꼬리
   // 금화·반짝임은 계속 움직인다. 아래 animate 에서 돌리려고 목록을 받아 둔다.
   const plumes = spec.plumes ? addPlumes(root, ruler, spec.plumes, outlineMat, oW) : [];
+  if (spec.fluff) addFluff(root, ruler, spec.fluff, outlineMat, oW);   // 가슴 뭉게구름
+  const hearts = spec.hearts ? addHearts(root, ruler, spec.hearts) : [];
   const orbiting = spec.coins ? addCoins(root, ruler, spec.coins, outlineMat, oW) : [];
   const twinkling = spec.sparkles ? addSparkles(root, ruler, spec.sparkles) : [];
 
@@ -2208,6 +2348,15 @@ export function buildPlant(id, opts = {}) {
       pivot.userData.holder.rotation.y = -orbit + Math.sin(t * 1.6 + pivot.userData.phase) * 0.6;
       if (pivot.userData.baseY === undefined) pivot.userData.baseY = pivot.position.y;
       pivot.position.y = pivot.userData.baseY + Math.sin(t * 1.7 + pivot.userData.phase) * 0.05;
+    }
+
+    // 하트 — 위로 떠오르며 커졌다 사라진다.
+    for (const h of hearts) {
+      const k = (t * 0.45 + h.userData.phase / 6.28) % 1;
+      h.position.y = h.userData.baseY + k * 0.5;
+      h.material.opacity = Math.sin(k * Math.PI) * 0.95;
+      const sc = h.userData.size * (0.7 + Math.sin(k * Math.PI) * 0.4);
+      h.scale.set(sc, sc, 1);
     }
 
     // 반짝임 — 시간차로 커졌다 사라진다.

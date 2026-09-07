@@ -396,48 +396,53 @@ export const CHARACTERS = [
     sparkles: { count: 10 }
   },
   {
-    // 발명 — 관리자에게만 보이는 캐릭터. 아직 공개 전이라 목록에서도 감춘다.
+    // 발명 — 관리자에게만 보이는 캐릭터. 원본 그림(분홍 토끼)을 그대로 옮겼다.
     //
-    // 만드라고라 계열이 아니다. 뿌리 몸매도 잎도 안 쓰고, 가나디처럼 통통
-    // 둥근 덩어리에 고양이 귀와 선글라스를 얹었다.
+    // 만드라고라 계열이 아니다. 뿌리 몸매도 잎도 안 쓴다. 원본의 요소는 넷이다:
+    //   · 분홍 몸에 굵은 검은 테두리
+    //   · 위로 쭉 선 토끼 귀(안쪽은 연분홍)
+    //   · 검은 선글라스 + 크게 벌리고 웃는 붉은 입
+    //   · 가슴의 흰 뭉게구름, 둘레에 떠다니는 하트
     id: 'invent',
     name: '발명',
     adminOnly: true,         // 고르는 화면에 관리자에게만 나온다
     unlockAt: Infinity,      // 시간으로도 코인으로도 안 열린다
-    previewZoom: 1.02,
-    body: 0xfff4f6,          // 아주 옅은 분홍빛 흰색
-    bodyTop: 0xffffff,
-    bodyBottom: 0xf7dde4,    // 아래로 갈수록 분홍기가 돈다
-    outlineColor: 0xd4667f,  // 검정 대신 진한 분홍 테두리(스티커 그림체)
-    outlineWidth: 1.15,
-    // 통통 둥근 몸 + 뭉툭한 머리. 가나디와 같은 결이되 조금 더 동그랗다.
+    previewZoom: 0.92,       // 귀가 길어 위가 잘리지 않게 조금 뺀다
+    body: 0xf9a3c0,          // 원본의 분홍
+    bodyTop: 0xfcbcd2,
+    bodyBottom: 0xef86ab,
+    outlineColor: 0x141018,  // 굵고 진한 검정 — 스티커 그림체의 핵심
+    outlineWidth: 1.35,
+    // 통통 둥근 몸. 가나디보다 조금 더 크고 둥글다.
     profile: [
       [0.000, 0.00], [0.045, 0.34], [0.130, 0.50], [0.270, 0.59],
-      [0.450, 0.625], [0.630, 0.615], [0.800, 0.575], [0.930, 0.52],
-      [1.030, 0.46], [1.120, 0.38], [1.190, 0.28], [1.240, 0.16], [1.270, 0.00]
+      [0.450, 0.628], [0.630, 0.622], [0.800, 0.585], [0.930, 0.53],
+      [1.030, 0.47], [1.120, 0.39], [1.190, 0.29], [1.240, 0.17], [1.270, 0.00]
     ],
-    top: { kind: 'catears', color: 0xfff4f6, inner: 0xf68ba6, y: 0.9, height: 0.34, width: 0.19 },
-    shades: true,            // 검은 선글라스 — 이 캐릭터의 얼굴이다
-    nose: 0xe4738d,          // 작은 분홍 코
-    mouth: 'cute',           // 코 아래 작은 ω 입(선만)
-    mouthScale: 0.95,
+    top: {
+      kind: 'bunnyears',
+      color: 0xf9a3c0, inner: 0xfde6ee,
+      y: 0.9, height: 0.95, width: 0.165, gap: 0.4, tilt: 0.22
+    },
+    shades: true,            // 검은 선글라스
+    fluff: { y: 0.09, size: 1.02 },        // 배 앞의 흰 뭉게구름(입 아래로)
+    hearts: { count: 7, color: 0xff3d73 }, // 둘레에 떠다니는 하트
+    mouth: 'laugh',          // 크게 벌리고 웃는 붉은 입
+    mouthScale: 1.6,
     face: {
-      // 선글라스가 눈을 덮으므로 눈은 작고 단순하게 둔다.
+      // 선글라스가 눈을 덮으므로 눈 자체는 작고 단순하게.
       eye: 0x000000, sclera: 0x000000,
-      eyeScale: [0.4, 0.4],
+      eyeScale: [0.42, 0.42],
       eyeAspect: 1.0,
       eyeBulge: 1.2,
-      eyeGap: 0.27,
-      eyeY: 0.58,
-      mouthY: 0.24,
-      noseY: 0.32,
-      noseScale: 0.22,
-      noseFlat: 0.2,
+      eyeGap: 0.28,
+      eyeY: 0.60,
+      mouthY: 0.50,          // 선글라스 바로 아래
       glint: false,
       brows: false,
-      blush: true            // 분홍 볼터치 — 원본 그림의 인상
+      blush: false           // 몸이 이미 분홍이라 볼터치는 묻힌다
     },
-    sizeMul: 1.2
+    sizeMul: 1.15
   },
   {
     // 럭키라고라 — 돈으로 못 사고 오직 룰렛 대박(0.1%)으로만 얻는 한정 캐릭터.
