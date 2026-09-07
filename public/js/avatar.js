@@ -155,6 +155,14 @@ function assemble(gltf, spec) {
   const model = gltf.scene.clone(true);
   model.rotation.y = spec.yaw ?? AVATAR.yaw;
 
+  // 그림 한 장에서 만든 모델은 앞뒤(깊이)가 눌려 있다. 정면에서는 멀쩡한데
+  // 옆이나 뒤를 보면 종잇장처럼 얇다. depth 로 그 축만 부풀린다.
+  //
+  // 크기를 맞추기 전에 걸어야 한다. normalizeToPlayerBox 는 키로 배율을
+  // 정하고 좌우 중심을 다시 잡는데, 나중에 z 만 늘리면 그 계산이 어긋난다.
+  // 깊이는 키에 영향이 없으니 먼저 걸어도 크기는 그대로다.
+  model.scale.z = spec.depth ?? 1;
+
   const ok = normalizeToPlayerBox(model, true,
     spec.scale ?? AVATAR.scale, spec.yOffset ?? AVATAR.yOffset);
   if (!ok) {
