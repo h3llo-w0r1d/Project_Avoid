@@ -634,7 +634,10 @@ async function drawTowerLog() {
 }
 
 /* ---- 봇전 기록 ---- */
-const BOT_NAME = { novice: '초보', mid: '중수', expert: '고수', godwater: '고인물' };
+// 봇 티어 키 → 사람이 읽는 이름. bot-ai.js 의 BOT_TIERS 와 같이 여섯이다.
+// 빠진 키가 있으면 'rookie' 처럼 키가 그대로 표에 뜬다.
+const BOT_NAME = { rookie: '왕초보', novice: '초보', mid: '중수',
+                   expert: '고수', master: '초고수', godwater: '고인물' };
 async function drawBotLog() {
   try {
     const { rows, total } = await api(`/api/admin/bot-log?limit=${PLAY_PER}&offset=${botPage * PLAY_PER}`);
