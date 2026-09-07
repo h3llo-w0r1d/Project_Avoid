@@ -1599,8 +1599,8 @@ function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
   const {
     // [깃털 수, 팔 길이, [안쪽 길이, 바깥 길이], [밑동색, 끝색], 폭, y, 처짐(안), 처짐(밖)]
     rows = [
-      [8, 0.56, [0.30, 0.50], [0x8a5c08, 0xc98f1c], 0.40, 0.30, -34, -6],
-      [10, 0.92, [0.46, 0.90], [0xb07c12, 0xefc251], 0.44, 0.10, -48, -9],
+      [10, 0.58, [0.28, 0.52], [0x7d5205, 0xd39a22], 0.36, 0.30, -34, -6],
+      [12, 0.94, [0.44, 0.94], [0xa07010, 0xf6cd63], 0.40, 0.10, -48, -9],
       [11, 1.30, [0.64, 1.50], [0xd9a52c, 0xfff0ad], 0.46, -0.14, -58, -11]
     ],
     armAngle = 7,         // 팔이 뻗는 각. 거의 수평이라야 부조처럼 보인다
@@ -1658,14 +1658,13 @@ function addPlumes(root, ruler, spec, outlineMat, oW = 1) {
         wing.add(f);
         addOutline(f, 0.026 * oW, outlineMat);
 
-        // 깃대는 맨 아래(긴) 깃털에만. 짧은 덮깃에까지 넣으면 지저분하다.
-        if (r === rows.length - 1) {
-          const q = new THREE.Mesh(quillGeo, quillMat);
-          q.scale.set(len * 0.94, wide, wide);
-          q.rotation.z = ang;
-          q.position.set(ax, ay, -0.01 * i + wide * 0.05);
-          wing.add(q);
-        }
+        // 깃대는 모든 겹에 넣는다. 굵기가 깃털 폭에 비례해 정해지므로
+        // 짧은 덮깃에서도 알아서 가늘어진다.
+        const q = new THREE.Mesh(quillGeo, quillMat);
+        q.scale.set(len * 0.94, wide, wide);
+        q.rotation.z = ang;
+        q.position.set(ax, ay, -0.01 * i + wide * 0.05);
+        wing.add(q);
       }
     });
 
