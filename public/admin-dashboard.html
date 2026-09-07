@@ -873,8 +873,15 @@ async function drawSpins() {
     if (!total) { $('spin-table').innerHTML = '<p class="empty">아직 룰렛 기록이 없습니다</p>'; $('spin-pager').innerHTML = ''; return; }
     const body = rows.map((r) => {
       const who = r.member ? `<span style="color:#9ad0ff">${esc(r.name)}</span>` : `${esc(r.name)} <span class="dim">(게스트)</span>`;
+      // 특별 당첨마다 아이콘이 다르다. 예전엔 🎵 하나로 고정이라
+      // 노래가 아닌 당첨(캐릭터 제작권 등)에도 음표가 붙었다.
+      const prizeIcon = (t) => t.includes('제작권') ? '🎨'
+        : t.includes('노래') ? '🎵'
+        : t.includes('잭팟') ? '💰'
+        : t.includes('은하수') ? '🌌'
+        : t.includes('가나디') ? '🐶' : '🎁';
       const got = r.prize
-        ? `<span style="color:#c79bff;font-weight:800">🎵 ${esc(r.prize)}</span>`
+        ? `<span style="color:#c79bff;font-weight:800">${prizeIcon(r.prize)} ${esc(r.prize)}</span>`
         : r.reward > 0
           ? `<span style="color:#57d18a">🪙 ${r.reward}</span>`
           : '<span class="dim">꽝</span>';

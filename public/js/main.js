@@ -818,19 +818,22 @@ const adminCoins = (() => {
     { label: '💰300', jackpot: true, coins: 300, color: '#ffd93b' }, // 코인 잭팟
     { label: '가나디라고라', lucky: true, color: '#ffcf6a' },        // 가나디라고라(한정 캐릭터)
     { label: '은하수', arena: true, color: '#7b6bd6' },              // 은하수 경기장(한정 스킨)
-    { label: '🎵', song: true, color: '#b57bff' }                    // 개발자가 불러주는 노래
+    { label: '🎵', song: true, color: '#b57bff' },                   // 개발자가 불러주는 노래
+    { label: '나만의 캐릭터 제작', custom: true, color: '#ff6fae' }   // 커스텀 캐릭터 제작권
   ];
   // 보상별 확률(합 100). 한정 보상 셋이 각각 1% 아래에 몰려 있다:
-  // 노래 0.1% · 가나디라고라 1% · 은하수 1% · 코인 잭팟 2%.
+  // 노래 0.1% · 나만의 캐릭터 제작 0.1% · 가나디라고라 1% · 은하수 1% · 코인 잭팟 2%.
   // 코인은 값이 클수록 희귀: 꽝 43.9 · 5코인 20 · 10코인 15 · 20코인 10 · 50코인 7.
   // (가나디 5 → 1 로 내리고 은하수 1 을 새로 뺐다. 남은 3 은 꽝으로: 40.9 → 43.9)
+  // (나만의 캐릭터 제작 0.1 을 새로 넣으며 꽝에서 뗐다: 43.9 → 43.8)
   const WEIGHTS = [
-    { coins: 0, p: 43.9 }, { coins: 5, p: 20 }, { coins: 10, p: 15 },
+    { coins: 0, p: 43.8 }, { coins: 5, p: 20 }, { coins: 10, p: 15 },
     { coins: 20, p: 10 }, { coins: 50, p: 7 },
     { jackpot: true, coins: 300, p: 2 },   // 코인 잭팟 300
     { lucky: true, p: 1 },                  // 가나디라고라(한정 캐릭터)
     { arena: true, p: 1 },                  // 은하수 경기장(한정 스킨)
-    { song: true, p: 0.1 }                  // 개발자가 불러주는 노래(제일 귀함)
+    { song: true, p: 0.1 },                 // 개발자가 불러주는 노래
+    { custom: true, p: 0.1 }                // 나만의 캐릭터 제작권(제일 귀함)
   ];
   const N = SEG.length, ARC = 360 / N;
 
@@ -855,12 +858,13 @@ const adminCoins = (() => {
       // 특별 칸은 이름을 그대로, 코인 칸은 값에 아이콘을 붙인다.
       // 마지막 갈래가 '코인이 없으면 꽝' 이라, 특별 칸을 여기 빠뜨리면
       // 그 칸이 통째로 '꽝' 으로 찍힌다(은하수를 넣고 실제로 그랬다).
-      const txt = s.song ? '개발자가<br>불러주는<br>노래'
+      const txt = s.custom ? '🎨 나만의<br>캐릭터 제작<br><small>(초희귀)</small>'
+        : s.song ? '개발자가<br>불러주는<br>노래'
         : s.lucky ? '🐶 가나디라고라<br><small>(룰렛 전용)</small>'
         : s.arena ? '🌌 은하수<br><small>(룰렛 전용)</small>'
         : s.jackpot ? '💰300'
         : (s.coins ? `🪙${s.label}` : '꽝');
-      const cls = (s.song || s.lucky || s.arena) ? 'roul-label roul-label-song' : 'roul-label';
+      const cls = (s.song || s.lucky || s.arena || s.custom) ? 'roul-label roul-label-song' : 'roul-label';
       return `<span class="${cls}" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
     }).join('');
 
@@ -892,12 +896,15 @@ const adminCoins = (() => {
     let r = Math.random() * total;
     let chosen = WEIGHTS[WEIGHTS.length - 1];
     for (const w of WEIGHTS) { if (r < w.p) { chosen = w; break; } r -= w.p; }
+    if (chosen.custom) return { idx: SEG.findIndex((s) => s.custom), coins: 0, custom: true };
     if (chosen.song) return { idx: SEG.findIndex((s) => s.song), coins: 0, song: true };
     if (chosen.lucky) return { idx: SEG.findIndex((s) => s.lucky), coins: 0, lucky: true };
     if (chosen.arena) return { idx: SEG.findIndex((s) => s.arena), coins: 0, arena: true };
     if (chosen.jackpot) return { idx: SEG.findIndex((s) => s.jackpot), coins: chosen.coins, jackpot: true };
     // 일반 코인: 특별 칸은 빼고 같은 코인 칸 중에서.
-    const idxs = SEG.map((s, i) => (!s.song && !s.lucky && !s.arena && !s.jackpot && s.coins === chosen.coins ? i : -1)).filter((i) => i >= 0);
+    // 특별 칸을 여기서 빼지 않으면 코인 당첨이 그 칸에 멈춰 버린다.
+    const idxs = SEG.map((s, i) => (!s.song && !s.lucky && !s.arena && !s.jackpot && !s.custom
+      && s.coins === chosen.coins ? i : -1)).filter((i) => i >= 0);
     return { idx: idxs[(Math.random() * idxs.length) | 0], coins: chosen.coins };
   }
 
@@ -925,7 +932,7 @@ const adminCoins = (() => {
     resultEl.className = 'roulette-result';
     refresh();
 
-    const { idx, coins, song, lucky, jackpot, arena } = pick();
+    const { idx, coins, song, lucky, jackpot, arena, custom } = pick();
     const wasOwnedLucky = lucky && wallet.isOwned('lucky');   // 이미 가진 가나디라고라인지
     const wasOwnedArena = arena && wallet.isOwnedIn('arena', 'galaxy');   // 이미 가진 은하수인지
     // idx 칸 중심이 위(포인터)로 오게. 칸 중심각(시계방향, top 기준) = idx*ARC+ARC/2
@@ -954,6 +961,8 @@ const adminCoins = (() => {
         if (coins > 0) wallet.add(coins);
         if (jackpot) prize = '잭팟';
         else if (song) prize = '노래';
+        // 제작권은 관리 화면에서 누가 됐는지 봐야 연락해 만들어 줄 수 있다.
+        else if (custom) prize = '캐릭터 제작권';
       }
       renderCoinHud();
       // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 시간으로 돌려
@@ -982,6 +991,11 @@ const adminCoins = (() => {
         resultEl.textContent = '💰🎉 잭팟! 300코인 획득!!';
         resultEl.className = 'roulette-result win jackpot';
         audio.coin?.(); audio.stageUp?.();
+      } else if (custom) {
+        resultEl.innerHTML = '🎨🎉 초대박! 「나만의 캐릭터 제작」 당첨!<br>' +
+          '<small>관리자에게 원하는 유형의 캐릭터를 말하면 커스텀 캐릭터를 만들어드립니다</small>';
+        resultEl.className = 'roulette-result win jackpot';
+        audio.stageUp?.();
       } else if (song) {
         resultEl.textContent = '🎉 초대박! 개발자가 불러주는 노래 🎵';
         resultEl.className = 'roulette-result win jackpot';
@@ -997,9 +1011,9 @@ const adminCoins = (() => {
         if (coins >= 50) audio.stageUp?.();
       }
 
-      // 희귀 보상(0.1~2%: 가나디·은하수·300코인 잭팟·노래)을 뽑으면 누적 횟수를
+      // 희귀 보상(0.1~2%: 가나디·은하수·잭팟·노래·캐릭터 제작권)을 뽑으면 누적 횟수를
       // 올린다. 3회면 럭키가이, 10회면 행운의 여신을 얻고 축하 연출이 뜬다.
-      if (lucky || jackpot || song || arena) {
+      if (lucky || jackpot || song || arena || custom) {
         if (auth.signedIn) {
           api.luckyHit().then((r) => {
             if (r?.newTitles?.length) showTitleUnlock(r.newTitles);
@@ -1016,7 +1030,7 @@ const adminCoins = (() => {
 
       // 꽝 연속 카운트 → 불운(5연속)·저주받은 자(10연속) 업적. 대박·코인 당첨이
       // 나오면 연속이 끊겨 0 으로 돌아간다. 카운트는 브라우저에 이어 둔다.
-      const isBlank = !lucky && !jackpot && !song && !arena && coins === 0;
+      const isBlank = !lucky && !jackpot && !song && !arena && !custom && coins === 0;
       if (isBlank) {
         const n = (parseInt(localStorage.getItem(BLANK_STREAK_KEY) || '0', 10) || 0) + 1;
         localStorage.setItem(BLANK_STREAK_KEY, String(n));
@@ -1045,6 +1059,7 @@ const adminCoins = (() => {
     const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
     // 표시 정보(라벨·정렬순서·강조). 초대박 3종을 맨 위, 그다음 코인 큰 순, 꽝은 맨 아래.
     const info = (w) => {
+      if (w.custom) return { label: '🎨 나만의 캐릭터 제작', ord: 1001, special: true };
       if (w.song) return { label: '🎵 개발자가 불러주는 노래', ord: 1000, special: true };
       if (w.arena) return { label: '🌌 은하수 (한정 경기장)', ord: 997, special: true };
       if (w.jackpot) return { label: '💰 코인 300 잭팟', ord: 999, special: true };
