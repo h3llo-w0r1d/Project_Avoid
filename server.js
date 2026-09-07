@@ -645,6 +645,7 @@ app.post('/api/purchase', (req, res) => {
 // 사람은 서버 닉네임으로 덮어써 사칭을 막는다.
 // 도전모드 한 판 기록(성공·실패 모두). 관리 화면에서 보려는 용도.
 app.post('/api/challenge-log', (req, res) => {
+  if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
   const who = posterName(req, req.body?.name);
   if (who.error) return res.status(400).json({ error: who.error });
   const floor = Math.max(0, Math.min(999, Math.floor(Number(req.body?.floor) || 0)));
@@ -667,6 +668,7 @@ app.post('/api/challenge-log', (req, res) => {
 
 // 봇전 한 판 기록.
 app.post('/api/bot-log', (req, res) => {
+  if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
   const who = posterName(req, req.body?.name);
   if (who.error) return res.status(400).json({ error: who.error });
   const tier = typeof req.body?.tier === 'string' ? req.body.tier.slice(0, 20) : '';
@@ -1358,4 +1360,4 @@ const httpServer = app.listen(PORT, () => {
 
 // 1v1 은 같은 HTTP 서버에 WebSocket 으로 얹는다.
 // 포트를 따로 쓰면 배포할 때 프록시 설정이 하나 더 늘어난다.
-const lobby = attachLobby(httpServer, users, matchLog, plays);
+const lobby = attachLobby(httpServer, users, matchLog, plays, isAdminUser);
