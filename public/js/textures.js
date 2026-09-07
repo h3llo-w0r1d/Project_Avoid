@@ -335,16 +335,32 @@ export function makeSoftDotTexture(size = 64) {
 
 // 캐릭터 머리 위에 띄울 라벨. 알약 모양 배경에 글자를 얹는다.
 // 배경이 없으면 밝은 잔디 위에서 흰 글자가 묻힌다.
+//
+// 캔버스 폭을 320 으로 못 박아 뒀더니 이름이 길면 양끝이 잘렸다
+// ('봇 · 왕초보 (발명)' 이 '봇 · 왕초보 (발' 로 보였다). 글자 폭을 먼저 재서
+// 알약을 늘린다. 글씨 크기는 그대로 두고 알약만 길어지므로 어떤 이름이든
+// 똑같은 크기로 읽힌다. 늘어난 비율은 tex.userData.aspect 로 알려 주고,
+// 이름표를 붙이는 쪽(Player.setLabel)이 그만큼 옆으로 늘려 붙인다.
+const LABEL_FONT = '700 60px "Pretendard", "Noto Sans KR", sans-serif';
+let labelMeasure = null;
+
 export function makeLabelTexture(text, color = '#4fd6ff') {
-  const W = 320;
   const H = 120;
+  const pad = 12;
+  const r = (H - pad * 2) / 2;
+
+  // 글자 폭 재기용 캔버스는 한 번만 만들어 돌려 쓴다.
+  if (!labelMeasure) labelMeasure = document.createElement('canvas').getContext('2d');
+  labelMeasure.font = LABEL_FONT;
+  const textW = labelMeasure.measureText(String(text ?? '')).width;
+  // 둥근 양끝(r 씩)과 여백을 더한 만큼이 필요한 폭. 짧은 이름은 예전 그대로 320.
+  const W = Math.max(320, Math.ceil(textW + r * 2 + pad * 2 + 20));
+
   const cv = document.createElement('canvas');
   cv.width = W;
   cv.height = H;
   const g = cv.getContext('2d');
 
-  const pad = 12;
-  const r = (H - pad * 2) / 2;
   const x0 = pad;
   const y0 = pad;
   const w = W - pad * 2;
@@ -368,7 +384,7 @@ export function makeLabelTexture(text, color = '#4fd6ff') {
   g.lineWidth = 5;
   g.stroke();
 
-  g.font = '700 60px "Pretendard", "Noto Sans KR", sans-serif';
+  g.font = LABEL_FONT;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillStyle = color;
@@ -376,6 +392,7 @@ export function makeLabelTexture(text, color = '#4fd6ff') {
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.userData = { aspect: W / H };
   return tex;
 }
 

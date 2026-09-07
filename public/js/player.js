@@ -133,15 +133,19 @@ export class Player {
   // 가려지면 안 되기 때문이다.
   setLabel(text, color) {
     this.clearLabel();
+    const map = makeLabelTexture(text, color);
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: makeLabelTexture(text, color),
+      map,
       transparent: true,
       depthTest: false,
       fog: false
     }));
     // 무대 전체가 한 화면에 들어오는 카메라라 캐릭터가 작게 보인다.
     // 이름표를 캐릭터 비례로 잡으면 글자가 안 읽힌다.
-    sprite.scale.set(2.7, 1.01, 1);
+    // 이름이 길면 알약이 옆으로 늘어난다. 늘어난 비율만큼 스프라이트도
+    // 늘려야 글씨 크기가 이름 길이와 상관없이 같다.
+    const aspect = map.userData?.aspect ?? (320 / 120);
+    sprite.scale.set(1.01 * aspect, 1.01, 1);
     sprite.position.y = PLAYER.height * 1.75;   // 잎끝 바로 위
     sprite.renderOrder = 10;
     this.mesh.add(sprite);
