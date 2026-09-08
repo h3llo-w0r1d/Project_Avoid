@@ -1149,10 +1149,30 @@ const adminCoins = (() => {
       if (rare) audio.stageUp?.(); else if (coins > 0) audio.coin?.();
       if (given.some((g) => g.song)) playDevSong();
 
-      showTenResults(given, coins, rare);
+      showTenResults(given, coins);
       tally(given);
       refresh();
     }, wait);
+  }
+
+  // 초대박으로 무엇이 나왔는지 이름으로 적는다. 같은 게 여러 번이면 묶는다.
+  // '초대박 1번' 같은 숫자는 무엇을 받았는지 안 알려 준다 — 격자에서 다시
+  // 찾아야 한다. 이미 가진 한정 보상이 또 나온 건(100코인) 빼야 한다.
+  function rareNames(given) {
+    const order = [];
+    const count = new Map();
+    for (const g of given) {
+      let name = null;
+      if (g.custom) name = '🎨 나만의 캐릭터 제작';
+      else if (g.song) name = '🎵 개발자가 불러주는 노래';
+      else if (g.lucky && !g.dupLucky) name = '🐶 가나디라고라';
+      else if (g.arena && !g.dupArena) name = '🌌 은하수';
+      else if (g.jackpot) name = '💰 300코인 잭팟';
+      if (!name) continue;
+      if (!count.has(name)) order.push(name);
+      count.set(name, (count.get(name) || 0) + 1);
+    }
+    return order.map((n) => (count.get(n) > 1 ? n + ' ×' + count.get(n) : n));
   }
 
   // 칸 하나에 뭐라고 그릴지.
@@ -1171,13 +1191,14 @@ const adminCoins = (() => {
   }
 
   // 열 개를 한 화면에 펼친다.
-  function showTenResults(given, coins, rare) {
+  function showTenResults(given, coins) {
     const cells = given.map((g) => {
       const c = cellOf(g);
       return '<li class="roul10-cell ' + c.cls + '">'
         + (c.ico ? '<span class="roul10-ico">' + c.ico + '</span>' : '')
         + '<span class="roul10-text">' + c.text + '</span></li>';
     }).join('');
+    const names = rareNames(given);
 
     const overlay = document.createElement('div');
     overlay.className = 'unlock-overlay';
@@ -1186,7 +1207,7 @@ const adminCoins = (() => {
       + '<div class="unlock-kicker">🎰 10회 결과</div>'
       + '<ul class="roul10-grid">' + cells + '</ul>'
       + '<div class="unlock-name"><span class="coin-ico"></span> 합계 ' + coins + '코인</div>'
-      + (rare ? '<div class="coin-gift-msg">초대박 ' + rare + '번!</div>' : '')
+      + (names.length ? '<div class="coin-gift-msg">' + names.join('<br>') + '</div>' : '')
       + '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
