@@ -36,6 +36,46 @@
   }
   main { max-width: 960px; margin: 0 auto; }
 
+  /* 누적 판수 카드. 타이틀 화면(index.html)의 것과 같은 모습으로, 관리
+     화면에서는 왼쪽 위 빈 자리에 둔다. 본문(main)이 960px 로 가운데
+     정렬돼 있어 넓은 화면에서는 왼쪽이 비는데, 거기 놓는다.
+     좁아지면 본문과 겹치므로 그 전에 치운다. */
+  #total-plays {
+    position: fixed; left: 24px; top: 24px; z-index: 4;
+    width: 260px; padding: 20px 22px; border-radius: 16px;
+    background: linear-gradient(160deg, rgba(255, 70, 90, 0.10), rgba(20, 12, 20, 0.55));
+    border: 1px solid rgba(255, 90, 110, 0.28);
+    box-shadow: 0 18px 46px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+  }
+  #total-plays.hidden { display: none; }
+  .pc-kicker {
+    font-size: 11px; font-weight: 800; letter-spacing: 0.22em;
+    color: rgba(255, 140, 155, 0.9);
+  }
+  .pc-kicker::before {
+    content: ''; display: inline-block; vertical-align: middle;
+    width: 6px; height: 6px; margin-right: 8px; border-radius: 50%;
+    background: #ff5f78; box-shadow: 0 0 8px #ff5f78;
+  }
+  .pc-num {
+    margin-top: 10px;
+    font-size: 40px; font-weight: 900; line-height: 1;
+    color: #fff; font-variant-numeric: tabular-nums;
+  }
+  .pc-unit { margin-left: 6px; font-size: 18px; font-weight: 800; color: var(--muted); }
+  .pc-sub {
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 12px; color: var(--muted);
+  }
+  #total-plays-since {
+    color: #ffb3c0; font-weight: 800; letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  /* 960px 본문 + 카드 260px + 여백. 이보다 좁으면 겹친다. */
+  @media (max-width: 1560px) { #total-plays { display: none; } }
+
   header.bar {
     position: sticky; top: 0; z-index: 5;
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -191,6 +231,15 @@
 </head>
 <body>
 <main>
+  <!-- 누적 판수. 타이틀 화면과 같은 카드를 왼쪽 위 빈 자리에 둔다.
+       숫자는 아래 스크립트가 /api/play-count 로 채운다(못 받으면 숨긴다).
+       id 는 total-plays — play-count 는 아래 플레이 기록 라벨이 이미 쓴다. -->
+  <aside id="total-plays" class="hidden" aria-label="누적 판수">
+    <div class="pc-kicker">TOTAL PLAYS</div>
+    <div class="pc-num"><span id="total-plays-num">0</span><span class="pc-unit">판</span></div>
+    <div class="pc-sub"><span id="total-plays-since"></span> ~</div>
+  </aside>
+
   <header class="bar">
     <h1>Avoid<em>Arc</em> 관리</h1>
     <span class="meta" id="meta">불러오는 중…</span>
@@ -388,6 +437,27 @@ const stamp = (at) => {
   return `${d.getMonth() + 1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
 };
 
+// 왼쪽 위 '누적 판수' 카드. 게임 타이틀 화면의 것과 같은 숫자다
+// (혼자 하기·층 오르기 + 봇전 + 1v1). 못 받아 오면 카드를 숨긴다 —
+// 장식이라 없다고 아쉬울 게 없고, 0판이라고 거짓말하는 것보단 낫다.
+//
+// 관리 화면의 '플레이 기록' 표와 숫자가 다른 게 정상이다. 저 표는 끝난
+// 판만(plays), 이 카드는 시작한 판까지 센다.
+async function drawPlayCount() {
+  const card = $('total-plays');
+  if (!card) return;
+  try {
+    const r = await fetch('/api/play-count');
+    if (!r.ok) return;
+    const { total, since } = await r.json();
+    if (!(total > 0)) return;
+    $('total-plays-num').textContent = total.toLocaleString('ko-KR');
+    if (since) $('total-plays-since').textContent = String(since).replaceAll('-', '.');
+    card.classList.remove('hidden');
+  } catch { /* 못 받으면 그냥 안 띄운다 */ }
+}
+
+
 async function load() {
   say('불러오는 중…');
   try {
@@ -399,6 +469,7 @@ async function load() {
       (versus ? ` (1v1 ${versus}명)` : '');
     say('');
     drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawPurchases(); drawSpins();
+    drawPlayCount();
   } catch (e) { say(e.message, true); }
 }
 
