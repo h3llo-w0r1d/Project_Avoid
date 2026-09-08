@@ -1117,13 +1117,6 @@ const adminCoins = (() => {
   // 펼친다.
   const TEN = 10;
 
-  // 결과의 '급'. 원판을 어디에 멈출지 고를 때만 쓴다.
-  function rankOf(r) {
-    if (r.custom || r.song) return 5;
-    if (r.lucky || r.arena) return 4;
-    if (r.jackpot) return 3;
-    return r.coins > 0 ? 1 : 0;
-  }
 
   function spin10() {
     if (spinning) return;
@@ -1135,10 +1128,10 @@ const adminCoins = (() => {
     refresh();
 
     const picks = Array.from({ length: TEN }, () => pick());
-    // 원판은 제일 좋은 결과에 멈춘다. 아무 데나 멈추면 눈에 보이는 칸과
-    // 아래 결과가 따로 놀아 어리둥절해진다.
-    const best = picks.reduce((a, b) => (rankOf(b) > rankOf(a) ? b : a), picks[0]);
-    const wait = turnWheelTo(best.idx, 2600);
+    // 원판은 첫 번째 결과에 멈춘다. 아래 격자도 뽑은 순서대로 깔리므로,
+    // 원판이 가리키는 칸 = 왼쪽 위 1번 칸이 된다. 둘이 다르면 눈에 보이는
+    // 것과 결과가 따로 놀아 어리둥절해진다.
+    const wait = turnWheelTo(picks[0].idx, 2600);
 
     setTimeout(() => {
       spinning = false;
