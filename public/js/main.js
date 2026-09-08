@@ -793,7 +793,7 @@ const adminCoins = (() => {
 })();
 
 // ── 코인 룰렛 ──────────────────────────────────────────────
-// 누적 게임 시간이 100초 쌓일 때마다 1회씩 돌린다(코인이 아니라 '시간'으로).
+// 누적 게임 시간이 SECONDS_PER_SPIN 만큼 쌓일 때마다 1회씩 돌린다(코인이 아니라 '시간'으로).
 // 돌리면 랜덤 코인 보상. 칸은 7개지만 확률은 WEIGHTS 로 따로 준다.
 (() => {
   const modal = document.getElementById('roulette-modal');
@@ -804,6 +804,13 @@ const adminCoins = (() => {
   const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
   const PER = wallet.secondsPerSpin();   // 한 회에 필요한 누적 시간(초)
+  // 안내 문구도 같은 값에서 만든다. HTML 에 숫자를 박아 두면 값을 바꿀 때
+  // 한쪽만 고쳐져 "80초" 라고 적힌 채 150초씩 걸리는 일이 생긴다.
+  const needEl = document.getElementById('roulette-need');
+  if (needEl) {
+    needEl.innerHTML = `게임 시간이 <b>${PER}초</b> 쌓일 때마다 룰렛 <b>1회</b>!`
+      + ' 돌려서 코인 획득 <span class="coin-ico"></span>';
+  }
   const BLANK_STREAK_KEY = 'avoidarc.roul.blankStreak';   // 룰렛 꽝 연속 횟수(불운·저주 업적용)
   // 게스트가 뽑은 희귀 보상 횟수. 서버에 쌓을 계정이 없어 브라우저에만 센다.
   // 칭호를 주는 게 아니라 '로그인하면 받을 수 있다'고 알릴 때만 쓴다.
@@ -873,7 +880,7 @@ const adminCoins = (() => {
 
   // 가운데 원과 버튼을 지금 상태로 그린다.
   const refresh = () => {
-    // 룰렛에 쓸 수 있는 초(잔여 풀). 1회 돌리면 100초 차감된다.
+    // 룰렛에 쓸 수 있는 초(잔여 풀). 1회 돌리면 그만큼 차감된다.
     const secs = wallet.spendableSeconds();
     const left = isAdmin ? Infinity : wallet.spinsAvailable();
     if (hubEl) {
@@ -926,7 +933,7 @@ const adminCoins = (() => {
       resultEl.className = 'roulette-result lose';
       return;
     }
-    if (!isAdmin) wallet.useSpin();   // 누적 시간 100초 = 1회 소모
+    if (!isAdmin) wallet.useSpin();   // 쌓인 시간에서 1회분 소모
     spinning = true;
     resultEl.textContent = '';
     resultEl.className = 'roulette-result';

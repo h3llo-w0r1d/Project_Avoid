@@ -198,7 +198,8 @@
         <div class="roul-odds-title">당첨 확률</div>
         <ul id="roulette-odds-list"></ul>
       </div>
-      <p class="board-hint">게임 시간이 <b>80초</b> 쌓일 때마다 룰렛 <b>1회</b>! 돌려서 코인 획득 <span class="coin-ico"></span></p>
+      <!-- 초 수는 JS 가 SECONDS_PER_SPIN 을 읽어 채운다(숫자를 여기 박으면 어긋난다) -->
+      <p class="board-hint" id="roulette-need"></p>
       <div class="roulette-wrap">
         <div class="roulette-pointer"></div>
         <div class="roulette-wheel" id="roulette-wheel"></div>

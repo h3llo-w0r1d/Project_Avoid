@@ -35,7 +35,10 @@ let adminAll = false;
 export const FX_LEVEL_AT = [500, 1000];
 const PLAY_KEY = 'avoidarc.playtime';   // 누적 게임 시간(초). 룰렛 횟수의 원천.
 const SPINUSED_KEY = 'avoidarc.spins.used';   // 지금까지 돌린 룰렛 횟수
-const SECONDS_PER_SPIN = 80;            // 이만큼 쌓일 때마다 룰렛 1회
+// 이만큼 쌓일 때마다 룰렛 1회. 올리면 한 번이 귀해지고, 내리면 흔해진다.
+// 화면에 적히는 안내 문구도 이 값을 읽어 쓴다(main.js) — 숫자를 두 군데
+// 적어 두면 한쪽만 고쳐져 어긋난다. 실제로 그랬다.
+const SECONDS_PER_SPIN = 150;
 // 상점 항목마다 '산 목록' 과 '지금 켠 것' 을 담는 칸.
 // 발자국(trail)은 항목을 나누기 전에 쓰던 키를 그대로 둔다 — 키를 바꾸면
 // 이미 산 사람의 기록이 통째로 날아간다.
@@ -142,10 +145,10 @@ export const wallet = {
     schedulePush();
     return v;
   },
-  // 지금까지 돌린 횟수 / 100초당 1회 규칙으로 남은 횟수.
+  // 지금까지 돌린 횟수 / SECONDS_PER_SPIN 당 1회 규칙으로 남은 횟수.
   spinsUsed() { return Math.max(0, Math.floor(Number(localStorage.getItem(SPINUSED_KEY)) || 0)); },
   spinsAvailable() { return Math.max(0, Math.floor(this.playtime() / SECONDS_PER_SPIN) - this.spinsUsed()); },
-  // 룰렛에 쓸 수 있는 초(전체 누적에서 이미 돌린 만큼 뺀 잔여 풀). 1회 돌리면 100초 준다.
+  // 룰렛에 쓸 수 있는 초(전체 누적에서 이미 돌린 만큼 뺀 잔여 풀).
   spendableSeconds() { return Math.max(0, this.playtime() - this.spinsUsed() * SECONDS_PER_SPIN); },
   useSpin() { localStorage.setItem(SPINUSED_KEY, String(this.spinsUsed() + 1)); schedulePush(); },
   secondsPerSpin() { return SECONDS_PER_SPIN; },
