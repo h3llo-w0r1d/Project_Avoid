@@ -927,6 +927,9 @@ const adminCoins = (() => {
       spin10Btn.textContent = spinning ? '…' : '10회 돌리기';
     }
     if (goldBtn) {
+      // 광고를 아직 안 붙였다. 붙기 전까지는 공짜로 좋은 확률판을 돌리는
+      // 셈이라 관리자에게만 보인다. 광고가 붙으면 이 줄만 지우면 된다.
+      goldBtn.classList.toggle('hidden', !isAdmin);
       const g = goldLeft();
       goldBtn.disabled = spinning || g <= 0;
       goldBtn.innerHTML = g > 0
@@ -1123,6 +1126,7 @@ const adminCoins = (() => {
 
   function spinGold() {
     if (spinning) return;
+    if (!isAdmin) return;            // 아직 관리자 전용
     if (goldLeft() <= 0) {
       resultEl.textContent = '황금 룰렛은 하루 ' + GOLD_PER_DAY + '번까지예요. 내일 다시 오세요';
       resultEl.className = 'roulette-result lose';
