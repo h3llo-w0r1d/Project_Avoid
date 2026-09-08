@@ -800,6 +800,7 @@ const adminCoins = (() => {
   if (!modal) return;
   const wheel = document.getElementById('roulette-wheel');
   const spinBtn = document.getElementById('roulette-spin');
+  const spin10Btn = document.getElementById('roulette-spin10');
   const resultEl = document.getElementById('roulette-result');
   const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
@@ -892,9 +893,15 @@ const adminCoins = (() => {
           `<span class="hub-spins">${left}회</span>` +
           `<span class="hub-next">다음까지 ${Math.ceil(toNext)}초</span>`;
     }
+    // 남은 횟수는 가운데 원이 이미 보여 준다. 버튼이 둘이라 글씨가 길면
+    // 좁은 화면에서 두 줄로 접히므로, 버튼에는 짧게만 적는다.
     spinBtn.disabled = spinning || (!isAdmin && left <= 0);
     spinBtn.textContent = spinning ? '돌리는 중…'
-      : isAdmin ? '돌리기' : (left > 0 ? `돌리기 (남은 ${left}회)` : '아직 부족해요');
+      : (isAdmin || left > 0) ? '돌리기' : '아직 부족해요';
+    if (spin10Btn) {
+      spin10Btn.disabled = spinning || (!isAdmin && left < 10);
+      spin10Btn.textContent = spinning ? '…' : '10회 돌리기';
+    }
   };
 
   // 보상 하나 뽑기 → { idx(멈출 칸), coins, song?, lucky?, jackpot? }
@@ -925,137 +932,278 @@ const adminCoins = (() => {
     } catch { /* 무시 */ }
   }
 
-  function spin() {
-    if (spinning) return;
-    if (!isAdmin && wallet.spinsAvailable() <= 0) {
-      const toNext = PER - (wallet.playtime() % PER);
-      resultEl.textContent = `게임을 ${Math.ceil(toNext)}초 더 하면 한 번 돌릴 수 있어요`;
-      resultEl.className = 'roulette-result lose';
-      return;
-    }
-    if (!isAdmin) wallet.useSpin();   // 쌓인 시간에서 1회분 소모
-    spinning = true;
-    resultEl.textContent = '';
-    resultEl.className = 'roulette-result';
-    refresh();
+  // ── 보상 지급 ──
+  // 결과 하나를 실제로 준다. 지갑·소유를 바꾸고 서버에 남긴 뒤, 무엇이
+  // 됐는지 정리해 돌려준다.
+  //
+  // 1회와 10회가 이 한 곳을 같이 쓴다. 따로 두면 '이미 가진 한정 보상은
+  // 100코인으로 대체' 같은 규칙이 한쪽에만 남는다. 10회 안에서 가나디가
+  // 두 번 나와도, 순서대로 부르니 두 번째는 자연히 중복으로 처리된다.
+  function grantOne(res) {
+    const { coins, song, lucky, jackpot, arena, custom } = res;
+    const dupLucky = lucky && wallet.isOwned('lucky');
+    const dupArena = arena && wallet.isOwnedIn('arena', 'galaxy');
+    let rewardCoins = coins;   // 서버 기록에 남길 보상 코인
+    let prize;                 // 특별 당첨 태그(관리 기록)
 
-    const { idx, coins, song, lucky, jackpot, arena, custom } = pick();
-    const wasOwnedLucky = lucky && wallet.isOwned('lucky');   // 이미 가진 가나디라고라인지
-    const wasOwnedArena = arena && wallet.isOwnedIn('arena', 'galaxy');   // 이미 가진 은하수인지
+    if (lucky) {
+      if (dupLucky) { rewardCoins = 100; wallet.add(100); prize = '가나디라고라(중복)'; }
+      else { wallet.markOwned('lucky'); rewardCoins = 0; prize = '가나디라고라'; }
+    } else if (arena) {
+      // 은하수도 가나디와 같은 규칙 — 이미 가졌으면 100코인으로 대체한다.
+      if (dupArena) { rewardCoins = 100; wallet.add(100); prize = '은하수(중복)'; }
+      else {
+        wallet.markOwnedIn('arena', 'galaxy'); rewardCoins = 0; prize = '은하수';
+        applyArena('galaxy');                  // 딴 그 자리에서 바로 켜 준다
+        wallet.equipIn('arena', 'galaxy');
+      }
+    } else {
+      if (coins > 0) wallet.add(coins);
+      if (jackpot) prize = '잭팟';
+      else if (song) prize = '노래';
+      // 제작권은 관리 화면에서 누가 됐는지 봐야 연락해 만들어 줄 수 있다.
+      else if (custom) prize = '캐릭터 제작권';
+    }
+    // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 시간으로
+    // 돌려 건 코인은 0. 특별 당첨은 prize 로 누가 됐는지 남긴다.
+    if (!isAdmin) api.recordSpin(0, rewardCoins, auth.signedIn ? undefined : auth.displayName, prize);
+    return { ...res, dupLucky, dupArena, rewardCoins, prize };
+  }
+
+  // 꽝인가(코인 0 + 특별 보상 없음) / 초대박인가.
+  const isBlank = (r) => !r.lucky && !r.jackpot && !r.song && !r.arena && !r.custom && r.coins === 0;
+  const isRare = (r) => !!(r.lucky || r.jackpot || r.song || r.arena || r.custom);
+
+  // 희귀 보상 집계와 꽝 연속 세기. 결과 목록을 통째로 받는다(1회면 한 개).
+  //
+  // 10회를 한 번에 돌리면 희귀 보상이 여러 번 나올 수 있다. 그때마다 축하
+  // 창을 띄우면 창이 겹쳐 쌓이므로, 얻은 칭호를 모아 마지막에 한 번만 띄운다.
+  async function tally(results) {
+    const rares = results.filter(isRare).length;
+    if (rares > 0) {
+      if (auth.signedIn) {
+        const got = [];
+        for (let i = 0; i < rares; i++) {
+          const r = await api.luckyHit().catch(() => null);
+          if (r?.newTitles?.length) got.push(...r.newTitles);
+        }
+        if (got.length) showTitleUnlock(got);
+      } else {
+        // 게스트는 서버에 쌓을 계정이 없어서, 브라우저에만 세어 두고 문턱을
+        // 넘길 때 로그인하면 받을 수 있다고 알려 준다(칭호를 주진 않는다).
+        let n = parseInt(localStorage.getItem(GUEST_LUCKY_KEY) || '0', 10) || 0;
+        const reach = [];
+        for (let i = 0; i < rares; i++) {
+          n++;
+          if (n === 3) reach.push('럭키가이');
+          else if (n === 10) reach.push('행운의 여신');
+        }
+        localStorage.setItem(GUEST_LUCKY_KEY, String(n));
+        if (reach.length) showTitleLoginPrompt(reach);
+      }
+    }
+
+    // 꽝 연속 카운트 → 불운(5연속)·저주받은 자(10연속) 업적. 대박·코인 당첨이
+    // 나오면 연속이 끊겨 0 으로 돌아간다. 카운트는 브라우저에 이어 둔다.
+    let streak = parseInt(localStorage.getItem(BLANK_STREAK_KEY) || '0', 10) || 0;
+    let crossed = 0;
+    for (const r of results) {
+      if (isBlank(r)) { streak++; if (streak === 5 || streak === 10) crossed = streak; }
+      else streak = 0;
+    }
+    localStorage.setItem(BLANK_STREAK_KEY, String(streak));
+    if (crossed) {
+      if (auth.signedIn) {
+        const r = await api.awardTitle(crossed >= 10 ? 'cursed' : 'unlucky').catch(() => null);
+        if (r?.fresh && r.title) showTitleUnlock([r.title]);
+      } else {
+        showTitleLoginPrompt([crossed >= 10 ? '저주받은 자' : '불운']);
+      }
+    }
+  }
+
+  // 원판을 그 칸까지 돌린다. 멈출 때까지 기다릴 시간(ms)을 돌려준다.
+  function turnWheelTo(idx, ms = 4000) {
     // idx 칸 중심이 위(포인터)로 오게. 칸 중심각(시계방향, top 기준) = idx*ARC+ARC/2
     const center = idx * ARC + ARC / 2;
     const desiredMod = (360 - center) % 360;                 // 그 칸을 위로 보내는 회전각
     const currentMod = ((rotation % 360) + 360) % 360;
     const jitter = (Math.random() - 0.5) * (ARC * 0.5);       // 칸 안에서 살짝 랜덤
     rotation += 5 * 360 + ((desiredMod - currentMod + 360) % 360) + jitter;
-    wheel.style.transition = 'transform 4s cubic-bezier(0.16, 0.84, 0.28, 1)';
-    wheel.style.transform = `rotate(${rotation}deg)`;
+    wheel.style.transition = 'transform ' + ms + 'ms cubic-bezier(0.16, 0.84, 0.28, 1)';
+    wheel.style.transform = 'rotate(' + rotation + 'deg)';
+    return ms + 100;
+  }
+
+  // 돌릴 수 있는지 본다. 안 되면 안내를 띄우고 false.
+  function canSpin(times) {
+    if (isAdmin) return true;
+    const left = wallet.spinsAvailable();
+    if (left >= times) return true;
+    if (times > 1) {
+      resultEl.textContent = '한 번에 10회를 돌리려면 ' + times + '회가 있어야 해요 (지금 ' + left + '회)';
+      resultEl.className = 'roulette-result lose';
+      return false;
+    }
+    const toNext = PER - (wallet.playtime() % PER);
+    resultEl.textContent = '게임을 ' + Math.ceil(toNext) + '초 더 하면 한 번 돌릴 수 있어요';
+    resultEl.className = 'roulette-result lose';
+    return false;
+  }
+
+  function spin() {
+    if (spinning) return;
+    if (!canSpin(1)) return;
+    if (!isAdmin) wallet.useSpin();   // 쌓인 시간에서 1회분 소모
+    spinning = true;
+    resultEl.textContent = '';
+    resultEl.className = 'roulette-result';
+    refresh();
+
+    const res = pick();
+    const wait = turnWheelTo(res.idx);
 
     setTimeout(() => {
       spinning = false;
-
-      // 보상 지급. 가나디라고라는 이미 있으면 100코인으로 대체한다.
-      let rewardCoins = coins;   // 서버 기록에 남길 보상 코인
-      let prize;                 // 특별 당첨 태그(관리 기록)
-      if (lucky) {
-        if (wasOwnedLucky) { rewardCoins = 100; wallet.add(100); prize = '가나디라고라(중복)'; }
-        else { wallet.markOwned('lucky'); rewardCoins = 0; prize = '가나디라고라'; }
-      } else if (arena) {
-        // 은하수도 가나디와 같은 규칙 — 이미 가졌으면 100코인으로 대체한다.
-        if (wasOwnedArena) { rewardCoins = 100; wallet.add(100); prize = '은하수(중복)'; }
-        else { wallet.markOwnedIn('arena', 'galaxy'); rewardCoins = 0; prize = '은하수'; }
-      } else {
-        if (coins > 0) wallet.add(coins);
-        if (jackpot) prize = '잭팟';
-        else if (song) prize = '노래';
-        // 제작권은 관리 화면에서 누가 됐는지 봐야 연락해 만들어 줄 수 있다.
-        else if (custom) prize = '캐릭터 제작권';
-      }
+      const g = grantOne(res);
       renderCoinHud();
-      // 관리자가 아니면 결과를 서버에 남긴다(관리 화면에서 보려고). 시간으로 돌려
-      // 건 코인은 0. 특별 당첨은 prize 로 누가 됐는지 남긴다.
-      if (!isAdmin) api.recordSpin(0, rewardCoins, auth.signedIn ? undefined : auth.displayName, prize);
       if (characters.open$) characters.draw();   // 가나디라고라 해금·코인 반영
 
-      if (lucky) {
-        resultEl.textContent = wasOwnedLucky
+      if (g.lucky) {
+        resultEl.textContent = g.dupLucky
           ? '가나디라고라는 이미 있어요! 대신 100코인 지급'
           : '🎉 초대박! 한정 캐릭터 가나디라고라 획득!';
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
-      } else if (arena) {
-        if (wasOwnedArena) {
-          resultEl.textContent = '은하수는 이미 있어요! 대신 100코인 지급';
-        } else {
-          resultEl.innerHTML = '🌌 초대박! 한정 경기장 「은하수」 획득!<br>' +
-            '<small>상점 → 경기장 스킨에서 켤 수 있어요</small>';
-          applyArena('galaxy');        // 딴 그 자리에서 바로 켜 준다
-          wallet.equipIn('arena', 'galaxy');
-        }
+      } else if (g.arena) {
+        resultEl.innerHTML = g.dupArena
+          ? '은하수는 이미 있어요! 대신 100코인 지급'
+          : '🌌 초대박! 한정 경기장 「은하수」 획득!<br>'
+            + '<small>상점 → 경기장 스킨에서 켤 수 있어요</small>';
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
-      } else if (jackpot) {
+      } else if (g.jackpot) {
         resultEl.textContent = '💰🎉 잭팟! 300코인 획득!!';
         resultEl.className = 'roulette-result win jackpot';
         audio.coin?.(); audio.stageUp?.();
-      } else if (custom) {
-        resultEl.innerHTML = '🎨🎉 초대박! 「나만의 캐릭터 제작」 당첨!<br>' +
-          '<small>관리자에게 원하는 유형의 캐릭터를 말하면 커스텀 캐릭터를 만들어드립니다</small>';
+      } else if (g.custom) {
+        resultEl.innerHTML = '🎨🎉 초대박! 「나만의 캐릭터 제작」 당첨!<br>'
+          + '<small>관리자에게 원하는 유형의 캐릭터를 말하면 커스텀 캐릭터를 만들어드립니다</small>';
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
-      } else if (song) {
+      } else if (g.song) {
         resultEl.textContent = '🎉 초대박! 개발자가 불러주는 노래 🎵';
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
         playDevSong();
-            } else if (coins === 0) {
+      } else if (g.coins === 0) {
         resultEl.textContent = '꽝! 다음 기회에…';
         resultEl.className = 'roulette-result lose';
       } else {
-        resultEl.innerHTML = `<span class="coin-ico"></span> ${coins}코인 당첨!`;
-        resultEl.className = 'roulette-result win' + (coins >= 50 ? ' jackpot' : '');
+        resultEl.innerHTML = '<span class="coin-ico"></span> ' + g.coins + '코인 당첨!';
+        resultEl.className = 'roulette-result win' + (g.coins >= 50 ? ' jackpot' : '');
         audio.coin?.();
-        if (coins >= 50) audio.stageUp?.();
+        if (g.coins >= 50) audio.stageUp?.();
       }
 
-      // 희귀 보상(0.1~2%: 가나디·은하수·잭팟·노래·캐릭터 제작권)을 뽑으면 누적 횟수를
-      // 올린다. 3회면 럭키가이, 10회면 행운의 여신을 얻고 축하 연출이 뜬다.
-      if (lucky || jackpot || song || arena || custom) {
-        if (auth.signedIn) {
-          api.luckyHit().then((r) => {
-            if (r?.newTitles?.length) showTitleUnlock(r.newTitles);
-          });
-        } else {
-          // 게스트는 서버에 쌓을 계정이 없어서, 브라우저에만 세어 두고 문턱을
-          // 넘길 때 로그인하면 받을 수 있다고 알려 준다(칭호를 주진 않는다).
-          const n = (parseInt(localStorage.getItem(GUEST_LUCKY_KEY) || '0', 10) || 0) + 1;
-          localStorage.setItem(GUEST_LUCKY_KEY, String(n));
-          if (n === 3) showTitleLoginPrompt(['럭키가이']);
-          else if (n === 10) showTitleLoginPrompt(['행운의 여신']);
-        }
-      }
-
-      // 꽝 연속 카운트 → 불운(5연속)·저주받은 자(10연속) 업적. 대박·코인 당첨이
-      // 나오면 연속이 끊겨 0 으로 돌아간다. 카운트는 브라우저에 이어 둔다.
-      const isBlank = !lucky && !jackpot && !song && !arena && !custom && coins === 0;
-      if (isBlank) {
-        const n = (parseInt(localStorage.getItem(BLANK_STREAK_KEY) || '0', 10) || 0) + 1;
-        localStorage.setItem(BLANK_STREAK_KEY, String(n));
-        if (n === 5 || n === 10) {
-          if (auth.signedIn) {
-            api.awardTitle(n >= 10 ? 'cursed' : 'unlucky').then((r) => {
-              if (r?.fresh && r.title) showTitleUnlock([r.title]);
-            });
-          } else {
-            showTitleLoginPrompt([n >= 10 ? '저주받은 자' : '불운']);
-          }
-        }
-      } else {
-        localStorage.setItem(BLANK_STREAK_KEY, '0');
-      }
+      tally([g]);
       refresh();
-    }, 4100);
+    }, wait);
   }
+
+  // ── 10회 한 번에 돌리기 ──
+  // 횟수가 쌓이면 한 번씩 돌리기가 번거롭다. 열 번을 따로 돌리면 4초짜리
+  // 연출을 열 번 봐야 하므로, 원판은 한 번만 돌리고 결과 열 개를 한 화면에
+  // 펼친다.
+  const TEN = 10;
+
+  // 결과의 '급'. 원판을 어디에 멈출지 고를 때만 쓴다.
+  function rankOf(r) {
+    if (r.custom || r.song) return 5;
+    if (r.lucky || r.arena) return 4;
+    if (r.jackpot) return 3;
+    return r.coins > 0 ? 1 : 0;
+  }
+
+  function spin10() {
+    if (spinning) return;
+    if (!canSpin(TEN)) return;
+    if (!isAdmin) for (let i = 0; i < TEN; i++) wallet.useSpin();
+    spinning = true;
+    resultEl.textContent = '';
+    resultEl.className = 'roulette-result';
+    refresh();
+
+    const picks = Array.from({ length: TEN }, () => pick());
+    // 원판은 제일 좋은 결과에 멈춘다. 아무 데나 멈추면 눈에 보이는 칸과
+    // 아래 결과가 따로 놀아 어리둥절해진다.
+    const best = picks.reduce((a, b) => (rankOf(b) > rankOf(a) ? b : a), picks[0]);
+    const wait = turnWheelTo(best.idx, 2600);
+
+    setTimeout(() => {
+      spinning = false;
+      // 순서대로 지급한다 — 한정 보상이 두 번 나오면 두 번째는 중복 처리된다.
+      const given = picks.map(grantOne);
+      renderCoinHud();
+      if (characters.open$) characters.draw();
+
+      const coins = given.reduce((s, g) => s + (g.rewardCoins || 0), 0);
+      // '초대박 N번' 은 실제로 받은 것만 센다. 이미 가진 한정 보상이 또
+      // 나오면 100코인으로 바뀌므로, 그걸 세면 코인만 받고 초대박이라 뜬다.
+      const rare = given.filter((g) => isRare(g) && !g.dupLucky && !g.dupArena).length;
+      resultEl.innerHTML = '10회 결과 — <span class="coin-ico"></span> 합계 ' + coins + '코인';
+      resultEl.className = 'roulette-result win' + (rare ? ' jackpot' : '');
+      if (rare) audio.stageUp?.(); else if (coins > 0) audio.coin?.();
+      if (given.some((g) => g.song)) playDevSong();
+
+      showTenResults(given, coins, rare);
+      tally(given);
+      refresh();
+    }, wait);
+  }
+
+  // 칸 하나에 뭐라고 그릴지.
+  function cellOf(g) {
+    if (g.custom) return { ico: '🎨', text: '캐릭터 제작', cls: 'rare' };
+    if (g.song) return { ico: '🎵', text: '노래', cls: 'rare' };
+    if (g.lucky) return g.dupLucky
+      ? { ico: '<span class="coin-ico"></span>', text: '100', cls: 'coin' }
+      : { ico: '🐶', text: '가나디라고라', cls: 'rare' };
+    if (g.arena) return g.dupArena
+      ? { ico: '<span class="coin-ico"></span>', text: '100', cls: 'coin' }
+      : { ico: '🌌', text: '은하수', cls: 'rare' };
+    if (g.jackpot) return { ico: '💰', text: '300', cls: 'rare' };
+    if (g.coins > 0) return { ico: '<span class="coin-ico"></span>', text: String(g.coins), cls: 'coin' };
+    return { ico: '', text: '꽝', cls: 'blank' };
+  }
+
+  // 열 개를 한 화면에 펼친다.
+  function showTenResults(given, coins, rare) {
+    const cells = given.map((g) => {
+      const c = cellOf(g);
+      return '<li class="roul10-cell ' + c.cls + '">'
+        + (c.ico ? '<span class="roul10-ico">' + c.ico + '</span>' : '')
+        + '<span class="roul10-text">' + c.text + '</span></li>';
+    }).join('');
+
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card roul10-card">'
+      + '<div class="unlock-kicker">🎰 10회 결과</div>'
+      + '<ul class="roul10-grid">' + cells + '</ul>'
+      + '<div class="unlock-name"><span class="coin-ico"></span> 합계 ' + coins + '코인</div>'
+      + (rare ? '<div class="coin-gift-msg">초대박 ' + rare + '번!</div>' : '')
+      + '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const done = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 260);
+    };
+    overlay.addEventListener('click', done);
+  }
+
 
   // ── 확률표 ──
   // 각 칸의 당첨 확률을 WEIGHTS 로 정확히 계산해 채운다(노래 먼저, 코인 큰 순, 꽝).
@@ -1106,6 +1254,7 @@ const adminCoins = (() => {
   document.getElementById('roulette-close').addEventListener('click', close);
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   spinBtn.addEventListener('click', () => { closeOdds(); spin(); });
+  spin10Btn?.addEventListener('click', () => { closeOdds(); spin10(); });
 })();
 
 const characters = new CharacterUI({

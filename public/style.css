@@ -752,7 +752,8 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 :root.force-landscape .roulette-wrap { --wheel: 168px; margin: 6px auto 2px; }
 :root.force-landscape #roulette-modal .board-hint { margin-top: 2px; font-size: 12px; }
 :root.force-landscape .roulette-result { min-height: 18px; margin: 3px 0; font-size: 15px; }
-:root.force-landscape #roulette-spin { margin-top: 4px; padding: 10px; }
+:root.force-landscape .roul-buttons { margin-top: 4px; }
+:root.force-landscape .roul-buttons button { padding: 10px; }
 .roulette-wheel {
   position: absolute; inset: 6px; border-radius: 50%; overflow: hidden;
   border: 6px solid rgba(255, 255, 255, 0.16);
@@ -803,8 +804,58 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 .roulette-result.win { color: #ffd76a; text-shadow: 0 0 16px rgba(255, 200, 90, 0.5); }
 .roulette-result.jackpot { font-size: 22px; }
 .roulette-result.lose { color: var(--muted); }
-#roulette-spin { margin-top: 8px; }
 #roulette-spin:disabled { opacity: 0.5; }
+
+/* 돌리기 버튼 두 개(1회 / 10회). 폭을 반씩 나눠 갖는다. */
+.roul-buttons { display: flex; gap: 10px; margin-top: 8px; }
+.roul-buttons button { flex: 1; margin-top: 0; min-width: 0; }
+.roul-buttons button:disabled { opacity: 0.5; }
+
+/* 10회 결과 — 열 칸을 5×2 로 펼친다. 한 번에 다 보이는 게 요점이라
+   스크롤이 생기지 않게 칸을 작게 잡는다. */
+.roul10-card { width: min(560px, 94vw); }
+.roul10-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin: 16px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.roul10-cell {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  min-height: 74px; padding: 8px 4px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.04);
+}
+.roul10-ico { font-size: 20px; line-height: 1; }
+/* 이름이 긴 보상('가나디라고라')도 칸을 넘기지 않게 줄여서 두 줄까지 쓴다. */
+.roul10-text {
+  font-size: 12px; font-weight: 800; line-height: 1.2; text-align: center;
+  word-break: keep-all;
+}
+.roul10-cell.coin { border-color: rgba(255, 207, 106, 0.35); background: rgba(255, 207, 106, 0.10); }
+.roul10-cell.coin .roul10-text { color: #ffe6a0; font-size: 15px; }
+.roul10-cell.blank { opacity: 0.45; }
+.roul10-cell.blank .roul10-text { color: var(--muted); }
+/* 초대박은 한눈에 튀어야 한다 — 열 칸 중에 섞여 있으면 놓친다. */
+.roul10-cell.rare {
+  border-color: rgba(255, 90, 140, 0.55);
+  background: linear-gradient(160deg, rgba(255, 90, 140, 0.20), rgba(140, 60, 200, 0.16));
+  box-shadow: 0 0 16px rgba(255, 90, 140, 0.30);
+}
+.roul10-cell.rare .roul10-text { color: #ffd9e6; }
+
+@media (max-width: 520px) {
+  .roul10-grid { gap: 6px; }
+  .roul10-cell { min-height: 62px; padding: 6px 2px; }
+  .roul10-ico { font-size: 17px; }
+  .roul10-text { font-size: 11px; }
+  .roul10-cell.coin .roul10-text { font-size: 13px; }
+}
+
 
 /* 확률표 버튼(룰렛 머리 왼쪽) + 펼치는 팝오버 */
 #roulette-modal .modal-card { position: relative; }
