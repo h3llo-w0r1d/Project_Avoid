@@ -1784,21 +1784,33 @@ function endBotMatch(win) {
   showBotResult(win, secs, state.botTier);
 }
 
+// 결과창이 뜨고 이 시간 동안은 다시하기 키를 안 받는다(밀리초).
+const RESTART_GRACE = 1000;
+
 // 결과 오버레이에서 스페이스(엔터)로 바로 다시 하기.
 // 일반 게임의 결과 화면(ui.js 의 keydown)과 같은 감각으로 맞춘다.
 //
 // ui.js 쪽 핸들러는 '.unlock-overlay' 가 떠 있으면 물러난다. 봇전 결과창이
 // 바로 그 오버레이라, 여기서 따로 듣지 않으면 스페이스가 아무 일도 안 한다.
 //
-// e.repeat 을 거르는 게 핵심이다. 죽는 순간 점프하려고 스페이스를 누르고
-// 있었으면, 누른 채로는 repeat 만 오고 새 keydown 은 안 온다 — 안 거르면
-// 결과창이 뜨자마자 다음 판이 시작된다. 손을 뗐다 다시 눌러야 한다.
+// 두 가지를 거른다.
+//
+// 1. e.repeat — 죽는 순간 스페이스를 누르고 있었으면 누른 채로는 repeat 만
+//    오고 새 keydown 은 안 온다. 안 거르면 결과창이 뜨자마자 다음 판이 간다.
+//
+// 2. 뜨자마자 잠깐(GRACE) — repeat 만 걸러서는 부족했다. 점프하려고 스페이스를
+//    톡톡 치던 중에 죽으면, 그 다음 타건이 멀쩡한 새 keydown 이라 결과창이
+//    보이기도 전에 넘어가 버린다. 결과를 읽을 틈을 준다.
+//    누르는 건 막아도 버튼은 그대로다 — 버튼은 일부러 누른 것이니까.
 //
 // 떼는 함수를 돌려준다. 창을 닫을 때 반드시 불러야 한다 — 안 그러면
 // 창이 사라진 뒤에도 스페이스가 판을 시작시킨다.
+
 function spaceToRestart(overlay, run) {
+  const readyAt = performance.now() + RESTART_GRACE;
   const onKey = (e) => {
     if (e.repeat) return;
+    if (performance.now() < readyAt) return;
     if (e.code !== 'Space' && e.code !== 'Enter' && e.code !== 'NumpadEnter') return;
     if (!overlay.isConnected) return;
     // 이 위에 창이 더 떠 있으면(선물 창 등) 그쪽이 먼저다.
