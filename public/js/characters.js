@@ -18,6 +18,16 @@ export const CHARACTERS = [
     name: '만드라고라',
     unlockAt: 0,
     previewZoom: 1.18,       // 잎이 길어 작아 보여, 고르는 화면에서만 살짝 당긴다
+    // 도형 조립 대신 .glb 를 쓴다. 아래 profile·top·face 는 모델을 못
+    // 불러왔을 때를 위해 남겨 둔다(그때는 예전 모습으로 나온다).
+    model: {
+      url: './models/mandragora.glb',
+      yaw: 0,
+      scale: 1.35,     // 가나디와 몸통 폭을 맞춘 값(히트박스는 고정이라 중요)
+      depth: 1.0,
+      yOffset: 0,
+      brighten: 0.35
+    },
     body: 0xf2e6cd,
     profile: [
       [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
