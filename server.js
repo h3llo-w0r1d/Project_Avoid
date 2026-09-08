@@ -863,7 +863,9 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     })(),
     usage: stats.recent(30),
     usageMonthly: stats.monthly(24),
-    usageTotals: stats.totals()
+    usageTotals: stats.totals(),
+    // 관리 화면의 '누적 판수' 도 타이틀 카드와 같은 숫자를 쓴다.
+    playCount: playCountNow()
   });
 });
 
@@ -999,7 +1001,11 @@ app.post('/api/titles', (req, res) => {
 // 캐시는 CPU 를 아끼려는 게 아니라, 사람이 몰려도 쿼리 수가 접속자 수에
 // 비례해 늘지 않게 상한을 씌우는 용도다.
 let playCountCache = { at: 0, total: 0, since: null };
-app.get('/api/play-count', (req, res) => {
+
+// 사이트 누적 판수. 타이틀 화면 카드와 관리 화면이 같은 숫자를 보게
+// 여기 한 곳에서만 센다 — 각자 세면 화면마다 다른 숫자가 뜬다.
+// (실제로 이용 현황은 혼자 하기만 세서 봇전·1v1 만큼 적게 나왔다.)
+function playCountNow() {
   const now = Date.now();
   if (now - playCountCache.at > 5_000) {
     let total = stats.totals().runs;              // 혼자 하기 + 층 오르기
@@ -1015,8 +1021,10 @@ app.get('/api/play-count', (req, res) => {
     }
     playCountCache = { at: now, total, since };
   }
-  res.json({ total: playCountCache.total, since: playCountCache.since });
-});
+  return { total: playCountCache.total, since: playCountCache.since };
+}
+
+app.get('/api/play-count', (req, res) => res.json(playCountNow()));
 
 // 판수 랭킹 — 누가 제일 많이 했나(통산). 기록이 아니라 '많이 한 순서' 라
 // 실력과 무관하게 오래 붙어 있던 사람이 위로 온다. 그게 이 판의 취지다.

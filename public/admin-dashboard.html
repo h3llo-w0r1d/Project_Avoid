@@ -510,7 +510,9 @@ function drawUsage() {
     <div class="card"><div class="big">${newToday}<em>명</em></div><div class="lbl">오늘 신규 가입</div>
       <div class="sub">누적 회원 ${num(accts.length)}명</div></div>
     <div class="card"><div class="big">${today.runs}<em>판</em></div><div class="lbl">오늘 판 수</div>
-      <div class="sub">누적 ${num(totals.runs)}판</div></div>
+      <!-- 누적은 서버가 낸 값(혼자 하기+층 오르기+봇전+1v1). totals.runs 는
+           혼자 하기만 세서 왼쪽 위 카드와 숫자가 어긋났다. -->
+      <div class="sub">누적 ${num(data.playCount?.total ?? totals.runs)}판</div></div>
     <div class="card"><div class="big">${spellTime(today.seconds)}</div><div class="lbl">오늘 플레이 시간</div>
       <div class="sub">누적 ${spellTime(totals.seconds).replace(/<[^>]+>/g, '')}</div></div>`;
 
