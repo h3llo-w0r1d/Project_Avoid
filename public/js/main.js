@@ -801,6 +801,7 @@ const adminCoins = (() => {
   const wheel = document.getElementById('roulette-wheel');
   const spinBtn = document.getElementById('roulette-spin');
   const spin10Btn = document.getElementById('roulette-spin10');
+  const goldBtn = document.getElementById('roulette-gold');
   const resultEl = document.getElementById('roulette-result');
   const hubEl = document.getElementById('roulette-hub');   // 가운데 원(누적시간·남은횟수)
 
@@ -843,6 +844,29 @@ const adminCoins = (() => {
     { song: true, p: 0.1 },                 // 개발자가 불러주는 노래
     { custom: true, p: 0.1 }                // 나만의 캐릭터 제작권(제일 귀함)
   ];
+
+  // 광고를 보고 돌리는 「황금 룰렛」의 확률판.
+  //
+  // 횟수를 더 주지 않고 한 번의 질만 올린다. 횟수를 늘리면 코인이 불어
+  // 상점이 며칠 만에 빈 껍데기가 된다(10회 = 약 160코인 = 보통 16일치).
+  //
+  // 꽝과 5코인을 없애고(= 무조건 당첨) 초대박을 2.5배로 올렸다.
+  // 기대값은 1회에 약 42코인 — 일반(16코인)의 2.6배다.
+  //
+  // 노래와 캐릭터 제작권은 뺐다. 코인이 아니라 사람이 직접 이행해야 하는
+  // 보상이라, 확률을 올리면 감당 못 할 만큼 당첨자가 쌓인다.
+  // 이 둘은 일반 룰렛에서만 나온다.
+  const GOLD_WEIGHTS = [
+    { coins: 10, p: 36 }, { coins: 20, p: 30 }, { coins: 50, p: 23 },
+    { jackpot: true, coins: 300, p: 5 },   // 2% → 5%
+    { lucky: true, p: 3 },                  // 1% → 3%
+    { arena: true, p: 3 }                   // 1% → 3%
+  ];
+  // 하루에 광고로 돌릴 수 있는 횟수. 광고 수익과 코인 인플레가 정면으로
+  // 부딪히는 지점이라, 여기 하나로 조절한다.
+  const GOLD_PER_DAY = 2;
+  const GOLD_KEY = 'avoidarc.roul.gold';   // { day: "YYYY-MM-DD", used: n }
+
   const N = SEG.length, ARC = 360 / N;
 
   // 원판은 SVG 부채꼴로 그린다. conic-gradient 은 0°·180°(위·아래)에서 이음새
@@ -902,14 +926,22 @@ const adminCoins = (() => {
       spin10Btn.disabled = spinning || (!isAdmin && left < 10);
       spin10Btn.textContent = spinning ? '…' : '10회 돌리기';
     }
+    if (goldBtn) {
+      const g = goldLeft();
+      goldBtn.disabled = spinning || g <= 0;
+      goldBtn.innerHTML = g > 0
+        ? '<b>✨ 황금 룰렛 <small>(광고시청)</small></b>'
+          + '<span>꽝 없음 · 초대박 2.5배 · 오늘 ' + g + '회 남음</span>'
+        : '<b>✨ 황금 룰렛</b><span>오늘은 다 썼어요 · 내일 다시</span>';
+    }
   };
 
   // 보상 하나 뽑기 → { idx(멈출 칸), coins, song?, lucky?, jackpot? }
-  function pick() {
-    const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
+  function pick(table = WEIGHTS) {
+    const total = table.reduce((s, w) => s + w.p, 0);
     let r = Math.random() * total;
-    let chosen = WEIGHTS[WEIGHTS.length - 1];
-    for (const w of WEIGHTS) { if (r < w.p) { chosen = w; break; } r -= w.p; }
+    let chosen = table[table.length - 1];
+    for (const w of table) { if (r < w.p) { chosen = w; break; } r -= w.p; }
     if (chosen.custom) return { idx: SEG.findIndex((s) => s.custom), coins: 0, custom: true };
     if (chosen.song) return { idx: SEG.findIndex((s) => s.song), coins: 0, song: true };
     if (chosen.lucky) return { idx: SEG.findIndex((s) => s.lucky), coins: 0, lucky: true };
@@ -1051,16 +1083,76 @@ const adminCoins = (() => {
     return false;
   }
 
+  // ── 황금 룰렛(광고) ──
+  // 오늘 몇 번 썼는지. 날짜가 바뀌면 0 부터 다시.
+  function goldState() {
+    const today = new Date().toISOString().slice(0, 10);
+    let v = null;
+    try { v = JSON.parse(localStorage.getItem(GOLD_KEY) || 'null'); } catch { /* 깨졌으면 새로 */ }
+    if (!v || v.day !== today) return { day: today, used: 0 };
+    return { day: today, used: Math.max(0, Math.floor(v.used) || 0) };
+  }
+  const goldLeft = () => Math.max(0, GOLD_PER_DAY - goldState().used);
+  function useGold() {
+    const g = goldState();
+    localStorage.setItem(GOLD_KEY, JSON.stringify({ day: g.day, used: g.used + 1 }));
+  }
+
+  // 보상형 광고를 보여 준다. 끝까지 봤으면 true.
+  //
+  // 아직 광고를 안 붙였다. 붙일 때 이 함수 속만 구글 H5 Games Ads 의
+  // adBreak({ type: 'reward', adViewed, adDismissed }) 으로 바꾸면 된다 —
+  // 부르는 쪽은 그대로 둔다. 그때까지는 잠깐 기다리는 것으로 대신한다.
+  function watchAd() {
+    return new Promise((resolve) => {
+      const ov = document.createElement('div');
+      ov.className = 'unlock-overlay ad-wait';
+      ov.innerHTML = '<div class="unlock-card">'
+        + '<div class="unlock-kicker">📺 광고</div>'
+        + '<div class="unlock-name">잠시만요…</div>'
+        + '<div class="unlock-hint">아직 광고가 붙지 않아 대기로 대신합니다</div></div>';
+      document.body.appendChild(ov);
+      requestAnimationFrame(() => ov.classList.add('show'));
+      setTimeout(() => {
+        ov.classList.remove('show');
+        setTimeout(() => ov.remove(), 240);
+        resolve(true);
+      }, 1600);
+    });
+  }
+
+  function spinGold() {
+    if (spinning) return;
+    if (goldLeft() <= 0) {
+      resultEl.textContent = '황금 룰렛은 하루 ' + GOLD_PER_DAY + '번까지예요. 내일 다시 오세요';
+      resultEl.className = 'roulette-result lose';
+      return;
+    }
+    spinning = true; refresh();          // 기다리는 동안 다른 버튼을 못 누르게
+    watchAd().then((ok) => {
+      spinning = false;
+      if (!ok) { refresh(); return; }    // 중간에 껐으면 횟수도 안 깎는다
+      useGold();
+      runSpin(true);
+    });
+  }
+
   function spin() {
     if (spinning) return;
     if (!canSpin(1)) return;
     if (!isAdmin) wallet.useSpin();   // 쌓인 시간에서 1회분 소모
+    runSpin(false);
+  }
+
+  // 한 번 돌리는 몸통. gold 면 황금 확률판을 쓴다(쌓인 횟수는 안 깎는다 —
+  // 그건 광고로 얻은 것이라 부르는 쪽에서 이미 처리했다).
+  function runSpin(gold) {
     spinning = true;
     resultEl.textContent = '';
     resultEl.className = 'roulette-result';
     refresh();
 
-    const res = pick();
+    const res = pick(gold ? GOLD_WEIGHTS : WEIGHTS);
     const wait = turnWheelTo(res.idx);
 
     setTimeout(() => {
@@ -1106,6 +1198,7 @@ const adminCoins = (() => {
         if (g.coins >= 50) audio.stageUp?.();
       }
 
+      if (gold) resultEl.className += ' gold';
       tally([g]);
       refresh();
     }, wait);
@@ -1269,6 +1362,7 @@ const adminCoins = (() => {
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   spinBtn.addEventListener('click', () => { closeOdds(); spin(); });
   spin10Btn?.addEventListener('click', () => { closeOdds(); spin10(); });
+  goldBtn?.addEventListener('click', () => { closeOdds(); spinGold(); });
 })();
 
 const characters = new CharacterUI({
