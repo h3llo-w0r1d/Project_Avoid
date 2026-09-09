@@ -2682,7 +2682,9 @@ kbd {
 
 /* ---------- 설정 창 ---------- */
 .settings-card { width: min(460px, 94vw); max-height: 88vh; }
-.settings-body { overflow-y: auto; max-height: calc(88vh - 90px); padding-right: 4px; }
+/* 제목이 첫 항목에 붙어 있으면 「설정 소리」 가 한 덩어리로 읽힌다. */
+.settings-card .modal-head { margin-bottom: 18px; }
+.settings-body { overflow-y: auto; max-height: calc(88vh - 108px); padding-right: 4px; }
 
 .set-sec { margin-bottom: 22px; }
 .set-sec h3 {
@@ -2733,8 +2735,10 @@ kbd {
 
 /* 점프 키 */
 .set-keys { display: flex; gap: 8px; flex-wrap: wrap; }
+/* 「아무 키나…」 가 들어가도 글자가 칸에 꽉 차지 않게 넉넉히 잡는다. */
 .set-key {
-  min-width: 64px; padding: 8px 12px; border-radius: 9px;
+  min-width: 156px; padding: 9px 12px; border-radius: 9px;
+  white-space: nowrap;
   border: 1px solid var(--stroke); background: rgba(255, 255, 255, 0.06);
   color: var(--text); font-family: inherit; font-size: 13px; font-weight: 800;
   cursor: pointer;
@@ -2742,9 +2746,13 @@ kbd {
 .set-key:hover { border-color: rgba(79, 214, 255, 0.5); }
 .set-key.waiting {
   border-color: var(--accent); background: rgba(79, 214, 255, 0.16);
-  color: #cfe9ff; animation: setBlink 1s ease-in-out infinite;
+  color: #eaf7ff; animation: setBlink 1.1s ease-in-out infinite;
 }
-@keyframes setBlink { 50% { opacity: 0.55; } }
+/* 글자가 아니라 테두리만 숨 쉬게 한다. 글자를 흐리게 하면 정작 읽어야 할
+   안내가 안 보인다. */
+@keyframes setBlink {
+  50% { border-color: rgba(79, 214, 255, 0.35); background: rgba(79, 214, 255, 0.07); }
+}
 
 #set-reset { width: 100%; margin-top: 4px; padding: 11px; font-size: 14px; }
 

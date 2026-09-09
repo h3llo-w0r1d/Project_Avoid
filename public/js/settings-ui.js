@@ -113,8 +113,7 @@ export class SettingsUI {
           ${this.h.audio?.userMusicName
             ? '<button type="button" id="set-music-clear" class="set-clear">지우고 기본 곡으로</button>' : ''}
         </div>
-        <p class="set-hint">mp3 · m4a · wav · ogg · flac 을 넣을 수 있어요.
-          이 브라우저에만 저장되고 서버로 올라가지 않아요.</p>
+        <p class="set-hint">mp3 · m4a · wav · ogg · flac 을 넣을 수 있어요.</p>
       </section>
 
       <section class="set-sec">
