@@ -45,7 +45,11 @@ async function main() {
   // 지운 자리만 검게 눌러 두면 남은 풍경과 사이에 세로 경계가 생겨
   // "검은 네모" 로 읽힌다. 왼쪽 전체를 서서히 재우면 그 경계가 사라지고,
   // 오른쪽 포탈만 밝게 남아 시선이 그리로 간다.
-  const RAMP = 0.62;   // 이 비율까지 어둡게 재운다(오른쪽은 그대로)
+  // 지운 자리가 커서 검은 자국이 남는 시안일 때만 켠다. 풍경이 꽉 찬
+  // 시안에서는 멀쩡한 성까지 덮어 버려 오히려 화면이 비어 보인다.
+  //   RAMP=0.6 DIM=0.7 node scripts/erase-mockup-ui.js ...
+  const RAMP = Number(process.env.RAMP ?? 0);      // 이 비율까지 어둡게 재운다
+  const DIM = Number(process.env.DIM ?? 0);        // 왼쪽 끝에서 얼마나 어둡게
 
   const raw = await sharp(src)
     .extract({ left: 0, top: TOP_BAR, width: W, height: H })
@@ -55,7 +59,7 @@ async function main() {
   const ramp = Buffer.from(
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">` +
     `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0">` +
-    `<stop offset="0%" stop-color="#05060f" stop-opacity="0.72"/>` +
+    `<stop offset="0%" stop-color="#05060f" stop-opacity="${DIM}"/>` +
     `<stop offset="${Math.round(RAMP * 100)}%" stop-color="#05060f" stop-opacity="0"/>` +
     `</linearGradient></defs>` +
     `<rect width="${W}" height="${H}" fill="url(#g)"/></svg>`);
