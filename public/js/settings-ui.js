@@ -34,7 +34,7 @@ export class SettingsUI {
     this.h = hooks;
     this.el = { modal: $('settings-modal'), body: $('settings-body'), btn: $('settings-btn') };
     if (!this.el.modal) return;
-    this.listening = null;      // 키를 기다리는 중이면 그 자리 번호
+    this.listening = false;    // 키 입력을 기다리는 중인가
 
     this.el.btn?.addEventListener('click', () => this.open());
     $('settings-close')?.addEventListener('click', () => this.close());
@@ -49,34 +49,26 @@ export class SettingsUI {
 
   open() { this.el.modal.classList.remove('hidden'); this.draw(); }
   close() {
-    this.listening = null;
+    this.listening = false;
     this.el.modal.classList.add('hidden');
   }
 
   #onKey(e) {
     if (!this.open$) return;
-    if (this.listening === null) {
+    if (!this.listening) {
       if (e.code === 'Escape') { e.preventDefault(); this.close(); }
       return;
     }
     e.preventDefault();
     e.stopPropagation();
-    if (e.code === 'Escape') { this.listening = null; this.draw(); return; }
+    this.listening = false;
+    if (e.code === 'Escape') { this.draw(); return; }
     if (MOVE_KEYS.has(e.code)) {
       this.warn = '이동에 쓰는 키예요';
-      this.listening = null;
       this.draw();
       return;
     }
-    const keys = [...settings.get('jumpKeys')];
-    // 이미 다른 자리에 있는 키면 그 자리를 비운다 — 같은 키가 두 번 뜨면
-    // 무엇을 지우는지 알 수 없다.
-    const dup = keys.indexOf(e.code);
-    if (dup >= 0 && dup !== this.listening) keys.splice(dup, 1);
-    const at = Math.min(this.listening, keys.length);
-    keys[at] = e.code;
-    settings.set('jumpKeys', keys.filter(Boolean));
-    this.listening = null;
+    settings.set('jumpKeys', [e.code]);
     this.warn = '';
     this.draw();
   }
@@ -86,11 +78,9 @@ export class SettingsUI {
     const b = this.el.body;
     if (!b) return;
     const pct = (v) => Math.round(v * 100);
-    const jumpRow = s.jumpKeys.map((k, i) => (
-      `<button type="button" class="set-key${this.listening === i ? ' waiting' : ''}" data-slot="${i}">`
-      + (this.listening === i ? '아무 키나…' : keyLabel(k)) + '</button>'
-    )).join('');
-    const canAdd = s.jumpKeys.length < 3;
+    // 점프 키는 하나만 둔다. 여러 개면 무엇이 눌리는지 헷갈리기만 한다.
+    const jumpKey = `<button type="button" class="set-key${this.listening ? ' waiting' : ''}" data-jump>`
+      + (this.listening ? '아무 키나…' : keyLabel(s.jumpKeys[0])) + '</button>';
 
     b.innerHTML = `
       <section class="set-sec">
@@ -123,8 +113,7 @@ export class SettingsUI {
           ${this.h.audio?.userMusicName
             ? '<button type="button" id="set-music-clear" class="set-clear">지우고 기본 곡으로</button>' : ''}
         </div>
-        <p class="set-hint">mp3 · m4a · wav · ogg · flac 을 넣을 수 있어요
-          (브라우저에 따라 안 되는 형식도 있는데, <b>mp3</b> 는 어디서나 됩니다).
+        <p class="set-hint">mp3 · m4a · wav · ogg · flac 을 넣을 수 있어요.
           이 브라우저에만 저장되고 서버로 올라가지 않아요.</p>
       </section>
 
@@ -132,9 +121,7 @@ export class SettingsUI {
         <h3>조작</h3>
         <div class="set-row">
           <span>점프</span>
-          <div class="set-keys">${jumpRow}
-            ${canAdd ? '<button type="button" class="set-key add" data-slot="' + s.jumpKeys.length + '">+ 추가</button>' : ''}
-          </div>
+          <div class="set-keys">${jumpKey}</div>
         </div>
         <p class="set-hint">${this.warn ? '<b class="set-warn">' + this.warn + '</b> · ' : ''}키를 눌러 바꿉니다.
           이동(WASD·화살표)은 고정입니다.</p>
@@ -146,8 +133,7 @@ export class SettingsUI {
           <input type="checkbox" data-flag="lowEffects"${s.lowEffects ? ' checked' : ''}>
           <span>화면 효과 줄이기</span>
         </label>
-        <p class="set-hint">감전 번쩍임과 발자국 효과를 끕니다.
-          기기가 버거울 때나 번쩍임이 불편할 때 켜세요.</p>
+        <p class="set-hint">감전 번쩍임과 발자국 효과를 끕니다. (렉 걸림 감소)</p>
       </section>
 
       <button type="button" id="set-reset" class="ghost small">모두 기본값으로</button>
@@ -190,12 +176,10 @@ export class SettingsUI {
       this.h.audio?.restartMusic?.();
       this.draw();
     });
-    for (const btn of b.querySelectorAll('.set-key')) {
-      btn.addEventListener('click', () => {
-        this.listening = Number(btn.dataset.slot);
-        this.draw();
-      });
-    }
+    b.querySelector('.set-key')?.addEventListener('click', () => {
+      this.listening = true;
+      this.draw();
+    });
 
     for (const c of b.querySelectorAll('input[data-flag]')) {
       c.addEventListener('change', () => {

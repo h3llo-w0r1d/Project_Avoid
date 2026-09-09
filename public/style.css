@@ -2744,7 +2744,6 @@ kbd {
   border-color: var(--accent); background: rgba(79, 214, 255, 0.16);
   color: #cfe9ff; animation: setBlink 1s ease-in-out infinite;
 }
-.set-key.add { color: var(--muted); font-weight: 700; }
 @keyframes setBlink { 50% { opacity: 0.55; } }
 
 #set-reset { width: 100%; margin-top: 4px; padding: 11px; font-size: 14px; }

@@ -19,7 +19,7 @@ export const DEFAULTS = {
   // 돌아가 버린다.
   musicOn: true,
   musicSource: 'default',    // 'default' | 'custom'
-  jumpKeys: ['Space'],       // 기본은 스페이스 하나. 설정에서 늘릴 수 있다.
+  jumpKeys: ['Space'],       // 점프 키 하나. 설정에서 바꿀 수 있다.
   lowEffects: false          // 화면 효과 줄이기
 };
 
@@ -39,8 +39,9 @@ function read() {
     return {
       ...DEFAULTS,
       ...v,
+      // 점프는 하나만 쓴다. 여러 개를 저장해 둔 옛 값은 첫 번째만 살린다.
       jumpKeys: Array.isArray(v.jumpKeys) && v.jumpKeys.length
-        ? v.jumpKeys.map(String) : [...DEFAULTS.jumpKeys]
+        ? [String(v.jumpKeys[0])] : [...DEFAULTS.jumpKeys]
     };
   } catch {
     return { ...DEFAULTS };
