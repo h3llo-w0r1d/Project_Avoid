@@ -1817,6 +1817,8 @@ async function openTower() {
   box.innerHTML =
     '<div class="pylon">' +
     `<div class="pylon-mast"><span class="pylon-live" style="height:${(lit * 100).toFixed(2)}%"></span></div>` +
+    // 머리(피뢰침·가로대)와 기초. 층 목록과 상관없는 장식이라 여기 한 번만 둔다.
+    '<div class="pylon-head"><span class="pylon-tip"></span>' + '<span class="pylon-arm a1"></span><span class="pylon-arm a2"></span></div>' + '<div class="pylon-base"></div>' +
     parts.join('') + '</div>';
 
   for (const b of box.querySelectorAll('.pf-hit:not([disabled])')) {
