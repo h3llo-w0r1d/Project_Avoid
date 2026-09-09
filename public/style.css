@@ -2698,6 +2698,11 @@ kbd {
 .set-row > span:first-child { width: 66px; flex: none; }
 .set-row input[type="range"] { flex: 1; accent-color: var(--accent); }
 .set-row > b { width: 46px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+/* 배경음악을 꺼 둔 동안의 배경음 칸. 흐리게 두면 「지금은 안 쓰는 값」
+   이라는 게 보인다 — 값 자체는 남아 있어 다시 켜면 그대로 돌아온다. */
+.set-row.off { opacity: 0.45; }
+.set-row input[type="range"]:disabled { cursor: not-allowed; }
+
 .set-check { cursor: pointer; }
 .set-check input { width: 18px; height: 18px; accent-color: var(--accent); }
 .set-check span { font-weight: 700; }

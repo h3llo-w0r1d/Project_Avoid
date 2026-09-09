@@ -78,6 +78,10 @@ export class SettingsUI {
     const b = this.el.body;
     if (!b) return;
     const pct = (v) => Math.round(v * 100);
+    // 배경음악을 꺼 두면 배경음 칸은 0 을 가리키고 손대지 못하게 한다.
+    // 소리는 이미 안 나는데 40% 라고 적혀 있으면 어느 쪽이 맞는지 알 수가
+    // 없다. 저장값(musicVolume)은 건드리지 않아서 다시 켜면 그대로 돌아온다.
+    const musicPct = s.musicOn ? pct(s.musicVolume) : 0;
     // 점프 키는 하나만 둔다. 여러 개면 무엇이 눌리는지 헷갈리기만 한다.
     const jumpKey = `<button type="button" class="set-key${this.listening ? ' waiting' : ''}" data-jump>`
       + (this.listening ? '원하는 키 입력' : keyLabel(s.jumpKeys[0])) + '</button>';
@@ -85,10 +89,11 @@ export class SettingsUI {
     b.innerHTML = `
       <section class="set-sec">
         <h3>소리</h3>
-        <label class="set-row">
+        <label class="set-row${s.musicOn ? '' : ' off'}">
           <span>배경음</span>
-          <input type="range" min="0" max="100" value="${pct(s.musicVolume)}" data-vol="musicVolume">
-          <b>${pct(s.musicVolume)}%</b>
+          <input type="range" min="0" max="100" value="${musicPct}" data-vol="musicVolume"
+            ${s.musicOn ? '' : 'disabled'}>
+          <b>${musicPct}%</b>
         </label>
         <label class="set-row">
           <span>효과음</span>
