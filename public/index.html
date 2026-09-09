@@ -444,9 +444,32 @@
       <button type="button" id="shop-btn"><span class="sm-ico">🛍️</span><span class="sm-label">상점</span></button>
     </nav>
 
-    <!-- 도전모드(탑). 왼쪽 아래 동그란 버튼. 타이틀에서만 보인다. -->
+    <!-- 도전모드(탑). 왼쪽 아래 동그란 버튼. 타이틀에서만 보인다.
+         고리와 문장은 SVG 로 그린다 — 버튼이 화면마다 152·116·88·66px 로
+         달라져서, 그림 파일로 두면 어느 크기에선가 반드시 뭉개진다. -->
     <button id="tower-btn" type="button" aria-label="층 오르기" title="층 오르기 — 층을 올라가며 깨기">
-      <span class="tower-label">층 오르기</span>
+      <svg class="tower-ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle class="tr-out" cx="50" cy="50" r="48.2" />
+        <circle class="tr-in" cx="50" cy="50" r="43" />
+        <!-- 네 방향 눈금. 고리가 그냥 원이 아니라 「장치」 로 보이게 한다. -->
+        <g class="tr-tick">
+          <path d="M50 3.8L53.2 7 50 10.2 46.8 7z" />
+          <path d="M50 89.8L53.2 93 50 96.2 46.8 93z" />
+          <path d="M7 46.8L10.2 50 7 53.2 3.8 50z" />
+          <path d="M93 46.8L96.2 50 93 53.2 89.8 50z" />
+        </g>
+      </svg>
+      <span class="tower-face">
+        <svg class="tower-emblem" viewBox="0 0 32 32" aria-hidden="true">
+          <circle class="te-ring" cx="16" cy="16" r="13.4" />
+          <!-- 여덟 갈래 나침반. 가는 갈래와 굵은 갈래를 번갈아 둔다. -->
+          <path class="te-star" d="M16 2.6l2.9 10.5L29.4 16l-10.5 2.9L16 29.4l-2.9-10.5L2.6 16l10.5-2.9z" />
+          <path class="te-thin" d="M24.5 7.5l-5.2 7.3-2.1-2.1zM7.5 24.5l5.2-7.3 2.1 2.1zM24.5 24.5l-7.3-5.2 2.1-2.1zM7.5 7.5l7.3 5.2-2.1 2.1z" />
+          <circle class="te-core" cx="16" cy="16" r="2.6" />
+        </svg>
+        <span class="tower-label">층 오르기</span>
+        <span class="tower-arrow" aria-hidden="true">→</span>
+      </span>
     </button>
 
     <!-- 오른쪽 빈 자리에 두는 누적 판수 카드. 이 사이트에서 지금까지 몇 판이
