@@ -80,7 +80,7 @@ export class SettingsUI {
     const pct = (v) => Math.round(v * 100);
     // 점프 키는 하나만 둔다. 여러 개면 무엇이 눌리는지 헷갈리기만 한다.
     const jumpKey = `<button type="button" class="set-key${this.listening ? ' waiting' : ''}" data-jump>`
-      + (this.listening ? '아무 키나…' : keyLabel(s.jumpKeys[0])) + '</button>';
+      + (this.listening ? '원하는 키 입력' : keyLabel(s.jumpKeys[0])) + '</button>';
 
     b.innerHTML = `
       <section class="set-sec">
@@ -105,15 +105,14 @@ export class SettingsUI {
           <button type="button" class="set-pick${s.musicSource === 'custom' ? ' on' : ''}" data-act="mine">
             내 음악</button>
         </div>
+        ${this.h.audio?.userMusicName ? `
         <div class="set-music">
-          <span class="set-note">${
-            this.h.audio?.userMusicName
-              ? (s.musicSource === 'custom' ? '▶ ' : '') + escapeHtml(this.h.audio.userMusicName)
-              : '「내 음악」 을 누르면 파일을 고릅니다'}</span>
-          ${this.h.audio?.userMusicName
-            ? '<button type="button" id="set-music-clear" class="set-clear">지우고 기본 곡으로</button>' : ''}
-        </div>
-        <p class="set-hint">mp3 · m4a · wav · ogg · flac 을 넣을 수 있어요.</p>
+          <span class="set-note">${(s.musicSource === 'custom' ? '▶ ' : '')
+            + escapeHtml(this.h.audio.userMusicName)}</span>
+          <button type="button" id="set-music-clear" class="set-clear">지우고 기본 곡으로</button>
+        </div>` : `
+        <p class="set-hint">「내 음악」 을 누르면 파일을 고릅니다
+          (mp3 · m4a · wav · ogg · flac)</p>`}
       </section>
 
       <section class="set-sec">

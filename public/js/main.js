@@ -541,7 +541,7 @@ function paintPoll(box, data) {
       + `<span class="poll-pct">${total ? pct + '%' : ''}</span>`
       + '</button>';
   }).join('');
-  box.innerHTML = '<div class="poll-kicker">어느 쪽이 나은가요?</div>'
+  box.innerHTML = '<div class="poll-kicker">더 맘에 드는 디자인에 투표해주세요!</div>'
     + '<div class="poll-sub">캐릭터 창에서 둘 다 써 볼 수 있어요</div>'
     + rows
     + `<div class="poll-foot">${total ? total + '명 참여' + (mine ? ' · 다시 눌러 바꿀 수 있어요' : '') : '첫 표를 던져 보세요'}</div>`;
