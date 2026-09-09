@@ -525,7 +525,7 @@ api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); 
 // 누구의 한 표인지는 브라우저 id(avoidarc.cid)로 가른다 — 접속 신호에 이미
 // 쓰는 값이라 새로 만들지 않는다. 로그인했으면 서버가 계정으로 묶는다.
 const POLL_ID = 'mandragora-look';
-const POLL_LABEL = { classic: '기존 그림체', model: '3D 모델' };
+const POLL_LABEL = { classic: '만드라고라', model: '만드라고라(new)' };
 
 function pollCid() {
   try { return localStorage.getItem('avoidarc.cid') ?? ''; } catch { return ''; }
@@ -545,7 +545,7 @@ function paintPoll(box, data) {
       + '</button>';
   }).join('');
   box.innerHTML = '<div class="poll-kicker">어느 쪽이 나은가요?</div>'
-    + '<div class="poll-sub">만드라고라 · 캐릭터 창에서 둘 다 써 볼 수 있어요</div>'
+    + '<div class="poll-sub">캐릭터 창에서 둘 다 써 볼 수 있어요</div>'
     + rows
     + `<div class="poll-foot">${total ? total + '명 참여' + (mine ? ' · 다시 눌러 바꿀 수 있어요' : '') : '첫 표를 던져 보세요'}</div>`;
   box.classList.remove('hidden');

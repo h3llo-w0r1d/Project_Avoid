@@ -35,7 +35,7 @@ export const CHARACTERS = [
     // 같은 만드라고라를 3D 모델(.glb)로 만든 것. 모델을 못 불러오면
     // 아래 profile 로 조립해 원래 모습으로 나온다 — 빈 화면은 안 나온다.
     id: 'mandragora3d',
-    name: '만드라고라 3D',
+    name: '만드라고라(new)',
     unlockAt: 0,
     previewZoom: 1.02,       // 모델은 잎이 짧아 덜 당겨도 된다
     model: {
