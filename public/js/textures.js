@@ -331,62 +331,6 @@ export function makeSoftDotTexture(size = 64) {
   return tex;
 }
 
-// ---------------------------------------------------------------- 오라
-
-// 발밑에 까는 검은 오라. 캐릭터 스펙에 aura 가 있으면 Player 가 깐다.
-//
-// 순수한 검정만 쓰면 잔디 위에서 그냥 그림자로 보여 오라인 줄 모른다.
-// 그래서 바깥 테두리에 옅은 보랏빛을 남긴다.
-//
-// 밖으로 뻗는 연기 갈래를 길이가 제각각이게 그려 넣는다. 매끈한 원이면
-// 돌려도 도는 게 안 보인다 — 갈래가 있어야 회전이 눈에 들어온다.
-export function makeAuraTexture(size = 256) {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = size;
-  const g = cv.getContext('2d');
-  const c = size / 2;
-
-  g.save();
-  g.translate(c, c);
-  for (let i = 0; i < 14; i++) {
-    const a = (i / 14) * Math.PI * 2;
-    const len = c * (0.62 + (i % 3) * 0.11);
-    const wide = 0.11 + (i % 2) * 0.05;
-    const gr = g.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
-    gr.addColorStop(0, 'rgba(28,8,44,0.95)');
-    gr.addColorStop(0.55, 'rgba(126,44,190,0.55)');
-    gr.addColorStop(1, 'rgba(160,70,240,0)');
-    g.fillStyle = gr;
-    g.beginPath();
-    g.moveTo(0, 0);
-    g.arc(0, 0, len, a - wide, a + wide);
-    g.closePath();
-    g.fill();
-  }
-  g.restore();
-
-  // 가운데의 짙은 덩어리
-  const core = g.createRadialGradient(c, c, 0, c, c, c * 0.72);
-  core.addColorStop(0.0, 'rgba(10,4,16,0.92)');
-  core.addColorStop(0.55, 'rgba(18,8,28,0.55)');
-  core.addColorStop(1.0, 'rgba(20,10,30,0)');
-  g.fillStyle = core;
-  g.fillRect(0, 0, size, size);
-
-  // 바깥 테두리의 보랏빛 — 이게 있어야 잔디 위에서 오라로 읽힌다
-  const rim = g.createRadialGradient(c, c, c * 0.66, c, c, c * 0.97);
-  rim.addColorStop(0.0, 'rgba(150,60,220,0)');
-  rim.addColorStop(0.55, 'rgba(178,80,255,0.62)');
-  rim.addColorStop(1.0, 'rgba(150,60,220,0)');
-  g.fillStyle = rim;
-  g.fillRect(0, 0, size, size);
-
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
-
-
 // ---------------------------------------------------------------- 이름표
 
 // 캐릭터 머리 위에 띄울 라벨. 알약 모양 배경에 글자를 얹는다.

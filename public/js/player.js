@@ -2,8 +2,7 @@ import * as THREE from 'three';
 import { ARENA_RADIUS, PLAYER } from './config.js';
 import { PlayerBody } from './shared/player-physics.js';
 import { buildFallbackAvatar, loadModelAvatar, buildModelAvatarSync } from './avatar.js';
-import { findCharacter } from './characters.js';
-import { makeLabelTexture, makeAuraTexture } from './textures.js';
+import { makeLabelTexture } from './textures.js';
 
 const TWO_PI = Math.PI * 2;
 const FLIP_TIME = 0.42;   // 2단 점프 한 바퀴에 걸리는 시간(초)
@@ -68,7 +67,6 @@ export class Player {
     // 이 캐릭터에 .glb 가 있으면 불러와서 교체한다. 불러오는 동안에도
     // 도형 캐릭터로 게임을 할 수 있고, 실패하면 그대로 남는다.
     this.swapInModel(this.characterId);
-    this.scene = scene;   // 나중에 오라를 붙이고 뗄 때 쓴다
     scene.add(this.mesh);
 
     this.lean = 0;
@@ -99,12 +97,6 @@ export class Player {
     this.halo.rotation.x = -Math.PI / 2;
     scene.add(this.halo);
 
-    // 캐릭터마다 붙는 발밑 오라(스펙의 aura). 없는 캐릭터가 대부분이라
-    // 필요할 때만 만든다. 링·그림자와 같은 규칙으로 따라다닌다.
-    this.aura = null;
-    this.auraSpin = 0;
-    this.setAura(this.characterId);
-
     // 점프할 때 발밑에 퍼지는 고리
     this.puff = new THREE.Mesh(
       new THREE.RingGeometry(0.5, 0.72, 24),
@@ -125,38 +117,9 @@ export class Player {
   setCharacter(characterId) {
     if (characterId === this.characterId) return;
     this.characterId = characterId;
-    this.setAura(characterId);
 
     this.useSkin(buildFallbackAvatar({ characterId }), characterId);
     this.swapInModel(characterId);
-  }
-
-  // 발밑 오라를 캐릭터에 맞춰 갈아 끼운다. 스펙에 aura 가 없으면 치운다.
-  setAura(characterId) {
-    if (this.aura) {
-      this.aura.parent?.remove(this.aura);
-      this.aura.geometry.dispose();
-      this.aura.material.map?.dispose();
-      this.aura.material.dispose();
-      this.aura = null;
-    }
-    const spec = findCharacter(characterId)?.aura;
-    if (!spec) return;
-    const r = PLAYER.radius * 1.8 * (spec.size ?? 1.3);
-    this.aura = new THREE.Mesh(
-      new THREE.PlaneGeometry(r * 2, r * 2),
-      new THREE.MeshBasicMaterial({
-        map: makeAuraTexture(),
-        color: spec.color ?? 0xffffff,
-        transparent: true,
-        // 어둡게 깔아야 오라로 보인다. 더하기(Additive)로 하면 밝아져서
-        // 검은 오라가 아니라 빛무리가 된다.
-        depthWrite: false
-      })
-    );
-    this.aura.rotation.x = -Math.PI / 2;
-    this.aura.renderOrder = -1;      // 그림자·링보다 아래에 깔린다
-    this.scene.add(this.aura);
   }
 
   // 겉모습만 갈아 끼운다. 그 사이 캐릭터가 또 바뀌었으면 버린다 —
@@ -319,16 +282,6 @@ export class Player {
     this.halo.position.set(this.pos.x, 0.09, this.pos.z);
     this.halo.visible = onDeck;
     this.halo.material.opacity = this.grounded ? 0.55 : 0.9;
-
-    // 오라 — 링보다 살짝 아래에 깔고 천천히 돈다. 공중에 뜨면 옅어져
-    // 착지 지점을 가리지 않는다.
-    if (this.aura) {
-      this.aura.position.set(this.pos.x, 0.07, this.pos.z);
-      this.aura.visible = onDeck;
-      if (dt > 0) this.auraSpin += dt * (findCharacter(this.characterId)?.aura?.spin ?? 0.5);
-      this.aura.rotation.z = this.auraSpin;
-      this.aura.material.opacity = (this.grounded ? 0.85 : 0.45) * shrink;
-    }
 
     // 점프 고리 — 퍼지면서 사라진다
     if (this.puffT >= 0 && dt > 0) {

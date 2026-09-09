@@ -465,9 +465,6 @@ export const CHARACTERS = [
     giftOnly: true,
     unlockAt: Infinity,
     previewZoom: 0.86,
-    // 발밑에 까는 검은 오라. 이 캐릭터만의 표시다.
-    // 반지름은 발밑 링(PLAYER.radius * 1.8)보다 넉넉하게 잡아 링을 감싼다.
-    aura: { size: 1.9, spin: 0.5, color: 0xffffff },
     model: {
       url: './models/rengar.glb',
       yaw: 0,
