@@ -26,6 +26,17 @@
 // 누적시간은 룰렛 말고 쓰는 데가 없다(코드 전체를 확인했다). 그래서 이
 // 값을 다시 매겨도 랭킹·칭호·발자국 효과에는 아무 영향이 없다.
 //
+// 놓치기 쉬운 두 번째 문제
+// -------------------------
+// 기준을 올리면 "이미 많이 돌린 사람" 도 막힌다. 돌린횟수 x 새기준 이
+// 누적시간을 넘어서면, 남은 횟수도 0 이고 잔여 풀도 0 으로 눌린다
+// (둘 다 음수를 0 으로 자르기 때문에). 게임을 아무리 해도 계속 0 초로
+// 떠서 영영 못 돌린다 — 실제로 제보가 들어왔다.
+//
+// 그런 계정은 돌린횟수를 floor(누적시간 / 새기준) 으로 낮춘다. 남은
+// 횟수는 그대로 0 이지만 잔여 풀이 살아나, 그 시점부터 다시 쌓인다.
+// 이미 쓴 횟수는 보상을 받아 갔으니 되돌려 주지 않는다.
+
 // 여러 번 돌려도 안전하다 — 이미 올려 둔 값보다 크거나 같으면 건너뛴다.
 // 그 사이 그 사람 브라우저가 옛 값을 밀어 올렸으면 다시 맞춰 준다.
 
@@ -83,9 +94,20 @@ for (const r of rows) {
               redo: had != null });
 }
 
+// 막힌 계정: 돌린횟수가 누적시간으로 벌 수 있는 횟수를 넘는다.
+// 위 plan 과 겹치지 않는다 — 저쪽은 남은 횟수가 있던 사람이고,
+// 이쪽은 이미 다 쓰고도 모자란 사람이다.
+const stuck = [];
+for (const r of rows) {
+  const t = Math.max(0, Number(r.playtime) || 0);
+  const used = Math.max(0, Number(r.spins_used) || 0);
+  const earned = Math.floor(t / TO);
+  if (used > earned) stuck.push({ id: r.id, nickname: r.nickname, t, used, earned });
+}
+
 console.log(`기준 ${FROM}초 → ${TO}초 · ${APPLY ? '적용' : '미리보기(안 바꿈)'}`);
 console.log(`대상 ${plan.length}명 / 플레이시간 있는 계정 ${rows.length}명\n`);
-if (!plan.length) { console.log('바꿀 것이 없습니다.'); process.exit(0); }
+
 
 plan.sort((a, b) => (b.before - b.after) - (a.before - a.after));
 console.log('닉네임             그대로 뒀을 때 → 살린 뒤   누적시간');
@@ -98,6 +120,17 @@ for (const p of plan) {
 const saved = plan.reduce((s, p) => s + (p.before - p.after), 0);
 console.log(`\n살려 주는 횟수 합계: ${saved}회`);
 
+if (stuck.length) {
+  console.log(`\n막힌 계정 ${stuck.length}명 — 돌린횟수를 낮춰 다시 쌓이게 한다`);
+  console.log('닉네임             누적시간   돌린횟수 → 낮춤');
+  for (const s2 of stuck) {
+    console.log('  ' + String(s2.nickname ?? '(이름없음)').padEnd(18)
+      + String(Math.round(s2.t)).padStart(8)
+      + String(s2.used).padStart(10) + ' → ' + s2.earned);
+  }
+}
+
+if (!plan.length && !stuck.length) { console.log('바꿀 것이 없습니다.'); process.exit(0); }
 if (!APPLY) { console.log('\n실제로 바꾸려면 --apply 를 붙이세요.'); process.exit(0); }
 
 const setTime = db.prepare('UPDATE users SET playtime = ? WHERE id = ?');
@@ -112,5 +145,9 @@ for (const p of plan) {
   note.run(p.id, FROM, TO, p.t, p.next, Date.now());
   n++;
 }
-console.log(`\n${n}명 적용했습니다. 그 사람들이 다음에 접속하면 반영됩니다`);
+const setUsed = db.prepare('UPDATE users SET spins_used = ? WHERE id = ?');
+let m = 0;
+for (const s2 of stuck) { setUsed.run(s2.earned, s2.id); m++; }
+
+console.log(`\n${n}명 소급, ${m}명 막힌 것 풀었습니다. 다음에 접속하면 반영됩니다`);
 console.log('(이미 로그인한 기기는 계정 지갑을 받아 와 사본을 맞춥니다).');
