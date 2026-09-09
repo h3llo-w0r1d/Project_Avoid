@@ -1177,7 +1177,7 @@ app.get('/api/challenge', (req, res) => {
   const admin = isAdminUser(req.user);
   const me = req.user ? users.byId(req.user.id) : null;
   // 관리자는 확인용이라 전부 열어 준다(진행도 자체는 그대로 쌓인다).
-  res.json({ signedIn: !!req.user, ...describeChallenge(me?.challenge ?? 0, admin) });
+  res.json({ signedIn: !!req.user, admin, ...describeChallenge(me?.challenge ?? 0, admin) });
 });
 
 // 한 층을 깼다고 알린다. 순서대로만(지금 층 +1) 인정한다.
@@ -1185,13 +1185,17 @@ app.get('/api/challenge', (req, res) => {
 app.post('/api/challenge/clear', (req, res) => {
   if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
   const floor = Math.floor(Number(req.body?.floor) || 0);
+  if (!floorAt(floor)) return res.status(400).json({ error: '없는 층입니다.' });
+  // 관리자는 확인용 계정이라 진행도를 남기지 않는다. 어차피 모든 층이 열려
+  // 있어서 진행도가 뜻이 없고, 랭킹에 끼면 남의 순위만 한 칸씩 민다.
+  // (한 판 기록도 /api/challenge-log 에서 같은 이유로 건너뛴다.)
+  if (isAdminUser(req.user)) {
+    return res.json({ ok: true, admin: true, ...describeChallenge(0, true) });
+  }
+  // 아직 안 내놓은 층은 클라가 뭐라 하든 인정하지 않는다.
+  if (floor > RELEASED) return res.status(403).json({ error: '아직 준비 중인 층입니다.' });
   const me = users.byId(req.user.id);
   const cleared = me?.challenge ?? 0;
-  if (!floorAt(floor)) return res.status(400).json({ error: '없는 층입니다.' });
-  // 아직 안 내놓은 층은 클라가 뭐라 하든 인정하지 않는다.
-  if (!isAdminUser(req.user) && floor > RELEASED) {
-    return res.status(403).json({ error: '아직 준비 중인 층입니다.' });
-  }
   if (floor !== cleared + 1) {
     // 이미 깬 층을 다시 깨는 건 조용히 무시(진행도 그대로).
     return res.json({ ok: true, ...describeChallenge(cleared) });

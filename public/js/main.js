@@ -1756,19 +1756,25 @@ async function openTower() {
   catch { overlay.querySelector('.tower-hint').textContent = '불러오지 못했습니다.'; return; }
 
   const hint = overlay.querySelector('.tower-hint');
+  // 관리자는 확인용이라 모든 층이 열려 있고 진행도를 남기지 않는다.
+  const admin = data.admin ?? isAdmin;
   // 아직 안 내놓은 층이 남아 있으면 어디까지 열렸는지도 같이 알려 준다.
   const upTo = data.released && data.released < data.top
     ? ` · ${data.released}층까지 열렸어요` : '';
-  hint.textContent = data.signedIn
-    ? `${data.cleared}층까지 통전됐어요${upTo}`
-    : `🔒 로그인하면 도전모드를 할 수 있어요${upTo}`;
-  overlay.querySelector('.tower-meter').textContent = `${data.cleared} / ${data.top}F`;
+  hint.textContent = admin
+    ? '관리자 — 모든 층이 열려 있고, 기록은 남지 않아요'
+    : data.signedIn
+      ? `${data.cleared}층까지 통전됐어요${upTo}`
+      : `🔒 로그인하면 도전모드를 할 수 있어요${upTo}`;
+  overlay.querySelector('.tower-meter').textContent = admin
+    ? `${data.top}F 전부` : `${data.cleared} / ${data.top}F`;
 
   let face = '';
   try { face = characters.preview(player.characterId); } catch { /* 미리보기 실패는 무시 */ }
-  // 지금 도전할 층. 열린 층을 다 깼으면 없다(0).
+  // 지금 도전할 층. 열린 층을 다 깼으면 없다(0). 관리자는 전부 열려 있어
+  // 「여기부터」 를 가리킬 자리가 없다.
   const top = data.released ?? data.top;
-  const cur = data.cleared < top ? data.cleared + 1 : 0;
+  const cur = admin ? 0 : (data.cleared < top ? data.cleared + 1 : 0);
   const zones = data.zones ?? [];
 
   // 60층이 맨 위, 1층이 맨 아래. 그래서 위에서부터 거꾸로 그린다.
@@ -1803,7 +1809,9 @@ async function openTower() {
   }
 
   // 통전된 높이 = 깬 층 / 전체. 아래에서부터 차오른다.
-  const lit = Math.max(0, Math.min(1, data.cleared / data.top));
+  // 관리자는 전부 열려 있으니 탑도 끝까지 켜 둔다 — 진행도가 0 이라고
+  // 새까만 철탑을 보여 주면 고장 난 것처럼 보인다.
+  const lit = admin ? 1 : Math.max(0, Math.min(1, data.cleared / data.top));
   const box = overlay.querySelector('.pylon-scroll');
   box.innerHTML =
     '<div class="pylon">' +
@@ -2006,7 +2014,9 @@ async function challengeCleared() {
   let msg = '';
   try {
     const r = await api.clearFloor(f.floor);
-    msg = `${r.cleared} / ${r.top}층 클리어`;
+    msg = r.admin
+      ? `${f.floor}층 클리어 (관리자 — 기록은 남지 않아요)`
+      : `${r.cleared} / ${r.top}층 클리어`;
   } catch (e) { msg = '진행 저장에 실패했습니다.'; }
   showTowerResult(true, f, msg);
 }
