@@ -202,6 +202,68 @@ async function onAuthChange() {
   if (auth.signedIn) { await claimCoinsNow(); await claimCharGiftsNow(); startCoinPolling(); }
   else stopCoinPolling();
   syncCharacterForAuth();
+  nudgeNewTitles();
+}
+
+// ── 새로 내놓은 칭호 알리기 ────────────────────────────────
+// 기록으로 얻는 칭호는 조건을 이미 넘겨 둔 사람이 많다. 그냥 내놓으면
+// 생긴 줄도 모르고 지나가므로, 접속할 때 한 번 알려 주고 장착까지 데려간다.
+//
+// 어느 칭호를 알릴지는 서버가 정한다(titles.js 의 announce). 본 것은 이
+// 브라우저에만 적어 둔다 — 계정에 저장할 만큼 중요한 값이 아니다.
+const TITLE_SEEN_KEY = 'avoidarc.titleseen';
+function titleSeen(id) {
+  try { return localStorage.getItem(TITLE_SEEN_KEY + '.' + id) === '1'; }
+  catch { return false; }
+}
+function markTitleSeen(id) {
+  try { localStorage.setItem(TITLE_SEEN_KEY + '.' + id, '1'); } catch { /* 막혔으면 이번만 */ }
+}
+
+let nudgedTitles = false;
+async function nudgeNewTitles() {
+  if (nudgedTitles || !auth.signedIn) return;
+  nudgedTitles = true;
+  let list;
+  try {
+    const p = await api.profile(auth.displayName);
+    list = (p?.titles?.all ?? [])
+      .filter((t) => t.earned && t.announce && !t.equipped && !titleSeen(t.id));
+  } catch { return; }
+  if (!list?.length) return;
+  // 판이 시작됐으면 끼어들지 않는다. 안 본 것으로 두고 다음 접속에 알린다.
+  if (state.phase !== 'title') return;
+  for (const t of list) markTitleSeen(t.id);
+  showTitleAvailable(list);
+}
+
+// 「이미 조건을 채웠으니 달 수 있다」 는 안내. 새로 딴 것(showTitleUnlock)과
+// 달리, 장착하러 갈 길을 같이 준다.
+function showTitleAvailable(list) {
+  const overlay = document.createElement('div');
+  overlay.className = 'unlock-overlay';
+  overlay.innerHTML =
+    '<div class="unlock-card bot-result">' +
+    '<div class="unlock-kicker">🏆 새 칭호</div>' +
+    '<div class="bot-result-face">🏷️</div>' +
+    `<div class="unlock-name">${list.map((t) => '「' + t.name + '」').join(' ')}</div>` +
+    `<div class="unlock-hint">${list[0].cond} — 이미 채우셨어요. 프로필에서 장착할 수 있어요.</div>` +
+    '<div class="bot-result-row">' +
+    '<button type="button" class="ghost small tt-later">나중에</button>' +
+    '<button type="button" class="primary small tt-go">장착하러 가기</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  const close = () => {
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 220);
+  };
+  overlay.querySelector('.tt-later').addEventListener('click', close);
+  overlay.querySelector('.tt-go').addEventListener('click', () => {
+    close();
+    document.getElementById('profile-btn')?.click();
+  });
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
 
 // 판이 도는 중인가. 이때 선물 창을 띄우면 화면을 가려서 그대로 죽는다.

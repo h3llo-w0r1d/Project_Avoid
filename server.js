@@ -356,7 +356,8 @@ app.get('/api/profile', (req, res) => {
     // 칭호: 모든 칭호 + 이 사람의 획득·장착 여부. 관리자는 전부 획득 처리되고
     // 운영자 칭호는 관리자에게만 보인다(프로필 주인의 관리자 여부로 판정).
     titles: describeTitles(
-      { plays: playCount, isAdmin: isAdminUser(user), awards: user?.awards, luckyHits: user?.luckyHits },
+      { plays: playCount, isAdmin: isAdminUser(user), awards: user?.awards,
+        luckyHits: user?.luckyHits, bestTime: best?.time ?? 0 },
       user?.titles)
   };
 
@@ -457,8 +458,15 @@ app.post('/api/scores', async (req, res) => {
     // 이번 제출로 정확히 1 늘었으므로, 직전 판수는 (지금-1) 이다. 축하 연출용.
     const isAdmin = isAdminUser(req.user);
     const playsNow = totalPlaysOf(finalName, req.user ?? null);
-    const gainedIds = earnedTitleIds({ plays: playsNow, isAdmin })
-      .filter((id) => !earnedTitleIds({ plays: Math.max(0, playsNow - 1), isAdmin }).includes(id));
+    // 기록 칭호(100초의 벽)는 이번 판에 벽을 넘었는지로 판정한다. 이 판을
+    // 제출한 뒤의 최고와, 그 판을 빼고 본 직전 최고를 견준다.
+    const who = req.user ? { userId: req.user.id, mode: 'normal' } : { name: finalName, mode: 'normal' };
+    const bestNow = scores.bestOf(who)?.time ?? 0;
+    const bestBefore = mode === 'normal' && bestNow <= seconds + 0.001 ? 0 : bestNow;
+    const ctxNow = { plays: playsNow, isAdmin, bestTime: bestNow };
+    const ctxBefore = { plays: Math.max(0, playsNow - 1), isAdmin, bestTime: bestBefore };
+    const gainedIds = earnedTitleIds(ctxNow)
+      .filter((id) => !earnedTitleIds(ctxBefore).includes(id));
     const newTitles = gainedIds.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
     // 판수로 새로 딴 칭호도 기록에 남긴다. 게스트는 칭호를 저장할 계정이 없어
     // 실제로 얻은 게 아니다 — 기록에도 그렇게 적어 둔다(로그만 보고 오해하지 않게).
@@ -467,7 +475,9 @@ app.post('/api/scores', async (req, res) => {
         modeLogs.title.add({
           name: finalName, userId: req.user?.id ?? null,
           title_id: t.id, title: t.name,
-          how: `${playsNow}판 달성${req.user ? '' : ' · 게스트(미획득)'}`
+          // 어떻게 땄는지. 판수 칭호와 기록 칭호는 딴 이유가 다르다.
+          how: (titleById(t.id)?.bestTime ? `버티기 ${bestNow.toFixed(2)}초` : `${playsNow}판 달성`)
+            + (req.user ? '' : ' · 게스트(미획득)')
         });
       } catch (err) { console.error('칭호 기록 실패:', err); }
     }
@@ -994,7 +1004,10 @@ app.post('/api/titles', (req, res) => {
   if (!name) return res.status(400).json({ error: '닉네임을 먼저 정해 주세요.' });
   const acct = users.byId(req.user.id);
   const plays = totalPlaysOf(name, req.user);
-  const ctx = { plays, isAdmin: isAdminUser(req.user), awards: acct?.awards, luckyHits: acct?.luckyHits };
+  // 기록 칭호를 달려면 서버가 아는 최고 기록이 필요하다. 클라가 보낸 값은 안 쓴다.
+  const bestTime = scores.bestOf({ userId: req.user.id, mode: 'normal' })?.time ?? 0;
+  const ctx = { plays, isAdmin: isAdminUser(req.user), awards: acct?.awards,
+    luckyHits: acct?.luckyHits, bestTime };
   const equipped = sanitizeEquipped(req.body?.equipped, ctx);
   const updated = users.setTitles(req.user.id, equipped);
   res.json({ ok: true, titles: describeTitles(ctx, updated?.titles ?? equipped) });
