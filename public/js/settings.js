@@ -14,8 +14,12 @@ const KEY = 'avoidarc.settings';
 export const DEFAULTS = {
   musicVolume: 0.4,
   sfxVolume: 0.8,
-  musicPick: 'default',      // 'default' | 'custom' | 'off'
-  jumpKeys: ['Space', 'KeyK', 'KeyZ'],
+  // 배경음은 켜짐 여부와 어느 곡이냐를 따로 둔다. 하나로 묶으면
+  // '내 음악을 넣어 둔 채 잠깐 끄기' 가 안 된다 — 껐다 켜면 기본 곡으로
+  // 돌아가 버린다.
+  musicOn: true,
+  musicSource: 'default',    // 'default' | 'custom'
+  jumpKeys: ['Space'],       // 기본은 스페이스 하나. 설정에서 늘릴 수 있다.
   lowEffects: false          // 화면 효과 줄이기
 };
 
@@ -26,6 +30,12 @@ function read() {
     const v = JSON.parse(raw);
     // 저장해 둔 것과 기본값을 합친다. 나중에 항목이 늘어도 옛 저장본이
     // 그대로 살아난다 — 없는 값만 기본으로 채워진다.
+    // 옛 저장본(musicPick 하나로 쓰던 것)을 새 두 값으로 옮긴다.
+    if (v.musicPick && v.musicOn === undefined) {
+      v.musicOn = v.musicPick !== 'off';
+      v.musicSource = v.musicPick === 'custom' ? 'custom' : 'default';
+      delete v.musicPick;
+    }
     return {
       ...DEFAULTS,
       ...v,

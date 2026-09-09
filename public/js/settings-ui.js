@@ -110,21 +110,22 @@ export class SettingsUI {
       <section class="set-sec">
         <h3>배경음악</h3>
         <div class="set-picks">
-          <button type="button" class="set-pick${s.musicPick === 'default' ? ' on' : ''}" data-pick="default">기본 곡</button>
-          <button type="button" class="set-pick${s.musicPick === 'custom' ? ' on' : ''}" data-pick="custom">내 음악</button>
-          <button type="button" class="set-pick${s.musicPick === 'off' ? ' on' : ''}" data-pick="off">끄기</button>
+          <button type="button" class="set-pick${s.musicOn ? ' on' : ''}" data-act="toggle">
+            ${s.musicOn ? '켜짐' : '꺼짐'}</button>
+          <button type="button" class="set-pick${s.musicSource === 'custom' ? ' on' : ''}" data-act="mine">
+            내 음악</button>
         </div>
         <div class="set-music">
-          <button type="button" id="set-music-pick" class="set-file">파일 고르기</button>
-          <span class="set-note" id="set-music-name">${
+          <span class="set-note">${
             this.h.audio?.userMusicName
-              ? escapeHtml(this.h.audio.userMusicName)
-              : '아직 넣은 곡이 없어요'}</span>
+              ? (s.musicSource === 'custom' ? '▶ ' : '') + escapeHtml(this.h.audio.userMusicName)
+              : '「내 음악」 을 누르면 파일을 고릅니다'}</span>
           ${this.h.audio?.userMusicName
-            ? '<button type="button" id="set-music-clear" class="set-clear">지우기</button>' : ''}
+            ? '<button type="button" id="set-music-clear" class="set-clear">지우고 기본 곡으로</button>' : ''}
         </div>
-        <p class="set-hint">내 음악은 이 브라우저에만 저장되고 서버로 올라가지 않아요.
-          다른 기기에서는 안 들립니다.</p>
+        <p class="set-hint">mp3 · m4a · wav · ogg · flac 을 넣을 수 있어요
+          (브라우저에 따라 안 되는 형식도 있는데, <b>mp3</b> 는 어디서나 됩니다).
+          이 브라우저에만 저장되고 서버로 올라가지 않아요.</p>
       </section>
 
       <section class="set-sec">
@@ -170,23 +171,25 @@ export class SettingsUI {
 
     for (const btn of b.querySelectorAll('.set-pick')) {
       btn.addEventListener('click', async () => {
-        const pick = btn.dataset.pick;
-        // 내 음악을 고르려는데 아직 파일이 없으면 바로 고르는 창을 연다.
-        if (pick === 'custom' && !this.h.audio?.userMusicName) { this.#chooseFile(); return; }
-        settings.set('musicPick', pick);
-        this.h.audio?.applyVolumes();
-        this.h.audio?.restartMusic?.();
+        if (btn.dataset.act === 'toggle') {
+          settings.set('musicOn', !settings.get('musicOn'));
+          this.h.audio?.applyVolumes();
+        } else {
+          // 「내 음악」 — 넣어 둔 곡이 있으면 그걸로 바꾸고, 없으면 고르는 창을 연다.
+          if (!this.h.audio?.userMusicName) { this.#chooseFile(); return; }
+          settings.set('musicSource',
+            settings.get('musicSource') === 'custom' ? 'default' : 'custom');
+          this.h.audio?.restartMusic?.();
+        }
         this.draw();
       });
     }
-    $('set-music-pick')?.addEventListener('click', () => this.#chooseFile());
     $('set-music-clear')?.addEventListener('click', async () => {
       await this.h.audio?.clearUserMusic();
-      if (settings.get('musicPick') === 'custom') settings.set('musicPick', 'default');
+      settings.set('musicSource', 'default');
       this.h.audio?.restartMusic?.();
       this.draw();
     });
-
     for (const btn of b.querySelectorAll('.set-key')) {
       btn.addEventListener('click', () => {
         this.listening = Number(btn.dataset.slot);
@@ -213,7 +216,9 @@ export class SettingsUI {
   #chooseFile() {
     const inp = document.createElement('input');
     inp.type = 'file';
-    inp.accept = 'audio/*';
+    // audio/* 만 주면 기기에 따라 mp3 가 목록에 안 뜨는 일이 있어,
+    // 확장자도 같이 적어 둔다.
+    inp.accept = 'audio/*,.mp3,.m4a,.aac,.wav,.ogg,.oga,.opus,.flac,.webm';
     inp.addEventListener('change', async () => {
       const f = inp.files?.[0];
       if (!f) return;
@@ -224,7 +229,8 @@ export class SettingsUI {
         if (nameEl) nameEl.textContent = '이 파일은 읽지 못했어요 (mp3·m4a·ogg·wav)';
         return;
       }
-      settings.set('musicPick', 'custom');
+      settings.set('musicSource', 'custom');
+      settings.set('musicOn', true);          // 꺼 뒀더라도 넣었으면 들려 준다
       this.h.audio?.applyVolumes();
       this.h.audio?.restartMusic?.();
       this.draw();

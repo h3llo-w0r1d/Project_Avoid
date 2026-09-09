@@ -153,7 +153,7 @@ export class Audio {
   // 아무 일도 안 한다 — unlock() 이 켜질 때 다시 부른다.
   applyVolumes() {
     if (!this.ctx) return;
-    const m = settings.get('musicPick') === 'off' ? 0 : settings.get('musicVolume');
+    const m = settings.get('musicOn') ? settings.get('musicVolume') : 0;
     // 뚝 끊으면 틱 소리가 나므로 짧게 넘긴다.
     this.musicBus.gain.setTargetAtTime(m, this.ctx.currentTime, 0.03);
     this.sfxBus.gain.setTargetAtTime(settings.get('sfxVolume'), this.ctx.currentTime, 0.03);
@@ -462,7 +462,7 @@ export class Audio {
   // 그대로 둔다 — 껐다 켤 때 처음부터 다시 시작하지 않게 하려는 것이다.
   pickMusicName(name) {
     if (name !== 'music') return name;                  // 첫 화면 곡 등은 그대로
-    if (settings.get('musicPick') === 'custom' && this.buffers['userMusic']) return 'userMusic';
+    if (settings.get('musicSource') === 'custom' && this.buffers['userMusic']) return 'userMusic';
     return name;
   }
 
