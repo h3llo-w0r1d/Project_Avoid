@@ -2622,8 +2622,12 @@ kbd {
 /* 투표 상자 — 누적 판수 카드 바로 위. 같은 폭·같은 결로 맞춰 한 덩어리로 읽히게.
    판수 카드가 화면 오른쪽 가운데 고정이라, 이건 그 위에 붙여 둔다. */
 #poll-box {
-  position: fixed; right: 96px; top: 50%; z-index: 12;
-  transform: translateY(calc(-50% - 152px));
+  position: fixed; right: 96px; z-index: 12;
+  /* 아래를 화면 한가운데보다 88px 위에 못 박는다. 판수 카드가 한가운데를
+     기준으로 서 있으므로(높이 약 152px → 윗변이 76px 위), 이렇게 두면 이
+     상자의 높이가 얼마든 겹치지 않는다. 처음엔 자기 높이를 어림해서
+     밀었더니 내용이 늘자 11px 겹쳤다. */
+  bottom: calc(50% + 88px);
   width: 300px; padding: 16px 18px; border-radius: 16px;
   background: linear-gradient(160deg, rgba(79, 214, 255, 0.10), rgba(12, 16, 26, 0.55));
   border: 1px solid rgba(79, 214, 255, 0.26);
