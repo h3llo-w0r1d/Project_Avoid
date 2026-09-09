@@ -2618,6 +2618,51 @@ kbd {
   font-variant-numeric: tabular-nums;
 }
 
+
+/* 투표 상자 — 누적 판수 카드 바로 위. 같은 폭·같은 결로 맞춰 한 덩어리로 읽히게.
+   판수 카드가 화면 오른쪽 가운데 고정이라, 이건 그 위에 붙여 둔다. */
+#poll-box {
+  position: fixed; right: 96px; top: 50%; z-index: 12;
+  transform: translateY(calc(-50% - 152px));
+  width: 300px; padding: 16px 18px; border-radius: 16px;
+  background: linear-gradient(160deg, rgba(79, 214, 255, 0.10), rgba(12, 16, 26, 0.55));
+  border: 1px solid rgba(79, 214, 255, 0.26);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+}
+#poll-box.hidden { display: none; }
+.poll-kicker {
+  font-size: 12px; font-weight: 900; letter-spacing: 0.06em;
+  color: #cfe9ff;
+}
+.poll-sub { margin-top: 3px; font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+/* 선택지. 막대가 뒤에 깔리고 이름·비율이 그 위에 얹힌다. */
+.poll-opt {
+  position: relative; display: flex; align-items: center; gap: 8px;
+  width: 100%; margin-top: 8px; padding: 9px 11px;
+  border-radius: 10px; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text); font-family: inherit; font-size: 13px; font-weight: 800;
+  cursor: pointer; text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.poll-opt:hover { border-color: rgba(79, 214, 255, 0.5); }
+.poll-opt.on { border-color: rgba(79, 214, 255, 0.85); background: rgba(79, 214, 255, 0.12); }
+.poll-bar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: rgba(79, 214, 255, 0.22);
+  transition: width 0.35s ease;
+}
+.poll-name { position: relative; flex: 1; }
+.poll-pct { position: relative; color: #9fd8ff; font-variant-numeric: tabular-nums; }
+.poll-foot { margin-top: 9px; font-size: 11px; color: var(--muted); }
+
+/* 좁아지면 판수 카드와 같이 치운다(가운데 패널과 겹친다). */
+@media (max-width: 1240px) { #poll-box { display: none; } }
+:root.force-landscape #poll-box { display: none; }
+
 /* 화면이 좁아지면 가운데 패널과 겹친다. 그 전에 치운다. */
 @media (max-width: 1240px) { #play-count { display: none; } }
 :root.force-landscape #play-count { display: none; }

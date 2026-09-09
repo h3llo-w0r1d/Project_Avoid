@@ -517,6 +517,61 @@ function renderNotice() {
 
 api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); }).catch(() => {});
 
+// 타이틀 오른쪽, 누적 판수 카드 위의 투표 상자.
+//
+// 지금은 만드라고라를 도형으로 둘지 3D 모델로 갈지 묻는다. 서버가 선택지를
+// 정해 두므로 여기서는 이름만 붙인다.
+//
+// 누구의 한 표인지는 브라우저 id(avoidarc.cid)로 가른다 — 접속 신호에 이미
+// 쓰는 값이라 새로 만들지 않는다. 로그인했으면 서버가 계정으로 묶는다.
+const POLL_ID = 'mandragora-look';
+const POLL_LABEL = { classic: '기존 그림체', model: '3D 모델' };
+
+function pollCid() {
+  try { return localStorage.getItem('avoidarc.cid') ?? ''; } catch { return ''; }
+}
+
+function paintPoll(box, data) {
+  if (!box || !data) return;
+  const { counts = {}, total = 0, mine = null, choices = [] } = data;
+  const rows = choices.map((c) => {
+    const n = counts[c] ?? 0;
+    const pct = total ? Math.round((n / total) * 100) : 0;
+    const on = mine === c;
+    return `<button type="button" class="poll-opt${on ? ' on' : ''}" data-choice="${c}">`
+      + `<span class="poll-bar" style="width:${pct}%"></span>`
+      + `<span class="poll-name">${POLL_LABEL[c] ?? c}</span>`
+      + `<span class="poll-pct">${total ? pct + '%' : ''}</span>`
+      + '</button>';
+  }).join('');
+  box.innerHTML = '<div class="poll-kicker">어느 쪽이 나은가요?</div>'
+    + '<div class="poll-sub">만드라고라 · 캐릭터 창에서 둘 다 써 볼 수 있어요</div>'
+    + rows
+    + `<div class="poll-foot">${total ? total + '명 참여' + (mine ? ' · 다시 눌러 바꿀 수 있어요' : '') : '첫 표를 던져 보세요'}</div>`;
+  box.classList.remove('hidden');
+}
+
+// 투표 상자를 띄우고 버튼을 연결한다. 서버가 안 되면 그냥 안 띄운다 —
+// 없다고 아쉬울 게 없고, 빈 상자가 남는 것보단 낫다.
+function setupPoll() {
+  const box = document.getElementById('poll-box');
+  if (!box) return;
+  const load = () => api.pollGet(POLL_ID, pollCid())
+    .then((d) => paintPoll(box, d))
+    .catch(() => { /* 조용히 안 띄운다 */ });
+
+  box.addEventListener('click', (e) => {
+    const btn = e.target.closest('.poll-opt');
+    if (!btn) return;
+    api.pollVote(POLL_ID, btn.dataset.choice, pollCid())
+      .then((d) => paintPoll(box, d))
+      .catch(() => {});
+  });
+  load();
+  // 타이틀로 돌아올 때마다 새로 받는다(다른 사람 표가 늘었을 수 있다).
+  return load;
+}
+
 // 타이틀 오른쪽 '누적 판수' 카드. 못 받아 오면 카드를 그냥 안 띄운다 —
 // 장식이라 없다고 아쉬울 게 없고, 0판이라고 거짓말하는 것보단 낫다.
 //
@@ -526,6 +581,9 @@ api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); 
 //  · 타이틀로 돌아올 때 — 방금 내 판이 더해진 걸 바로 보게(제일 보고 싶은 순간)
 // 이보다 더 촘촘히 할 이유는 없다. 제일 붐비는 시간대도 평균 51초에 한 판이라
 // 1초마다 물어봐도 대개 같은 숫자가 돌아온다.
+// 투표 상자를 띄우고, 타이틀로 돌아올 때 같이 새로 받을 함수를 받아 둔다.
+const reloadPoll = setupPoll();
+
 let playCountShown = 0;
 function refreshPlayCount(animate = false) {
   const card = document.getElementById('play-count');
@@ -2183,6 +2241,7 @@ function goHome() {
   ui.showTitle();
   renderNotice();
   refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
+  reloadPoll?.();            // 그 사이 늘어난 표도 같이
   claimCoinsNow();          // 판 중이라 미뤄 뒀던 선물이 있으면 여기서 받는다
   claimCharGiftsNow();
 }
@@ -2849,6 +2908,7 @@ function leaveVersus() {
   ui.showTitle();
   renderNotice();
   refreshPlayCount(true);   // 방금 한 판이 더해진 걸 굴려 올리며 보여 준다
+  reloadPoll?.();            // 그 사이 늘어난 표도 같이
   claimCoinsNow();          // 판 중이라 미뤄 뒀던 선물이 있으면 여기서 받는다
   claimCharGiftsNow();
 }

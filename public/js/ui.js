@@ -573,6 +573,24 @@ export const api = {
     return { amount: d.amount ?? 0, message: d.message ?? '' };
   },
 
+  // 투표 현황을 받아 온다 → { choices, counts, total, mine }
+  async pollGet(id, cid) {
+    const res = await fetch('/api/poll/' + encodeURIComponent(id)
+      + (cid ? '?cid=' + encodeURIComponent(cid) : ''));
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  // 한 표를 던진다(이미 던졌으면 바꾼다). 돌려주는 값은 pollGet 과 같다.
+  async pollVote(id, choice, cid) {
+    const res = await fetch('/api/poll/' + encodeURIComponent(id), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ choice, cid })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
   // 개발자가 이 계정에 준 캐릭터 id 들. 서버만 쓰는 목록이라 위조가 안 된다.
   async giftedCharacters() {
     const res = await fetch('/api/me/gifts');

@@ -10,6 +10,18 @@
   /* 코인 아이콘. 이모지 🪙(U+1FA99)는 2019년에 생긴 문자라 오래된 기기의
      글꼴에는 없어서 네모로 뜬다. 글꼴에 기대지 않게 직접 그린다.
      (이 페이지는 style.css 를 안 써서 같은 규칙을 여기에도 둔다.) */
+  /* 투표 결과 */
+  .pollcard { border: 1px solid var(--stroke); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .pollcard h3 { font-size: 16px; font-weight: 800; margin-bottom: 12px; }
+  .pollrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
+  .pollname { width: 92px; flex: none; font-weight: 700; }
+  .pollbar { flex: 1; height: 14px; border-radius: 7px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .pollbar i { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
+  .pollrow b { width: 46px; text-align: right; font-variant-numeric: tabular-nums; }
+  .pollcard details { margin-top: 12px; }
+  .pollcard summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  .pollcard .poll-clear { margin-top: 12px; }
+
   .coin-ico {
     display: inline-block;
     width: 1em;
@@ -264,6 +276,7 @@
     <button type="button" data-panel="match">1v1 대전 기록</button>
     <button type="button" data-panel="buy">캐릭터 구매 기록</button>
     <button type="button" data-panel="spin">룰렛 기록</button>
+    <button type="button" data-panel="poll">투표 결과</button>
     <button type="button" data-panel="tower">층 오르기 기록</button>
     <button type="button" data-panel="bot">봇전 기록</button>
     <button type="button" data-panel="title">칭호 획득 기록</button>
@@ -330,6 +343,14 @@
       <span class="dim">(코인 처리는 브라우저에서 하므로 참고용입니다.)</span></p>
     <div class="wrap" id="buy-table"></div>
     <div class="pager" id="buy-pager"></div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-poll">
+    <h2>투표 결과</h2>
+    <p class="hint">타이틀 화면 오른쪽에서 받는 투표입니다.
+      로그인한 사람은 계정으로, 아니면 브라우저별로 한 표씩 셉니다.
+      <span class="dim">(관리자 표는 세지 않습니다.)</span></p>
+    <div id="poll-boxes"></div>
   </section>
 
   <section class="tab-panel hidden" id="panel-spin">
@@ -474,6 +495,7 @@ async function load() {
       (versus ? ` (1v1 ${versus}명)` : '');
     say('');
     drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawPurchases(); drawSpins();
+    drawPolls();
     drawPlayCount();
   } catch (e) { say(e.message, true); }
 }
@@ -959,6 +981,52 @@ async function delPurchase(id) {
 
 const SPIN_PER = 20;
 let spinPage = 0;
+// 투표 결과. overview 가 실어 준 값을 그대로 그린다.
+// 이름표는 여기서 붙인다 — 서버는 선택지 코드만 안다.
+const POLL_TITLE = { 'mandragora-look': '만드라고라 — 어느 쪽이 나은가?' };
+const POLL_CHOICE = { classic: '기존 그림체', model: '3D 모델' };
+
+function drawPolls() {
+  const host = $('poll-boxes');
+  if (!host) return;
+  const list = data.polls ?? [];
+  if (!list.length) { host.innerHTML = '<p class="empty">투표가 없습니다</p>'; return; }
+  host.innerHTML = list.map((p2) => {
+    const total = p2.total || 0;
+    const bars = (p2.choices || []).map((c) => {
+      const n = p2.counts?.[c] ?? 0;
+      const pct = total ? Math.round((n / total) * 100) : 0;
+      return `<div class="pollrow">`
+        + `<span class="pollname">${esc(POLL_CHOICE[c] ?? c)}</span>`
+        + `<span class="pollbar"><i style="width:${pct}%"></i></span>`
+        + `<b>${pct}%</b><span class="dim">${n}표</span></div>`;
+    }).join('');
+    const rows = (p2.recent || []).map((r) => `<tr>`
+      + `<td class="dim">${stamp(r.at)}</td>`
+      + `<td>${r.voter.startsWith('u:') ? '<span style="color:#9ad0ff">계정</span>' : '<span class="dim">비로그인</span>'}</td>`
+      + `<td>${esc(POLL_CHOICE[r.choice] ?? r.choice)}</td></tr>`).join('');
+    return `<div class="pollcard">`
+      + `<h3>${esc(POLL_TITLE[p2.id] ?? p2.id)} <span class="dim">${total}명 참여</span></h3>`
+      + bars
+      + `<details><summary>최근 표 ${(p2.recent || []).length}건</summary>`
+      + `<div class="wrap"><table><thead><tr><th>시각</th><th>구분</th><th>선택</th></tr></thead>`
+      + `<tbody>${rows || '<tr><td colspan=3 class=dim>아직 없습니다</td></tr>'}</tbody></table></div></details>`
+      + `<button type="button" class="danger poll-clear" data-poll="${esc(p2.id)}">이 투표 비우기</button>`
+      + `</div>`;
+  }).join('');
+}
+
+// 비우기 — 되돌릴 수 없으니 한 번 묻는다.
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.poll-clear');
+  if (!btn) return;
+  if (!confirm('이 투표를 통째로 비울까요?\n(되돌릴 수 없습니다)')) return;
+  try {
+    await api('/api/poll/' + encodeURIComponent(btn.dataset.poll), { method: 'DELETE' });
+    say('투표를 비웠습니다.'); await load();
+  } catch (err) { say(err.message, true); }
+});
+
 async function drawSpins() {
   try {
     const { rows, total } = await api(`/api/admin/spins?limit=${SPIN_PER}&offset=${spinPage * SPIN_PER}`);

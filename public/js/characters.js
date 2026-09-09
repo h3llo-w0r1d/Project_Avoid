@@ -14,12 +14,30 @@
 
 export const CHARACTERS = [
   {
+    // 원래의 만드라고라 — 도형으로 조립한다. 3D 모델판(mandragora3d)과
+    // 나란히 두고 어느 쪽이 나은지 투표를 받는 중이라 둘 다 고를 수 있다.
+    // 기본 캐릭터라 CHARACTERS[0] 자리를 지켜야 한다(DEFAULT_CHARACTER).
     id: 'mandragora',
     name: '만드라고라',
     unlockAt: 0,
     previewZoom: 1.18,       // 잎이 길어 작아 보여, 고르는 화면에서만 살짝 당긴다
-    // 도형 조립 대신 .glb 를 쓴다. 아래 profile·top·face 는 모델을 못
-    // 불러왔을 때를 위해 남겨 둔다(그때는 예전 모습으로 나온다).
+    body: 0xf2e6cd,
+    profile: [
+      [0.000, 0.00], [0.005, 0.18], [0.030, 0.34], [0.100, 0.48],
+      [0.220, 0.56], [0.380, 0.575], [0.560, 0.56], [0.760, 0.51],
+      [0.960, 0.44], [1.140, 0.34], [1.300, 0.21], [1.410, 0.09],
+      [1.450, 0.00]
+    ],
+    top: { kind: 'leaves', count: 5, length: 1.5, color: '#a9d477' },
+    skin: 'fiber'
+  },
+  {
+    // 같은 만드라고라를 3D 모델(.glb)로 만든 것. 모델을 못 불러오면
+    // 아래 profile 로 조립해 원래 모습으로 나온다 — 빈 화면은 안 나온다.
+    id: 'mandragora3d',
+    name: '만드라고라 3D',
+    unlockAt: 0,
+    previewZoom: 1.02,       // 모델은 잎이 짧아 덜 당겨도 된다
     model: {
       url: './models/mandragora.glb',
       yaw: 0,
@@ -404,6 +422,73 @@ export const CHARACTERS = [
     plumes: { y: 0.52, spread: 0.16, sweep: 0.18 },
     coins: { count: 4, radius: 1.06, y: 0.34, size: 0.2, tilt: 0.3 },
     sparkles: { count: 10 }
+  },
+  {
+    // 포로 — 선물 받은 사람과 관리자에게만 보인다.
+    // 꼬리가 길게 늘어져 경계상자가 커진다. 그래서 배율·높이보정을 눈으로 맞췄다.
+    id: 'poro',
+    name: '포로',
+    giftOnly: true,
+    unlockAt: Infinity,
+    previewZoom: 0.92,
+    model: {
+      url: './models/poro.glb',
+      yaw: 0,
+      // 히트박스는 캐릭터와 무관하게 고정이라, 겉모습이 크면 "닿았는데 안
+      // 죽는" 캐릭터가 된다. 가나디와 몸통 폭이 같아 보이는 값이다.
+      // 꼬리가 길어 경계상자가 커진 만큼 배율을 올려야 몸이 제 크기가 된다.
+      scale: 2.6,
+      depth: 1.0,
+      yOffset: 0,
+      brighten: 0.3
+    },
+    // 모델을 못 불러왔을 때 쓸 대타. 흰 털뭉치에 가깝게만 해 둔다.
+    body: 0xf6f2ef,
+    bodyTop: 0xffffff,
+    bodyBottom: 0xe4dcd6,
+    profile: [
+      [0.000, 0.00], [0.050, 0.36], [0.160, 0.53], [0.320, 0.60],
+      [0.520, 0.615], [0.720, 0.59], [0.900, 0.53], [1.040, 0.44],
+      [1.150, 0.32], [1.230, 0.18], [1.270, 0.00]
+    ],
+    // 모델이 주역이라 대타에는 머리 장식을 안 얹는다. 다만 top 을 아예
+    // 빼면 plant.js 가 spec.top.kind 를 읽다 터진다 — 'none' 을 넣어 둔다.
+    top: { kind: 'none' },
+    face: { eyeScale: [0.34, 0.34], eyeGap: 0.26, eyeY: 0.58, mouthY: 0.42, glint: false },
+    sizeMul: 1.1
+  },
+  {
+    // 렝가 — 웅크린 자세라 키보다 폭이 넓다(1.9 x 1.58 x 1.82).
+    // 키에 맞춰 정규화하면 옆으로 크게 퍼지므로 배율을 줄여 잡았다.
+    id: 'rengar',
+    name: '렝가',
+    giftOnly: true,
+    unlockAt: Infinity,
+    previewZoom: 0.86,
+    model: {
+      url: './models/rengar.glb',
+      yaw: 0,
+      // 히트박스는 캐릭터와 무관하게 고정이라, 겉모습이 크면 "닿았는데 안
+      // 죽는" 캐릭터가 된다. 가나디와 몸통 폭이 같아 보이는 값이다.
+      // 웅크린 자세에 무기가 밖으로 뻗어 있어, 몸통 기준으로 보수적으로 잡았다.
+      scale: 0.9,
+      depth: 1.0,
+      yOffset: 0,
+      brighten: 0.4    // 검은 옷이라 무대에서 특히 어둡다
+    },
+    body: 0x3a3540,
+    bodyTop: 0x4a444f,
+    bodyBottom: 0x241f28,
+    profile: [
+      [0.000, 0.00], [0.050, 0.34], [0.150, 0.50], [0.310, 0.58],
+      [0.500, 0.60], [0.700, 0.58], [0.880, 0.52], [1.030, 0.43],
+      [1.150, 0.31], [1.240, 0.17], [1.290, 0.00]
+    ],
+    // 모델이 주역이라 대타에는 머리 장식을 안 얹는다. 다만 top 을 아예
+    // 빼면 plant.js 가 spec.top.kind 를 읽다 터진다 — 'none' 을 넣어 둔다.
+    top: { kind: 'none' },
+    face: { eyeScale: [0.32, 0.32], eyeGap: 0.28, eyeY: 0.60, mouthY: 0.42, glint: false },
+    sizeMul: 1.1
   },
   {
     // 발명 — 관리자에게만 보이는 캐릭터. 원본 그림(분홍 토끼)을 그대로 옮겼다.

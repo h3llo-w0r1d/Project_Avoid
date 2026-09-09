@@ -24,6 +24,7 @@ import { openReplaysStore } from './lib/replays.js';
 import { gzipSync, gunzipSync } from 'node:zlib';
 import { openCoinGrants } from './lib/coingrants.js';
 import { openCharGifts } from './lib/chargifts.js';
+import { openPolls } from './lib/polls.js';
 import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
@@ -131,6 +132,7 @@ const modeLogs = openModeLogs(db);          // 도전모드·봇전 한 판 기�
 const replays = openReplaysStore(db);       // 최고기록 다시보기(입력 기록)
 const coinGrants = openCoinGrants(db);       // 관리자가 준 코인 지급 대기
 const charGifts = openCharGifts(db);         // 개발자가 특정 계정에 준 캐릭터
+const polls = openPolls(db);                 // 간단한 투표
 
 // 지금 사이트에 몇 명이 있는지(실시간 접속). 메모리에만 두고 저장 안 한다.
 const presence = openPresence();
@@ -865,7 +867,11 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     usageMonthly: stats.monthly(24),
     usageTotals: stats.totals(),
     // 관리 화면의 '누적 판수' 도 타이틀 카드와 같은 숫자를 쓴다.
-    playCount: playCountNow()
+    playCount: playCountNow(),
+    // 투표 결과와 최근 기록
+    polls: Object.keys(POLLS).map((id) => ({
+      id, choices: POLLS[id], ...polls.result(id), recent: polls.recent(id, 60)
+    }))
   });
 });
 
@@ -1081,6 +1087,47 @@ app.get('/api/play-ranks', (req, res) => {
 // 값 자체는 여전히 클라가 계산해 알려 준다(코인·룰렛·구매가 원래 그 신뢰
 // 모델이다). 이 API 는 '기기 간에 같은 지갑을 쓰게' 하는 것이 목적이지
 // 조작을 막는 장치가 아니다.
+
+// ── 투표 ────────────────────────────────────────────────────────────
+// 지금 받는 건 하나뿐이다: 만드라고라를 도형으로 둘지 3D 모델로 갈지.
+// 선택지를 서버가 정해 두고, 그 밖의 값은 받지 않는다 — 클라가 보내는
+// 대로 저장하면 아무 문자열이나 집계에 섞인다.
+const POLLS = { 'mandragora-look': ['classic', 'model'] };
+
+// 누구의 한 표인가. 로그인했으면 계정, 아니면 브라우저 id.
+// 브라우저 id 는 접속 신호에 이미 쓰는 것(avoidarc.cid)을 그대로 받는다.
+function voterOf(req) {
+  if (req.user) return 'u:' + req.user.id;
+  const cid = String(req.body?.cid ?? req.query?.cid ?? '').slice(0, 64);
+  return cid ? 'b:' + cid : null;
+}
+
+// 관리자: 투표를 통째로 비운다(다시 받고 싶을 때).
+app.delete('/api/poll/:id', requireAdmin, (req, res) => {
+  const id = String(req.params.id);
+  if (!POLLS[id]) return res.status(404).json({ error: '없는 투표입니다.' });
+  polls.clear(id);
+  res.json({ ok: true });
+});
+
+app.get('/api/poll/:id', (req, res) => {
+  const id = String(req.params.id);
+  if (!POLLS[id]) return res.status(404).json({ error: '없는 투표입니다.' });
+  res.json({ id, choices: POLLS[id], ...polls.result(id, voterOf(req)) });
+});
+
+app.post('/api/poll/:id', (req, res) => {
+  const id = String(req.params.id);
+  const choices = POLLS[id];
+  if (!choices) return res.status(404).json({ error: '없는 투표입니다.' });
+  const choice = String(req.body?.choice ?? '');
+  if (!choices.includes(choice)) return res.status(400).json({ error: '고를 수 없는 항목입니다.' });
+  const voter = voterOf(req);
+  if (!voter) return res.status(400).json({ error: '누구인지 알 수 없습니다.' });
+  // 관리자는 집계에서 뺀다(다른 기록과 같은 규칙).
+  if (isAdminUser(req.user)) return res.json({ id, choices, ...polls.result(id, voter) });
+  res.json({ id, choices, ...polls.vote(id, voter, choice) });
+});
 
 // 이 계정이 선물로 받은 캐릭터. 지갑과 달리 클라가 못 쓴다 — 읽기만 된다.
 app.get('/api/me/gifts', (req, res) => {
