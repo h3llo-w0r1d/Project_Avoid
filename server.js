@@ -576,7 +576,10 @@ app.post('/api/presence', (req, res) => {
   const ua = req.get('user-agent');
   // 관리자(나) 본인은 접속·순방문자 집계에서 뺀다.
   if (!isNonHuman(clientIp(req), ua) && !isAdminUser(req.user)) {
-    presence.beat(body.id);
+    // 로그인한 사람은 서버가 아는 닉네임을 쓴다(사칭 방지). 게스트는 자기
+    // 브라우저가 지은 이름을 그대로 받는다 — 어차피 임시 이름이다.
+    const who = req.user ? (req.user.nickname ?? '') : body.name;
+    presence.beat(body.id, who);
     // 이 브라우저의 오늘 첫 신호면 순 방문자로 한 번 센다(중복은 stats 가 거른다).
     stats.uniqueVisit(body.id, isMobile(ua));
   }
@@ -845,6 +848,7 @@ app.get('/api/admin/overview', requireAdmin, (req, res) => {
     season: seasonInfo(),
     // 지금 사이트에 있는 사람 수(실시간). lobby.stats() 는 1v1 대기·대전 수라 따로 둔다.
     present: presence.count(),
+    presentNames: presence.names(),
     online: lobby.stats(),
     scores: scores.all(),
     // 계정 목록에 '몇 판 했는지'를 붙인다. scores 는 시즌이 바뀌면 지난 기록을
@@ -1303,6 +1307,12 @@ app.delete('/api/admin/scores/:id', requireAdmin, async (req, res) => {
 
 // 모든 판 기록(플레이 로그). 시간 역순 한 쪽씩 준다.
 // 도전모드 기록(관리자). 성공·실패 모두.
+// 지금 접속한 사람 목록. 관리 화면이 15초마다 이것만 따로 받아 간다 —
+// overview 전체를 다시 받으면 무거워서 자주 못 부른다.
+app.get('/api/admin/present', requireAdmin, (req, res) => {
+  res.json({ present: presence.count(), names: presence.names() });
+});
+
 app.get('/api/admin/challenge-log', requireAdmin, (req, res) => {
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
   const offset = Math.max(0, Number(req.query.offset) || 0);

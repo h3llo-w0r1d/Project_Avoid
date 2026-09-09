@@ -595,6 +595,11 @@
         // 사파리 비공개 탭 등 localStorage 가 막힌 경우엔 임시 id 로 둔다
         id = rnd();
       }
+      // 게스트로 놀고 있으면 그 이름. auth.js 가 지어 localStorage 에 둔 값이다.
+      function guestLabel() {
+        try { return localStorage.getItem('avoidarc.guestName') || ''; }
+        catch (e) { return ''; }
+      }
       function beat(force) {
         // 평소엔 화면이 숨겨진 탭(뒤로 물러난 탭)은 접속자로 세지 않는다.
         // 다만 force 면(페이지가 막 열렸을 때) 숨은 탭이어도 방문은 한 번 보낸다.
@@ -603,7 +608,9 @@
         fetch('/api/presence', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: id }),
+          // 게스트 이름만 보낸다. 로그인한 사람의 닉네임은 서버가 이미 안다
+          // — 여기서 보내면 남의 이름을 대신 적어 보낼 수 있다.
+          body: JSON.stringify({ id: id, name: guestLabel() }),
           keepalive: true
         })
           // 서버가 지금 접속자 수를 함께 돌려준다. 어차피 20초마다 오가는

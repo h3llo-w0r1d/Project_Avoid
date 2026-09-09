@@ -52,41 +52,51 @@
      화면에서는 왼쪽 위 빈 자리에 둔다. 본문(main)이 960px 로 가운데
      정렬돼 있어 넓은 화면에서는 왼쪽이 비는데, 거기 놓는다.
      좁아지면 본문과 겹치므로 그 전에 치운다. */
-  #total-plays {
+  #present-box {
     position: fixed; left: 24px; top: 24px; z-index: 4;
-    width: 260px; padding: 20px 22px; border-radius: 16px;
-    background: linear-gradient(160deg, rgba(255, 70, 90, 0.10), rgba(20, 12, 20, 0.55));
-    border: 1px solid rgba(255, 90, 110, 0.28);
+    width: 260px; max-height: calc(100vh - 48px);
+    display: flex; flex-direction: column;
+    padding: 20px 22px; border-radius: 16px;
+    background: linear-gradient(160deg, rgba(74, 222, 128, 0.08), rgba(12, 18, 20, 0.6));
+    border: 1px solid rgba(74, 222, 128, 0.24);
     box-shadow: 0 18px 46px rgba(0, 0, 0, 0.45);
-    pointer-events: none;
   }
-  #total-plays.hidden { display: none; }
+  /* 사람이 많으면 목록만 스크롤한다. 카드가 화면 밖으로 자라면 안 된다. */
+  #present-list {
+    list-style: none; margin: 14px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 7px;
+    overflow-y: auto; min-height: 0;
+  }
+  #present-list li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 800; color: #eaf4ff;
+  }
+  #present-list li::before {
+    content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%;
+    background: #4ade80; box-shadow: 0 0 8px rgba(74, 222, 128, 0.9);
+  }
+  /* 게스트는 임시 이름이라 한 톤 죽인다 — 계정과 구별이 돼야 한다. */
+  #present-list li.guest { color: var(--muted); font-weight: 600; }
+  #present-list li.guest::before { background: #6b7a8f; box-shadow: none; }
+  #present-list li.none { color: var(--muted); font-weight: 600; }
+  #present-list li.none::before { content: none; }
+  #present-list .tabs { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 700; }
   .pc-kicker {
     font-size: 11px; font-weight: 800; letter-spacing: 0.22em;
-    color: rgba(255, 140, 155, 0.9);
+    color: rgba(120, 235, 165, 0.9);
   }
   .pc-kicker::before {
     content: ''; display: inline-block; vertical-align: middle;
     width: 6px; height: 6px; margin-right: 8px; border-radius: 50%;
-    background: #ff5f78; box-shadow: 0 0 8px #ff5f78;
+    background: #4ade80; box-shadow: 0 0 8px #4ade80;
   }
-  .pc-num {
-    margin-top: 10px;
-    font-size: 40px; font-weight: 900; line-height: 1;
-    color: #fff; font-variant-numeric: tabular-nums;
-  }
-  .pc-unit { margin-left: 6px; font-size: 18px; font-weight: 800; color: var(--muted); }
   .pc-sub {
     margin-top: 12px; padding-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     font-size: 12px; color: var(--muted);
   }
-  #total-plays-since {
-    color: #ffb3c0; font-weight: 800; letter-spacing: 0.04em;
-    font-variant-numeric: tabular-nums;
-  }
   /* 960px 본문 + 카드 260px + 여백. 이보다 좁으면 겹친다. */
-  @media (max-width: 1560px) { #total-plays { display: none; } }
+  @media (max-width: 1560px) { #present-box { display: none; } }
 
   header.bar {
     position: sticky; top: 0; z-index: 5;
@@ -248,13 +258,13 @@
 </head>
 <body>
 <main>
-  <!-- 누적 판수. 타이틀 화면과 같은 카드를 왼쪽 위 빈 자리에 둔다.
-       숫자는 아래 스크립트가 /api/play-count 로 채운다(못 받으면 숨긴다).
-       id 는 total-plays — play-count 는 아래 플레이 기록 라벨이 이미 쓴다. -->
-  <aside id="total-plays" class="hidden" aria-label="누적 판수">
-    <div class="pc-kicker">TOTAL PLAYS</div>
-    <div class="pc-num"><span id="total-plays-num">0</span><span class="pc-unit">판</span></div>
-    <div class="pc-sub"><span id="total-plays-since"></span> ~</div>
+  <!-- 지금 사이트에 있는 사람들. 넓은 화면의 왼쪽 빈 자리에 둔다.
+       15초마다 혼자 새로 받는다 — 접속자는 계속 바뀌는데 「새로고침」 을
+       누를 때만 갱신되면 볼 이유가 없다. -->
+  <aside id="present-box" aria-label="지금 접속">
+    <div class="pc-kicker">ONLINE NOW</div>
+    <ol id="present-list"><li class="none">불러오는 중…</li></ol>
+    <div class="pc-sub" id="present-sub"></div>
   </aside>
 
   <header class="bar">
@@ -467,22 +477,33 @@ const stamp = (at) => {
 // (혼자 하기·층 오르기 + 봇전 + 1v1). 못 받아 오면 카드를 숨긴다 —
 // 장식이라 없다고 아쉬울 게 없고, 0판이라고 거짓말하는 것보단 낫다.
 //
-// 관리 화면의 '플레이 기록' 표와 숫자가 다른 게 정상이다. 저 표는 끝난
-// 판만(plays), 이 카드는 시작한 판까지 센다.
-async function drawPlayCount() {
-  const card = $('total-plays');
-  if (!card) return;
-  try {
-    const r = await fetch('/api/play-count');
-    if (!r.ok) return;
-    const { total, since } = await r.json();
-    if (!(total > 0)) return;
-    $('total-plays-num').textContent = total.toLocaleString('ko-KR');
-    if (since) $('total-plays-since').textContent = String(since).replaceAll('-', '.');
-    card.classList.remove('hidden');
-  } catch { /* 못 받으면 그냥 안 띄운다 */ }
+// 지금 사이트에 있는 사람들. 관리자(나)는 접속 집계에서 빠지므로 목록에도
+// 안 나온다. 이름을 아직 못 받은 신호는 「이름 모름」 으로 묶어 둔다 —
+// 페이지가 막 열려 아직 게스트 이름을 못 지은 참이다.
+function drawPresent(present, list) {
+  const box = $('present-list');
+  if (!box) return;
+  const rows = Array.isArray(list) ? list : [];
+  const named = rows.reduce((n, r) => n + (r.tabs || 1), 0);
+  const unknown = Math.max(0, (present ?? 0) - named);
+  box.innerHTML = rows.length
+    ? rows.map((r) => `<li class="${/^Guest\d/.test(r.name) ? 'guest' : ''}">`
+        + esc(r.name)
+        + (r.tabs > 1 ? `<span class="tabs">탭 ${r.tabs}</span>` : '')
+        + '</li>').join('')
+    : '<li class="none">아무도 없어요</li>';
+  $('present-sub').textContent = unknown
+    ? `${present}명 접속 · 이름 모름 ${unknown}명`
+    : `${present ?? 0}명 접속`;
 }
 
+// 접속자는 계속 바뀐다. 목록만 따로 15초마다 새로 받는다.
+async function pollPresent() {
+  try {
+    const d = await api('/api/admin/present');
+    drawPresent(d.present, d.names);
+  } catch { /* 잠깐 못 받는 건 그냥 넘어간다 */ }
+}
 
 async function load() {
   say('불러오는 중…');
@@ -493,10 +514,12 @@ async function load() {
     const versus = data.online?.online ?? 0;
     $('meta').textContent = `${data.season.name} · 지금 접속 ${data.present ?? 0}명` +
       (versus ? ` (1v1 ${versus}명)` : '');
+    // 접속자는 다른 표보다 먼저 그린다 — 뒤에 두면 앞의 표 하나가 실패할 때
+    // 같이 죽는다.
+    drawPresent(data.present, data.presentNames);
     say('');
     drawUsage(); drawAccounts(); drawScores(); drawPlays(); drawMatches(); drawPurchases(); drawSpins();
     drawPolls();
-    drawPlayCount();
   } catch (e) { say(e.message, true); }
 }
 
@@ -1152,6 +1175,10 @@ $('usage-seg').addEventListener('click', (e) => {
 });
 
 load();
+// 접속자 목록은 overview 와 따로 돈다. 다른 표가 잘못돼도 이건 보여야 하고,
+// 계속 바뀌는 값이라 15초마다 새로 받는다.
+pollPresent();
+setInterval(pollPresent, 15000);
 </script>
 </body>
 </html>
