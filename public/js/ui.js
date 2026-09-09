@@ -6,7 +6,9 @@ const $ = (id) => document.getElementById(id);
 
 // 한 쪽에 10개씩, 최대 10쪽(=100위)까지 보여 준다.
 const PER_PAGE = 10;
-const MAX_PAGES = 10;
+// 혼자 하기 기록은 200위까지 온다(20쪽). 다른 판은 100위까지라 10쪽에서
+// 알아서 멈춘다 — 받은 만큼만 쪽을 만들기 때문이다.
+const MAX_PAGES = 20;
 
 const BEST_KEY = 'voltline.best';
 const HC_KEY = 'voltline.best.hardcore';   // 하드코어 개인 최고기록
@@ -460,8 +462,27 @@ export class UI {
     };
 
     this.el.pager.appendChild(button('‹', Math.max(0, this.page - 1), this.page === 0));
-    for (let i = 0; i < pages; i++) {
+
+    // 쪽이 많으면 번호를 전부 늘어놓지 않는다 — 20쪽이면 폰에서 버튼이
+    // 서너 줄로 접혀 목록을 밀어낸다. 처음·끝과 지금 쪽 언저리만 두고
+    // 사이는 … 로 접는다. 여덟 쪽까지는 예전처럼 전부 보여 준다.
+    const near = new Set([0, pages - 1, this.page]);
+    if (pages > 8) {
+      near.add(Math.max(0, this.page - 1));
+      near.add(Math.min(pages - 1, this.page + 1));
+    } else {
+      for (let i = 0; i < pages; i++) near.add(i);
+    }
+    let prev = -1;
+    for (const i of [...near].sort((x, y) => x - y)) {
+      if (prev >= 0 && i - prev > 1) {
+        const gap = document.createElement('span');
+        gap.className = 'pager-gap';
+        gap.textContent = '…';
+        this.el.pager.appendChild(gap);
+      }
       this.el.pager.appendChild(button(String(i + 1), i, false, i === this.page));
+      prev = i;
     }
     this.el.pager.appendChild(
       button('›', Math.min(pages - 1, this.page + 1), this.page === pages - 1)

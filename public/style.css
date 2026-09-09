@@ -2457,6 +2457,12 @@ kbd {
 .pager button:hover:not(:disabled) { color: var(--text); background: rgba(255, 255, 255, 0.07); }
 .pager button.current { color: var(--text); background: rgba(79, 214, 255, 0.16); border-color: var(--stroke); }
 .pager button:disabled { opacity: 0.25; cursor: default; }
+/* 접힌 쪽 자리. 버튼과 높이를 맞춰 줄이 흔들리지 않게 한다. */
+.pager-gap {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 32px; color: var(--muted); font-size: 13px;
+  opacity: 0.6; user-select: none;
+}
 
 .my-rank {
   margin-top: 12px;

@@ -243,8 +243,12 @@ app.use('/models', express.static(join(root, 'public', 'models'), { maxAge: '7d'
 // ETag 가 있으니 안 바뀌었으면 304 만 오고 본문은 다시 안 받는다.
 app.use(express.static(join(root, 'public'), { etag: true, maxAge: 0, cacheControl: true }));
 
-// 화면에서 10개씩 10쪽으로 나눠 보여 준다.
+// 화면에서 10개씩 나눠 보여 준다.
 const TOP_N = 100;
+// 혼자 하기 기록(버티기·하드코어·마이크·마이크 하드)만 200위까지 준다.
+// 사람이 제일 많이 몰리는 판이라 100위에서 끊으면 이름을 찾을 수가 없다
+// — 버티기만 해도 기록을 올린 사람이 238명이다.
+const SOLO_TOP_N = 200;
 
 // 내 최고 기록이 몇 위인지. 로그인했으면 계정으로, 게스트면 이름으로 찾는다.
 // 100위 밖이면 목록에 안 나오므로 이 값으로 따로 알려 준다.
@@ -269,7 +273,7 @@ app.get('/api/scores', async (req, res) => {
   // 서버가 그 순간에 떠 있으리란 보장이 없어, 물어볼 때 확인한다.
   await scores.rollSeasons();
   const mode = normScoreMode(req.query.mode);
-  res.json({ top: scores.top(TOP_N, mode), me: myBest(req, mode), season: seasonInfo() });
+  res.json({ top: scores.top(SOLO_TOP_N, mode), me: myBest(req, mode), season: seasonInfo() });
 });
 
 // 지난 시즌들의 상위권
@@ -407,7 +411,7 @@ app.post('/api/scores', async (req, res) => {
   // 관리자(나) 본인 판은 전적·랭킹·판수·논시간 어디에도 안 남긴다.
   // 게임오버 화면은 정상적으로 뜨게, 제외됐다는 표시만 돌려준다.
   if (isAdminUser(req.user)) {
-    return res.json({ excluded: true, rank: null, top: scores.top(TOP_N, mode), me: null, season: seasonInfo() });
+    return res.json({ excluded: true, rank: null, top: scores.top(SOLO_TOP_N, mode), me: null, season: seasonInfo() });
   }
 
   const t = Number(time);
@@ -471,7 +475,7 @@ app.post('/api/scores', async (req, res) => {
     res.json({
       id: entry.id,
       rank: scores.rankOf(entry.id),
-      top: scores.top(TOP_N, mode),
+      top: scores.top(SOLO_TOP_N, mode),
       me: scores.bestOf(req.user ? { userId: req.user.id, mode } : { name: finalName, mode }),
       season: seasonInfo(),
       newTitles,
