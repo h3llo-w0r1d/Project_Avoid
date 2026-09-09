@@ -1761,11 +1761,13 @@ async function openTower() {
   // 아직 안 내놓은 층이 남아 있으면 어디까지 열렸는지도 같이 알려 준다.
   const upTo = data.released && data.released < data.top
     ? ` · ${data.released}층까지 열렸어요` : '';
+  // 게스트에게 「로그인하세요」 를 여기 적어 두면 눈에 안 들어온다 —
+  // 층을 눌렀을 때 화면 가운데에서 알려 준다(askTowerLogin).
   hint.textContent = admin
     ? '관리자 — 모든 층이 열려 있고, 기록은 남지 않아요'
     : data.signedIn
       ? `${data.cleared}층까지 통전됐어요${upTo}`
-      : `🔒 로그인하면 도전모드를 할 수 있어요${upTo}`;
+      : `한 층씩 올라가며 깨는 모드예요${upTo}`;
   overlay.querySelector('.tower-meter').textContent = admin
     ? `${data.top}F 전부` : `${data.cleared} / ${data.top}F`;
 
@@ -1793,7 +1795,8 @@ async function openTower() {
     }
     const st = f.soon ? 'soon' : (f.done ? 'done' : (f.open ? 'open' : 'lock'));
     const here = !f.soon && f.floor === cur && data.signedIn;
-    const canGo = f.open && !f.soon && data.signedIn;
+    // 게스트도 누를 수는 있다 — 눌러야 왜 안 되는지 알려 줄 수 있다.
+    const canGo = f.open && !f.soon;
     const me = here && face ? `<img class="pf-me" src="${face}" alt="">` : '';
     parts.push(
       `<div class="pf ${st}${here ? ' here' : ''}" data-floor="${f.floor}">` +
@@ -1824,6 +1827,8 @@ async function openTower() {
     b.addEventListener('click', () => {
       const n = Number(b.closest('.pf').dataset.floor);
       const f = data.floors.find((x) => x.floor === n);
+      // 탑은 열어 둔 채로 안내만 띄운다 — 「나중에」 를 누르면 계속 구경한다.
+      if (!data.signedIn) { askTowerLogin(close); return; }
       close();
       startChallenge(f);
     });
@@ -1835,6 +1840,35 @@ async function openTower() {
   if (now) box.scrollTop = now.offsetTop - box.clientHeight / 2 + now.offsetHeight / 2;
 }
 
+
+// 게스트가 층을 눌렀을 때. 왜 안 되는지와 어떻게 하면 되는지를 한 번에.
+// closeTower 는 「로그인하러 가기」 를 눌렀을 때 탑을 닫는 데 쓴다 — 안 닫으면
+// 로그인 화면 위에 탑이 그대로 덮여 있다.
+function askTowerLogin(closeTower) {
+  const overlay = document.createElement('div');
+  overlay.className = 'unlock-overlay';
+  overlay.innerHTML =
+    '<div class="unlock-card bot-result">' +
+    '<div class="unlock-kicker">🔒 로그인이 필요해요</div>' +
+    '<div class="bot-result-face">🗼</div>' +
+    '<div class="unlock-name">게스트는 층 오르기를 할 수 없어요</div>' +
+    '<div class="unlock-hint">로그인하면 층을 깨고 어디까지 올랐는지 남아요</div>' +
+    '<div class="bot-result-row">' +
+    '<button type="button" class="ghost small tower-later">나중에</button>' +
+    '<button type="button" class="primary small tower-login">로그인하러 가기</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+  const close = () => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); };
+  overlay.querySelector('.tower-later').addEventListener('click', close);
+  overlay.querySelector('.tower-login').addEventListener('click', () => {
+    close();
+    closeTower?.();
+    auth.logout();          // 게스트 상태를 풀면 로그인 화면으로 돌아간다
+  });
+  // 바깥을 눌러도 닫힌다(카드 안은 그대로).
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+}
 
 // ── 도전모드 진행 ──────────────────────────────────────────
 // state.challenge 가 '무엇을 해야 하나'(서버가 준 층 정의)라면,
