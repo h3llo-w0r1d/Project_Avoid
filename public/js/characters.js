@@ -573,8 +573,9 @@ export const CHARACTERS = [
       url: './models/ganadi.glb',
       yaw: 0,
       // 히트박스는 캐릭터와 무관하게 고정이라, 겉모습이 크면 "닿았는데 안
-      // 죽는" 캐릭터가 된다. 다른 캐릭터와 몸통 폭이 같아 보이는 값이다.
-      scale: 1.25,
+      // 죽는" 캐릭터가 된다. 통통한 체형이라 같은 배율에서도 커 보여
+      // 1.25 에서 8할로 내렸다.
+      scale: 1.0,
       depth: 1.0,
       yOffset: 0,
       brighten: 0.3
