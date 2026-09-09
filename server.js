@@ -29,7 +29,7 @@ import { openPresence } from './lib/presence.js';
 import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 import { describe as describeTitles, sanitizeEquipped, earnedIds as earnedTitleIds, titleById, isAwardable } from './lib/titles.js';
-import { describe as describeChallenge, floorAt, TOP_FLOOR } from './lib/challenge.js';
+import { describe as describeChallenge, floorAt, TOP_FLOOR, RELEASED } from './lib/challenge.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -1171,27 +1171,27 @@ app.get('/api/tower-ranks', (req, res) => {
   });
 });
 
-// 도전모드(탑) — 내 진행도와 층 목록. 로그인해야 도전할 수 있다.
-// 아직 준비 중이라 관리자만 쓸 수 있다(버튼도 관리자에게만 보인다).
+// 도전모드(탑) — 내 진행도와 층 목록. 목록은 누구나 볼 수 있고(로그인 안 해도
+// 무엇이 기다리는지는 보인다), 실제로 도전하려면 로그인해야 한다.
 app.get('/api/challenge', (req, res) => {
-  if (!isAdminUser(req.user)) {
-    return res.status(403).json({ error: '도전모드는 준비 중입니다.' });
-  }
-  const me = users.byId(req.user.id);
+  const admin = isAdminUser(req.user);
+  const me = req.user ? users.byId(req.user.id) : null;
   // 관리자는 확인용이라 전부 열어 준다(진행도 자체는 그대로 쌓인다).
-  res.json({ signedIn: true, ...describeChallenge(me?.challenge ?? 0, true) });
+  res.json({ signedIn: !!req.user, ...describeChallenge(me?.challenge ?? 0, admin) });
 });
 
 // 한 층을 깼다고 알린다. 순서대로만(지금 층 +1) 인정한다.
 // 조건 달성 자체는 클라가 판정한다(코인·판정이 원래 클라 신뢰 모델이라 동일).
 app.post('/api/challenge/clear', (req, res) => {
-  if (!isAdminUser(req.user)) {
-    return res.status(403).json({ error: '도전모드는 준비 중입니다.' });
-  }
+  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
   const floor = Math.floor(Number(req.body?.floor) || 0);
   const me = users.byId(req.user.id);
   const cleared = me?.challenge ?? 0;
   if (!floorAt(floor)) return res.status(400).json({ error: '없는 층입니다.' });
+  // 아직 안 내놓은 층은 클라가 뭐라 하든 인정하지 않는다.
+  if (!isAdminUser(req.user) && floor > RELEASED) {
+    return res.status(403).json({ error: '아직 준비 중인 층입니다.' });
+  }
   if (floor !== cleared + 1) {
     // 이미 깬 층을 다시 깨는 건 조용히 무시(진행도 그대로).
     return res.json({ ok: true, ...describeChallenge(cleared) });

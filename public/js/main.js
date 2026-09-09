@@ -739,21 +739,6 @@ function showShopLoginPrompt() {
   overlay.addEventListener('click', close);
 }
 
-// 아직 여는 중인 기능을 눌렀을 때. 버튼은 보이게 두되(뭐가 올지 보이게)
-// 누르면 준비 중이라고만 알린다. 관리자는 그대로 쓸 수 있다.
-// (상점은 열었고, 지금은 층 오르기만 이걸 쓴다.)
-function comingSoon() {
-  const t = document.createElement('div');
-  t.className = 'shop-toast center';
-  t.textContent = '업데이트 중입니다';
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('show'));
-  setTimeout(() => {
-    t.classList.remove('show');
-    setTimeout(() => t.remove(), 240);
-  }, 1600);
-}
-
 // ── 코인 지급(관리자) ──────────────────────────────────────
 // 계정 목록을 보여 주고, 누르면 그 계정에 코인을 지급한다(대기에 쌓임 →
 // 그 사람 다음 접속 때 자동 수령). 상단바 💰 버튼으로 연다.
@@ -1505,11 +1490,9 @@ const versus = new VersusUI({
 
 // 봇전 버튼 — 난이도 고르는 창을 연다.
 document.getElementById('bot-btn')?.addEventListener('click', pickBotDifficulty);
-// 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼.
-document.getElementById('tower-btn')?.addEventListener('click', () => {
-  if (isAdmin) openTower();
-  else comingSoon();
-});
+// 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼. 30층까지 열려 있고 그 위는
+// 목록에 「업데이트 중」 으로 뜬다(관리자는 전부 들어갈 수 있다).
+document.getElementById('tower-btn')?.addEventListener('click', openTower);
 
 // 물리·연출 쪽은 소리를 모른다. 사건만 받아서 여기서 소리를 낸다.
 //
@@ -1773,14 +1756,19 @@ async function openTower() {
   catch { overlay.querySelector('.tower-hint').textContent = '불러오지 못했습니다.'; return; }
 
   const hint = overlay.querySelector('.tower-hint');
+  // 아직 안 내놓은 층이 남아 있으면 어디까지 열렸는지도 같이 알려 준다.
+  const upTo = data.released && data.released < data.top
+    ? ` · ${data.released}층까지 열렸어요` : '';
   hint.textContent = data.signedIn
-    ? `${data.cleared}층까지 통전됐어요`
-    : '🔒 로그인하면 도전모드를 할 수 있어요';
+    ? `${data.cleared}층까지 통전됐어요${upTo}`
+    : `🔒 로그인하면 도전모드를 할 수 있어요${upTo}`;
   overlay.querySelector('.tower-meter').textContent = `${data.cleared} / ${data.top}F`;
 
   let face = '';
   try { face = characters.preview(player.characterId); } catch { /* 미리보기 실패는 무시 */ }
-  const cur = Math.min(data.top, data.cleared + 1);   // 지금 도전할 층
+  // 지금 도전할 층. 열린 층을 다 깼으면 없다(0).
+  const top = data.released ?? data.top;
+  const cur = data.cleared < top ? data.cleared + 1 : 0;
   const zones = data.zones ?? [];
 
   // 60층이 맨 위, 1층이 맨 아래. 그래서 위에서부터 거꾸로 그린다.
@@ -1789,15 +1777,17 @@ async function openTower() {
     // 구간의 맨 위 층 앞에 표지판을 세운다(위에서 내려오며 만나는 순서).
     const z = zones.find((x) => x.to === f.floor);
     if (z) {
+      const zSoon = z.from > (data.released ?? data.top);
       parts.push(
-        `<div class="pz${data.cleared >= z.to ? ' lit' : ''}">` +
+        `<div class="pz${data.cleared >= z.to ? ' lit' : ''}${zSoon ? ' soon' : ''}">` +
         `<span class="pz-range">${z.from}–${z.to}F</span>` +
         `<span class="pz-name">${z.name}</span>` +
+        (zSoon ? '<span class="pz-soon">업데이트 중</span>' : '') +
         '</div>');
     }
-    const st = f.done ? 'done' : (f.open ? 'open' : 'lock');
-    const here = f.floor === cur && data.signedIn;
-    const canGo = f.open && data.signedIn;
+    const st = f.soon ? 'soon' : (f.done ? 'done' : (f.open ? 'open' : 'lock'));
+    const here = !f.soon && f.floor === cur && data.signedIn;
+    const canGo = f.open && !f.soon && data.signedIn;
     const me = here && face ? `<img class="pf-me" src="${face}" alt="">` : '';
     parts.push(
       `<div class="pf ${st}${here ? ' here' : ''}" data-floor="${f.floor}">` +
@@ -1805,9 +1795,10 @@ async function openTower() {
       '<span class="pf-arm"></span><span class="pf-ins"></span>' +
       `<span class="pf-plate">` +
       `<b class="pf-num">${f.floor}<i>F</i></b>` +
-      `<span class="pf-goal">${f.done ? '통전 완료' : f.goal}</span>` +
+      `<span class="pf-goal">${f.soon ? '준비 중인 층이에요' : f.done ? '통전 완료' : f.goal}</span>` +
       me +
-      `<span class="pf-state">${f.done ? '통전' : here ? '도전' : f.open ? '열림' : '잠김'}</span>` +
+      `<span class="pf-state">${f.soon ? '업데이트 중'
+        : f.done ? '통전' : here ? '도전' : f.open ? '열림' : '잠김'}</span>` +
       '</span></button></div>');
   }
 
