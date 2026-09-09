@@ -6,14 +6,23 @@
 // 화면의 로컬 좌표로 되돌린다. 안 돌렸으면 그대로 반환한다.
 
 import { toLocal } from './orientation.js';
+import { settings } from './settings.js';
 
-const KEY_MAP = {
+// 이동은 고정이다. 점프만 설정에서 바꿀 수 있다 — 스페이스가 브라우저
+// 스크롤과 겹쳐 불편하다는 얘기가 있었고, 왼손잡이 배치도 있다.
+const MOVE_MAP = {
   KeyW: 'up', ArrowUp: 'up',
   KeyS: 'down', ArrowDown: 'down',
   KeyA: 'left', ArrowLeft: 'left',
-  KeyD: 'right', ArrowRight: 'right',
-  Space: 'jump', KeyK: 'jump', KeyZ: 'jump'
+  KeyD: 'right', ArrowRight: 'right'
 };
+
+// 눌린 키가 무슨 동작인지. 점프 키는 설정을 그때그때 읽는다 —
+// 미리 표를 만들어 두면 설정을 바꾼 뒤 새로고침해야 먹는다.
+function actionOf(code) {
+  if (MOVE_MAP[code]) return MOVE_MAP[code];
+  return settings.get('jumpKeys').includes(code) ? 'jump' : null;
+}
 
 export class Input {
   constructor() {
@@ -34,7 +43,7 @@ export class Input {
 
   bindKeyboard() {
     addEventListener('keydown', (e) => {
-      const action = KEY_MAP[e.code];
+      const action = actionOf(e.code);
       if (!action) return;
       if (this.enabled) e.preventDefault();
       if (action === 'jump') {
@@ -45,7 +54,7 @@ export class Input {
     });
 
     addEventListener('keyup', (e) => {
-      const action = KEY_MAP[e.code];
+      const action = actionOf(e.code);
       if (action && action !== 'jump') this.keys[action] = false;
     });
 

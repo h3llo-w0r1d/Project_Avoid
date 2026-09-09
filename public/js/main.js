@@ -10,6 +10,8 @@ import { wallet } from './wallet.js';
 import { Input } from './input.js';
 import { VoiceJump } from './voice-jump.js';
 import { UI, api } from './ui.js';
+import { SettingsUI } from './settings-ui.js';
+import { settings } from './settings.js';
 import { VersusUI } from './versus-ui.js';
 import { PauseUI } from './pause-ui.js';
 import { Auth } from './auth.js';
@@ -289,7 +291,8 @@ const trail = new TrailFX(scene);
 // 발자국 효과를 지금 상태(켠 것 + 그 단계)로 맞춘다. 단계가 올랐을 때도
 // 이걸 부르면 그 자리에서 화려해진다.
 function refreshTrail() {
-  const id = wallet.equippedIn('trail');
+  // 설정에서 화면 효과를 줄였으면 발자국은 안 그린다.
+  const id = settings.get('lowEffects') ? null : wallet.equippedIn('trail');
   // 고른 단계로 켠다. 안 골랐으면 열린 최고 단계다(wallet.fxPick).
   trail.setEffect(id, id ? wallet.fxPick(id) : 1);
 }
@@ -410,12 +413,6 @@ const audio = new Audio();
 
 const ui = new UI({
   onStart: startGame,
-  onToggleMute: () => {
-    audio.unlock();
-    audio.setMuted(!audio.muted);
-    return audio.muted;
-  },
-  isMuted: () => audio.muted,
   onEscape: togglePause,
   onHome: goHome
 });
@@ -1426,6 +1423,17 @@ const adminCoins = (() => {
   spin10Btn?.addEventListener('click', () => { closeOdds(); spin10(); });
   goldBtn?.addEventListener('click', () => { closeOdds(); spinGold(); });
 })();
+
+// 설정 창. 소리 크기·배경음·점프 키·화면 효과를 여기서 다룬다.
+const settingsUI = new SettingsUI({
+  audio,
+  // 화면 효과를 줄이면 발자국 효과도 같이 끈다.
+  onEffects: () => refreshTrail()
+});
+
+// 저장해 둔 내 음악을 읽어 둔다. 소리가 아직 안 깨어 있으면 해독은
+// 미뤄지고, unlock() 때 이어진다.
+audio.loadUserMusic().catch(() => {});
 
 const characters = new CharacterUI({
   bestSeconds,

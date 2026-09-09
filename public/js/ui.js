@@ -1,4 +1,5 @@
 import { STAGES } from './config.js';
+import { settings } from './settings.js';
 import { GUEST_PATTERN } from './profanity.js';
 
 const $ = (id) => document.getElementById(id);
@@ -171,13 +172,8 @@ export class UI {
       handlers.onEscape?.();
     });
 
-    const mute = $('mute-btn');
-    const paintMute = (muted) => {
-      mute.textContent = muted ? '🔇' : '🔊';
-      mute.classList.toggle('off', muted);
-    };
-    paintMute(handlers.isMuted());
-    mute.addEventListener('click', () => paintMute(handlers.onToggleMute()));
+    // 음소거 버튼은 설정 창으로 옮겼다(settings-ui.js). 소리 크기를 배경음·
+    // 효과음으로 나눠 줄 수 있어 단순 끄기보다 쓸모가 많다.
 
 
     // 모바일이면 가상 조작을 켠다
@@ -323,6 +319,9 @@ export class UI {
   }
 
   flashZap() {
+    // 화면 효과를 줄였으면 번쩍이지 않는다. 빛에 민감한 분도 있고,
+    // 저사양 기기에서는 이 순간에 프레임이 튄다.
+    if (settings.get('lowEffects')) return;
     document.body.classList.remove('zapped');
     void document.body.offsetWidth; // 리플로우로 애니메이션 재시작
     document.body.classList.add('zapped');

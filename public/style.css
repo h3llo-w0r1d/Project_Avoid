@@ -2672,6 +2672,76 @@ kbd {
 :root.force-landscape #play-count { display: none; }
 
 /* 탑 화면 — 둥둥 뜬 땅이 아래(1층)부터 위로 이어지고, 그 위를 올라간다 */
+
+/* ---------- 설정 창 ---------- */
+.settings-card { width: min(460px, 94vw); max-height: 88vh; }
+.settings-body { overflow-y: auto; max-height: calc(88vh - 90px); padding-right: 4px; }
+
+.set-sec { margin-bottom: 22px; }
+.set-sec h3 {
+  font-size: 13px; font-weight: 900; letter-spacing: 0.1em;
+  color: var(--accent); margin-bottom: 10px;
+}
+.set-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 10px; font-size: 14px; font-weight: 700;
+}
+.set-row > span:first-child { width: 66px; flex: none; }
+.set-row input[type="range"] { flex: 1; accent-color: var(--accent); }
+.set-row > b { width: 46px; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.set-check { cursor: pointer; }
+.set-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+.set-check span { font-weight: 700; }
+.set-hint { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+.set-warn { color: #ffb454; }
+
+/* 배경음 고르기 — 세 칸이 폭을 나눠 갖는다 */
+/* 전역 button 이 width:100% · margin-top:12px 이라, 설정 창의 작은 버튼들은
+   따로 풀어 준다. 안 풀면 점프 키가 한 줄에 하나씩 세로로 쌓인다. */
+.settings-body button { width: auto; margin-top: 0; padding: 8px 12px; font-size: 13px; }
+
+.set-picks { display: flex; gap: 8px; margin-bottom: 10px; }
+.set-picks .set-pick { flex: 1; }
+.set-pick {
+  flex: 1; padding: 9px 6px; border-radius: 10px;
+  border: 1px solid var(--stroke); background: rgba(255, 255, 255, 0.04);
+  color: var(--text); font-family: inherit; font-size: 13px; font-weight: 800;
+  cursor: pointer;
+}
+.set-pick:hover { border-color: rgba(79, 214, 255, 0.5); }
+.set-pick.on { border-color: var(--accent); background: rgba(79, 214, 255, 0.14); color: #cfe9ff; }
+
+.set-music { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.set-file, .set-clear {
+  padding: 7px 12px; border-radius: 9px;
+  border: 1px solid var(--stroke); background: rgba(255, 255, 255, 0.05);
+  color: var(--text); font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.set-clear { color: #ff8a9a; border-color: rgba(255, 90, 110, 0.35); }
+/* 파일 이름이 길어도 줄을 밀어내지 않게 잘라 준다 */
+.set-note {
+  flex: 1; min-width: 0; font-size: 12px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* 점프 키 */
+.set-keys { display: flex; gap: 8px; flex-wrap: wrap; }
+.set-key {
+  min-width: 64px; padding: 8px 12px; border-radius: 9px;
+  border: 1px solid var(--stroke); background: rgba(255, 255, 255, 0.06);
+  color: var(--text); font-family: inherit; font-size: 13px; font-weight: 800;
+  cursor: pointer;
+}
+.set-key:hover { border-color: rgba(79, 214, 255, 0.5); }
+.set-key.waiting {
+  border-color: var(--accent); background: rgba(79, 214, 255, 0.16);
+  color: #cfe9ff; animation: setBlink 1s ease-in-out infinite;
+}
+.set-key.add { color: var(--muted); font-weight: 700; }
+@keyframes setBlink { 50% { opacity: 0.55; } }
+
+#set-reset { width: 100%; margin-top: 4px; padding: 11px; font-size: 14px; }
+
 /* ---------- 층 오르기 — 고압 송전탑 ---------- */
 /* 철탑 하나가 위로 이어지고, 깬 층까지 전류가 흐른다.
    층은 철탑에서 뻗은 가로대 끝의 명판이고 10층마다 구간 표지판이 붙는다.

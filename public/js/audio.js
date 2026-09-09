@@ -8,6 +8,7 @@
 // 그래서 AudioContext 는 첫 클릭 때 unlock() 에서 만든다.
 
 import { SOUNDS, VOICE } from './config.js';
+import { settings, musicStore } from './settings.js';
 
 const MUTE_KEY = 'avoidarc.muted';
 
@@ -22,6 +23,12 @@ export class Audio {
   constructor() {
     this.ctx = null;
     this.master = null;
+    // 배경음과 효과음을 따로 줄일 수 있게 버스를 나눈다.
+    //   destination ← master(음소거) ← musicBus / sfxBus
+    // 나누기 전엔 master 하나뿐이라 "브금만 끄기" 가 안 됐다.
+    this.musicBus = null;
+    this.userMusicName = null;   // 사용자가 넣은 곡의 파일 이름
+    this.sfxBus = null;
     this.ambient = null;
     this.muted = localStorage.getItem(MUTE_KEY) === '1';
     this.noise = null;
@@ -62,15 +69,16 @@ export class Audio {
     }
   }
 
+  // 해독했으면 true. 사용자가 넣은 곡은 이 값으로 "쓸 수 있는 파일인지" 를 가린다.
   async decode(name) {
     const raw = this.raw[name];
-    if (!raw || !this.ctx) return;
+    if (!raw || !this.ctx) return false;
     delete this.raw[name];
     try {
       this.buffers[name] = await this.ctx.decodeAudioData(raw);
     } catch (err) {
       console.warn(`소리 파일을 해독하지 못해 합성음을 씁니다 (${name}):`, err.message);
-      return;
+      return false;
     }
 
     // 이 곡을 틀라고 했었는데 그때는 아직 안 받아져 있었다면 이제 시작한다.
@@ -78,6 +86,7 @@ export class Audio {
     // 소리를 여는 순간(unlock)에 해독이 시작되므로, 바로 이어서 playMusic 을
     // 부르면 아직 준비가 안 돼 조용히 넘어간다. 그래서 첫 판만 음악이 없었다.
     if (this.wantMusic === name && this.playing?.name !== name) this.playMusic(name);
+    return true;
   }
 
   // 반드시 클릭·키 입력 같은 사용자 제스처 안에서 불러야 한다.
@@ -93,6 +102,12 @@ export class Audio {
     this.master = this.ctx.createGain();
     this.master.gain.value = this.muted ? 0 : 0.5;
     this.master.connect(this.ctx.destination);
+
+    this.musicBus = this.ctx.createGain();
+    this.sfxBus = this.ctx.createGain();
+    this.musicBus.connect(this.master);
+    this.sfxBus.connect(this.master);
+    this.applyVolumes();
 
     // 잡음은 한 번 만들어 두고 돌려 쓴다
     const len = this.ctx.sampleRate;
@@ -129,9 +144,19 @@ export class Audio {
     const gain = this.ctx.createGain();
     gain.gain.value = volume ?? entryOf(SOUNDS[name])?.volume ?? 1;
     src.connect(gain);
-    gain.connect(target ?? this.master);
+    gain.connect(target ?? this.sfxBus ?? this.master);
     src.start();
     return src;
+  }
+
+  // 설정의 소리 크기를 버스에 반영한다. 소리가 아직 안 깨어 있으면
+  // 아무 일도 안 한다 — unlock() 이 켜질 때 다시 부른다.
+  applyVolumes() {
+    if (!this.ctx) return;
+    const m = settings.get('musicPick') === 'off' ? 0 : settings.get('musicVolume');
+    // 뚝 끊으면 틱 소리가 나므로 짧게 넘긴다.
+    this.musicBus.gain.setTargetAtTime(m, this.ctx.currentTime, 0.03);
+    this.sfxBus.gain.setTargetAtTime(settings.get('sfxVolume'), this.ctx.currentTime, 0.03);
   }
 
   setMuted(muted) {
@@ -227,7 +252,7 @@ export class Audio {
     const gain = this.ctx.createGain();
     gain.gain.value = VOICE.volume;
     src.connect(gain);
-    gain.connect(this.master);
+    gain.connect(this.sfxBus ?? this.master);
     src.start();
     return true;
   }
@@ -268,7 +293,7 @@ export class Audio {
     g.gain.setValueAtTime(0.0001, at);
     g.gain.exponentialRampToValueAtTime(Math.max(peak, 0.0002), at + attack);
     g.gain.exponentialRampToValueAtTime(0.0001, at + attack + decay);
-    g.connect(this.master);
+    g.connect(this.sfxBus ?? this.master);
     return g;
   }
 
@@ -398,8 +423,51 @@ export class Audio {
   // 브라우저는 사용자가 뭔가 누르기 전에는 소리를 못 내게 막는다. 그전에
   // 불리면 무엇을 틀지만 적어 두고, unlock() 때 그 곡을 시작한다.
 
+  // 사용자가 넣은 곡을 읽어 둔다. 페이지를 열 때 한 번 부른다.
+  // 아직 소리가 안 깨어 있으면 해독은 unlock() 뒤로 미룬다.
+  async loadUserMusic() {
+    const rec = await musicStore.load();
+    if (!rec?.blob) return false;
+    this.userMusicName = rec.name ?? null;
+    const buf = await rec.blob.arrayBuffer();
+    this.raw['userMusic'] = buf;
+    if (this.ctx) await this.decode('userMusic');
+    return true;
+  }
+
+  // 새 곡을 넣는다. 저장까지 하고, 바로 틀어 준다.
+  async setUserMusic(file) {
+    const buf = await file.arrayBuffer();
+    this.raw['userMusic'] = buf.slice(0);
+    // 해독이 안 되면(형식이 안 맞으면) 저장하지 않는다 — 다음에 열 때
+    // 또 실패하느니 지금 알려 주는 편이 낫다.
+    if (this.ctx) {
+      const okDecode = await this.decode('userMusic');
+      if (!okDecode) return false;
+    }
+    await musicStore.save(file, file.name);
+    this.userMusicName = file.name;
+    return true;
+  }
+
+  async clearUserMusic() {
+    await musicStore.clear();
+    delete this.raw['userMusic'];
+    delete this.buffers['userMusic'];
+    this.userMusicName = null;
+  }
+
+  // 설정에 따라 실제로 틀 곡 이름을 고른다.
+  // 'off' 는 musicBus 를 0 으로 두는 쪽으로 처리하므로 여기서는 곡을
+  // 그대로 둔다 — 껐다 켤 때 처음부터 다시 시작하지 않게 하려는 것이다.
+  pickMusicName(name) {
+    if (name !== 'music') return name;                  // 첫 화면 곡 등은 그대로
+    if (settings.get('musicPick') === 'custom' && this.buffers['userMusic']) return 'userMusic';
+    return name;
+  }
+
   playMusic(name) {
-    this.wantMusic = name || null;
+    this.wantMusic = name ? this.pickMusicName(name) : null;
     if (!this.ctx) return;
     // 같은 곡이면 그대로 흐르게 둔다. 다시 틀면 처음으로 되감겨서,
     // 게임을 시작할 때마다 곡이 앞으로 돌아가 거슬린다.
@@ -410,14 +478,32 @@ export class Audio {
 
     const gain = this.ctx.createGain();
     gain.gain.value = 0;
-    gain.connect(this.master);
+    gain.connect(this.musicBus ?? this.master);
 
     const src = this.playFile(this.wantMusic, { loop: true, target: gain, volume: 1 });
     if (!src) return;      // 파일을 안 넣었으면 조용히 넘어간다
 
-    const volume = entryOf(SOUNDS[this.wantMusic])?.volume ?? 0.5;
-    gain.gain.setTargetAtTime(volume, this.now, 0.8);
+    // 크기는 musicBus 가 맡는다(설정의 배경음 슬라이더). 여기서는 서서히
+    // 켜지기만 한다 — 곡마다 다른 볼륨을 또 곱하면 두 번 줄어든다.
+    gain.gain.setTargetAtTime(1, this.now, 0.8);
     this.playing = { name: this.wantMusic, src, gain };
+  }
+
+  // 지금 틀던 곡을 고른 것으로 다시 잡는다. 설정에서 곡을 바꿨을 때 부른다.
+  //
+  // playMusic 은 "같은 곡이면 그대로 둔다" 라서, 이름이 바뀌지 않는 경우
+  // (기본 → 끄기 → 기본)에는 아무 일도 안 한다. 그래서 지금 것을 먼저
+  // 잊고 다시 부른다.
+  restartMusic() {
+    const want = this.wantMusic;
+    if (!want) return;
+    // pickMusicName 은 'music' 을 받아야 사용자 곡으로 바꿔 준다.
+    const base = want === 'userMusic' ? 'music' : want;
+    const next = this.pickMusicName(base);
+    if (this.playing?.name === next) return;   // 바뀐 게 없으면 그대로
+    this.playing = null;
+    this.stopMusic(0.4);
+    this.playMusic(base);
   }
 
   // 페이드로 끈다. 뚝 끊으면 '틱' 소리가 난다.
@@ -444,7 +530,7 @@ export class Audio {
     const group = this.ctx.createGain();
     group.gain.value = 0;
     group.gain.setTargetAtTime(0.35, this.now, 1.5);
-    group.connect(this.master);
+    group.connect(this.sfxBus ?? this.master);
 
     // 배경음악은 여기서 다루지 않는다. 환경음은 게임이 시작하고 끝날 때
     // 켜고 끄지만, 음악은 화면이 바뀔 때마다 곡을 갈아 끼워야 해서
