@@ -18,11 +18,14 @@ import sharp from 'sharp';
 
 const OUT = 'public/img';
 
-// [파일 이름, 가로, 세로, 품질]
+// [파일 이름, 가로, 품질] — 세로는 원본 비율 그대로 둔다.
+// 여기서 16:9 로 맞춰 잘라 버리면 그 순간 원본 좌우가 날아간다. 화면마다
+// 필요한 잘림은 CSS(object-fit: cover)가 그때그때 하는 게 맞다 — 넓은
+// 모니터와 세로 폰은 잘리는 방향부터 다르다.
 // 품질 72/68 은 눈으로 구별이 안 가면서 용량이 확 떨어지는 지점이다.
 const SIZES = [
-  ['title-bg.webp', 2400, 1350, 72],
-  ['title-bg-sm.webp', 1200, 675, 68]
+  ['title-bg.webp', 2400, 72],
+  ['title-bg-sm.webp', 1200, 68]
 ];
 
 const kb = (p) => (statSync(p).size / 1024).toFixed(0) + 'KB';
@@ -41,13 +44,13 @@ async function main() {
   }
 
   mkdirSync(OUT, { recursive: true });
-  for (const [name, w, h, quality] of SIZES) {
+  for (const [name, w, quality] of SIZES) {
     const out = join(OUT, name);
-    await sharp(src)
-      .resize(w, h, { fit: 'cover', position: 'centre' })
+    const info = await sharp(src)
+      .resize({ width: w })
       .webp({ quality, effort: 6 })
       .toFile(out);
-    console.log(`만듦  ${out}  ${w}×${h}  ${kb(out)}`);
+    console.log(`만듦  ${out}  ${info.width}×${info.height}  ${kb(out)}`);
   }
   console.log('');
   console.log('넣었으면 배포만 하면 타이틀 화면에 바로 뜹니다.');
