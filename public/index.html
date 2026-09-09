@@ -299,8 +299,16 @@
 
   <!-- 시작 화면 -->
   <div id="title-screen" class="screen">
-    <!-- 배경: 은은한 붉은 전기 무드. 타이틀에서만, 카드 뒤는 어둡게(비네트). -->
+    <!-- 배경: 사진이 있으면 사진, 없으면 아래 SVG 무드만. 타이틀에서만 보이고
+         게임이 시작되면 3D 무대가 대신 나온다. 카드 뒤는 어둡게(비네트). -->
     <div id="title-backdrop" aria-hidden="true">
+      <!-- 파일이 없으면 onerror 로 스스로 빠진다. 그래야 그림을 넣기 전에도
+           화면이 멀쩡하고, 넣는 순간 따로 손댈 것 없이 뜬다. -->
+      <picture class="tb-photo">
+        <source media="(max-width: 900px)" srcset="./img/title-bg-sm.webp" type="image/webp">
+        <img src="./img/title-bg.webp" alt="" decoding="async" fetchpriority="high"
+             onerror="this.closest('.tb-photo').remove()">
+      </picture>
       <svg viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
         <defs>
           <filter id="tbGlow" x="-40%" y="-40%" width="180%" height="180%">
