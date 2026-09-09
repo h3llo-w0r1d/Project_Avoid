@@ -40,15 +40,35 @@ async function main() {
   const H = meta.height - TOP_BAR;
   console.log(`원본 ${meta.width}×${meta.height} → 상단 바 ${TOP_BAR}px 잘라 ${W}×${H}`);
 
-  const base = await sharp(src)
+  // 왼쪽으로 갈수록 어두워지는 그라데이션을 먼저 깐다.
+  // 지운 자리만 검게 눌러 두면 남은 풍경과 사이에 세로 경계가 생겨
+  // "검은 네모" 로 읽힌다. 왼쪽 전체를 서서히 재우면 그 경계가 사라지고,
+  // 오른쪽 포탈만 밝게 남아 시선이 그리로 간다.
+  const RAMP = 0.62;   // 이 비율까지 어둡게 재운다(오른쪽은 그대로)
+
+  const raw = await sharp(src)
     .extract({ left: 0, top: TOP_BAR, width: W, height: H })
     .png()
     .toBuffer();
 
+  const ramp = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">` +
+    `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0">` +
+    `<stop offset="0%" stop-color="#05060f" stop-opacity="0.72"/>` +
+    `<stop offset="${Math.round(RAMP * 100)}%" stop-color="#05060f" stop-opacity="0"/>` +
+    `</linearGradient></defs>` +
+    `<rect width="${W}" height="${H}" fill="url(#g)"/></svg>`);
+
+  const base = await sharp(raw)
+    .composite([{ input: ramp }])
+    .png()
+    .toBuffer();
+
+
   // 뭉갠 뒤 어둡게 누른 판. 이걸 가짜 UI 자리에만 덮는다.
   const soft = await sharp(base)
     .blur(64)
-    .modulate({ brightness: 0.36, saturation: 0.65 })
+    .modulate({ brightness: 0.55, saturation: 0.8 })
     .removeAlpha()
     .raw()
     .toBuffer();
