@@ -3098,32 +3098,107 @@ kbd {
 }
 .promo-lead { margin: 12px 0 0; font-size: 14px; font-weight: 700; line-height: 1.7; color: var(--muted); }
 
-/* 철탑 한 컷. 층 오르기 창에 쓰는 격자와 같은 결이라, 글을 안 읽어도
-   무엇을 말하는지 짐작이 간다. */
-.promo-art { margin: 22px auto 0; width: 100%; max-width: 420px; height: 120px; position: relative; }
+/* 철탑 한 컷. 층 오르기 창에 쓰는 것과 같은 격자·머리·기초를 그대로 쓴다
+   — 알림에서 본 그림이 창을 열었을 때 또 나와야 같은 것이라고 읽힌다.
+   전류가 아래에서 위로 차오르는 것이 이 모드가 하는 일 그 자체다. */
+.promo-art {
+  position: relative; margin: 24px auto 0;
+  width: 100%; max-width: 440px; height: 178px;
+}
+
+/* 기둥 — 칸마다 X 브레이스, 칸 경계마다 가로 브레이스, 좌우 주각.
+   무늬는 아래를 기준으로 쌓아야 차오르는 전류와 격자가 안 어긋난다. */
 .promo-tower {
-  position: absolute; left: 50%; top: 0; bottom: 0; width: 92px;
-  transform: translateX(-50%);
-  --panel-h: 40px;
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: 58px; bottom: 18px; width: 104px;
+  --panel: 30px;
   background:
-    linear-gradient(to bottom right, transparent calc(50% - 1.3px),
-      rgba(255, 190, 126, 0.75) calc(50% - 1.3px) calc(50% + 1.3px), transparent calc(50% + 1.3px)),
-    linear-gradient(to bottom left, transparent calc(50% - 1.3px),
-      rgba(255, 190, 126, 0.75) calc(50% - 1.3px) calc(50% + 1.3px), transparent calc(50% + 1.3px)),
+    linear-gradient(to bottom right, transparent calc(50% - 1.2px),
+      rgba(150, 174, 214, 0.5) calc(50% - 1.2px) calc(50% + 1.2px), transparent calc(50% + 1.2px)),
+    linear-gradient(to bottom left, transparent calc(50% - 1.2px),
+      rgba(150, 174, 214, 0.5) calc(50% - 1.2px) calc(50% + 1.2px), transparent calc(50% + 1.2px)),
+    linear-gradient(180deg, rgba(150, 174, 214, 0.3) 0 2px, transparent 2px),
+    linear-gradient(90deg,
+      rgba(198, 218, 248, 0.8) 0 3px, rgba(86, 104, 138, 0.6) 3px 5px,
+      rgba(10, 13, 22, 0.25) 5px calc(100% - 5px),
+      rgba(86, 104, 138, 0.6) calc(100% - 5px) calc(100% - 3px),
+      rgba(198, 218, 248, 0.8) calc(100% - 3px) 100%);
+  background-size: 100% var(--panel), 100% var(--panel), 100% var(--panel), 100% 100%;
+  background-position: 0 100%;
+  background-repeat: repeat, repeat, repeat, no-repeat;
+}
+
+/* 아래에서 차오르는 전류. 같은 격자를 주황으로 다시 그린다. */
+.promo-rise {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 0;
+  --panel: 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 140, 60, 0) 0%, rgba(255, 115, 45, 0.28) 100%),
+    linear-gradient(to bottom right, transparent calc(50% - 1.4px),
+      rgba(255, 190, 126, 0.85) calc(50% - 1.4px) calc(50% + 1.4px), transparent calc(50% + 1.4px)),
+    linear-gradient(to bottom left, transparent calc(50% - 1.4px),
+      rgba(255, 190, 126, 0.85) calc(50% - 1.4px) calc(50% + 1.4px), transparent calc(50% + 1.4px)),
     linear-gradient(180deg, rgba(255, 190, 126, 0.5) 0 2px, transparent 2px),
     linear-gradient(90deg, rgba(255, 212, 158, 0.95) 0 3px, transparent 3px calc(100% - 3px),
       rgba(255, 212, 158, 0.95) calc(100% - 3px) 100%);
-  background-size: 100% var(--panel-h), 100% var(--panel-h), 100% var(--panel-h), 100% 100%;
+  background-size: 100% 100%, 100% var(--panel), 100% var(--panel), 100% var(--panel), 100% 100%;
   background-position: 0 100%;
-  background-repeat: repeat, repeat, repeat, no-repeat;
-  filter: drop-shadow(0 0 18px rgba(255, 130, 50, 0.4));
+  background-repeat: no-repeat, repeat, repeat, repeat, no-repeat;
+  border-top: 2px solid rgba(255, 210, 160, 0.95);
+  box-shadow: 0 0 26px rgba(255, 120, 50, 0.5);
+  animation: promoRise 3.4s cubic-bezier(0.5, 0, 0.4, 1) infinite;
 }
-.promo-tower::after {
-  content: ''; position: absolute; left: 50%; top: -14px; transform: translateX(-50%);
-  width: 3px; height: 16px;
-  background: linear-gradient(180deg, rgba(255, 232, 200, 0.95), rgba(255, 170, 90, 0.3));
+/* 끝까지 차오르면 잠깐 머물렀다가, 안 보이는 사이에 바닥으로 돌아간다. */
+@keyframes promoRise {
+  0%   { height: 0; opacity: 1; }
+  62%  { height: 100%; opacity: 1; }
+  86%  { height: 100%; opacity: 1; }
+  100% { height: 100%; opacity: 0; }
 }
 
+/* 머리 — 피뢰침과 가로대 둘. 위가 짧고 아래가 길다(실제 송전탑 순서). */
+.promo-tip {
+  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
+  width: 3px; height: 26px;
+  background: linear-gradient(180deg, rgba(214, 232, 255, 0.95), rgba(150, 174, 214, 0.35));
+}
+.promo-tip::after {
+  content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #ffd9a1; box-shadow: 0 0 12px 3px rgba(255, 170, 90, 0.75);
+  animation: promoBlink 3.4s ease-in-out infinite;
+}
+@keyframes promoBlink { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+.promo-arm {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(180deg, rgba(206, 226, 255, 0.9), rgba(118, 140, 180, 0.7));
+}
+/* 가로대 양 끝에 매달린 애자 */
+.promo-arm::before, .promo-arm::after {
+  content: ''; position: absolute; top: 4px; width: 5px; height: 11px;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(180deg, rgba(180, 200, 232, 0.8), rgba(96, 116, 150, 0.45));
+}
+.promo-arm::before { left: 7px; }
+.promo-arm::after { right: 7px; }
+.promo-arm.a1 { top: 24px; width: 148px; }
+.promo-arm.a2 { top: 42px; width: 196px; }
+
+/* 기초 — 기둥이 허공에서 잘리지 않게 받쳐 준다. */
+.promo-base {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: 4px; width: 142px; height: 14px;
+  border-radius: 3px; border: 1px solid rgba(150, 168, 200, 0.35);
+  background: linear-gradient(180deg, #717a90 0%, #4b5367 45%, #2b3140 100%);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+/* 움직임을 줄여 달라고 한 사람에게는 끝까지 차오른 모습만 보여 준다. */
+@media (prefers-reduced-motion: reduce) {
+  .promo-rise { animation: none; height: 100%; }
+  .promo-tip::after { animation: none; opacity: 1; }
+}
 .promo-foot { margin: 22px 0 0; font-size: 13px; font-weight: 700; color: #ffc07a; }
 .promo-card .promo-go { margin-top: 20px; }
 .promo-acts { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
@@ -3133,7 +3208,13 @@ kbd {
   .promo-card { padding: 26px 20px 20px; }
   .promo-title { font-size: 25px; }
   .promo-lead { font-size: 12.5px; }
-  .promo-art { height: 88px; }
+  .promo-art { height: 132px; max-width: 300px; }
+  .promo-tower { top: 34px; width: 84px; --panel: 28px; }
+  .promo-rise { --panel: 28px; }
+  .promo-arm.a1 { top: 22px; width: 116px; }
+  .promo-arm.a2 { top: 38px; width: 154px; }
+  .promo-tip { height: 22px; }
+  .promo-base { width: 116px; height: 12px; }
   .promo-acts { flex-wrap: wrap; }
 }
 

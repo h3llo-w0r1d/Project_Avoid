@@ -526,8 +526,7 @@ const PROMO = {
   badge: 'NEW MODE',
   title: '층 오르기 OPEN!',
   lead: [
-    '1층부터 30층까지, 한 층씩 조건을 깨고 올라가는 새 모드예요.',
-    '버티기 · 점프 제한 · 코인 줍기 — 위로 갈수록 까다로워집니다.'
+    '1층부터 정상까지, 한 층씩 조건을 깨고 올라가는 새 모드예요.'
   ],
   foot: '누가 제일 높이 올라가나? 랭킹에 「층 오르기」 가 생겼어요.',
   cta: '지금 도전하기'
@@ -558,7 +557,15 @@ function openPromo(promo) {
     `<span class="promo-badge">${promo.badge}</span>` +
     `<h2 class="promo-title">${promo.title}</h2>` +
     `<p class="promo-lead">${promo.lead.join('<br>')}</p>` +
-    '<div class="promo-art"><span class="promo-tower"></span></div>' +
+    // 철탑 한 컷. 층 오르기 창에 쓰는 것과 같은 격자라, 글을 안 읽어도
+    // 무엇을 말하는지 짐작이 간다. 전류가 아래에서 위로 차오르는 것이
+    // 이 모드가 하는 일 그 자체다.
+    '<div class="promo-art">' +
+    '<i class="promo-tip"></i>' +
+    '<i class="promo-arm a1"></i><i class="promo-arm a2"></i>' +
+    '<span class="promo-tower"><i class="promo-rise"></i></span>' +
+    '<i class="promo-base"></i>' +
+    '</div>' +
     `<p class="promo-foot">${promo.foot}</p>` +
     `<button type="button" class="primary promo-go">${promo.cta}</button>` +
     '<div class="promo-acts">' +
