@@ -618,6 +618,13 @@ body.playing #hud { top: calc(10px + env(safe-area-inset-top)); }
 #fullscreen-btn svg { width: 23px; height: 23px; display: block; }
 #fullscreen-btn.on { color: var(--accent); border-color: var(--accent); }
 
+/* 설정 톱니. 전체화면 버튼과 같은 결로 맞춘다 — 크기를 안 주면 SVG 가
+   버튼을 꽉 채워 테두리에 닿고, 색을 안 주면 까맣게 나온다. */
+#settings-btn { display: inline-flex; align-items: center; justify-content: center;
+  color: #d3ddf5; }
+#settings-btn svg { width: 21px; height: 21px; display: block; }
+#settings-btn:hover { color: #fff; }
+
 /* 홈 화면에 추가 버튼. 설치 가능할 때만 뜬다. */
 .install-btn {
   width: 100%;
