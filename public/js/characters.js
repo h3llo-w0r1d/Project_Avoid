@@ -465,13 +465,16 @@ export const CHARACTERS = [
     giftOnly: true,
     unlockAt: Infinity,
     previewZoom: 0.86,
+    // 발밑에 까는 검은 오라. 이 캐릭터만의 표시다.
+    // 반지름은 발밑 링(PLAYER.radius * 1.8)보다 넉넉하게 잡아 링을 감싼다.
+    aura: { size: 1.9, spin: 0.5, color: 0xffffff },
     model: {
       url: './models/rengar.glb',
       yaw: 0,
       // 히트박스는 캐릭터와 무관하게 고정이라, 겉모습이 크면 "닿았는데 안
       // 죽는" 캐릭터가 된다. 가나디와 몸통 폭이 같아 보이는 값이다.
       // 웅크린 자세에 무기가 밖으로 뻗어 있어, 몸통 기준으로 보수적으로 잡았다.
-      scale: 0.9,
+      scale: 1.08,   // 0.9 에서 20% 키움
       depth: 1.0,
       yOffset: 0,
       brighten: 0.4    // 검은 옷이라 무대에서 특히 어둡다
