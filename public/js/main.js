@@ -514,6 +514,79 @@ function renderNotice() {
 
 api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); }).catch(() => {});
 
+// ── 새 소식 알림 ──────────────────────────────────────────
+// 새 모드를 내놔도 사람들이 모르면 없는 것과 같다. 접속하면 한 번 크게
+// 알려 주고, 거기서 바로 시작할 수 있게 한다.
+//
+// 끝낼 때는 PROMO 를 null 로 두면 된다. until 이 지나도 저절로 안 뜬다 —
+// 내리는 걸 잊어도 언젠가는 멈추게 해 둔다.
+const PROMO = {
+  id: 'tower-open',                 // 「오늘 하루 안 보기」 를 기억하는 열쇠
+  until: '2026-10-31',              // 이 날까지만 뜬다
+  badge: 'NEW MODE',
+  title: '층 오르기 OPEN!',
+  lead: [
+    '1층부터 30층까지, 한 층씩 조건을 깨고 올라가는 새 모드예요.',
+    '버티기 · 점프 제한 · 코인 줍기 — 위로 갈수록 까다로워집니다.'
+  ],
+  foot: '누가 제일 높이 올라가나? 랭킹에 「층 오르기」 가 생겼어요.',
+  cta: '지금 도전하기'
+};
+
+const PROMO_KEY = 'avoidarc.promo';
+const today = () => new Date().toLocaleDateString('sv-SE');   // YYYY-MM-DD
+
+// 오늘은 안 보기로 했는지. 열쇠에 promo.id 를 붙여 두면, 다음 소식은
+// 이전 소식을 껐던 것과 상관없이 새로 뜬다.
+function promoMuted(id) {
+  try { return localStorage.getItem(PROMO_KEY + '.' + id) === today(); }
+  catch { return false; }
+}
+function mutePromoToday(id) {
+  try { localStorage.setItem(PROMO_KEY + '.' + id, today()); } catch { /* 막혔으면 이번만 */ }
+}
+
+function openPromo(promo) {
+  if (!promo) return;
+  if (promo.until && today() > promo.until) return;
+  if (promoMuted(promo.id)) return;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal promo-modal';
+  overlay.innerHTML =
+    '<div class="modal-card panel promo-card">' +
+    `<span class="promo-badge">${promo.badge}</span>` +
+    `<h2 class="promo-title">${promo.title}</h2>` +
+    `<p class="promo-lead">${promo.lead.join('<br>')}</p>` +
+    '<div class="promo-art"><span class="promo-tower"></span></div>' +
+    `<p class="promo-foot">${promo.foot}</p>` +
+    `<button type="button" class="primary promo-go">${promo.cta}</button>` +
+    '<div class="promo-acts">' +
+    '<button type="button" class="ghost small promo-today">오늘 하루 안 보기</button>' +
+    '<button type="button" class="ghost small promo-close">닫기</button>' +
+    '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(() => overlay.classList.add('show'));
+
+  const close = () => {
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  overlay.querySelector('.promo-close').addEventListener('click', close);
+  overlay.querySelector('.promo-today').addEventListener('click', () => {
+    mutePromoToday(promo.id);
+    close();
+  });
+  overlay.querySelector('.promo-go').addEventListener('click', () => { close(); openTower(); });
+  // 바깥을 눌러도 닫힌다. 광고처럼 붙잡아 두면 오히려 미움받는다.
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+}
+
+// 타이틀 화면에 있을 때만, 화면이 자리를 잡은 뒤에 띄운다.
+setTimeout(() => {
+  if (state.phase === 'title') openPromo(PROMO);
+}, 900);
+
 // 타이틀 오른쪽, 누적 판수 카드 위의 투표 상자.
 //
 // 지금은 만드라고라를 도형으로 둘지 3D 모델로 갈지 묻는다. 서버가 선택지를

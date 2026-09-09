@@ -3073,6 +3073,71 @@ kbd {
 }
 
 
+/* ---------- 새 소식 알림 ---------- */
+/* 접속하면 한 번 뜨는 창. 평소 카드보다 넉넉히 잡아 「새로 생겼다」 가
+   한눈에 들어오게 한다. 대신 바깥을 누르면 바로 닫힌다. */
+.promo-card {
+  width: min(820px, 94vw); max-width: none;
+  text-align: center; padding: 34px 38px 26px;
+  border-color: rgba(255, 170, 90, 0.4);
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 140, 60, 0.16), transparent 62%),
+    var(--panel);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 170, 90, 0.14);
+}
+/* 카드가 세로 flex 라 inline-block 만으로는 가로로 늘어난다. */
+.promo-badge {
+  align-self: center;
+  padding: 5px 12px; border-radius: 999px;
+  font-size: 11px; font-weight: 900; letter-spacing: 0.18em;
+  color: #12151f; background: linear-gradient(135deg, #ffd9a1, #ff9d4d);
+}
+.promo-title {
+  margin: 14px 0 0; font-size: 34px; font-weight: 900; letter-spacing: -0.02em;
+  color: #fff; text-shadow: 0 0 26px rgba(255, 150, 70, 0.45);
+}
+.promo-lead { margin: 12px 0 0; font-size: 14px; font-weight: 700; line-height: 1.7; color: var(--muted); }
+
+/* 철탑 한 컷. 층 오르기 창에 쓰는 격자와 같은 결이라, 글을 안 읽어도
+   무엇을 말하는지 짐작이 간다. */
+.promo-art { margin: 22px auto 0; width: 100%; max-width: 420px; height: 120px; position: relative; }
+.promo-tower {
+  position: absolute; left: 50%; top: 0; bottom: 0; width: 92px;
+  transform: translateX(-50%);
+  --panel-h: 40px;
+  background:
+    linear-gradient(to bottom right, transparent calc(50% - 1.3px),
+      rgba(255, 190, 126, 0.75) calc(50% - 1.3px) calc(50% + 1.3px), transparent calc(50% + 1.3px)),
+    linear-gradient(to bottom left, transparent calc(50% - 1.3px),
+      rgba(255, 190, 126, 0.75) calc(50% - 1.3px) calc(50% + 1.3px), transparent calc(50% + 1.3px)),
+    linear-gradient(180deg, rgba(255, 190, 126, 0.5) 0 2px, transparent 2px),
+    linear-gradient(90deg, rgba(255, 212, 158, 0.95) 0 3px, transparent 3px calc(100% - 3px),
+      rgba(255, 212, 158, 0.95) calc(100% - 3px) 100%);
+  background-size: 100% var(--panel-h), 100% var(--panel-h), 100% var(--panel-h), 100% 100%;
+  background-position: 0 100%;
+  background-repeat: repeat, repeat, repeat, no-repeat;
+  filter: drop-shadow(0 0 18px rgba(255, 130, 50, 0.4));
+}
+.promo-tower::after {
+  content: ''; position: absolute; left: 50%; top: -14px; transform: translateX(-50%);
+  width: 3px; height: 16px;
+  background: linear-gradient(180deg, rgba(255, 232, 200, 0.95), rgba(255, 170, 90, 0.3));
+}
+
+.promo-foot { margin: 22px 0 0; font-size: 13px; font-weight: 700; color: #ffc07a; }
+.promo-card .promo-go { margin-top: 20px; }
+.promo-acts { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+.promo-acts button { width: auto; margin: 0; padding: 8px 14px; font-size: 12px; }
+
+@media (max-width: 640px) {
+  .promo-card { padding: 26px 20px 20px; }
+  .promo-title { font-size: 25px; }
+  .promo-lead { font-size: 12.5px; }
+  .promo-art { height: 88px; }
+  .promo-acts { flex-wrap: wrap; }
+}
+
+
 /* 봇전 | 온라인 1v1 을 반반 나눠 놓는 줄 */
 .split-row { display: flex; gap: 10px; margin-top: 10px; }
 .split-row > button { flex: 1 1 0; margin: 0; min-width: 0; }
