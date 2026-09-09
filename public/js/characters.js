@@ -568,7 +568,18 @@ export const CHARACTERS = [
     name: '가나디라고라',
     unlockAt: Infinity,
     rouletteOnly: true,      // 룰렛 전용(코인으로 못 삼)
-    previewZoom: 1.0,
+    previewZoom: 0.88,   // 모델이 통통해 1.0 이면 카드 아래가 잘린다
+    model: {
+      url: './models/ganadi.glb',
+      yaw: 0,
+      // 히트박스는 캐릭터와 무관하게 고정이라, 겉모습이 크면 "닿았는데 안
+      // 죽는" 캐릭터가 된다. 다른 캐릭터와 몸통 폭이 같아 보이는 값이다.
+      scale: 1.25,
+      depth: 1.0,
+      yOffset: 0,
+      brighten: 0.3
+    },
+    // 아래 도형 정의는 모델을 못 불러왔을 때 쓸 대타로 남겨 둔다.
     body: 0xffffff,          // 하얀 강아지
     bodyBottom: 0xf1f0f3,    // 아래는 아주 살짝 회색
     outlineColor: 0x1d1c20,  // 진한 검은 테두리(만화 강아지 느낌)
