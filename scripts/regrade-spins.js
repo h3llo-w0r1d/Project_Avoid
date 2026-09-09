@@ -97,9 +97,13 @@ for (const r of rows) {
 // 막힌 계정: 돌린횟수가 누적시간으로 벌 수 있는 횟수를 넘는다.
 // 위 plan 과 겹치지 않는다 — 저쪽은 남은 횟수가 있던 사람이고,
 // 이쪽은 이미 다 쓰고도 모자란 사람이다.
+// 위에서 누적시간을 올려 줄 계정은 그 값으로 따져야 한다. 원래 값으로
+// 따지면 두 손질이 겹쳐서, 이미 살려 준 사람의 돌린횟수까지 낮춰
+// 없던 횟수가 왕창 생긴다(실제로 미리보기에서 그렇게 나왔다).
+const planned = new Map(plan.map((p2) => [p2.id, p2.next]));
 const stuck = [];
 for (const r of rows) {
-  const t = Math.max(0, Number(r.playtime) || 0);
+  const t = planned.get(r.id) ?? Math.max(0, Number(r.playtime) || 0);
   const used = Math.max(0, Number(r.spins_used) || 0);
   const earned = Math.floor(t / TO);
   if (used > earned) stuck.push({ id: r.id, nickname: r.nickname, t, used, earned });
