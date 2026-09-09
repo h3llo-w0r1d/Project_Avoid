@@ -1777,7 +1777,7 @@ async function openTower() {
     // 구간의 맨 위 층 앞에 표지판을 세운다(위에서 내려오며 만나는 순서).
     const z = zones.find((x) => x.to === f.floor);
     if (z) {
-      const zSoon = z.from > (data.released ?? data.top);
+      const zSoon = z.soon ?? (z.from > (data.released ?? data.top));
       parts.push(
         `<div class="pz${data.cleared >= z.to ? ' lit' : ''}${zSoon ? ' soon' : ''}">` +
         `<span class="pz-range">${z.from}–${z.to}F</span>` +
