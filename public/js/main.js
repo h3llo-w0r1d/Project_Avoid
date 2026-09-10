@@ -1812,7 +1812,6 @@ function startGame() {
   clearChallengeGear();   // 지난 층의 물리 변형·안전지대가 남지 않게
   state.mode = 'solo';
   state.botAI = null;      // 봇전·도전모드 흔적을 지운다(일반 판)
-  state.challenge = null;
   // 하드코어 여부는 타이틀 토글에서 읽는다. 다시 시작해도 같은 모드로 이어진다.
   state.hardcore = ui.isHardcore();
   // 이번 판의 씨앗. 전기선·감전지대를 이 씨앗으로 돌려 다시보기가 그대로 재현된다.
@@ -2078,6 +2077,10 @@ function applyChallenge(f) {
 // 안 그러면 다음 판이 미끄럽거나 안전지대가 남는다.
 function clearChallengeGear() {
   chal = null;
+  // '무엇을 해야 하나'(층 정의)까지 같이 지운다. 이걸 안 지우면 층오르기를
+  // 하다 나간 뒤 봇전을 끝냈을 때 endBotMatch 가 아직 도전 중인 줄 알고
+  // 층 결과창을 띄운다 — 이기면 층이 공짜로 클리어됐다.
+  state.challenge = null;
   player.body.setTune(null);
   safeZone.stop();
   pads.stop();
