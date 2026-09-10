@@ -2584,35 +2584,43 @@ kbd {
   width: 152px; height: 152px; margin: 0; padding: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   border: 0; cursor: pointer; color: #ffe0bd;
-  background: radial-gradient(circle at 50% 46%, rgba(255, 90, 30, 0.1), transparent 62%);
+  /* 속은 원판이 아니라 「가운데만 살짝 그늘진 자리」 다. 가장자리로 갈수록
+     투명해져서 배경의 바위·용암이 그대로 비치고, 동그란 테두리가 안 보인다.
+     글씨가 앉을 자리만 어둡게 깔아 둔다. */
+  background: radial-gradient(circle at 50% 48%,
+    rgba(26, 7, 8, 0.62) 0%,
+    rgba(24, 6, 8, 0.5) 44%,
+    rgba(255, 84, 26, 0.1) 72%,
+    rgba(20, 5, 8, 0.14) 86%,
+    transparent 100%);
+  /* 빛은 버튼 밖 바위까지 번져야 한다. 안쪽 그림자는 테두리를 도로
+     만들어 버려서 쓰지 않는다. */
   box-shadow:
-    0 0 60px rgba(255, 62, 18, 0.44),
-    0 0 22px rgba(255, 120, 50, 0.36),
-    inset 0 0 30px rgba(255, 70, 22, 0.18);
+    0 0 66px rgba(255, 62, 18, 0.4),
+    0 0 26px rgba(255, 120, 50, 0.3);
   transition: box-shadow 0.18s ease, transform 0.18s ease;
 }
 #tower-btn:hover {
   transform: scale(1.03);
   box-shadow:
-    0 0 84px rgba(255, 74, 26, 0.66),
-    0 0 30px rgba(255, 140, 70, 0.52),
-    inset 0 0 38px rgba(255, 84, 28, 0.28);
+    0 0 92px rgba(255, 74, 26, 0.6),
+    0 0 34px rgba(255, 140, 70, 0.45);
 }
 
 .tower-ring {
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none; overflow: visible;
 }
-/* 바위 결. 잡음을 아주 옅게 얹어 매끈한 면을 깬다. */
-.tr-rock { opacity: 0.15; }
 
 /* 고리는 네 겹이다. 번진 빛 → 몸통 → 끊어진 밝은 조각 → 안쪽 실오라기.
    한 겹으로 그리면 굵기만 있고 온도가 없다. */
 .tr-glow {
-  fill: none; stroke: #ff4f16; stroke-width: 6.5;
-  opacity: 0.42; filter: blur(3.5px);
+  fill: none; stroke: #ff4f16; stroke-width: 8;
+  opacity: 0.5; filter: blur(5px);
 }
-.tr-out { fill: none; stroke: rgba(255, 96, 40, 0.34); stroke-width: 0.8; }
+/* 바깥 실선은 배경 위에 얹으면 「원을 그려 놨다」 는 자국으로 읽힌다.
+   아주 흐리게만 남겨 고리 둘레의 열기 정도로 보이게 한다. */
+.tr-out { fill: none; stroke: rgba(255, 96, 40, 0.14); stroke-width: 0.7; }
 .tr-mid {
   fill: none; stroke: url(#towerRing); stroke-width: 2.6;
   filter: drop-shadow(0 0 2px rgba(255, 110, 45, 0.95));
@@ -2680,7 +2688,11 @@ kbd {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 19px; font-weight: 900; white-space: nowrap;
   letter-spacing: 0.01em; color: #ffe9d0;
-  text-shadow: 0 0 18px rgba(255, 74, 26, 0.95), 0 0 5px rgba(255, 160, 90, 0.85);
+  /* 뒤가 비치므로 글씨를 더 세게 받쳐 준다 — 검은 그림자 한 겹을 깔고
+     그 위에 붉은 빛을 얹는다. */
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8),
+    0 0 20px rgba(255, 74, 26, 0.95), 0 0 6px rgba(255, 160, 90, 0.9);
 }
 /* 이름 옆 화살표 — 「간다」 를 이름 줄에서 바로 읽히게 */
 .tl-go { font-style: normal; font-size: 16px; color: #ffb06a; }
