@@ -1072,7 +1072,7 @@ const adminCoins = (() => {
       // 특별 칸은 이름을 그대로, 코인 칸은 값에 아이콘을 붙인다.
       // 마지막 갈래가 '코인이 없으면 꽝' 이라, 특별 칸을 여기 빠뜨리면
       // 그 칸이 통째로 '꽝' 으로 찍힌다(은하수를 넣고 실제로 그랬다).
-      const txt = s.custom ? '🎨 나만의<br>캐릭터 제작<br><small>(초희귀)</small>'
+      const txt = s.custom ? '🎨 나만의<br>캐릭터 제작'
         : s.song ? '개발자가<br>불러주는<br>노래'
         : s.lucky ? '🐶 가나디라고라<br><small>(룰렛 전용)</small>'
         : s.arena ? '🌌 은하수<br><small>(룰렛 전용)</small>'
