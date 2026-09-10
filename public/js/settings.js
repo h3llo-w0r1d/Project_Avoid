@@ -23,10 +23,29 @@ export const DEFAULTS = {
   lowEffects: false          // 화면 효과 줄이기
 };
 
+// 설정 창이 생기기 전에 쓰던 🔊 음소거. 그 버튼은 없어졌는데 값은 남아
+// 있어서, 껐던 사람은 설정에서 무엇을 켜도 소리가 안 났다.
+// 여기서 한 번 새 설정으로 옮기고 지운다.
+const OLD_MUTE = 'avoidarc.muted';
+function takeOldMute() {
+  try {
+    const was = localStorage.getItem(OLD_MUTE) === '1';
+    localStorage.removeItem(OLD_MUTE);
+    return was;
+  } catch { return false; }
+}
+
 function read() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { ...DEFAULTS };
+    // 설정을 한 번도 안 만져 본 사람만 옛 음소거를 물려받는다. 이미
+    // 설정에서 무언가 정한 사람은 그 선택이 우선이다.
+    const oldMute = takeOldMute();
+    if (!raw) {
+      return oldMute
+        ? { ...DEFAULTS, musicOn: false, sfxVolume: 0 }
+        : { ...DEFAULTS };
+    }
     const v = JSON.parse(raw);
     // 저장해 둔 것과 기본값을 합친다. 나중에 항목이 늘어도 옛 저장본이
     // 그대로 살아난다 — 없는 값만 기본으로 채워진다.

@@ -10,7 +10,6 @@
 import { SOUNDS, VOICE } from './config.js';
 import { settings, musicStore } from './settings.js';
 
-const MUTE_KEY = 'avoidarc.muted';
 
 // 문자열로 적었으면 { url, volume } 로 펴 준다
 function entryOf(value) {
@@ -24,13 +23,15 @@ export class Audio {
     this.ctx = null;
     this.master = null;
     // 배경음과 효과음을 따로 줄일 수 있게 버스를 나눈다.
-    //   destination ← master(음소거) ← musicBus / sfxBus
+    //   destination ← master ← musicBus / sfxBus
     // 나누기 전엔 master 하나뿐이라 "브금만 끄기" 가 안 됐다.
+    // master 에는 음소거를 두지 않는다. 예전엔 여기서 통째로 껐는데,
+    // 그 버튼이 없어진 뒤로 껐던 사람이 설정에서 무엇을 켜도 소리가
+    // 안 나는 막다른 길이 됐다. 이제 크기는 설정(버스)이 정한다.
     this.musicBus = null;
     this.userMusicName = null;   // 사용자가 넣은 곡의 파일 이름
     this.sfxBus = null;
     this.ambient = null;
-    this.muted = localStorage.getItem(MUTE_KEY) === '1';
     this.noise = null;
 
     this.buffers = {};      // 이름 -> AudioBuffer (다 받아진 것만)
@@ -100,7 +101,7 @@ export class Audio {
 
     this.ctx = new Ctx();
     this.master = this.ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : 0.5;
+    this.master.gain.value = 0.5;
     this.master.connect(this.ctx.destination);
 
     this.musicBus = this.ctx.createGain();
@@ -159,16 +160,6 @@ export class Audio {
     this.sfxBus.gain.setTargetAtTime(settings.get('sfxVolume'), this.ctx.currentTime, 0.03);
   }
 
-  setMuted(muted) {
-    this.muted = muted;
-    localStorage.setItem(MUTE_KEY, muted ? '1' : '0');
-    if (muted) window.speechSynthesis?.cancel();
-    if (this.master) {
-      // 뚝 끊으면 '틱' 소리가 나므로 짧게 넘긴다
-      this.master.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.master.gain.setTargetAtTime(muted ? 0 : 0.5, this.ctx.currentTime, 0.02);
-    }
-  }
 
   // ---------------------------------------------------------------- 내 목소리
 
@@ -257,16 +248,17 @@ export class Audio {
     return true;
   }
 
-  // 녹음 칸에서 눌러 듣기. 음소거 중이어도 들려줘야 확인이 된다.
+  // 녹음 칸에서 눌러 듣기. 효과음을 0 으로 줄여 뒀어도 이건 들려줘야
+  // 녹음이 제대로 됐는지 확인이 된다 — 그동안만 효과음 버스를 올린다.
   auditionUserVoice() {
-    if (!this.ctx) return false;
-    const wasMuted = this.muted;
-    if (wasMuted) this.master.gain.setValueAtTime(0.5, this.now);
+    if (!this.ctx || !this.sfxBus) return false;
+    const before = this.sfxBus.gain.value;
+    if (before < 0.4) this.sfxBus.gain.setValueAtTime(0.6, this.now);
     const played = this.playUserVoice();
-    if (wasMuted) {
+    if (before < 0.4) {
       const voice = this.userVoice;
       const after = this.now + (voice ? voice.buffer.duration / voice.rate : 0) + 0.05;
-      this.master.gain.setValueAtTime(0, after);
+      this.sfxBus.gain.setValueAtTime(before, after);
     }
     return played;
   }
@@ -279,7 +271,7 @@ export class Audio {
   // 음소거 중이면 false 다 — 어차피 아무 소리도 안 나므로, 효과음을
   // 대신 내려 해도 그것 역시 안 난다.
   say(boost = 1) {
-    if (!VOICE.enabled || this.muted || !this.ctx) return false;
+    if (!VOICE.enabled || !this.ctx) return false;
     return this.playUserVoice(boost);
   }
 
@@ -331,7 +323,7 @@ export class Audio {
 
   // 파일이 있으면 파일, 없으면 합성. 모든 효과음이 이 문을 지난다.
   cue(name, synth) {
-    if (!this.ctx || this.muted) return;
+    if (!this.ctx) return;
     if (this.playFile(name)) return;
     synth();
   }
@@ -574,7 +566,7 @@ export class Audio {
     // 풀벌레 — 불규칙한 간격으로 짧게 운다
     const chirp = () => {
       if (!this.ambient) return;
-      if (!this.muted) {
+      {
         const at = this.now;
         const base = 2300 + Math.random() * 1400;
         for (let i = 0; i < 3; i++) {
