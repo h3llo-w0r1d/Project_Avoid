@@ -2576,60 +2576,90 @@ kbd {
 /* ── 하드코어 모드 토글 (타이틀) ─────────────────────────────── */
 /* ---------- 도전모드(탑) ---------- */
 /* 타이틀 왼쪽 아래 동그란 버튼 */
-/* 층 오르기 버튼 — 가는 금빛 고리 하나와 이름 한 줄.
-   배경(성·구름·용암)이 이미 화려해서, 버튼까지 화려하면 서로 싸운다.
-   뒤가 시끄러울수록 앞은 조용해야 읽힌다. */
+/* 층 오르기 버튼 — 식어 가는 용암 줄기로 두른 고리.
+   배경이 이미 화려해서 형태는 단순하게 두되, 고리 자체의 결은 살린다.
+   매끈한 한 줄이면 「그려 넣은 원」 이고, 결이 있어야 「타고 있는 것」 이다. */
 #tower-btn {
   position: fixed; left: 150px; bottom: 74px; z-index: 12;
   width: 152px; height: 152px; margin: 0; padding: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   border: 0; cursor: pointer;
   /* closest-side 라야 원으로 잘리는 자리에서 이미 투명하다. 기본값
-     (farthest-corner)이면 잘린 자리에 색이 남아 테두리처럼 보인다. */
+     (farthest-corner)이면 잘린 자리에 색이 남아 테두리처럼 보인다.
+     가운데는 거의 검게 — 글씨가 앉을 자리이자, 고리를 더 뜨겁게 보이게 한다. */
   background: radial-gradient(circle closest-side at 50% 50%,
-    rgba(62, 24, 8, 0.5) 0%,
-    rgba(46, 17, 7, 0.36) 52%,
-    rgba(34, 12, 6, 0.14) 74%,
-    transparent 90%);
-  box-shadow: 0 0 44px rgba(255, 120, 40, 0.24);
+    rgba(10, 4, 5, 0.72) 0%,
+    rgba(16, 5, 5, 0.6) 46%,
+    rgba(120, 34, 8, 0.26) 74%,
+    rgba(60, 16, 6, 0.1) 86%,
+    transparent 96%);
+  box-shadow: 0 0 52px rgba(255, 62, 14, 0.32), 0 0 20px rgba(255, 110, 40, 0.22);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 #tower-btn:hover {
   transform: scale(1.03);
-  box-shadow: 0 0 62px rgba(255, 140, 55, 0.42);
+  box-shadow: 0 0 74px rgba(255, 72, 20, 0.52), 0 0 26px rgba(255, 130, 55, 0.38);
 }
 
 .tower-ring {
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none; overflow: visible;
 }
-/* 고리는 셋이다 — 번진 빛 / 가는 바깥 테 / 금빛 본선.
-   굵게 그리면 「불타는 원」 이 되고, 가늘어야 「장식 고리」 가 된다. */
-.tr-glow {
-  fill: none; stroke: #ff7a28; stroke-width: 3.2;
-  opacity: 0.34; filter: blur(3px);
+
+/* 1) 번진 열기 — 고리 둘레 공기가 달아오른 것 */
+.tr-heat {
+  fill: none; stroke: #ff3808; stroke-width: 5.6;
+  opacity: 0.46; filter: blur(4.5px);
 }
-.tr-outer { fill: none; stroke: rgba(255, 168, 96, 0.36); stroke-width: 0.7; }
-.tr-main {
-  fill: none; stroke: url(#towerRing); stroke-width: 1.5;
-  filter: drop-shadow(0 0 2px rgba(255, 140, 60, 0.9));
+/* 2) 몸통 — 붉게 달아오른 줄기 */
+.tr-body {
+  fill: none; stroke: url(#towerRing); stroke-width: 2.4;
+  filter: drop-shadow(0 0 2px rgba(255, 90, 30, 0.9));
 }
-.tr-star { fill: #ffd7a0; filter: drop-shadow(0 0 2.5px rgba(255, 150, 70, 0.95)); }
-#tower-btn:hover .tr-main { stroke: #ffd9a4; }
-#tower-btn:hover .tr-glow { opacity: 0.5; }
+/* 3) 검게 식은 껍질 — 몸통 위에 어두운 조각을 덮어 균일한 선을 깬다.
+      둘레가 약 283. 길고 짧은 조각을 섞어 불규칙하게. */
+.tr-crust {
+  /* 새까맣게 두면 검은 구슬을 꿴 것처럼 보인다. 붉은 기가 남은 어두운
+     색으로, 옅게 덮어야 「식어 가는 자리」 로 읽힌다. */
+  fill: none; stroke: #4a1205; stroke-width: 2.3; stroke-linecap: round;
+  stroke-dasharray: 5 24 3 38 8 31 4 17 6 45 4 22;
+  opacity: 0.62;
+}
+/* 4) 갈라진 틈으로 보이는 속불 — 껍질 사이사이가 제일 뜨겁다 */
+.tr-core {
+  fill: none; stroke: #ffcf8a; stroke-width: 1.1; stroke-linecap: round;
+  stroke-dasharray: 3 34 6 22 2 47 5 29 3 38;
+  stroke-dashoffset: 14;
+  opacity: 0.9;
+  animation: towerBreathe 4.2s ease-in-out infinite;
+}
+@keyframes towerBreathe { 0%, 100% { opacity: 0.72; } 50% { opacity: 1; } }
+/* 5) 흩어진 불티 */
+.tr-spark { fill: #ff8a2e; filter: drop-shadow(0 0 1.6px rgba(255, 110, 40, 0.95)); }
+.tr-spark circle:nth-child(3n) { fill: #ffd7a0; }
+.tr-spark circle:nth-child(4n) { fill: #ff5a12; }
+/* 6) 네 방향의 별 */
+.tr-star { fill: #ffc078; filter: drop-shadow(0 0 3px rgba(255, 90, 30, 1)); }
+
+#tower-btn:hover .tr-body { filter: drop-shadow(0 0 4px rgba(255, 130, 60, 1)); }
+#tower-btn:hover .tr-heat { opacity: 0.58; }
 
 /* 이름 한 줄. 화살표는 이름 옆에 붙여 「간다」 가 한 번에 읽히게. */
 .tower-label {
   position: relative; z-index: 1;
   display: inline-flex; align-items: center; gap: 2px;
   font-size: 17px; font-weight: 800; white-space: nowrap;
-  letter-spacing: 0.01em; color: #ffcf94;
-  /* 뒤가 비치므로 검은 그림자를 한 겹 깔고 그 위에 불빛을 얹는다. */
+  letter-spacing: 0.01em; color: #ffd9b0;
   text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.75),
-    0 0 14px rgba(255, 120, 45, 0.8);
+    0 1px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8),
+    0 0 16px rgba(255, 74, 20, 0.85);
 }
-.tl-go { font-style: normal; font-size: 15px; color: #ffb268; }
+.tl-go { font-style: normal; font-size: 15px; color: #ff9a48; }
+
+/* 움직임을 줄여 달라고 한 사람에게는 숨쉬기를 멈춘다. */
+@media (prefers-reduced-motion: reduce) {
+  .tr-core { animation: none; opacity: 0.9; }
+}
 
 @media (max-width: 1100px) { :root { --tower-space: 180px; }   /* 116 + 40 + 24 */ #tower-btn { left: 24px; bottom: 40px; width: 116px; height: 116px; }
   .tower-emblem { width: 23px; height: 23px; }

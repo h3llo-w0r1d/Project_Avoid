@@ -448,25 +448,68 @@
          그림 파일이 아니라 SVG 로 그린다 — 버튼이 화면마다 152·116·88px 로
          달라져서, 그림으로 두면 어느 크기에선가 반드시 뭉개진다.
 
-         가는 이중 고리 + 네 방향의 작은 별 + 이름 한 줄. 그게 전부다.
-         나침반·꺾쇠·불티를 얹어 봤더니 배경이 이미 화려해서 서로 싸웠다.
-         뒤가 시끄러울수록 앞은 조용해야 읽힌다. -->
+         고리는 매끈한 선이 아니라 「식어 가는 용암 줄기」 다. 한 겹으로는
+         절대 그 느낌이 안 난다. 여섯 겹을 겹친다:
+           번진 열기 → 몸통 → 검게 식은 껍질(파선) → 갈라진 틈으로 보이는
+           속불(파선) → 흩어진 불티 → 네 방향의 별
+         몸통·껍질·속불은 feTurbulence 로 미세하게 일그러뜨려 손으로 그은
+         선처럼 보이게 한다. 정지 필터라 매 프레임 계산하지 않는다. -->
     <button id="tower-btn" type="button" aria-label="층 오르기" title="층 오르기 — 층을 올라가며 깨기">
       <svg class="tower-ring" viewBox="0 0 100 100" aria-hidden="true">
         <defs>
-          <linearGradient id="towerRing" x1="0.15" y1="0" x2="0.85" y2="1">
-            <stop offset="0%" stop-color="#ffdca8" />
-            <stop offset="30%" stop-color="#ff9a3c" />
-            <stop offset="60%" stop-color="#d8551a" />
-            <stop offset="100%" stop-color="#ffc179" />
+          <linearGradient id="towerRing" x1="0.12" y1="0" x2="0.88" y2="1">
+            <stop offset="0%" stop-color="#ffb35e" />
+            <stop offset="26%" stop-color="#ff5c14" />
+            <stop offset="54%" stop-color="#c22c06" />
+            <stop offset="78%" stop-color="#ff6a18" />
+            <stop offset="100%" stop-color="#ffa951" />
           </linearGradient>
+          <!-- 선을 미세하게 일그러뜨린다(자로 그은 원처럼 안 보이게) -->
+          <filter id="towerWarp" x="-30%" y="-30%" width="160%" height="160%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="9" result="t" />
+            <feDisplacementMap in="SourceGraphic" in2="t" scale="2.2"
+              xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+          <!-- 속불은 일그러뜨리면서 번지기까지 해야 한다 -->
+          <filter id="towerCore" x="-35%" y="-35%" width="170%" height="170%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.055" numOctaves="3" seed="9" result="t" />
+            <feDisplacementMap in="SourceGraphic" in2="t" scale="2.2"
+              xChannelSelector="R" yChannelSelector="G" result="d" />
+            <feGaussianBlur in="d" stdDeviation="1.1" result="g" />
+            <feMerge><feMergeNode in="g" /><feMergeNode in="d" /></feMerge>
+          </filter>
         </defs>
-        <circle class="tr-glow" cx="50" cy="50" r="45" />
-        <circle class="tr-outer" cx="50" cy="50" r="48.2" />
-        <circle class="tr-main" cx="50" cy="50" r="45" />
-        <!-- 네 방향의 작은 별. 고리에 얹혀 반짝이는 정도로만. -->
-        <!-- 고리 위 네 방향(반지름 45)에 얹는다. 가운데 좌표로 잘못 그리면
-             글씨 뒤에 뭉쳐 버린다. -->
+
+        <circle class="tr-heat" cx="50" cy="50" r="45" />
+        <circle class="tr-body" cx="50" cy="50" r="45" filter="url(#towerWarp)" />
+        <circle class="tr-crust" cx="50" cy="50" r="45" filter="url(#towerWarp)" />
+        <circle class="tr-core" cx="50" cy="50" r="45" filter="url(#towerCore)" />
+
+        <!-- 고리에서 튀어 흩어진 불티 -->
+        <g class="tr-spark">
+          <circle cx="93.97" cy="53.00" r="0.78" />
+          <circle cx="87.73" cy="69.81" r="1.06" />
+          <circle cx="86.72" cy="78.19" r="1.17" />
+          <circle cx="72.35" cy="90.84" r="0.88" />
+          <circle cx="55.15" cy="96.76" r="1.45" />
+          <circle cx="47.65" cy="92.77" r="0.53" />
+          <circle cx="30.66" cy="88.46" r="0.74" />
+          <circle cx="23.46" cy="85.86" r="1.26" />
+          <circle cx="9.08" cy="69.22" r="1.43" />
+          <circle cx="5.61" cy="60.11" r="0.49" />
+          <circle cx="4.64" cy="43.67" r="1.11" />
+          <circle cx="6.12" cy="33.80" r="0.84" />
+          <circle cx="18.25" cy="14.78" r="1.00" />
+          <circle cx="27.44" cy="12.96" r="1.14" />
+          <circle cx="43.19" cy="6.62" r="0.58" />
+          <circle cx="50.77" cy="6.26" r="0.71" />
+          <circle cx="69.75" cy="6.77" r="1.35" />
+          <circle cx="83.18" cy="18.19" r="0.64" />
+          <circle cx="88.91" cy="25.24" r="1.21" />
+          <circle cx="93.77" cy="42.53" r="1.30" />
+        </g>
+
+        <!-- 네 방향의 별. 고리 위(r=45) 에 얹는다. -->
         <g class="tr-star">
           <path d="M50 0.8Q50 5 54.2 5Q50 5 50 9.2Q50 5 45.8 5Q50 5 50 0.8z" />
           <path d="M50 90.8Q50 95 54.2 95Q50 95 50 99.2Q50 95 45.8 95Q50 95 50 90.8z" />
