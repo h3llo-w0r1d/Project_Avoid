@@ -2587,12 +2587,16 @@ kbd {
   /* 속은 원판이 아니라 「가운데만 살짝 그늘진 자리」 다. 가장자리로 갈수록
      투명해져서 배경의 바위·용암이 그대로 비치고, 동그란 테두리가 안 보인다.
      글씨가 앉을 자리만 어둡게 깔아 둔다. */
-  background: radial-gradient(circle at 50% 48%,
-    rgba(26, 7, 8, 0.62) 0%,
-    rgba(24, 6, 8, 0.5) 44%,
-    rgba(255, 84, 26, 0.1) 72%,
-    rgba(20, 5, 8, 0.14) 86%,
-    transparent 100%);
+  /* closest-side 가 중요하다. 기본값(farthest-corner)이면 100% 가 모서리라,
+     정작 원으로 잘리는 자리(반지름의 71% 지점)에는 아직 10% 가 남아 있다.
+     그 남은 10% 가 칼로 자른 듯한 동그란 테두리로 보였다.
+     closest-side 로 두고 88% 에서 완전히 투명하게 만들어, 잘리기 한참 전에
+     사라지게 한다. */
+  background: radial-gradient(circle closest-side at 50% 48%,
+    rgba(24, 6, 8, 0.5) 0%,
+    rgba(23, 6, 8, 0.36) 42%,
+    rgba(22, 6, 8, 0.13) 66%,
+    transparent 88%);
   /* 빛은 버튼 밖 바위까지 번져야 한다. 안쪽 그림자는 테두리를 도로
      만들어 버려서 쓰지 않는다. */
   box-shadow:
@@ -2618,9 +2622,8 @@ kbd {
   fill: none; stroke: #ff4f16; stroke-width: 8;
   opacity: 0.5; filter: blur(5px);
 }
-/* 바깥 실선은 배경 위에 얹으면 「원을 그려 놨다」 는 자국으로 읽힌다.
-   아주 흐리게만 남겨 고리 둘레의 열기 정도로 보이게 한다. */
-.tr-out { fill: none; stroke: rgba(255, 96, 40, 0.14); stroke-width: 0.7; }
+/* 바깥 실선은 결국 「원을 그려 놨다」 는 자국이라 아예 안 그린다. */
+.tr-out { display: none; }
 .tr-mid {
   fill: none; stroke: url(#towerRing); stroke-width: 2.6;
   filter: drop-shadow(0 0 2px rgba(255, 110, 45, 0.95));
