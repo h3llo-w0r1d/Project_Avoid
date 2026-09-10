@@ -461,32 +461,19 @@ export class UI {
       return b;
     };
 
-    this.el.pager.appendChild(button('‹', Math.max(0, this.page - 1), this.page === 0));
+    // 다섯 쪽씩 묶어 보여 준다(1~5, 6~10 …). 20쪽을 한 줄에 늘어놓으면
+    // 폰에서 서너 줄로 접히고, … 로 접으면 가운데 쪽으로 갈 길이 없다.
+    // 화살표는 한 쪽이 아니라 앞뒤 묶음으로 건너뛴다 — 묶음 안 쪽들은
+    // 이미 번호로 보이니 화살표까지 한 칸씩 갈 이유가 없다.
+    const GROUP = 5;
+    const start = Math.floor(this.page / GROUP) * GROUP;
+    const end = Math.min(start + GROUP, pages);
 
-    // 쪽이 많으면 번호를 전부 늘어놓지 않는다 — 20쪽이면 폰에서 버튼이
-    // 서너 줄로 접혀 목록을 밀어낸다. 처음·끝과 지금 쪽 언저리만 두고
-    // 사이는 … 로 접는다. 여덟 쪽까지는 예전처럼 전부 보여 준다.
-    const near = new Set([0, pages - 1, this.page]);
-    if (pages > 8) {
-      near.add(Math.max(0, this.page - 1));
-      near.add(Math.min(pages - 1, this.page + 1));
-    } else {
-      for (let i = 0; i < pages; i++) near.add(i);
-    }
-    let prev = -1;
-    for (const i of [...near].sort((x, y) => x - y)) {
-      if (prev >= 0 && i - prev > 1) {
-        const gap = document.createElement('span');
-        gap.className = 'pager-gap';
-        gap.textContent = '…';
-        this.el.pager.appendChild(gap);
-      }
+    this.el.pager.appendChild(button('‹', Math.max(0, start - 1), start === 0));
+    for (let i = start; i < end; i++) {
       this.el.pager.appendChild(button(String(i + 1), i, false, i === this.page));
-      prev = i;
     }
-    this.el.pager.appendChild(
-      button('›', Math.min(pages - 1, this.page + 1), this.page === pages - 1)
-    );
+    this.el.pager.appendChild(button('›', Math.min(pages - 1, end), end >= pages));
   }
 
   // 내 순위. 100위 밖이라 목록에 안 나오는 경우가 이 줄의 존재 이유다.
