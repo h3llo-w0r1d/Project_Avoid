@@ -2576,138 +2576,60 @@ kbd {
 /* ── 하드코어 모드 토글 (타이틀) ─────────────────────────────── */
 /* ---------- 도전모드(탑) ---------- */
 /* 타이틀 왼쪽 아래 동그란 버튼 */
-/* 불에 달군 쇠고리 같은 버튼. 안쪽은 어둡게 파 놓고 고리만 밝혀,
-   배경(성·구름) 위에 얹혀도 글씨가 묻히지 않게 한다.
-   주황보다 붉게 — 이 게임의 위험 색이 붉은 전기선이라 결이 맞는다. */
+/* 층 오르기 버튼 — 가는 금빛 고리 하나와 이름 한 줄.
+   배경(성·구름·용암)이 이미 화려해서, 버튼까지 화려하면 서로 싸운다.
+   뒤가 시끄러울수록 앞은 조용해야 읽힌다. */
 #tower-btn {
   position: fixed; left: 150px; bottom: 74px; z-index: 12;
   width: 152px; height: 152px; margin: 0; padding: 0; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  border: 0; cursor: pointer; color: #ffe0bd;
-  /* 속은 원판이 아니라 「가운데만 살짝 그늘진 자리」 다. 가장자리로 갈수록
-     투명해져서 배경의 바위·용암이 그대로 비치고, 동그란 테두리가 안 보인다.
-     글씨가 앉을 자리만 어둡게 깔아 둔다. */
-  /* closest-side 가 중요하다. 기본값(farthest-corner)이면 100% 가 모서리라,
-     정작 원으로 잘리는 자리(반지름의 71% 지점)에는 아직 10% 가 남아 있다.
-     그 남은 10% 가 칼로 자른 듯한 동그란 테두리로 보였다.
-     closest-side 로 두고 88% 에서 완전히 투명하게 만들어, 잘리기 한참 전에
-     사라지게 한다. */
-  background: radial-gradient(circle closest-side at 50% 48%,
-    rgba(24, 6, 8, 0.5) 0%,
-    rgba(23, 6, 8, 0.36) 42%,
-    rgba(22, 6, 8, 0.13) 66%,
-    transparent 88%);
-  /* 빛은 버튼 밖 바위까지 번져야 한다. 안쪽 그림자는 테두리를 도로
-     만들어 버려서 쓰지 않는다. */
-  box-shadow:
-    0 0 66px rgba(255, 62, 18, 0.4),
-    0 0 26px rgba(255, 120, 50, 0.3);
-  transition: box-shadow 0.18s ease, transform 0.18s ease;
+  border: 0; cursor: pointer;
+  /* closest-side 라야 원으로 잘리는 자리에서 이미 투명하다. 기본값
+     (farthest-corner)이면 잘린 자리에 색이 남아 테두리처럼 보인다. */
+  background: radial-gradient(circle closest-side at 50% 50%,
+    rgba(62, 24, 8, 0.5) 0%,
+    rgba(46, 17, 7, 0.36) 52%,
+    rgba(34, 12, 6, 0.14) 74%,
+    transparent 90%);
+  box-shadow: 0 0 44px rgba(255, 120, 40, 0.24);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 #tower-btn:hover {
   transform: scale(1.03);
-  box-shadow:
-    0 0 92px rgba(255, 74, 26, 0.6),
-    0 0 34px rgba(255, 140, 70, 0.45);
+  box-shadow: 0 0 62px rgba(255, 140, 55, 0.42);
 }
 
 .tower-ring {
   position: absolute; inset: 0; width: 100%; height: 100%;
   pointer-events: none; overflow: visible;
 }
-
-/* 고리는 네 겹이다. 번진 빛 → 몸통 → 끊어진 밝은 조각 → 안쪽 실오라기.
-   한 겹으로 그리면 굵기만 있고 온도가 없다. */
+/* 고리는 셋이다 — 번진 빛 / 가는 바깥 테 / 금빛 본선.
+   굵게 그리면 「불타는 원」 이 되고, 가늘어야 「장식 고리」 가 된다. */
 .tr-glow {
-  fill: none; stroke: #ff4f16; stroke-width: 8;
-  opacity: 0.5; filter: blur(5px);
+  fill: none; stroke: #ff7a28; stroke-width: 3.2;
+  opacity: 0.34; filter: blur(3px);
 }
-/* 바깥 실선은 결국 「원을 그려 놨다」 는 자국이라 아예 안 그린다. */
-.tr-out { display: none; }
-.tr-mid {
-  fill: none; stroke: url(#towerRing); stroke-width: 2.6;
-  filter: drop-shadow(0 0 2px rgba(255, 110, 45, 0.95));
+.tr-outer { fill: none; stroke: rgba(255, 168, 96, 0.36); stroke-width: 0.7; }
+.tr-main {
+  fill: none; stroke: url(#towerRing); stroke-width: 1.5;
+  filter: drop-shadow(0 0 2px rgba(255, 140, 60, 0.9));
 }
-.tr-hot {
-  /* 흰색으로 두면 분필 자국처럼 보인다. 노란 쪽으로 데워야 쇠가 된다. */
-  fill: none; stroke: #ffd79c; stroke-width: 1.2; stroke-linecap: round;
-  /* 둘레가 약 270. 길고 짧은 조각을 섞어 불규칙하게 끊는다. */
-  stroke-dasharray: 26 13 5 21 38 9 13 31 7 17;
-  stroke-dashoffset: 8;
-  opacity: 0.8;
-}
-.tr-wisp {
-  fill: none; stroke: #ff8330; stroke-width: 0.9; stroke-linecap: round;
-  stroke-dasharray: 9 34 17 46 6 28;
-  opacity: 0.5;
-}
-.tr-tick { fill: #ffa552; filter: drop-shadow(0 0 2.5px rgba(255, 90, 35, 0.95)); }
-.tr-chev {
-  fill: none; stroke: #ffa552; stroke-width: 2.4;
-  stroke-linecap: round; stroke-linejoin: round;
-  filter: drop-shadow(0 0 2.5px rgba(255, 90, 35, 0.95));
-}
-.tr-spark { fill: #ffd9a4; opacity: 0.9; filter: drop-shadow(0 0 3.5px rgba(255, 130, 50, 1)); }
-#tower-btn:hover .tr-mid { filter: drop-shadow(0 0 4px rgba(255, 150, 80, 1)); }
-#tower-btn:hover .tr-glow { opacity: 0.58; }
+.tr-star { fill: #ffd7a0; filter: drop-shadow(0 0 2.5px rgba(255, 150, 70, 0.95)); }
+#tower-btn:hover .tr-main { stroke: #ffd9a4; }
+#tower-btn:hover .tr-glow { opacity: 0.5; }
 
-/* 불티. 고리 안쪽에서 떠오른다. 크기·속도를 섞어야 흩날리는 것처럼 보인다. */
-.tower-embers { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: 50%; }
-.tower-embers i {
-  position: absolute; width: 2px; height: 2px; border-radius: 50%;
-  background: #ffcf8f; box-shadow: 0 0 5px 1px rgba(255, 130, 50, 0.9);
-  animation: towerEmber 5.4s ease-in-out infinite;
-}
-.tower-embers i:nth-child(1)  { left: 24%; bottom: 16%; animation-delay: 0s;    animation-duration: 5.4s; }
-.tower-embers i:nth-child(2)  { left: 44%; bottom: 9%;  animation-delay: 0.8s;  animation-duration: 4.6s; width: 2.6px; height: 2.6px; }
-.tower-embers i:nth-child(3)  { left: 66%; bottom: 18%; animation-delay: 1.5s;  animation-duration: 6.1s; }
-.tower-embers i:nth-child(4)  { left: 33%; bottom: 7%;  animation-delay: 2.2s;  animation-duration: 5s;   width: 1.5px; height: 1.5px; }
-.tower-embers i:nth-child(5)  { left: 57%; bottom: 13%; animation-delay: 2.9s;  animation-duration: 4.4s; }
-.tower-embers i:nth-child(6)  { left: 74%; bottom: 26%; animation-delay: 3.4s;  animation-duration: 5.8s; width: 1.5px; height: 1.5px; }
-.tower-embers i:nth-child(7)  { left: 18%; bottom: 30%; animation-delay: 4.1s;  animation-duration: 5.2s; }
-.tower-embers i:nth-child(8)  { left: 50%; bottom: 5%;  animation-delay: 1.1s;  animation-duration: 6.4s; width: 2.4px; height: 2.4px; }
-.tower-embers i:nth-child(9)  { left: 38%; bottom: 22%; animation-delay: 3.8s;  animation-duration: 4.9s; width: 1.4px; height: 1.4px; }
-.tower-embers i:nth-child(10) { left: 62%; bottom: 6%;  animation-delay: 0.4s;  animation-duration: 5.6s; }
-.tower-embers i:nth-child(11) { left: 80%; bottom: 12%; animation-delay: 2.6s;  animation-duration: 5.1s; width: 1.4px; height: 1.4px; }
-@keyframes towerEmber {
-  0%   { transform: translate(0, 0) scale(0.5); opacity: 0; }
-  15%  { opacity: 1; }
-  65%  { opacity: 0.75; }
-  100% { transform: translate(4px, -62px) scale(1); opacity: 0; }
-}
-
-/* 가운데 — 문장 · 이름 · 화살표 */
-.tower-face {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  position: relative; z-index: 1;
-}
-.tower-emblem { width: 29px; height: 29px; display: block;
-  filter: drop-shadow(0 0 6px rgba(255, 90, 35, 0.8)); }
-.tower-emblem .te-ring { fill: none; stroke: rgba(255, 110, 50, 0.55); stroke-width: 1; }
-.tower-emblem .te-star { fill: #ff9040; }
-.tower-emblem .te-thin { fill: rgba(255, 120, 55, 0.5); }
-.tower-emblem .te-core { fill: #240804; stroke: #ffb266; stroke-width: 1.2; }
+/* 이름 한 줄. 화살표는 이름 옆에 붙여 「간다」 가 한 번에 읽히게. */
 .tower-label {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 19px; font-weight: 900; white-space: nowrap;
-  letter-spacing: 0.01em; color: #ffe9d0;
-  /* 뒤가 비치므로 글씨를 더 세게 받쳐 준다 — 검은 그림자 한 겹을 깔고
-     그 위에 붉은 빛을 얹는다. */
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 17px; font-weight: 800; white-space: nowrap;
+  letter-spacing: 0.01em; color: #ffcf94;
+  /* 뒤가 비치므로 검은 그림자를 한 겹 깔고 그 위에 불빛을 얹는다. */
   text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.8),
-    0 0 20px rgba(255, 74, 26, 0.95), 0 0 6px rgba(255, 160, 90, 0.9);
+    0 1px 3px rgba(0, 0, 0, 0.95), 0 0 10px rgba(0, 0, 0, 0.75),
+    0 0 14px rgba(255, 120, 45, 0.8);
 }
-/* 이름 옆 화살표 — 「간다」 를 이름 줄에서 바로 읽히게 */
-.tl-go { font-style: normal; font-size: 16px; color: #ffb06a; }
-.tower-arrow {
-  font-size: 12px; font-weight: 900; line-height: 1;
-  color: rgba(255, 140, 80, 0.8);
-}
-
-/* 움직임을 줄여 달라고 한 사람에게는 불티를 끈다. */
-@media (prefers-reduced-motion: reduce) {
-  .tower-embers { display: none; }
-}
+.tl-go { font-style: normal; font-size: 15px; color: #ffb268; }
 
 @media (max-width: 1100px) { :root { --tower-space: 180px; }   /* 116 + 40 + 24 */ #tower-btn { left: 24px; bottom: 40px; width: 116px; height: 116px; }
   .tower-emblem { width: 23px; height: 23px; }

@@ -448,78 +448,33 @@
          그림 파일이 아니라 SVG 로 그린다 — 버튼이 화면마다 152·116·88px 로
          달라져서, 그림으로 두면 어느 크기에선가 반드시 뭉개진다.
 
-         매끈한 원 하나로는 「그려 넣은 동그라미」 로 보인다. 실제로 달군
-         쇠처럼 보이려면 (1) 테두리가 미세하게 일렁이고 (2) 밝기가 고르지
-         않게 끊기고 (3) 안쪽에 바위 결이 있어야 한다. 셋 다 feTurbulence
-         로 만든다 — 정지 필터라 매 프레임 계산하지 않는다. -->
+         가는 이중 고리 + 네 방향의 작은 별 + 이름 한 줄. 그게 전부다.
+         나침반·꺾쇠·불티를 얹어 봤더니 배경이 이미 화려해서 서로 싸웠다.
+         뒤가 시끄러울수록 앞은 조용해야 읽힌다. -->
     <button id="tower-btn" type="button" aria-label="층 오르기" title="층 오르기 — 층을 올라가며 깨기">
       <svg class="tower-ring" viewBox="0 0 100 100" aria-hidden="true">
         <defs>
-          <!-- 한쪽에서 달군 것처럼 고리 밝기가 돌게 -->
-          <linearGradient id="towerRing" x1="0.1" y1="0" x2="0.9" y2="1">
-            <stop offset="0%" stop-color="#ffe0b0" />
-            <stop offset="22%" stop-color="#ff7a28" />
-            <stop offset="48%" stop-color="#b81f08" />
-            <stop offset="72%" stop-color="#ff6f22" />
-            <stop offset="100%" stop-color="#ffc271" />
+          <linearGradient id="towerRing" x1="0.15" y1="0" x2="0.85" y2="1">
+            <stop offset="0%" stop-color="#ffdca8" />
+            <stop offset="30%" stop-color="#ff9a3c" />
+            <stop offset="60%" stop-color="#d8551a" />
+            <stop offset="100%" stop-color="#ffc179" />
           </linearGradient>
-          <!-- 고리를 미세하게 일렁이게 만든다(녹은 쇠) -->
-          <filter id="towerMelt" x="-25%" y="-25%" width="150%" height="150%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="5" result="t" />
-            <feDisplacementMap in="SourceGraphic" in2="t" scale="2.6"
-              xChannelSelector="R" yChannelSelector="G" />
-          </filter>
-          <!-- 밝은 조각은 일렁이면서 번져야 한다. CSS filter 를 두 번 걸 수
-               없으니 한 필터 안에서 같이 처리한다. -->
-          <filter id="towerHot" x="-30%" y="-30%" width="160%" height="160%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" seed="5" result="t" />
-            <feDisplacementMap in="SourceGraphic" in2="t" scale="2.6"
-              xChannelSelector="R" yChannelSelector="G" result="d" />
-            <feGaussianBlur in="d" stdDeviation="1.5" result="b" />
-            <feMerge><feMergeNode in="b" /><feMergeNode in="b" /><feMergeNode in="d" /></feMerge>
-          </filter>
         </defs>
-
-
-        <circle class="tr-glow" cx="50" cy="50" r="43" />
-        <circle class="tr-out" cx="50" cy="50" r="48.4" />
-        <circle class="tr-mid" cx="50" cy="50" r="43" filter="url(#towerMelt)" />
-        <!-- 끊어진 밝은 조각. 고르게 빛나면 형광등이지 달군 쇠가 아니다. -->
-        <circle class="tr-hot" cx="50" cy="50" r="43" filter="url(#towerHot)" />
-        <circle class="tr-wisp" cx="50" cy="50" r="39.5" filter="url(#towerMelt)" />
-
-        <!-- 위아래 마름모, 좌우 꺾쇠 -->
-        <g class="tr-tick">
-          <path d="M50 3.2L53.8 7 50 10.8 46.2 7z" />
-          <path d="M50 89.2L53.8 93 50 96.8 46.2 93z" />
-        </g>
-        <g class="tr-chev">
-          <path d="M13.4 42.6L6 50 13.4 57.4" />
-          <path d="M86.6 42.6L94 50 86.6 57.4" />
-        </g>
-        <!-- 고리에서 제일 뜨거운 점 몇 개 -->
-        <g class="tr-spark">
-          <circle cx="21.4" cy="24.8" r="1.5" />
-          <circle cx="74.6" cy="20.6" r="1.2" />
-          <circle cx="83.2" cy="68.4" r="1.4" />
-          <circle cx="28.6" cy="76.8" r="1.1" />
+        <circle class="tr-glow" cx="50" cy="50" r="45" />
+        <circle class="tr-outer" cx="50" cy="50" r="48.2" />
+        <circle class="tr-main" cx="50" cy="50" r="45" />
+        <!-- 네 방향의 작은 별. 고리에 얹혀 반짝이는 정도로만. -->
+        <!-- 고리 위 네 방향(반지름 45)에 얹는다. 가운데 좌표로 잘못 그리면
+             글씨 뒤에 뭉쳐 버린다. -->
+        <g class="tr-star">
+          <path d="M50 0.8Q50 5 54.2 5Q50 5 50 9.2Q50 5 45.8 5Q50 5 50 0.8z" />
+          <path d="M50 90.8Q50 95 54.2 95Q50 95 50 99.2Q50 95 45.8 95Q50 95 50 90.8z" />
+          <path d="M0.8 50Q5 50 5 45.8Q5 50 9.2 50Q5 50 5 54.2Q5 50 0.8 50z" />
+          <path d="M90.8 50Q95 50 95 45.8Q95 50 99.2 50Q95 50 95 54.2Q95 50 90.8 50z" />
         </g>
       </svg>
-      <!-- 불티. 고리 안에서 천천히 떠오른다. -->
-      <span class="tower-embers" aria-hidden="true">
-        <i></i><i></i><i></i><i></i><i></i><i></i>
-        <i></i><i></i><i></i><i></i><i></i>
-      </span>
-      <span class="tower-face">
-        <svg class="tower-emblem" viewBox="0 0 32 32" aria-hidden="true">
-          <circle class="te-ring" cx="16" cy="16" r="13.4" />
-          <path class="te-star" d="M16 2.6l2.9 10.5L29.4 16l-10.5 2.9L16 29.4l-2.9-10.5L2.6 16l10.5-2.9z" />
-          <path class="te-thin" d="M24.5 7.5l-5.2 7.3-2.1-2.1zM7.5 24.5l5.2-7.3 2.1 2.1zM24.5 24.5l-7.3-5.2 2.1-2.1zM7.5 7.5l7.3 5.2-2.1 2.1z" />
-          <circle class="te-core" cx="16" cy="16" r="2.6" />
-        </svg>
-        <span class="tower-label">층 오르기<i class="tl-go">→</i></span>
-        <span class="tower-arrow" aria-hidden="true">→</span>
-      </span>
+      <span class="tower-label">층 오르기<i class="tl-go">→</i></span>
     </button>
 
     <!-- 오른쪽 빈 자리에 두는 누적 판수 카드. 이 사이트에서 지금까지 몇 판이
