@@ -803,7 +803,7 @@ app.post('/api/admin/login', (req, res) => {
     adminTries.set(ip, n >= ADMIN_MAX_TRY
       ? { n: 0, until: now + ADMIN_LOCK_MS }
       : { n, until: 0 });
-    return res.status(401).json({ error: '열쇠가 다릅니다.' });
+    return res.status(401).json({ error: '비밀번호가 다릅니다.' });
   }
   adminTries.delete(ip);
   res.cookie(ADMIN_COOKIE, ADMIN_PASS, {

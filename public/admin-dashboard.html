@@ -98,7 +98,7 @@
   /* 960px 본문 + 카드 260px + 여백. 이보다 좁으면 겹친다. */
   @media (max-width: 1560px) { #present-box { display: none; } }
 
-  /* 열쇠 묻는 창. 화면을 통째로 덮어서, 뒤의 빈 표가 안 보이게 한다. */
+  /* 비밀번호 묻는 창. 화면을 통째로 덮어서, 뒤의 빈 표가 안 보이게 한다. */
   #gate {
     position: fixed; inset: 0; z-index: 99;
     display: flex; align-items: center; justify-content: center;
@@ -462,15 +462,15 @@ const matchCache = new Map();     // userId -> 대전 기록
 
 const api = async (path, opts) => {
   const res = await fetch(path, opts);
-  // 권한이 없으면 홈으로 튕기지 않고 열쇠를 묻는다. 관리자 계정으로 못
+  // 권한이 없으면 홈으로 튕기지 않고 비밀번호를 묻는다. 관리자 계정으로 못
   // 들어오는 상황(다른 기기·계정 분실)이 이 화면이 필요한 순간이다.
   if (res.status === 401) { askKey(); throw new Error('관리자 권한이 없습니다'); }
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
   return res.json();
 };
 
-// 열쇠를 묻는 화면. 한 번 통과하면 12시간 동안 이 브라우저에 남는다.
-// 열쇠 자체는 브라우저에 저장하지 않는다 — 서버가 준 쿠키만 남는다.
+// 비밀번호를 묻는 화면. 한 번 통과하면 12시간 동안 이 브라우저에 남는다.
+// 비밀번호 자체는 브라우저에 저장하지 않는다 — 서버가 준 쿠키만 남는다.
 let keyBox = null;
 function askKey(msg) {
   if (keyBox) {
@@ -482,9 +482,9 @@ function askKey(msg) {
   keyBox.innerHTML =
     '<form class="gate-card">' +
     '<h2>관리 화면</h2>' +
-    '<p>열쇠를 넣어 주세요.</p>' +
+    '<p>비밀번호를 입력하세요.</p>' +
     '<input type="password" id="gate-key" autocomplete="current-password" ' +
-    'placeholder="열쇠" autofocus>' +
+    'placeholder="비밀번호" autofocus>' +
     '<div class="gate-err"></div>' +
     '<button type="submit" class="gate-go">들어가기</button>' +
     '</form>';
