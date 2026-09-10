@@ -610,83 +610,6 @@ export const CHARACTERS = [
       brows: false                       // 눈썹 제거(눈 주변까지 검게 보이던 원인)
     },
     sizeMul: 1.2             // 몸이 작아 보여 키운다(겉보기만)
-  },
-  {
-    id: 'carrot',
-    wip: true,
-    name: '당근',
-    unlockAt: 30,
-    body: 0xf0954a,
-    // 위가 굵고 아래로 갈수록 뾰족해진다 — 당근을 세워 둔 모양.
-    // 제일 굵은 데를 어깨(80% 높이)까지 올려야 당근으로 읽힌다.
-    // 가운데가 제일 굵으면 그냥 주황색 덩어리로 보인다.
-    profile: [
-      [0.000, 0.00], [0.030, 0.08], [0.120, 0.17], [0.300, 0.27],
-      [0.560, 0.37], [0.860, 0.46], [1.150, 0.52], [1.380, 0.555],
-      [1.520, 0.55], [1.600, 0.50], [1.650, 0.36], [1.680, 0.18],
-      [1.700, 0.00]
-    ],
-    top: { kind: 'leaves', count: 7, length: 1.6, color: '#7fbf52', upright: 1.05 },
-    skin: 'grooves'
-  },
-  {
-    id: 'mushroom',
-    wip: true,
-    name: '버섯',
-    unlockAt: 60,
-    body: 0xf6ecd8,
-    // 짧고 통통한 기둥. 위에 갓이 덮인다.
-    profile: [
-      [0.000, 0.00], [0.020, 0.24], [0.090, 0.33], [0.260, 0.345],
-      [0.520, 0.335], [0.780, 0.325], [0.940, 0.32], [0.990, 0.28],
-      [1.010, 0.00]
-    ],
-    top: { kind: 'cap', radius: 0.78, height: 0.52, color: 0xe0483f, dots: 0xfff6ea }
-  },
-  {
-    id: 'acorn',
-    wip: true,
-    name: '도토리',
-    unlockAt: 90,
-    body: 0xe8c48f,
-    profile: [
-      [0.000, 0.00], [0.030, 0.24], [0.120, 0.42], [0.300, 0.54],
-      [0.550, 0.58], [0.800, 0.56], [1.000, 0.48], [1.150, 0.34],
-      [1.220, 0.15], [1.250, 0.00]
-    ],
-    top: { kind: 'acorn', radius: 0.74, height: 0.5, color: 0x7a5230 }
-  },
-  {
-    id: 'cactus',
-    wip: true,
-    name: '선인장',
-    unlockAt: 120,
-    body: 0x5aa05a,
-    // 위로 곧게 뻗은 기둥
-    profile: [
-      [0.000, 0.00], [0.020, 0.30], [0.100, 0.40], [0.300, 0.44],
-      [0.700, 0.45], [1.100, 0.44], [1.400, 0.41], [1.550, 0.32],
-      [1.620, 0.16], [1.650, 0.00]
-    ],
-    top: { kind: 'spikes', color: 0xf5f0dc, flower: 0xf2a4c0 },
-    skin: 'ribs',
-    armStyle: 'up',
-    armScale: 1.9        // 선인장 팔은 길게 뻗어야 선인장으로 보인다
-  },
-  {
-    id: 'potato',
-    wip: true,
-    name: '감자',
-    unlockAt: 150,
-    body: 0xc8a06a,
-    profile: [
-      [0.000, 0.00], [0.040, 0.28], [0.150, 0.46], [0.350, 0.56],
-      [0.600, 0.60], [0.850, 0.57], [1.050, 0.48], [1.180, 0.32],
-      [1.250, 0.14], [1.280, 0.00]
-    ],
-    top: { kind: 'sprout', count: 3, color: '#8fbf62', length: 0.62 },
-    skin: 'speckle',
-    lumpy: 0.05
   }
 ];
 
@@ -704,7 +627,6 @@ export const playableFor = (admin, gifts = []) => admin
       !c.adminOnly && (!c.giftOnly || gifts.includes(c.id)));
 
 // 아직 다듬는 중인 캐릭터가 남아 있는가. 있으면 고르는 화면에 안내를 띄운다.
-export const HAS_WIP = CHARACTERS.some((c) => c.wip);
 
 // findCharacter 는 wip 도 찾아 준다. 1v1 상대가 예전에 고른 캐릭터를
 // 보내올 수 있는데, 여기서 못 찾으면 상대가 통째로 안 보인다.

@@ -3,11 +3,10 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, writeFile } from 'node:fs/promises';
-import cookieParser from 'cookie-parser';
 import { openDatabase } from './lib/db.js';
-import { importScoresJson, openScoreStore } from './lib/scores.js';
-import { importUsersJson, openUserStore } from './lib/users.js';
-import { importMatchesJson, openMatchStore } from './lib/matches.js';
+import { openScoreStore } from './lib/scores.js';
+import { openUserStore } from './lib/users.js';
+import { openMatchStore } from './lib/matches.js';
 import { attachAuth } from './lib/auth-routes.js';
 import { attachLobby } from './lib/lobby.js';
 import { createTickets } from './lib/tickets.js';
@@ -69,21 +68,6 @@ function isNonHumanIp(ip) {
 // UA 까지 함께 보는 판정(접속 시점용). 방문 기록의 옛 행 재계산에는 IP 판정만 쓴다.
 function isNonHuman(ip, ua) {
   return isBot(ua) || isNonHumanIp(ip);
-}
-
-// 예전 JSON 파일이 남아 있으면 한 번만 옮긴다.
-// 옮긴 원본은 .imported 로 이름만 바꿔 둔다 — 지우지 않는다.
-{
-  const moved = {
-    기록: await importScoresJson(db, DATA_DIR),
-    계정: await importUsersJson(db, DATA_DIR),
-    대전: await importMatchesJson(db, DATA_DIR)
-  };
-  const some = Object.entries(moved).filter(([, n]) => n > 0);
-  if (some.length) {
-    console.log('예전 JSON 을 데이터베이스로 옮겼습니다: ' +
-      some.map(([k, n]) => `${k} ${n}건`).join(' · '));
-  }
 }
 
 const scores = await openScoreStore(DATA_DIR, db);
@@ -177,7 +161,19 @@ app.disable('x-powered-by');
 const jsonSmall = express.json({ limit: '4kb' });
 const jsonBig = express.json({ limit: '2mb' });
 app.use((req, res, next) => (req.path === '/api/replay' ? jsonBig : jsonSmall)(req, res, next));
-app.use(cookieParser());
+// 쿠키는 session·oauth_state·adminkey 셋뿐이라 의존성을 두지 않는다.
+// res.cookie / clearCookie 는 express 가 원래 갖고 있다.
+app.use((req, _res, next) => {
+  req.cookies = {};
+  for (const part of (req.headers.cookie ?? '').split(';')) {
+    const i = part.indexOf('=');
+    if (i < 0) continue;
+    const k = part.slice(0, i).trim();
+    const v = part.slice(i + 1).trim();
+    try { req.cookies[k] = decodeURIComponent(v); } catch { req.cookies[k] = v; }
+  }
+  next();
+});
 
 // 로그인 라우트를 먼저 붙인다. 여기서 req.user 를 채워 줘야
 // 아래 랭킹 API 가 "누가 올린 기록인지" 알 수 있다.
@@ -902,56 +898,6 @@ app.post('/api/admin/notice', requireAdmin, async (req, res) => {
   res.json({ ok: true, notices: noticeList(), text: noticeText });
 });
 
-// ── 패치노트 ────────────────────────────────────────────────────────
-// 날짜별 업데이트 기록. 여러 줄 텍스트를 파일 하나에 담고 관리자만 고친다.
-// (형식 파싱은 화면에서 한다 — 날짜 줄 + '- 항목' 줄.)
-const PATCHNOTES_FILE = join(DATA_DIR, 'patchnotes.txt');
-let patchNotesText = '';
-try { patchNotesText = await readFile(PATCHNOTES_FILE, 'utf8'); } catch { patchNotesText = ''; }
-
-// 패치노트를 커뮤니티(patch 칸)로 합쳤다. 예전 patchnotes.txt 에 쌓인 기록이
-// 있고 아직 옮긴 적 없으면, 날짜별로 한 글씩 만들어 이관한다(한 번만).
-// 각 글은 '운영자'가 쓴 것으로 두고, 날짜를 글 시각으로 삼아 순서를 지킨다.
-try {
-  if (patchNotesText.trim() && !board.hasCategory('patch')) {
-    const entries = [];
-    let cur = null;
-    for (const raw of patchNotesText.split('\n')) {
-      const line = raw.trim();
-      if (!line) continue;
-      if (/^[-•]/.test(line)) {
-        if (!cur) { cur = { date: '', items: [] }; entries.push(cur); }
-        cur.items.push(line.replace(/^[-•]\s*/, '').trim());
-      } else {
-        cur = { date: line, items: [] };
-        entries.push(cur);
-      }
-    }
-    for (const e of entries) {
-      if (!e.items.length) continue;
-      const ts = Date.parse(`${e.date}T12:00:00+09:00`);
-      const body = (e.date ? `${e.date}\n` : '') + e.items.map((i) => `• ${i}`).join('\n');
-      board.add({ name: '운영자', body, userId: 'system', category: 'patch', at: Number.isNaN(ts) ? Date.now() : ts });
-    }
-    console.log(`패치노트 ${entries.length}건을 커뮤니티로 이관했습니다.`);
-  }
-} catch (err) { console.error('패치노트 이관 실패:', err); }
-
-app.get('/api/patchnotes', (req, res) => res.json({ text: patchNotesText }));
-
-app.post('/api/admin/patchnotes', requireAdmin, async (req, res) => {
-  // 줄바꿈은 살리고 길이만 제한한다.
-  const text = String(req.body?.text ?? '').slice(0, 6000);
-  patchNotesText = text;
-  try {
-    await writeFile(PATCHNOTES_FILE, text, 'utf8');
-  } catch (err) {
-    console.error('패치노트 저장 실패:', err);
-    return res.status(500).json({ error: '패치노트를 저장하지 못했습니다.' });
-  }
-  res.json({ ok: true, text });
-});
-
 // 관리 창을 한 번에 채운다
 app.get('/api/admin/overview', requireAdmin, (req, res) => {
   res.json({
@@ -1426,48 +1372,25 @@ app.get('/api/admin/present', requireAdmin, (req, res) => {
   res.json({ present: presence.count(), names: presence.names() });
 });
 
-app.get('/api/admin/challenge-log', requireAdmin, (req, res) => {
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
-  const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(modeLogs.challenge.page(limit, offset));
-});
-app.post('/api/admin/challenge-log/clear', requireAdmin, (req, res) => {
-  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
-  res.json({ ok: true, removed: modeLogs.challenge.clear() });
-});
-
-// 칭호 획득 기록(관리자).
-app.get('/api/admin/title-log', requireAdmin, (req, res) => {
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
-  const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(modeLogs.title.page(limit, offset));
-});
-app.post('/api/admin/title-log/clear', requireAdmin, (req, res) => {
-  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
-  res.json({ ok: true, removed: modeLogs.title.clear() });
-});
-
-// 닉네임 변경 기록(관리자). 누가 무슨 이름에서 무슨 이름으로 바꿨나.
-app.get('/api/admin/rename-log', requireAdmin, (req, res) => {
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
-  const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(modeLogs.rename.page(limit, offset));
-});
-app.post('/api/admin/rename-log/clear', requireAdmin, (req, res) => {
-  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
-  res.json({ ok: true, removed: modeLogs.rename.clear() });
-});
-
-// 봇전 기록(관리자).
-app.get('/api/admin/bot-log', requireAdmin, (req, res) => {
-  const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
-  const offset = Math.max(0, Number(req.query.offset) || 0);
-  res.json(modeLogs.bot.page(limit, offset));
-});
-app.post('/api/admin/bot-log/clear', requireAdmin, (req, res) => {
-  if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
-  res.json({ ok: true, removed: modeLogs.bot.clear() });
-});
+// 도전모드·칭호·닉네임변경·봇전 기록(관리자). 넷 다 모양이 같아 한 번에 만든다.
+//   GET  …/<이름>        시간 역순 한 쪽
+//   POST …/<이름>/clear  통째로 비우기(확인 문구 필요)
+for (const [path, log] of Object.entries({
+  'challenge-log': modeLogs.challenge,
+  'title-log': modeLogs.title,
+  'rename-log': modeLogs.rename,
+  'bot-log': modeLogs.bot
+})) {
+  app.get(`/api/admin/${path}`, requireAdmin, (req, res) => {
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    res.json(log.page(limit, offset));
+  });
+  app.post(`/api/admin/${path}/clear`, requireAdmin, (req, res) => {
+    if (req.body?.confirm !== 'DELETE ALL') return res.status(400).json({ error: '확인 문구가 필요합니다.' });
+    res.json({ ok: true, removed: log.clear() });
+  });
+}
 
 app.get('/api/admin/plays', requireAdmin, (req, res) => {
   const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));

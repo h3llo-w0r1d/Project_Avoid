@@ -637,30 +637,6 @@ export const api = {
     return res.ok ? (await res.json()).admin === true : false;
   },
 
-  async adminOverview() {
-    const res = await fetch('/api/admin/overview');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
-  },
-
-  async adminRemoveScore(id) {
-    const res = await fetch(`/api/admin/scores/${encodeURIComponent(id)}`, { method: 'DELETE' });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
-    return res.json();
-  },
-
-  // 기록을 통째로 비운다. 서버가 확인 문구까지 요구한다 — 실수로 눌려도
-  // 본문이 정확히 맞지 않으면 400 으로 되돌린다.
-  async adminClearScores() {
-    const res = await fetch('/api/admin/scores/clear', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirm: 'DELETE ALL' })
-    });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
-    return res.json();
-  },
-
   // ---- 게시판 ----
 
   async boardList() {
@@ -697,28 +673,6 @@ export const api = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
     return data.posts;
-  },
-
-  async adminClearUsage() {
-    const res = await fetch('/api/admin/usage/clear', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirm: 'DELETE ALL' })
-    });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
-    return res.json();
-  },
-
-  async adminMatches(userId) {
-    const res = await fetch(`/api/admin/matches?user=${encodeURIComponent(userId)}`);
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
-    return res.json();
-  },
-
-  async adminResetUser(id) {
-    const res = await fetch(`/api/admin/users/${encodeURIComponent(id)}/reset`, { method: 'POST' });
-    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
-    return res.json();
   },
 
   async profile(name) {
