@@ -98,6 +98,27 @@
   /* 960px 본문 + 카드 260px + 여백. 이보다 좁으면 겹친다. */
   @media (max-width: 1560px) { #present-box { display: none; } }
 
+  #pw-modal {
+    position: fixed; inset: 0; z-index: 98;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(6, 8, 16, 0.86);
+  }
+  #pw-modal.hidden { display: none; }
+  #pw-now, #pw-new, #pw-new2 {
+    padding: 11px 13px; border-radius: 10px; font-size: 14px;
+    background: #0c0f18; border: 1px solid rgba(120, 150, 200, 0.24);
+    color: #e8eefc; font-family: inherit;
+  }
+  #pw-now:focus, #pw-new:focus, #pw-new2:focus { outline: none; border-color: #4fd6ff; }
+  .pw-row { display: flex; gap: 8px; }
+  .pw-row .gate-go { flex: 1; }
+  .pw-cancel {
+    padding: 11px 16px; border-radius: 10px; cursor: pointer;
+    background: transparent; border: 1px solid rgba(120, 150, 200, 0.28);
+    color: var(--muted); font-family: inherit; font-size: 14px; font-weight: 700;
+  }
+  .pw-ok { color: #7ee0a8 !important; }
+
   /* 비밀번호 묻는 창. 화면을 통째로 덮어서, 뒤의 빈 표가 안 보이게 한다. */
   #gate {
     position: fixed; inset: 0; z-index: 99;
@@ -295,10 +316,27 @@
     <div class="pc-sub" id="present-sub"></div>
   </aside>
 
+  <!-- 비밀번호 바꾸기. 서버에 들어가지 않고 여기서 바꾼다. -->
+  <div id="pw-modal" class="hidden">
+    <form class="gate-card" id="pw-form">
+      <h2>비밀번호 바꾸기</h2>
+      <p id="pw-need">지금 비밀번호와 새 비밀번호를 넣어 주세요.</p>
+      <input type="password" id="pw-now" autocomplete="current-password" placeholder="지금 비밀번호">
+      <input type="password" id="pw-new" autocomplete="new-password" placeholder="새 비밀번호 (4자 이상)">
+      <input type="password" id="pw-new2" autocomplete="new-password" placeholder="새 비밀번호 다시">
+      <div class="gate-err" id="pw-err"></div>
+      <div class="pw-row">
+        <button type="button" class="pw-cancel" id="pw-cancel">닫기</button>
+        <button type="submit" class="gate-go" id="pw-go">바꾸기</button>
+      </div>
+    </form>
+  </div>
+
   <header class="bar">
     <h1>Avoid<em>Arc</em> 관리</h1>
     <span class="meta" id="meta">불러오는 중…</span>
     <span class="spacer"></span>
+    <button id="pw-btn" type="button">비밀번호</button>
     <button id="refresh" type="button">새로고침</button>
     <a href="/">← 게임으로</a>
   </header>
@@ -1249,6 +1287,63 @@ $('usage-seg').addEventListener('click', (e) => {
   usageView = b.dataset.view;
   for (const btn of $('usage-seg').children) btn.classList.toggle('on', btn === b);
   drawUsage();
+});
+
+// ── 비밀번호 바꾸기 ──────────────────────────────────────
+// 관리자 계정으로 들어왔으면 지금 비밀번호를 안 물어본다 — 구글 계정으로
+// 이미 본인 확인이 됐고, 그 길이 없으면 비밀번호를 잊었을 때 되돌릴
+// 방법이 사라진다. 서버도 같은 규칙으로 판단한다(여기서만 숨기면 소용없다).
+let pwByAccount = false;
+fetch('/api/admin/me').then((r) => r.json()).then((d) => { pwByAccount = !!d.account; })
+  .catch(() => {});
+
+$('pw-btn').addEventListener('click', () => {
+  $('pw-modal').classList.remove('hidden');
+  $('pw-err').textContent = '';
+  $('pw-err').classList.remove('pw-ok');
+  for (const id of ['pw-now', 'pw-new', 'pw-new2']) $(id).value = '';
+  $('pw-now').style.display = pwByAccount ? 'none' : '';
+  $('pw-need').textContent = pwByAccount
+    ? '관리자 계정으로 들어와 있어서 지금 비밀번호는 묻지 않습니다.'
+    : '지금 비밀번호와 새 비밀번호를 넣어 주세요.';
+  (pwByAccount ? $('pw-new') : $('pw-now')).focus();
+});
+$('pw-cancel').addEventListener('click', () => $('pw-modal').classList.add('hidden'));
+$('pw-modal').addEventListener('click', (e) => {
+  if (e.target === $('pw-modal')) $('pw-modal').classList.add('hidden');
+});
+
+$('pw-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = $('pw-err');
+  err.classList.remove('pw-ok');
+  const next = $('pw-new').value;
+  if (next !== $('pw-new2').value) { err.textContent = '새 비밀번호 두 개가 다릅니다.'; return; }
+  if (next.length < 4 || /\s/.test(next)) { err.textContent = '4자 이상, 공백 없이 정해 주세요.'; return; }
+  $('pw-go').disabled = true;
+  err.textContent = '';
+  try {
+    const r = await fetch('/api/admin/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current: $('pw-now').value, next })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      err.textContent = d.error ?? '바꾸지 못했습니다.';
+      $('pw-go').disabled = false;
+      return;
+    }
+    err.classList.add('pw-ok');
+    err.textContent = d.weak
+      ? '바꿨습니다. 짧아서 약합니다 — 8자 이상을 권합니다.'
+      : '바꿨습니다.';
+    for (const id of ['pw-now', 'pw-new', 'pw-new2']) $(id).value = '';
+    setTimeout(() => { $('pw-modal').classList.add('hidden'); $('pw-go').disabled = false; }, 1800);
+  } catch {
+    err.textContent = '서버에 닿지 못했습니다.';
+    $('pw-go').disabled = false;
+  }
 });
 
 load();

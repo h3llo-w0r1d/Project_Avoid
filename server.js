@@ -92,21 +92,26 @@ const scores = await openScoreStore(DATA_DIR, db);
 // 환경변수가 우선. 없으면 만들어서 data/ 에 적어 두고 다음 실행에 다시 쓴다.
 // 매번 새로 만들면 서버를 켤 때마다 열쇠가 바뀌어 쓰기 불편하다.
 // data/ 는 .gitignore 에 들어 있어서 저장소에 올라가지 않는다.
-const { token: ADMIN_TOKEN, source: TOKEN_SOURCE } = await resolveAdminToken();
+// 관리자 비밀번호. 관리 화면에서 바꿀 수 있어야 해서 const 가 아니다.
+//
+// 파일(data/admin-token.txt)이 환경변수보다 앞선다. 환경변수는 처음 심어
+// 두는 값이고, 화면에서 한 번 바꾸면 그 뒤로는 파일이 정답이다 — 안 그러면
+// 화면에서 바꿔도 다시 켤 때 환경변수로 되돌아간다.
+let { token: ADMIN_TOKEN, source: TOKEN_SOURCE } = await resolveAdminToken();
+const ADMIN_TOKEN_FILE = join(DATA_DIR, 'admin-token.txt');
 
 async function resolveAdminToken() {
+  try {
+    const saved = (await readFile(join(DATA_DIR, 'admin-token.txt'), 'utf8')).trim();
+    if (saved) return { token: saved, source: 'file' };
+  } catch {
+    // 아직 없으면 아래로
+  }
   if (process.env.ADMIN_TOKEN) {
     return { token: process.env.ADMIN_TOKEN, source: 'env' };
   }
-  const file = join(DATA_DIR, 'admin-token.txt');
-  try {
-    const saved = (await readFile(file, 'utf8')).trim();
-    if (saved) return { token: saved, source: 'file' };
-  } catch {
-    // 아직 없으면 새로 만든다
-  }
   const token = randomBytes(12).toString('hex');
-  await writeFile(file, token, 'utf8');
+  await writeFile(join(DATA_DIR, 'admin-token.txt'), token, 'utf8');
   return { token, source: 'new' };
 }
 
@@ -784,28 +789,44 @@ function requireAdmin(req, res, next) {
   res.status(401).json({ error: '관리자만 쓸 수 있습니다.' });
 }
 
-// 열쇠를 몇 번이나 틀렸는지. 짧은 열쇠를 쓰더라도 무차별 대입을 못 하게
-// 막는다. 서버 메모리에만 두고, 창을 닫아도 IP 기준으로 남는다.
+// 몇 번이나 틀렸는지. 짧은 비밀번호를 쓰더라도 무차별 대입을 못 하게 막는다.
+// 서버 메모리에만 둔다.
+//
+// IP 별로만 막으면 IP 를 바꿔 가며 두드리는 걸 못 막는다. 그래서 전체
+// 실패 횟수도 따로 세어, 일정 수를 넘으면 잠시 아무도 못 넣게 한다.
+// 관리자 한 사람만 쓰는 문이라 이렇게 잠가도 불편할 일이 거의 없다.
 const adminTries = new Map();   // ip -> { n, until }
 const ADMIN_MAX_TRY = 6;
 const ADMIN_LOCK_MS = 10 * 60_000;
+let adminFailAll = { n: 0, since: 0, until: 0 };
+const ADMIN_ALL_MAX = 20;
+const ADMIN_ALL_WINDOW = 10 * 60_000;
 
-app.post('/api/admin/login', (req, res) => {
+app.post('/api/admin/login', async (req, res) => {
   const ip = clientIp(req);
   const now = Date.now();
   const rec = adminTries.get(ip);
-  if (rec && rec.until > now) {
-    const left = Math.ceil((rec.until - now) / 60_000);
+  const lockedUntil = Math.max(rec?.until ?? 0, adminFailAll.until);
+  if (lockedUntil > now) {
+    const left = Math.ceil((lockedUntil - now) / 60_000);
     return res.status(429).json({ error: `너무 여러 번 틀렸습니다. ${left}분 뒤에 다시 해 주세요.` });
   }
   if (!tokenMatches(req.body?.token)) {
+    // 틀리면 잠깐 붙잡아 둔다. 한 번에 수천 번 두드리는 걸 느리게 만든다.
+    await new Promise((r) => setTimeout(r, 400));
     const n = (rec?.n ?? 0) + 1;
     adminTries.set(ip, n >= ADMIN_MAX_TRY
       ? { n: 0, until: now + ADMIN_LOCK_MS }
       : { n, until: 0 });
+    if (now - adminFailAll.since > ADMIN_ALL_WINDOW) adminFailAll = { n: 0, since: now, until: 0 };
+    adminFailAll.n += 1;
+    if (adminFailAll.n >= ADMIN_ALL_MAX) {
+      adminFailAll = { n: 0, since: now, until: now + ADMIN_LOCK_MS };
+    }
     return res.status(401).json({ error: '비밀번호가 다릅니다.' });
   }
   adminTries.delete(ip);
+  adminFailAll = { n: 0, since: now, until: 0 };
   res.cookie(ADMIN_COOKIE, ADMIN_PASS, {
     httpOnly: true,           // 자바스크립트가 못 읽는다
     sameSite: 'lax',
@@ -821,10 +842,35 @@ app.post('/api/admin/logout', (req, res) => {
   res.json({ ok: true });
 });
 
+// 비밀번호 바꾸기. 관리자 계정으로 들어온 사람은 지금 비밀번호를 몰라도
+// 바꿀 수 있다 — 구글 계정으로 이미 본인 확인이 됐고, 그 길이 없으면
+// 비밀번호를 잊었을 때 되돌릴 방법이 사라진다.
+app.post('/api/admin/password', requireAdmin, async (req, res) => {
+  const next = String(req.body?.next ?? '');
+  if (!isAdminUser(req.user) && !tokenMatches(req.body?.current)) {
+    return res.status(401).json({ error: '지금 비밀번호가 다릅니다.' });
+  }
+  if (next.length < 4 || /\s/.test(next)) {
+    return res.status(400).json({ error: '4자 이상, 공백 없이 정해 주세요.' });
+  }
+  try {
+    await writeFile(ADMIN_TOKEN_FILE, next, 'utf8');
+  } catch (err) {
+    console.error('비밀번호 저장 실패:', err);
+    return res.status(500).json({ error: '저장하지 못했습니다.' });
+  }
+  ADMIN_TOKEN = next;
+  TOKEN_SOURCE = 'file';
+  // 바꾼 사람은 그대로 두고, 다른 브라우저는 다음에 새 비밀번호를 묻는다.
+  res.json({ ok: true, weak: next.length < 8 });
+});
+
 // 게임 화면이 관리 버튼을 그릴지 정하는 데 쓴다. 관리자가 아니면 그냥 false.
 // 관리 화면은 열쇠만 넣고 들어올 수도 있어서 그쪽도 같이 본다.
 app.get('/api/admin/me', (req, res) => {
-  res.json({ admin: isAdminUser(req.user) || adminCookieOk(req) });
+  // account 는 「계정으로 확인된 사람인가」. 비밀번호를 바꿀 때 지금
+  // 비밀번호를 물을지 정하는 데 쓴다.
+  res.json({ admin: isAdminUser(req.user) || adminCookieOk(req), account: isAdminUser(req.user) });
 });
 
 // ── 공지 ────────────────────────────────────────────────────────────
