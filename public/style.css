@@ -3358,6 +3358,22 @@ kbd {
   backdrop-filter: blur(4px);
 }
 #notice-banner::before { content: "📢 "; opacity: 0.9; }
+
+/* 공지 안의 @아이디 링크(인스타). 배너가 붉은 계열이라 흰 밑줄이 제일 잘 보인다.
+   손가락으로 누를 자리를 넓히려고 위아래 여백을 조금 준다. */
+#notice-banner a.notice-link {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 2px;
+  padding: 2px 1px;
+  border-radius: 4px;
+}
+#notice-banner a.notice-link:hover,
+#notice-banner a.notice-link:focus-visible {
+  background: rgba(255, 255, 255, 0.18);
+  text-decoration-color: #ffd9e0;
+}
 /* 공지 작성 모달의 버튼 묶음 오른쪽 정렬 */
 #notice-modal .board-write-row > div { display: flex; gap: 8px; }
 

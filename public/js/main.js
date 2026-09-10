@@ -559,6 +559,28 @@ let notices = [];          // 공지 목록(줄마다 하나)
 let noticeIndex = 0;       // 지금 보여 주는 공지 번호(여러 개면 번갈아)
 const noticeBanner = document.getElementById('notice-banner');
 
+// 공지 안의 @아이디를 인스타그램 프로필 링크로 바꾼다.
+//
+// 반드시 escape 를 먼저 하고 그 뒤에 링크를 심는다. 순서가 반대면 공지에
+// <script> 를 적어 모든 방문자 화면에서 돌릴 수 있다. 아이디에 쓰이는 글자
+// (영문·숫자·밑줄·점)는 escape 가 건드리지 않으므로 이 순서가 안전하다.
+//
+// 인스타 아이디는 점으로 시작하거나 끝날 수 없다. 그래서 「@avoid_arc 팔로우」
+// 처럼 뒤에 문장부호가 붙어도 아이디만 정확히 끊어 낸다.
+//
+// 앞 글자를 같이 잡는 이유: 안 그러면 test@gmail.com 의 @gmail.com 까지
+// 링크가 된다. 앞이 글자·숫자·점이면 아이디가 아니라 이메일로 본다.
+// (lookbehind 로 쓰면 짧지만, 옛 iOS 사파리에서 정규식 자체가 문법 오류라
+//  main.js 가 통째로 안 돌아간다. 그래서 캡처로 간다.)
+const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const HANDLE = /(^|[^A-Za-z0-9_.])@([A-Za-z0-9_](?:[A-Za-z0-9._]{0,28}[A-Za-z0-9_])?)/g;
+
+const linkifyNotice = (text) => esc(text).replace(HANDLE, (_, pre, id) =>
+  `${pre}<a class="notice-link" href="https://instagram.com/${id}"` +
+  ` target="_blank" rel="noopener noreferrer">@${id}</a>`);
+
 function renderNotice() {
   // 첫 화면에 머무를 때만 띄운다. 두 조건을 모두 본다:
   //  - phase 가 title (혼자하기·대전을 시작하면 playing/countdown 으로 바뀐다)
@@ -569,7 +591,7 @@ function renderNotice() {
   const text = notices[noticeIndex] ?? '';
   const show = text && state.phase === 'title' && titleShown;
   if (noticeBanner) {
-    noticeBanner.textContent = text;
+    noticeBanner.innerHTML = linkifyNotice(text);
     noticeBanner.classList.toggle('hidden', !show);
   }
 }
