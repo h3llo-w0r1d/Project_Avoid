@@ -188,11 +188,13 @@ const auth = attachAuth(app, users, {
   }
 });
 
-// 관리 대시보드. 관리자 계정으로 로그인했을 때만 페이지 자체를 내준다.
-// 아무나 주소를 쳐도 관리자가 아니면 홈으로 튕긴다. 데이터 API 는 이미
-// requireAdmin 이 막고 있지만, 페이지까지 막아 두면 남에게 존재조차 안 보인다.
+// 관리 대시보드. 관리자 계정으로 로그인했거나, 열쇠(비밀번호)를 넣어 둔
+// 브라우저면 들어간다. 둘 다 아니면 껍데기만 받고 안에서 열쇠를 묻는다.
+//
+// 페이지를 아예 안 내주면 「계정을 못 쓰는 상황」 에서 들어갈 길이 없다.
+// 안의 데이터는 어차피 requireAdmin 이 다 막고 있으므로, 껍데기는 내줘도
+// 남이 볼 수 있는 건 「열쇠를 넣으세요」 라는 칸 하나뿐이다.
 app.get('/admin', (req, res) => {
-  if (!isAdminUser(req.user)) return res.redirect('/');
   res.sendFile(join(root, 'public', 'admin-dashboard.html'));
 });
 
@@ -763,14 +765,66 @@ function tokenMatches(given) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+// 열쇠를 넣어 둔 브라우저에 주는 쿠키. 열쇠 자체를 쿠키에 담지 않는다 —
+// 담아 두면 쿠키가 새는 순간 열쇠가 통째로 샌다. 대신 서버가 켜질 때 만든
+// 난수를 준다. 서버를 다시 켜면 무효가 되어 다시 물어본다.
+const ADMIN_COOKIE = 'adminkey';
+const ADMIN_PASS = randomBytes(24).toString('hex');
+const ADMIN_HOURS = 12;
+
+const adminCookieOk = (req) => {
+  const v = req.cookies?.[ADMIN_COOKIE];
+  if (typeof v !== 'string' || v.length !== ADMIN_PASS.length) return false;
+  return timingSafeEqual(Buffer.from(v), Buffer.from(ADMIN_PASS));
+};
+
 function requireAdmin(req, res, next) {
-  if (tokenMatches(req.get('x-admin-token')) || isAdminUser(req.user)) return next();
+  if (tokenMatches(req.get('x-admin-token'))) return next();
+  if (isAdminUser(req.user) || adminCookieOk(req)) return next();
   res.status(401).json({ error: '관리자만 쓸 수 있습니다.' });
 }
 
+// 열쇠를 몇 번이나 틀렸는지. 짧은 열쇠를 쓰더라도 무차별 대입을 못 하게
+// 막는다. 서버 메모리에만 두고, 창을 닫아도 IP 기준으로 남는다.
+const adminTries = new Map();   // ip -> { n, until }
+const ADMIN_MAX_TRY = 6;
+const ADMIN_LOCK_MS = 10 * 60_000;
+
+app.post('/api/admin/login', (req, res) => {
+  const ip = clientIp(req);
+  const now = Date.now();
+  const rec = adminTries.get(ip);
+  if (rec && rec.until > now) {
+    const left = Math.ceil((rec.until - now) / 60_000);
+    return res.status(429).json({ error: `너무 여러 번 틀렸습니다. ${left}분 뒤에 다시 해 주세요.` });
+  }
+  if (!tokenMatches(req.body?.token)) {
+    const n = (rec?.n ?? 0) + 1;
+    adminTries.set(ip, n >= ADMIN_MAX_TRY
+      ? { n: 0, until: now + ADMIN_LOCK_MS }
+      : { n, until: 0 });
+    return res.status(401).json({ error: '열쇠가 다릅니다.' });
+  }
+  adminTries.delete(ip);
+  res.cookie(ADMIN_COOKIE, ADMIN_PASS, {
+    httpOnly: true,           // 자바스크립트가 못 읽는다
+    sameSite: 'lax',
+    secure: (process.env.BASE_URL ?? '').startsWith('https://'),
+    maxAge: ADMIN_HOURS * 3600_000,
+    path: '/'
+  });
+  res.json({ ok: true });
+});
+
+app.post('/api/admin/logout', (req, res) => {
+  res.clearCookie(ADMIN_COOKIE, { path: '/' });
+  res.json({ ok: true });
+});
+
 // 게임 화면이 관리 버튼을 그릴지 정하는 데 쓴다. 관리자가 아니면 그냥 false.
+// 관리 화면은 열쇠만 넣고 들어올 수도 있어서 그쪽도 같이 본다.
 app.get('/api/admin/me', (req, res) => {
-  res.json({ admin: isAdminUser(req.user) });
+  res.json({ admin: isAdminUser(req.user) || adminCookieOk(req) });
 });
 
 // ── 공지 ────────────────────────────────────────────────────────────

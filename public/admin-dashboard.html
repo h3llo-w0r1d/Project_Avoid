@@ -98,6 +98,34 @@
   /* 960px 본문 + 카드 260px + 여백. 이보다 좁으면 겹친다. */
   @media (max-width: 1560px) { #present-box { display: none; } }
 
+  /* 열쇠 묻는 창. 화면을 통째로 덮어서, 뒤의 빈 표가 안 보이게 한다. */
+  #gate {
+    position: fixed; inset: 0; z-index: 99;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(6, 8, 16, 0.94);
+  }
+  .gate-card {
+    width: min(340px, 88vw); padding: 28px 26px; border-radius: 16px;
+    background: #121620; border: 1px solid rgba(120, 150, 200, 0.18);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .gate-card h2 { margin: 0; font-size: 18px; }
+  .gate-card p { margin: 0; font-size: 13px; color: var(--muted); }
+  #gate-key {
+    padding: 11px 13px; border-radius: 10px; font-size: 14px;
+    background: #0c0f18; border: 1px solid rgba(120, 150, 200, 0.24);
+    color: #e8eefc; font-family: inherit;
+  }
+  #gate-key:focus { outline: none; border-color: #4fd6ff; }
+  .gate-err { min-height: 16px; font-size: 12px; color: #ff8a9a; }
+  .gate-go {
+    padding: 11px; border-radius: 10px; border: 0; cursor: pointer;
+    background: #2f6df6; color: #fff; font-family: inherit;
+    font-size: 14px; font-weight: 800;
+  }
+  .gate-go:disabled { opacity: 0.5; cursor: default; }
+
   header.bar {
     position: sticky; top: 0; z-index: 5;
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -434,10 +462,59 @@ const matchCache = new Map();     // userId -> 대전 기록
 
 const api = async (path, opts) => {
   const res = await fetch(path, opts);
-  if (res.status === 401) { location.href = '/'; throw new Error('관리자 권한이 없습니다'); }
+  // 권한이 없으면 홈으로 튕기지 않고 열쇠를 묻는다. 관리자 계정으로 못
+  // 들어오는 상황(다른 기기·계정 분실)이 이 화면이 필요한 순간이다.
+  if (res.status === 401) { askKey(); throw new Error('관리자 권한이 없습니다'); }
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? `HTTP ${res.status}`);
   return res.json();
 };
+
+// 열쇠를 묻는 화면. 한 번 통과하면 12시간 동안 이 브라우저에 남는다.
+// 열쇠 자체는 브라우저에 저장하지 않는다 — 서버가 준 쿠키만 남는다.
+let keyBox = null;
+function askKey(msg) {
+  if (keyBox) {
+    if (msg) keyBox.querySelector('.gate-err').textContent = msg;
+    return;
+  }
+  keyBox = document.createElement('div');
+  keyBox.id = 'gate';
+  keyBox.innerHTML =
+    '<form class="gate-card">' +
+    '<h2>관리 화면</h2>' +
+    '<p>열쇠를 넣어 주세요.</p>' +
+    '<input type="password" id="gate-key" autocomplete="current-password" ' +
+    'placeholder="열쇠" autofocus>' +
+    '<div class="gate-err"></div>' +
+    '<button type="submit" class="gate-go">들어가기</button>' +
+    '</form>';
+  document.body.appendChild(keyBox);
+  const err = keyBox.querySelector('.gate-err');
+  if (msg) err.textContent = msg;
+  keyBox.querySelector('.gate-card').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = keyBox.querySelector('.gate-go');
+    btn.disabled = true;
+    err.textContent = '';
+    try {
+      const r = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: $('gate-key').value })
+      });
+      if (!r.ok) {
+        err.textContent = (await r.json().catch(() => ({}))).error ?? '들어가지 못했습니다.';
+        btn.disabled = false;
+        return;
+      }
+      location.reload();
+    } catch {
+      err.textContent = '서버에 닿지 못했습니다.';
+      btn.disabled = false;
+    }
+  });
+  $('gate-key').focus();
+}
 
 const say = (msg, err = false) => {
   $('state').textContent = msg;
