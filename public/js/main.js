@@ -2047,13 +2047,16 @@ let chal = null;
 // 물리 변형 preset. PLAYER 의 값 중 바꿀 것만 적는다.
 const PHYS_TUNE = {
   // 미끄럽다 — 멈추는 데 오래 걸리고 방향도 늦게 바뀐다.
-  slip: { friction: 26, accel: 78 },
-  // 무겁다 — 점프 높이는 비슷한데 체공이 짧아(0.75초 → 0.55초) 빔을 점프로 넘기기 어렵다.
-  heavy: { gravity: 52, jumpSpeed: 14.2 },
-  // 빠르다 — 좁은 무대에서 과속해 가장자리로 미끄러져 나간다.
-  fast: { speed: 16.5, accel: 190 },
-  slipheavy: { friction: 26, accel: 78, gravity: 52, jumpSpeed: 14.2 }
+  // 처음 값(마찰 26·가속 78)의 절반 — 두 배로 미끄럽게, 멈추는 데 두 배가 걸린다.
+  slip: { friction: 13, accel: 39 },
+  // 무겁다 — 점프가 낮고(2.25 → 1.7) 체공이 짧아(0.75초 → 0.43초) 빔을 점프로 넘기기 어렵다.
+  // 빔 높이가 0.6 이라 넘을 수는 있다.
+  heavy: { gravity: 75, jumpSpeed: 16 },
+  // 빠르다 — 좁은 무대(반지름 11)에서 과속해 가장자리로 미끄러져 나간다. 처음 값의 두 배.
+  fast: { speed: 33, accel: 380 }
 };
+// 셋 다 — 가속은 slip 의 값이 이긴다. 과속의 가속까지 받으면 얼음 위라는 느낌이 사라진다.
+PHYS_TUNE.all = { ...PHYS_TUNE.fast, ...PHYS_TUNE.slip, ...PHYS_TUNE.heavy };
 
 // 코인 층에서만 쓰는 스폰 속도. 평소(7~12초에 하나)로는 층이 성립하지 않는다.
 //
@@ -2175,7 +2178,7 @@ function renderChalHud() {
 }
 
 const PHYS_LABEL = {
-  slip: '미끄러움', heavy: '무거움', fast: '과속', slipheavy: '미끄러움+무거움'
+  slip: '미끄러움', heavy: '무거움', fast: '과속', all: '미끄러움+무거움+과속'
 };
 // 그 층에 도전한다. 일반 판과 같은 게임이지만 목표를 채우면 바로 클리어.
 function startChallenge(f) {
