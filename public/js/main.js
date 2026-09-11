@@ -1656,7 +1656,7 @@ const versus = new VersusUI({
 
 // 봇전 버튼 — 난이도 고르는 창을 연다.
 document.getElementById('bot-btn')?.addEventListener('click', pickBotDifficulty);
-// 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼. 30층까지 열려 있고 그 위는
+// 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼. 40층까지 열려 있고 그 위는
 // 목록에 「업데이트 중」 으로 뜬다(관리자는 전부 들어갈 수 있다).
 document.getElementById('tower-btn')?.addEventListener('click', openTower);
 
@@ -1833,7 +1833,7 @@ function setArenaVisible(visible) {
 }
 
 function startGame() {
-  clearChallengeGear();   // 지난 층의 물리 변형·안전지대가 남지 않게
+  clearChallengeGear();   // 지난 층의 물리 조작·안전지대가 남지 않게
   state.mode = 'solo';
   state.botAI = null;      // 봇전·도전모드 흔적을 지운다(일반 판)
   // 하드코어 여부는 타이틀 토글에서 읽는다. 다시 시작해도 같은 모드로 이어진다.
@@ -2039,12 +2039,12 @@ function askTowerLogin(closeTower) {
 // state.challenge 가 '무엇을 해야 하나'(서버가 준 층 정의)라면,
 // 이쪽 chal 은 '지금 얼마나 했나'다. 층을 시작할 때 세우고 끝나면 지운다.
 //
-// 여기 있는 규칙(점프 배급·물리 변형·정지 금지·안전지대·발판)은 전부
+// 여기 있는 규칙(점프 배급·물리 조작·정지 금지·안전지대·발판)은 전부
 // 도전모드에서만 켠다. 전기선 시뮬과 물리 계산 자체는 손대지 않으므로
 // 일반 판·1v1·다시보기는 아무 영향을 받지 않는다.
 let chal = null;
 
-// 물리 변형 preset. PLAYER 의 값 중 바꿀 것만 적는다.
+// 물리 조작 preset. PLAYER 의 값 중 바꿀 것만 적는다.
 const PHYS_TUNE = {
   // 미끄럽다 — 멈추는 데 오래 걸리고 방향도 늦게 바뀐다.
   // 처음 값(마찰 26·가속 78)의 절반 — 두 배로 미끄럽게, 멈추는 데 두 배가 걸린다.
