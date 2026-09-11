@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
-  makeGrassTexture, makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture,
+  makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture,
   makeSnowTexture, makeSnowSkyTexture, makeGalaxyTexture, makeGalaxySkyTexture
 } from './textures.js';
 
@@ -107,6 +107,11 @@ function addArena(scene) {
   stones.name = 'deck-stones';
   group.add(stones);
 
+  // 풀숲 가장자리 — 수정. 바위는 설원이 쓴다(paintArena 가 골라 켠다).
+  const crystals = buildEdgeCrystals();
+  crystals.name = 'deck-crystals';
+  group.add(crystals);
+
   // 설원 스킨이 바위 대신 쓰는 얼음 기둥. 미리 만들어 두고 감춰 둔다 —
   // 고를 때마다 만들면 그 순간 멈칫한다(46개 인스턴싱).
   const ice = buildEdgeIce();
@@ -209,6 +214,48 @@ function buildEdgeStones() {
       }
     ));
   }
+  return group;
+}
+
+// 풀숲 가장자리. 받은 섬 그림처럼 흰 수정과 작은 회색 돌을 번갈아 두른다.
+// 수정은 스스로 은은히 빛나야 밤 무대에서 수정으로 읽힌다 — 안 그러면 흰 돌이다.
+// 무대 끝을 알려 주는 표시라 바위와 같은 자리(가장자리 바로 안쪽)에 서고,
+// 가까운 쪽 가장자리에서 캐릭터 발을 가리지 않게 키를 낮게 둔다.
+function buildEdgeCrystals() {
+  const group = new THREE.Group();
+  const count = 26;
+
+  // 이십면체를 조금만 세로로 늘린다. 팔면체는 뾰족한 가시처럼 보여 그림 속
+  // 굵직한 보석과 달랐다. 면이 또렷해야(flatShading) 깎은 보석처럼 번쩍인다.
+  const gemMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, emissive: 0x6d58d8, emissiveIntensity: 0.45,
+    roughness: 0.18, metalness: 0.1, flatShading: true
+  });
+  group.add(scatter(new THREE.IcosahedronGeometry(1, 0), gemMat, count,
+    (i, pos, rot, scl) => {
+      const a = (i / count) * Math.PI * 2 + rnd(-0.04, 0.04);
+      pos.set(Math.cos(a) * (ARENA_RADIUS - 0.1), rnd(0.08, 0.16), Math.sin(a) * (ARENA_RADIUS - 0.1));
+      rot.set(rnd(-0.3, 0.3), rnd(0, 6.3), rnd(-0.3, 0.3));
+      const size = rnd(0.38, 0.6);
+      scl.set(size, size * rnd(1.05, 1.3), size);
+    },
+    // 흰색에 옅은 푸른·보랏빛을 조금씩 — 그림 속 수정이 한 색이 아니다
+    () => new THREE.Color().setHSL(rnd(0.6, 0.78), rnd(0.15, 0.45), rnd(0.82, 0.95))
+  ));
+
+  // 수정 사이 작은 회색 돌. 바위와 같은 방법으로 찌그러뜨린다.
+  const pebble = new THREE.DodecahedronGeometry(1, 1);
+  rockify(pebble, 0.55, 7);
+  const pebbleMat = new THREE.MeshStandardMaterial({ color: 0x8d8a86, roughness: 0.95, flatShading: true });
+  group.add(scatter(pebble, pebbleMat, count,
+    (i, pos, rot, scl) => {
+      const a = ((i + 0.5) / count) * Math.PI * 2 + rnd(-0.05, 0.05);
+      pos.set(Math.cos(a) * (ARENA_RADIUS - 0.12), rnd(-0.06, 0.04), Math.sin(a) * (ARENA_RADIUS - 0.12));
+      rot.set(rnd(0, 0.6), rnd(0, 6.3), rnd(0, 0.6));
+      const size = rnd(0.2, 0.34);
+      scl.set(size * rnd(0.9, 1.3), size * rnd(0.6, 0.9), size * rnd(0.9, 1.3));
+    }
+  ));
   return group;
 }
 
@@ -720,9 +767,19 @@ function topTexture(kind) {
     topTexCache.set(kind,
       kind === 'snow' ? makeSnowTexture()
         : kind === 'galaxy' ? makeGalaxyTexture()
-        : makeGrassTexture());
+        : islandTexture());
   }
   return topTexCache.get(kind);
+}
+
+// 풀숲 상판은 받은 섬 그림(위에서 본 것)에서 수정 안쪽 잔디 원을 잘라 둔 파일이다.
+// CircleGeometry 의 UV 는 정사각형 안에 원이 내접하게 잡혀 잘라 둔 그대로 맞는다.
+// 타이틀에선 무대가 숨어 있어 판을 시작할 즈음엔 이미 받아져 있다.
+function islandTexture() {
+  const tex = new THREE.TextureLoader().load('img/arena-top.webp');
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 16;
+  return tex;
 }
 
 // 경기장 스킨을 입힌다.
@@ -792,8 +849,8 @@ export function paintArena(deck, spec = {}) {
   // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를
   // 함께 세워 빈틈을 메운다(바위는 spec.stone 색으로 이미 하얗게 칠해진다).
   // 가장자리 장식은 스킨마다 다른 것을 켠다.
-  //   (없음) 바위만 — 풀숲
-  //   ice    얼음 기둥 + 눈더미 — 설원
+  //   (없음) 수정 + 작은 돌 — 풀숲
+  //   ice    얼음 기둥 + 눈더미 + 서리 낀 바위 — 설원
   //   orbit  빛나는 고리 + 떠 있는 운석 — 은하수(돌·얼음은 우주와 안 어울린다)
   const ice = deck.getObjectByName('deck-ice');
   const snowy = deck.getObjectByName('deck-snowdeco');
@@ -809,9 +866,9 @@ export function paintArena(deck, spec = {}) {
   }
   if (snowy) snowy.visible = spec.edge === 'ice';
   if (orbit) orbit.visible = spec.edge === 'orbit';
-  // 바위는 무대 끝을 알려 주는 표시라 웬만하면 남긴다. 은하수처럼 대신할
-  // 표시(빛나는 고리)가 있는 스킨만 감춘다.
-  if (stones) stones.visible = !spec.hideStones;
-  // 바위는 어느 스킨에서도 남는다 — 무대 끝을 알려 주는 표시라 없으면
-  // 어디서 떨어지는지 가늠하기 어렵다.
+  // 수정·바위는 무대 끝을 알려 주는 표시라 스킨마다 둘 중 하나는 켠다.
+  // 은하수만 대신할 표시(빛나는 고리)가 있어 둘 다 끈다.
+  const crystals = deck.getObjectByName('deck-crystals');
+  if (crystals) crystals.visible = !spec.edge;
+  if (stones) stones.visible = !!spec.edge && !spec.hideStones;
 }
