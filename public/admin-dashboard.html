@@ -353,7 +353,7 @@
     <button type="button" data-panel="buy">캐릭터 구매 기록</button>
     <button type="button" data-panel="spin">룰렛 기록</button>
     <button type="button" data-panel="poll">투표 결과</button>
-    <button type="button" data-panel="tower">층 오르기 기록</button>
+    <button type="button" data-panel="tower">탑 오르기 기록</button>
     <button type="button" data-panel="bot">봇전 기록</button>
     <button type="button" data-panel="title">칭호 획득 기록</button>
     <button type="button" data-panel="rename">닉네임 변경 기록</button>
@@ -438,7 +438,7 @@
   </section>
 
   <section class="tab-panel hidden" id="panel-tower">
-    <h2>층 오르기 기록 <span class="dim" id="tower-count"></span></h2>
+    <h2>탑 오르기 기록 <span class="dim" id="tower-count"></span></h2>
     <p class="hint">도전모드 한 판 한 판을 남깁니다. <b>성공·실패 모두</b> 나옵니다.</p>
     <div class="tools">
       <span class="grow"></span>
@@ -589,7 +589,7 @@ const stamp = (at) => {
 };
 
 // 왼쪽 위 '누적 판수' 카드. 게임 타이틀 화면의 것과 같은 숫자다
-// (혼자 하기·층 오르기 + 봇전 + 1v1). 못 받아 오면 카드를 숨긴다 —
+// (혼자 하기·탑 오르기 + 봇전 + 1v1). 못 받아 오면 카드를 숨긴다 —
 // 장식이라 없다고 아쉬울 게 없고, 0판이라고 거짓말하는 것보단 낫다.
 //
 // 지금 사이트에 있는 사람들. 관리자(나)는 접속 집계에서 빠지므로 목록에도
@@ -675,7 +675,7 @@ function drawUsage() {
     <div class="card"><div class="big">${newToday}<em>명</em></div><div class="lbl">오늘 신규 가입</div>
       <div class="sub">누적 회원 ${num(accts.length)}명</div></div>
     <div class="card"><div class="big">${today.runs}<em>판</em></div><div class="lbl">오늘 판 수</div>
-      <!-- 누적은 서버가 낸 값(혼자 하기+층 오르기+봇전+1v1). totals.runs 는
+      <!-- 누적은 서버가 낸 값(혼자 하기+탑 오르기+봇전+1v1). totals.runs 는
            혼자 하기만 세서 왼쪽 위 카드와 숫자가 어긋났다. -->
       <div class="sub">누적 ${num(data.playCount?.total ?? totals.runs)}판</div></div>
     <div class="card"><div class="big">${spellTime(today.seconds)}</div><div class="lbl">오늘 플레이 시간</div>
@@ -865,7 +865,7 @@ const PLAY_PER = 20;
 let playPage = 0;
 let towerPage = 0, botPage = 0;
 
-/* ---- 층 오르기 기록(도전모드) — 성공·실패 모두 ---- */
+/* ---- 탑 오르기 기록(도전모드) — 성공·실패 모두 ---- */
 async function drawTowerLog() {
   try {
     const { rows, total } = await api(`/api/admin/challenge-log?limit=${PLAY_PER}&offset=${towerPage * PLAY_PER}`);
@@ -988,7 +988,7 @@ async function drawPlays() {
     // 뭉뚱그리면 그때 하드코어로 한 판까지 일반으로 둔갑한다.
     const MODES = { normal: ['일반', ''], hardcore: ['하드코어', 'hard'],
                     voice: ['마이크', 'mic'], voicehard: ['마이크·하드', 'hard'],
-                    tower: ['층 오르기', 'twr'], bot: ['봇전', 'bot'], versus: ['1대1', 'vs'] };
+                    tower: ['탑 오르기', 'twr'], bot: ['봇전', 'bot'], versus: ['1대1', 'vs'] };
     const mode = (v) => { const m = MODES[v];
       return m ? `<span class="mode ${m[1]}">${m[0]}</span>` : '<span class="dim">–</span>'; };
     const body = rows.map((r, i) =>
@@ -1262,7 +1262,7 @@ $('tabs').addEventListener('click', (e) => {
   if (b) showPanel(b.dataset.panel);
 });
 
-// 층 오르기·봇전 기록 비우기
+// 탑 오르기·봇전 기록 비우기
 async function clearLog(path, label, after) {
   if (!confirm(`${label}을(를) 모두 지웁니다. 되돌릴 수 없습니다.`)) return;
   if (prompt('정말 지우려면 DELETE ALL 을 입력하세요.') !== 'DELETE ALL') { say('취소했습니다.'); return; }
@@ -1275,7 +1275,7 @@ async function clearLog(path, label, after) {
   } catch (e) { say(e.message, true); }
 }
 $('tower-clear').addEventListener('click', () =>
-  clearLog('/api/admin/challenge-log/clear', '층 오르기 기록', () => { towerPage = 0; drawTowerLog(); }));
+  clearLog('/api/admin/challenge-log/clear', '탑 오르기 기록', () => { towerPage = 0; drawTowerLog(); }));
 $('botlog-clear').addEventListener('click', () =>
   clearLog('/api/admin/bot-log/clear', '봇전 기록', () => { botPage = 0; drawBotLog(); }));
 $('titlelog-clear').addEventListener('click', () =>

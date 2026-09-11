@@ -732,7 +732,7 @@ export const api = {
     return res.json();
   },
 
-  // 사이트 전체 누적 판수(혼자 하기·층 오르기·봇전·1v1 전부).
+  // 사이트 전체 누적 판수(혼자 하기·탑 오르기·봇전·1v1 전부).
   // { total, since } — since 는 언제부터 센 숫자인지('YYYY-MM-DD').
   async playCount() {
     const res = await fetch('/api/play-count');

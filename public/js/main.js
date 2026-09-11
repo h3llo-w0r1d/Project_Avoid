@@ -610,11 +610,11 @@ const PROMO = {
   id: 'tower-open',                 // 「오늘 하루 안 보기」 를 기억하는 열쇠
   until: '2026-10-31',              // 이 날까지만 뜬다
   badge: 'NEW MODE',
-  title: '층 오르기 OPEN!',
+  title: '탑 오르기 OPEN!',
   lead: [
     '1층부터 정상까지, 한 층씩 조건을 깨고 올라가는 새 모드예요.'
   ],
-  foot: '누가 제일 높이 올라가나? 랭킹에 「층 오르기」 가 생겼어요.',
+  foot: '누가 제일 높이 올라가나? 랭킹에 「탑 오르기」 가 생겼어요.',
   cta: '지금 도전하기'
 };
 
@@ -643,7 +643,7 @@ function openPromo(promo) {
     `<span class="promo-badge">${promo.badge}</span>` +
     `<h2 class="promo-title">${promo.title}</h2>` +
     `<p class="promo-lead">${promo.lead.join('<br>')}</p>` +
-    // 철탑 한 컷. 층 오르기 창에 쓰는 것과 같은 격자라, 글을 안 읽어도
+    // 철탑 한 컷. 탑 오르기 창에 쓰는 것과 같은 격자라, 글을 안 읽어도
     // 무엇을 말하는지 짐작이 간다. 전류가 아래에서 위로 차오르는 것이
     // 이 모드가 하는 일 그 자체다.
     '<div class="promo-art">' +
@@ -1892,7 +1892,7 @@ function startGame() {
 
 // ── 도전모드(탑) ────────────────────────────────────────────
 
-// 층 오르기 — 고압 송전탑.
+// 탑 오르기 — 고압 송전탑.
 //
 // 예전엔 떠 있는 잔디 섬이 지그재그로 이어졌는데, 흔한 레벨 선택 화면이라
 // 이 게임(붉은 고압 전기선을 피한다)과 아무 상관이 없었다. 60층으로 늘리고
@@ -1906,7 +1906,7 @@ async function openTower() {
   overlay.className = 'modal tower-modal';
   overlay.innerHTML =
     '<div class="modal-card panel tower-card">' +
-    '<div class="modal-head"><h2>층 오르기</h2>' +
+    '<div class="modal-head"><h2>탑 오르기</h2>' +
     '<span class="tower-meter"></span>' +
     '<button type="button" class="icon-btn tower-close" aria-label="닫기">✕</button></div>' +
     '<p class="board-hint tower-hint">불러오는 중…</p>' +
@@ -2016,7 +2016,7 @@ function askTowerLogin(closeTower) {
     '<div class="unlock-card bot-result">' +
     '<div class="unlock-kicker">🔒 로그인이 필요해요</div>' +
     '<div class="bot-result-face">🗼</div>' +
-    '<div class="unlock-name">게스트는 층 오르기를 할 수 없어요</div>' +
+    '<div class="unlock-name">게스트는 탑 오르기를 할 수 없어요</div>' +
     '<div class="unlock-hint">로그인하면 층을 깨고 어디까지 올랐는지 남아요</div>' +
     '<div class="bot-result-row">' +
     '<button type="button" class="ghost small tower-later">나중에</button>' +
@@ -2106,7 +2106,7 @@ function applyChallenge(f) {
 // 안 그러면 다음 판이 미끄럽거나 안전지대가 남는다.
 function clearChallengeGear() {
   chal = null;
-  // '무엇을 해야 하나'(층 정의)까지 같이 지운다. 이걸 안 지우면 층오르기를
+  // '무엇을 해야 하나'(층 정의)까지 같이 지운다. 이걸 안 지우면 탑 오르기를
   // 하다 나간 뒤 봇전을 끝냈을 때 endBotMatch 가 아직 도전 중인 줄 알고
   // 층 결과창을 띄운다 — 이기면 층이 공짜로 클리어됐다.
   state.challenge = null;

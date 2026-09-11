@@ -684,7 +684,7 @@ app.post('/api/challenge-log', (req, res) => {
   const seconds = Math.round(Math.max(0, Math.min(100000, Number(req.body?.seconds) || 0)) * 100) / 100;
   try {
     modeLogs.challenge.add({ name: who.name, userId: req.user?.id ?? null, floor, goal, ok, seconds });
-    // 판수에도 넣는다. 층 오르기도 엄연히 한 판이다.
+    // 판수에도 넣는다. 탑 오르기도 엄연히 한 판이다.
     plays.add({ name: who.name, seconds, userId: req.user?.id ?? null,
       mobile: isMobile(req.get('user-agent')), mode: 'tower' });
     res.json({ ok: true });
@@ -1063,7 +1063,7 @@ app.post('/api/titles', (req, res) => {
 // 첫 화면에 띄우는 '누적 판수'. 이 사이트에서 지금까지 시작된 모든 판을 센다.
 //
 // 셋을 더한다 — 한 곳에 다 세지 않는 이유는 판이 시작되는 길이 서로 다르기
-// 때문이다. 혼자 하기·층 오르기는 표(run/start)를 받아 가므로 stats 가 세고,
+// 때문이다. 혼자 하기·탑 오르기는 표(run/start)를 받아 가므로 stats 가 세고,
 // 봇전과 1v1 은 표를 안 받아서 각자의 기록표 줄 수로 센다.
 // 1v1 은 두 명이 하지만 한 판으로 친다.
 //
@@ -1081,7 +1081,7 @@ let playCountCache = { at: 0, total: 0, since: null };
 function playCountNow() {
   const now = Date.now();
   if (now - playCountCache.at > 5_000) {
-    let total = stats.totals().runs;              // 혼자 하기 + 층 오르기
+    let total = stats.totals().runs;              // 혼자 하기 + 탑 오르기
     try { total += modeLogs.bot.size; } catch { /* 표가 없으면 그냥 뺀다 */ }
     try { total += matchLog.size; } catch { /* 1v1 */ }
     // 언제부터 센 숫자인지. 사이트를 연 날(8/7)이 아니라 '판을 세기 시작한
@@ -1141,7 +1141,7 @@ app.get('/api/play-ranks', (req, res) => {
     season: seasonInfo(),
     note: bySeconds
       ? '시즌과 상관없는 통산 플레이 시간입니다 · 모든 모드를 셉니다'
-      : '시즌과 상관없는 통산 판수입니다 · 혼자 하기·층 오르기·봇전·1대1 을 모두 셉니다',
+      : '시즌과 상관없는 통산 판수입니다 · 혼자 하기·탑 오르기·봇전·1대1 을 모두 셉니다',
     top: rows.slice(0, TOP_N),
     me: at >= 0 ? { ...rows[at], rank: at + 1 } : null
   });
