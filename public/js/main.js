@@ -1900,7 +1900,7 @@ function startGame() {
 //
 // 지금은 철탑 하나가 위로 이어지고, 깬 층까지 전류가 흐른다(통전). 층은
 // 철탑에서 뻗어 나온 가로대 끝에 달린 명판이고, 10층마다 구간 표지판이
-// 붙는다. 스크롤 한 번으로 1층부터 60층까지 이어 본다.
+// 붙는다. 스크롤 한 번으로 1층부터 50층까지 이어 본다.
 async function openTower() {
   const overlay = document.createElement('div');
   overlay.className = 'modal tower-modal';
@@ -1944,7 +1944,7 @@ async function openTower() {
   const cur = admin ? 0 : (data.cleared < top ? data.cleared + 1 : 0);
   const zones = data.zones ?? [];
 
-  // 60층이 맨 위, 1층이 맨 아래. 그래서 위에서부터 거꾸로 그린다.
+  // 꼭대기 층이 맨 위, 1층이 맨 아래. 그래서 위에서부터 거꾸로 그린다.
   const parts = [];
   for (const f of [...data.floors].reverse()) {
     // 구간의 맨 위 층 앞에 표지판을 세운다(위에서 내려오며 만나는 순서).
@@ -1999,7 +1999,7 @@ async function openTower() {
     });
   }
 
-  // 지금 도전할 층이 화면 가운데 오게 스크롤을 맞춘다. 60층을 위에서부터
+  // 지금 도전할 층이 화면 가운데 오게 스크롤을 맞춘다. 50층을 위에서부터
   // 훑어 내려오게 두면 내가 어디까지 왔는지 찾는 데만 한참 걸린다.
   const now = box.querySelector('.pf.here') ?? box.querySelector('.pf.open');
   if (now) box.scrollTop = now.offsetTop - box.clientHeight / 2 + now.offsetHeight / 2;

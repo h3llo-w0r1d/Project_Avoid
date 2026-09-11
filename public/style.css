@@ -2990,7 +2990,7 @@ kbd {
   50% { opacity: 1; transform: translate(-50%, -3px) scale(1.15); }
 }
 
-/* 철탑 머리 — 가로대 두 개와 피뢰침. 60층 위에 얹혀 '여기가 끝'이 보인다.
+/* 철탑 머리 — 가로대 두 개와 피뢰침. 꼭대기 층 위에 얹혀 '여기가 끝'이 보인다.
    기둥 격자가 뒤로 비쳐야 한 구조로 읽히므로 배경은 두지 않는다. */
 .pylon-head { position: absolute; left: 46px; width: 92px; top: 10px; height: 68px; pointer-events: none; }
 .pylon-tip {
