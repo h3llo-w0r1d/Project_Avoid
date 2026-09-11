@@ -5,6 +5,11 @@
 
 import { ARENA_RADIUS, PLAYER } from '../config.js';
 
+// 공중이어도 가장자리에서 이만큼 넘게 나가면 낙사(droppedOff). 반지름 11 섬의
+// 약 1.4배 둘레다 — 가장자리에서 헛디뎌 이단 점프로 돌아오는 건 되고, 섬 밖
+// 멀리 날아갔다 돌아오는 건 안 된다.
+const OUT_MARGIN = 4;
+
 export class PlayerBody {
   constructor() {
     // 점프 가능 횟수. 기본은 설정값(2단). 하드코어 모드에서 1 로 낮춰 1단만 쓴다.
@@ -151,12 +156,16 @@ export class PlayerBody {
   get headY() { return this.y + PLAYER.height; }
 
   // 무대 밖으로 떨어졌는지 (판정용)
-  //  1) 가장자리를 넘어(반지름+0.6 밖) 살짝만 떨어져도 낙사, 그리고
-  //  2) 어느 쪽이든 충분히 깊이(-4 아래) 떨어지면 무조건 낙사.
+  //  1) 가장자리를 넘어(반지름+0.6 밖) 살짝만 떨어져도 낙사,
+  //  2) 어느 쪽이든 충분히 깊이(-4 아래) 떨어지면 무조건 낙사, 그리고
+  //  3) 공중이어도 가장자리에서 OUT_MARGIN 넘게 나가면 낙사.
   // 2) 가 없으면 가장자리에 딱 붙어 수직으로 떨어질 때(반지름을 안 넘김)
   //    계속 살아 있는 것으로 잘못 인식된다.
+  // 3) 이 없으면 이단 점프로 섬 밖 멀리(과속 층이면 수십 칸)까지 날아갔다가
+  //    돌아올 수 있다. 1v1 서버·다시보기도 이 판정을 그대로 쓴다.
   get droppedOff() {
-    return (Math.hypot(this.x, this.z) > ARENA_RADIUS + 0.6 && this.y < -1) || this.y < -4;
+    const d = Math.hypot(this.x, this.z);
+    return (d > ARENA_RADIUS + 0.6 && this.y < -1) || this.y < -4 || d > ARENA_RADIUS + OUT_MARGIN;
   }
 }
 
