@@ -2926,114 +2926,19 @@ kbd {
   border: 1px solid rgba(120, 150, 200, 0.14);
   scroll-behavior: smooth;
 }
-.pylon { position: relative; padding: 78px 22px 74px 206px; }
+/* 머리(완금·애자련·피뢰침)와 기초가 들어갈 자리를 위아래로 넉넉히 둔다 */
+.pylon { position: relative; padding: 168px 22px 92px 206px; }
 
-/* ── 철탑 기둥 ────────────────────────────────────────────────────
-   주각 두 개, 칸마다 X 브레이스, 칸 경계마다 가로 브레이스. 전부
-   그라디언트라 이미지 파일이 없다.
-   X 는 칸(--panel)마다 하나씩 그린다. 예전처럼 사선을 촘촘히 반복하면
-   구조가 아니라 그냥 빗금 무늬로 보인다.
-   무늬는 아래(0 100%)를 기준으로 쌓는다 — 통전 막대도 같은 기준이라
-   주황으로 덮인 칸과 강철 칸의 격자가 어긋나지 않는다. */
-.pylon-mast {
-  position: absolute; left: 46px; top: 0; bottom: 34px; width: 92px;
-  --panel: 74px;
-  background:
-    linear-gradient(to bottom right, transparent calc(50% - 1.3px),
-      rgba(150, 174, 214, 0.5) calc(50% - 1.3px) calc(50% + 1.3px), transparent calc(50% + 1.3px)),
-    linear-gradient(to bottom left, transparent calc(50% - 1.3px),
-      rgba(150, 174, 214, 0.5) calc(50% - 1.3px) calc(50% + 1.3px), transparent calc(50% + 1.3px)),
-    linear-gradient(180deg, rgba(150, 174, 214, 0.32) 0 2px, transparent 2px),
-    linear-gradient(90deg,
-      rgba(198, 218, 248, 0.78) 0 3px, rgba(86, 104, 138, 0.58) 3px 6px,
-      rgba(10, 13, 22, 0.28) 6px calc(100% - 6px),
-      rgba(86, 104, 138, 0.58) calc(100% - 6px) calc(100% - 3px),
-      rgba(198, 218, 248, 0.78) calc(100% - 3px) 100%);
-  background-size: 100% var(--panel), 100% var(--panel), 100% var(--panel), 100% 100%;
-  background-position: 0 100%;
-  background-repeat: repeat, repeat, repeat, no-repeat;
-}
+/* 철탑 그림 — pylon-art.js 가 명판 위치를 재서 그린다. 명판 뒤에 깔린다. */
+.pylon-art { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
 
-/* 아래에서부터 차오르는 전류. 깬 만큼만 밝다. 기둥과 똑같은 격자를
-   주황으로 다시 그린다 — 폭과 기준이 같아야 무늬가 겹친다. */
-.pylon-live {
-  position: absolute; left: 0; right: 0; bottom: 0;
-  --panel: 74px;
-  background:
-    linear-gradient(180deg, rgba(255, 140, 60, 0) 0%, rgba(255, 120, 50, 0.14) 14%, rgba(255, 105, 40, 0.26) 100%),
-    linear-gradient(to bottom right, transparent calc(50% - 1.5px),
-      rgba(255, 190, 126, 0.78) calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
-    linear-gradient(to bottom left, transparent calc(50% - 1.5px),
-      rgba(255, 190, 126, 0.78) calc(50% - 1.5px) calc(50% + 1.5px), transparent calc(50% + 1.5px)),
-    linear-gradient(180deg, rgba(255, 190, 126, 0.46) 0 2px, transparent 2px),
-    linear-gradient(90deg,
-      rgba(255, 212, 158, 0.95) 0 3px, rgba(196, 118, 48, 0.7) 3px 6px,
-      transparent 6px calc(100% - 6px),
-      rgba(196, 118, 48, 0.7) calc(100% - 6px) calc(100% - 3px),
-      rgba(255, 212, 158, 0.95) calc(100% - 3px) 100%);
-  background-size: 100% 100%, 100% var(--panel), 100% var(--panel), 100% var(--panel), 100% 100%;
-  background-position: 0 100%;
-  background-repeat: no-repeat, repeat, repeat, repeat, no-repeat;
-  box-shadow: 0 0 40px rgba(255, 120, 50, 0.3);
-  border-top: 2px solid rgba(255, 200, 140, 0.9);
-}
-
-/* 통전 경계에서 깜박이는 불꽃 */
-.pylon-live::after {
-  content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%);
-  width: 8px; height: 8px; border-radius: 50%;
-  background: #ffd9a1; box-shadow: 0 0 14px 4px rgba(255, 170, 90, 0.85);
-  animation: pylonSpark 2.4s ease-in-out infinite;
-}
-@keyframes pylonSpark {
-  0%, 100% { opacity: 0.35; transform: translate(-50%, 0) scale(0.8); }
-  50% { opacity: 1; transform: translate(-50%, -3px) scale(1.15); }
-}
-
-/* 철탑 머리 — 가로대 두 개와 피뢰침. 꼭대기 층 위에 얹혀 '여기가 끝'이 보인다.
-   기둥 격자가 뒤로 비쳐야 한 구조로 읽히므로 배경은 두지 않는다. */
-.pylon-head { position: absolute; left: 46px; width: 92px; top: 10px; height: 68px; pointer-events: none; }
-.pylon-tip {
-  position: absolute; left: 50%; top: 0; transform: translateX(-50%);
-  width: 3px; height: 30px;
-  background: linear-gradient(180deg, rgba(214, 232, 255, 0.95), rgba(150, 174, 214, 0.35));
-}
-.pylon-tip::after {
-  content: ''; position: absolute; left: 50%; top: -5px; transform: translateX(-50%);
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #ffd9a1; box-shadow: 0 0 12px 3px rgba(255, 170, 90, 0.7);
-  animation: pylonSpark 3.2s ease-in-out infinite;
-}
-/* 가로대 두 개. 위가 짧고 아래가 길다 — 실제 송전탑의 순서다. */
-.pylon-arm {
-  position: absolute; left: 50%; transform: translateX(-50%);
-  height: 4px; border-radius: 2px;
-  background: linear-gradient(180deg, rgba(206, 226, 255, 0.9), rgba(118, 140, 180, 0.7));
-  box-shadow: 0 1px 0 rgba(10, 13, 22, 0.6);
-}
-/* 가로대 양 끝에 매달린 애자 */
-.pylon-arm::before, .pylon-arm::after {
-  content: ''; position: absolute; top: 4px; width: 5px; height: 12px;
-  border-radius: 0 0 3px 3px;
-  background: linear-gradient(180deg, rgba(180, 200, 232, 0.75), rgba(96, 116, 150, 0.45));
-}
-.pylon-arm::before { left: 7px; }
-.pylon-arm::after { right: 7px; }
-.pylon-arm.a1 { top: 30px; width: 130px; }
-.pylon-arm.a2 { top: 52px; width: 168px; }
-
-/* 기초 — 콘크리트 주각과 땅. 기둥이 허공에서 잘리지 않게 받쳐 준다. */
-.pylon-base {
-  position: absolute; left: 30px; width: 124px; bottom: 26px; height: 20px;
-  border-radius: 3px; pointer-events: none;
-  border: 1px solid rgba(150, 168, 200, 0.35);
-  background: linear-gradient(180deg, #717a90 0%, #4b5367 45%, #2b3140 100%);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.16);
-}
-.pylon-base::after {
-  content: ''; position: absolute; left: -16px; right: -16px; bottom: -8px; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(150, 172, 210, 0.3) 20%, rgba(150, 172, 210, 0.3) 80%, transparent);
-}
+/* 통전된 주각을 타고 오르는 전류. 대시 한 칸(3+56)만큼 밀어야 끊김 없이 이어진다. */
+.py-flow { animation: pyFlow 0.9s linear infinite; }
+@keyframes pyFlow { to { stroke-dashoffset: -59; } }
+/* 통전 경계와 피뢰침 끝에서 깜박이는 불꽃 */
+.py-spark { animation: pySpark 2.4s ease-in-out infinite; }
+@keyframes pySpark { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .py-flow, .py-spark { animation: none; } }
 
 /* 구간 표지판 — 10층마다. 왼쪽에 노랑·검정 빗금(실제 경고 명판처럼). */
 .pz {
@@ -3053,22 +2958,6 @@ kbd {
 
 /* 한 층 */
 .pf { position: relative; height: 74px; display: flex; align-items: center; }
-
-/* 철탑에서 뻗어 나온 가로대 — 기둥과 같은 격자 무늬라 한 구조로 읽힌다 */
-.pf-arm {
-  position: absolute; left: -76px; top: 50%; width: 76px; height: 20px;
-  transform: translateY(-50%);
-  border-top: 2px solid rgba(160, 182, 220, 0.55);
-  border-bottom: 2px solid rgba(160, 182, 220, 0.32);
-  background: repeating-linear-gradient(45deg, rgba(140, 162, 200, 0.34) 0 1.5px, transparent 1.5px 13px);
-}
-/* 가로대 끝의 볼트 이음 */
-.pf-ins {
-  position: absolute; left: -14px; top: 50%; transform: translateY(-50%);
-  width: 14px; height: 14px; border-radius: 50%;
-  background: #3d4457; border: 2px solid rgba(180, 200, 232, 0.6);
-  box-shadow: inset 0 0 0 2px rgba(10, 13, 22, 0.6);
-}
 
 .pf-hit {
   position: relative; width: auto; margin: 0; padding: 0; border: 0;
@@ -3100,12 +2989,6 @@ kbd {
 }
 
 /* 깬 층 — 전류가 흐른다 */
-.pf.done .pf-arm {
-  border-top-color: rgba(255, 200, 140, 0.8);
-  border-bottom-color: rgba(255, 180, 110, 0.45);
-  background: repeating-linear-gradient(45deg, rgba(255, 186, 120, 0.5) 0 1.5px, transparent 1.5px 13px);
-}
-.pf.done .pf-ins { background: #6b4526; border-color: rgba(255, 200, 140, 0.75); }
 .pf.done .pf-plate { border-color: rgba(255, 150, 80, 0.32); background: linear-gradient(140deg, rgba(48, 34, 26, 0.85), rgba(22, 18, 26, 0.7)); }
 .pf.done .pf-num { color: #ffc490; }
 .pf.done .pf-goal { color: #d09a6a; }
@@ -3145,25 +3028,12 @@ kbd {
   pointer-events: none; filter: drop-shadow(0 5px 7px rgba(0, 0, 0, 0.6));
 }
 
-/* 좁은 화면 — 철탑 장식이 가로를 많이 먹어 글씨가 잘게 쪼개진다.
-   기둥은 가는 띠로 줄이고 가로대는 없앤다. '아래부터 통전된다'는 핵심은
-   기둥 하나로도 그대로 읽힌다. */
+/* 좁은 화면 — 철탑이 가로를 많이 먹어 글씨가 잘게 쪼개진다. 철탑 자리를
+   줄인다. 그림은 이 폭에 맞춰 가늘게 그려지고 애자는 빠진다. '아래부터
+   통전된다'는 핵심은 가는 철탑으로도 그대로 읽힌다. */
 @media (max-width: 720px) {
-  .pylon { padding: 58px 12px 42px 68px; }
-  .pylon-mast { left: 18px; width: 36px; bottom: 20px; --panel: 44px; }
-  .pylon-live { --panel: 44px; }
-  .pylon-head { left: 18px; width: 36px; top: 12px; height: 44px; }
-  .pylon-tip { height: 20px; }
-  .pylon-arm { height: 3px; }
-  .pylon-arm::before, .pylon-arm::after { top: 3px; width: 4px; height: 8px; }
-  .pylon-arm::before { left: 4px; }
-  .pylon-arm::after { right: 4px; }
-  .pylon-arm.a1 { top: 20px; width: 54px; }
-  .pylon-arm.a2 { top: 33px; width: 70px; }
-  .pylon-base { left: 10px; width: 52px; bottom: 14px; height: 12px; }
+  .pylon { padding: 104px 12px 58px 68px; }
   .pf { height: 58px; }
-  .pf-arm { left: -26px; width: 26px; height: 10px; }
-  .pf-ins { display: none; }
   .pf-plate { padding: 8px 10px; gap: 8px; border-radius: 8px; }
   .pf-num { font-size: 16px; min-width: 42px; }
   .pf-num i { font-size: 10px; }
@@ -3178,12 +3048,6 @@ kbd {
 /* 더 좁으면(회전한 폰) 상태 배지까지 뺀다 — 색만으로도 구분된다 */
 @media (max-width: 480px) {
   .pylon { padding-left: 58px; }
-  .pylon-mast { left: 14px; width: 30px; }
-  .pylon-head { left: 14px; width: 30px; }
-  .pylon-arm.a1 { width: 46px; }
-  .pylon-arm.a2 { width: 58px; }
-  .pylon-base { left: 6px; width: 42px; }
-  .pf-arm { left: -22px; width: 22px; }
   .pf.lock .pf-state, .pf.done .pf-state { display: none; }
   .pf-goal { font-size: 10.5px; }
 }

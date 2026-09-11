@@ -27,6 +27,7 @@ import { ARENA_RADIUS, VOICE, PLAYER } from './config.js';
 import { TrailFX, findTrail, findArena, DEFAULT_ARENA } from './effects.js';
 import { ShopUI } from './shop-ui.js';
 import { SafeZone, Pads } from './challenge-extras.js';
+import { drawPylon } from './pylon-art.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
 // 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
@@ -1966,7 +1967,6 @@ async function openTower() {
     parts.push(
       `<div class="pf ${st}${here ? ' here' : ''}" data-floor="${f.floor}">` +
       `<button type="button" class="pf-hit"${canGo ? '' : ' disabled'}>` +
-      '<span class="pf-arm"></span><span class="pf-ins"></span>' +
       `<span class="pf-plate">` +
       `<b class="pf-num">${f.floor}<i>F</i></b>` +
       `<span class="pf-goal">${f.soon ? '준비 중인 층이에요' : f.done ? '통전 완료' : f.goal}</span>` +
@@ -1976,17 +1976,19 @@ async function openTower() {
       '</span></button></div>');
   }
 
-  // 통전된 높이 = 깬 층 / 전체. 아래에서부터 차오른다.
-  // 관리자는 전부 열려 있으니 탑도 끝까지 켜 둔다 — 진행도가 0 이라고
-  // 새까만 철탑을 보여 주면 고장 난 것처럼 보인다.
-  const lit = admin ? 1 : Math.max(0, Math.min(1, data.cleared / data.top));
   const box = overlay.querySelector('.pylon-scroll');
   box.innerHTML =
-    '<div class="pylon">' +
-    `<div class="pylon-mast"><span class="pylon-live" style="height:${(lit * 100).toFixed(2)}%"></span></div>` +
-    // 머리(피뢰침·가로대)와 기초. 층 목록과 상관없는 장식이라 여기 한 번만 둔다.
-    '<div class="pylon-head"><span class="pylon-tip"></span>' + '<span class="pylon-arm a1"></span><span class="pylon-arm a2"></span></div>' + '<div class="pylon-base"></div>' +
+    '<div class="pylon"><svg class="pylon-art" aria-hidden="true"></svg>' +
     parts.join('') + '</div>';
+
+  // 철탑은 명판 위치를 재서 그리므로 크기가 바뀔 때마다(창 폭·폰 회전) 다시 그린다.
+  // 관리자는 전부 열려 있으니 탑도 끝까지 켜 둔다 — 진행도가 0 이라고
+  // 새까만 철탑을 보여 주면 고장 난 것처럼 보인다.
+  const pylon = box.firstChild;
+  const full = admin || data.cleared >= data.top;
+  const ro = new ResizeObserver(() => (pylon.isConnected
+    ? drawPylon(pylon, { cleared: data.cleared, full }) : ro.disconnect()));
+  ro.observe(pylon);
 
   for (const b of box.querySelectorAll('.pf-hit:not([disabled])')) {
     b.addEventListener('click', () => {
