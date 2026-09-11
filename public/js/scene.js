@@ -17,7 +17,9 @@ const SOFT_DOT = makeSoftDotTexture();
 export function createWorld(canvas) {
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: window.devicePixelRatio < 2
+    antialias: window.devicePixelRatio < 2,
+    // 기본 하늘은 캔버스 뒤에 깐 CSS 그림이다(style.css #stage). 비쳐 보이게 투명으로 둔다.
+    alpha: true
   });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
@@ -48,6 +50,9 @@ function addSky(scene) {
   );
   sky.name = 'sky';
   sky.renderOrder = -1;
+  // 기본 스킨은 구체 대신 CSS 배경 그림을 쓴다. 평면 그림을 구체에 감으면
+  // 한 바퀴로 늘어나고 위아래가 뭉개진다. 눈밭·은하수 스킨만 구체를 켠다.
+  sky.visible = false;
   scene.add(sky);
 }
 
@@ -772,6 +777,7 @@ export function paintArena(deck, spec = {}) {
   if (scene) {
     const sky = scene.getObjectByName('sky');
     if (sky) {
+      sky.visible = (spec.sky ?? 'night') !== 'night';
       const want = skyTexture(spec.sky ?? 'night');
       if (sky.material.map !== want) {
         sky.material.map = want;
