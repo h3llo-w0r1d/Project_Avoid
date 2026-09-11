@@ -107,10 +107,10 @@ function addArena(scene) {
   stones.name = 'deck-stones';
   group.add(stones);
 
-  // 풀숲 가장자리 — 수정. 바위는 설원이 쓴다(paintArena 가 골라 켠다).
-  const crystals = buildEdgeCrystals();
-  crystals.name = 'deck-crystals';
-  group.add(crystals);
+  // 풀숲 가장자리 — 돌무리. 바위(위)는 설원이 쓴다(paintArena 가 골라 켠다).
+  const rocks = buildEdgeRocks();
+  rocks.name = 'deck-rocks';
+  group.add(rocks);
 
   // 설원 스킨이 바위 대신 쓰는 얼음 기둥. 미리 만들어 두고 감춰 둔다 —
   // 고를 때마다 만들면 그 순간 멈칫한다(46개 인스턴싱).
@@ -217,95 +217,70 @@ function buildEdgeStones() {
   return group;
 }
 
-// 풀숲 가장자리. 받은 섬 그림처럼 수정 덩어리와 돌을 두른다.
+// 풀숲 가장자리. 받은 섬 그림처럼 돌을 제멋대로 두른다.
 //
-// 처음엔 이십면체 하나씩을 똑같은 간격으로 세웠더니 주사위를 줄 세운 것
-// 같았다. 진짜 수정은 한 자리에서 여러 결정이 제각각 기울어 뭉쳐 자라고,
-// 덩어리 사이 간격도 크기도 들쭉날쭉하다. 그래서:
-//   - 결정 하나 = 끝이 뾰족한 육각기둥. 뿌리는 짙은 보라, 끝으로 갈수록 희게.
-//   - 한 바퀴를 돌며 간격을 매번 새로 뽑아 덩어리를 심는다. 큰 덩어리는
-//     가운데 결정이 곧게 서고 둘레 결정이 바깥으로 벌어진다. 뿌리엔 돌을 박는다.
-//   - 가장자리 선에서 조금 안쪽이거나 끝에 걸치게 반지름도 흔든다.
-// 무대 끝을 알려 주는 표시이기도 해서 덩어리 사이가 너무 비지 않게 두고,
-// 가까운 쪽에서 캐릭터를 너무 가리지 않게 가장 큰 결정도 키 1.5 에서 멈춘다.
-// 결정·돌 각각 인스턴싱이라 몇 개를 심든 드로우콜은 둘이다.
-function buildEdgeCrystals() {
+// 같은 돌을 같은 간격으로 세우면 울타리처럼 보인다. 진짜 가장자리 돌은 큰
+// 바위 곁에 작은 돌이 붙어 무리를 짓고, 무리 사이 간격도 크기도 들쭉날쭉하다.
+// 그래서 한 바퀴를 돌며 간격을 매번 새로 뽑아 무리를 심는다 — 큰 돌 하나에
+// 작은 돌 몇 개가 안팎으로 흩어진다. 반쯤 묻고, 납작하게 눕히고, 조금씩 기울인다.
+// 색은 바닥 그림 속 바위와 같은 밝은 회색이다. 밑동은 어둡고 위로 갈수록 밝게,
+// 표면엔 잔 얼룩을 넣어 흙에 박힌 돌처럼 보이게 한다. (이끼를 얹어 봤는데
+// 카메라가 위에서 보니 이끼 낀 윗면만 보여 초록 덩어리가 됐다.) 그림자도
+// 떨군다 — 그림자가 없으면 돌이 잔디 위에 떠 있는 것처럼 보인다.
+// 모양이 반복돼 보이지 않게 서로 다르게 찌그러뜨린 돌 3종을 섞는다(드로우콜 3번).
+function buildEdgeRocks() {
   const group = new THREE.Group();
-  const shards = [];
-  const rocks = [];
+  const KINDS = 3;
+  const lists = Array.from({ length: KINDS }, () => []);
+  const put = (o) => lists[Math.floor(Math.random() * KINDS)].push(o);
 
   let a = rnd(0, Math.PI * 2);
-  const end = a + Math.PI * 2 - 0.12;
+  const end = a + Math.PI * 2 - 0.1;
   while (a < end) {
-    const r = ARENA_RADIUS + rnd(-0.3, 0.05);
+    const r = ARENA_RADIUS + rnd(-0.2, 0.08);
     const big = Math.random() < 0.5;
-    const n = big ? 3 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 2);
-    const tall = big ? rnd(0.75, 1) : rnd(0.35, 0.6);
+    const s = big ? rnd(0.5, 0.8) : rnd(0.28, 0.42);
+    put({ a, r, s, sink: rnd(0.12, 0.3) });
+    const n = Math.floor(big ? rnd(1, 4) : rnd(0, 2.5));
     for (let k = 0; k < n; k++) {
-      const h = tall * (k === 0 ? 1 : rnd(0.4, 0.8));
-      shards.push({
-        a: a + rnd(-0.04, 0.04), r: r + rnd(-0.2, 0.15), h, w: h * rnd(0.7, 1),
-        // 가운데 결정은 곧게, 둘레는 바깥 쪽으로 부채처럼 벌어진다
-        tilt: k === 0 ? rnd(0, 0.25) : rnd(0.35, 0.8), fan: rnd(-1.2, 1.2)
-      });
+      put({ a: a + rnd(-0.07, 0.07), r: r + rnd(-0.35, 0.2), s: s * rnd(0.25, 0.55), sink: rnd(0.1, 0.35) });
     }
-    if (big || Math.random() < 0.5) rocks.push({ a: a + rnd(-0.05, 0.05), r: r + rnd(-0.05, 0.15), s: rnd(0.3, 0.55) });
-    if (Math.random() < 0.6) rocks.push({ a: a + rnd(0.06, 0.16), r: ARENA_RADIUS + rnd(-0.25, 0.05), s: rnd(0.15, 0.3) });
-    a += rnd(0.1, 0.3);
+    a += rnd(0.09, 0.25);
   }
 
-  // 결정 도형: 높이 1 짜리 육각기둥 + 0.55 짜리 뾰족한 끝. 뿌리가 원점이라
-  // 기울이고 늘려도 땅에 박힌 자리에서 자란다. 바닥은 땅속이라 뚫어 둔다.
-  const body = new THREE.CylinderGeometry(0.5, 0.56, 1, 6, 1, true).translate(0, 0.5, 0);
-  const tip = new THREE.ConeGeometry(0.5, 0.55, 6, 1, true).translate(0, 1.275, 0);
-  const shardGeo = mergeTwo(body, tip);
-  const pos = shardGeo.attributes.position;
-  const col = new Float32Array(pos.count * 3);
-  for (let i = 0; i < pos.count; i++) {
-    const t = Math.min(1, Math.max(0, pos.getY(i) / 1.55));
-    col.set([0.42 + 0.58 * t, 0.34 + 0.66 * t, 0.78 + 0.22 * t], i * 3);
-  }
-  shardGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-
-  const shardMat = new THREE.MeshStandardMaterial({
-    vertexColors: true, emissive: 0x4b35b8, emissiveIntensity: 0.55,
-    roughness: 0.14, metalness: 0.2, flatShading: true
-  });
-  const up = new THREE.Vector3(0, 1, 0);
-  const lean = new THREE.Quaternion();
-  const spin = new THREE.Quaternion();
-  const axis = new THREE.Vector3();
-  group.add(scatter(shardGeo, shardMat, shards.length,
-    (i, p, rot, scl) => {
-      const c = shards[i];
-      p.set(Math.cos(c.a) * c.r, rnd(-0.12, -0.02), Math.sin(c.a) * c.r);
-      // 기울 방향(바깥 + 부채 각)에 수직인 축으로 눕힌 뒤, 제 축으로 한 번 돌린다
-      const th = c.a + c.fan;
-      axis.set(Math.sin(th), 0, -Math.cos(th));
-      lean.setFromAxisAngle(axis, c.tilt);
-      spin.setFromAxisAngle(up, rnd(0, Math.PI));
-      rot.setFromQuaternion(lean.multiply(spin));
-      scl.set(c.w, c.h, c.w);
-    },
-    // 결정마다 푸른빛·분홍빛을 조금씩 — 그림 속 수정이 한 색이 아니다
-    () => new THREE.Color().setHSL(rnd(0.66, 0.82), rnd(0.2, 0.55), rnd(0.8, 0.95))
-  ));
-
-  const rockGeo = new THREE.DodecahedronGeometry(1, 1);
-  rockify(rockGeo, 0.55, 7);
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, flatShading: true });
-  group.add(scatter(rockGeo, rockMat, rocks.length,
-    (i, p, rot, scl) => {
-      const o = rocks[i];
-      p.set(Math.cos(o.a) * o.r, -o.s * 0.25, Math.sin(o.a) * o.r);
-      rot.set(rnd(0, 0.6), rnd(0, 6.3), rnd(0, 0.6));
-      scl.set(o.s * rnd(0.9, 1.4), o.s * rnd(0.5, 0.8), o.s * rnd(0.9, 1.4));
-    },
-    () => {
-      const v = rnd(0.55, 0.75);
-      return new THREE.Color(v, v * rnd(0.95, 1), v * rnd(1, 1.08));
+  for (let k = 0; k < KINDS; k++) {
+    const geo = new THREE.DodecahedronGeometry(1, 1);
+    rockify(geo, 0.45 + k * 0.15, k + 11);
+    // 꼭짓점 색은 선형 값이라 화면에선 훨씬 밝게 나온다(0.33 이 화면에선 밝은 회색).
+    const pos = geo.attributes.position;
+    const col = new Float32Array(pos.count * 3);
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      const n = Math.sin(Math.round(x * 1e3) * 12.9898 + Math.round(z * 1e3) * 78.233 + k) * 43758.5453;
+      const up = Math.min(1, Math.max(0, (y + 0.6) / 1.4));
+      const g = 0.12 + 0.21 * up + (n - Math.floor(n) - 0.5) * 0.06;
+      col.set([g, g * 0.97, g * 0.92], i * 3);
     }
-  ));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0, flatShading: true });
+
+    const list = lists[k];
+    const mesh = scatter(geo, mat, list.length,
+      (i, p, rot, scl) => {
+        const o = list[i];
+        p.set(Math.cos(o.a) * o.r, -o.s * o.sink, Math.sin(o.a) * o.r);
+        rot.set(rnd(-0.35, 0.35), rnd(0, 6.3), rnd(-0.35, 0.35));
+        scl.set(o.s * rnd(0.9, 1.35), o.s * rnd(0.55, 0.85), o.s * rnd(0.9, 1.35));
+      },
+      // 돌마다 밝기·색기를 조금씩 — 볕에 바랜 것, 그늘에 있던 것이 섞인 느낌
+      () => {
+        const v = rnd(0.8, 1.1);
+        return new THREE.Color(v * rnd(0.97, 1.03), v, v * rnd(0.95, 1.02));
+      }
+    );
+    mesh.castShadow = true;
+    group.add(mesh);
+  }
   return group;
 }
 
@@ -899,7 +874,7 @@ export function paintArena(deck, spec = {}) {
   // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를
   // 함께 세워 빈틈을 메운다(바위는 spec.stone 색으로 이미 하얗게 칠해진다).
   // 가장자리 장식은 스킨마다 다른 것을 켠다.
-  //   (없음) 수정 + 작은 돌 — 풀숲
+  //   (없음) 제멋대로 둘린 돌무리 — 풀숲
   //   ice    얼음 기둥 + 눈더미 + 서리 낀 바위 — 설원
   //   orbit  빛나는 고리 + 떠 있는 운석 — 은하수(돌·얼음은 우주와 안 어울린다)
   const ice = deck.getObjectByName('deck-ice');
@@ -916,9 +891,9 @@ export function paintArena(deck, spec = {}) {
   }
   if (snowy) snowy.visible = spec.edge === 'ice';
   if (orbit) orbit.visible = spec.edge === 'orbit';
-  // 수정·바위는 무대 끝을 알려 주는 표시라 스킨마다 둘 중 하나는 켠다.
+  // 돌무리·바위는 무대 끝을 알려 주는 표시라 스킨마다 둘 중 하나는 켠다.
   // 은하수만 대신할 표시(빛나는 고리)가 있어 둘 다 끈다.
-  const crystals = deck.getObjectByName('deck-crystals');
-  if (crystals) crystals.visible = !spec.edge;
+  const rocks = deck.getObjectByName('deck-rocks');
+  if (rocks) rocks.visible = !spec.edge;
   if (stones) stones.visible = !!spec.edge && !spec.hideStones;
 }
