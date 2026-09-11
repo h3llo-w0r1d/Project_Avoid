@@ -2,8 +2,7 @@ import * as THREE from 'three';
 import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
-  makeSoilTexture, makeSkyTexture, makeGrassTuftTexture, makeSoftDotTexture,
-  makeSnowTexture, makeSnowSkyTexture, makeGalaxyTexture, makeGalaxySkyTexture
+  makeSoilTexture, makeGrassTuftTexture, makeSoftDotTexture, makeSnowTexture, makeGalaxyTexture
 } from './textures.js';
 
 // a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
@@ -33,27 +32,11 @@ export function createWorld(canvas) {
   // 실제 위치와 거리는 fitCamera() 가 화면 비율에 맞춰 잡아 준다.
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 600);
 
-  addSky(scene);
   addLights(scene);
   const deck = addArena(scene);
   addPollen(scene);
 
   return { renderer, scene, camera, deck };
-}
-
-function addSky(scene) {
-  const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(320, 32, 24),
-    new THREE.MeshBasicMaterial({
-      map: makeSkyTexture(), side: THREE.BackSide, depthWrite: false, fog: false
-    })
-  );
-  sky.name = 'sky';
-  sky.renderOrder = -1;
-  // 기본 스킨은 구체 대신 CSS 배경 그림을 쓴다. 평면 그림을 구체에 감으면
-  // 한 바퀴로 늘어나고 위아래가 뭉개진다. 눈밭·은하수 스킨만 구체를 켠다.
-  sky.visible = false;
-  scene.add(sky);
 }
 
 function addLights(scene) {
@@ -777,16 +760,6 @@ export function fitCamera(camera, renderer) {
 // 상판 무늬는 한 번 구워 두고 돌려 쓴다. 1024x1024 를 매번 다시 그리면
 // 스킨을 고를 때마다 몇십 ms 씩 멈춘다.
 const topTexCache = new Map();
-const skyTexCache = new Map();
-function skyTexture(kind) {
-  if (!skyTexCache.has(kind)) {
-    skyTexCache.set(kind,
-      kind === 'snow' ? makeSnowSkyTexture()
-        : kind === 'galaxy' ? makeGalaxySkyTexture()
-        : makeSkyTexture());
-  }
-  return skyTexCache.get(kind);
-}
 function topTexture(kind) {
   if (!topTexCache.has(kind)) {
     topTexCache.set(kind,
@@ -853,19 +826,10 @@ export function paintArena(deck, spec = {}) {
   const tufts = deck.getObjectByName('deck-tufts');
   if (tufts) tufts.visible = !spec.hideTufts;
 
-  // 하늘과 안개. 무대만 하얗고 하늘이 밤빛이면 눈밭이 뜬금없어 보인다.
-  // 안개 색은 곧 지평선 색이라, 하늘 아래쪽과 맞춰야 경계가 안 생긴다.
+  // 안개. 하늘은 스킨마다 캔버스 뒤 CSS 그림이 따로 깔린다(main.js applyArena).
+  // 안개 색은 곧 먼 곳 색이라, 배경 그림의 아래쪽 색과 맞춰야 섬 밑동이 붕 뜨지 않는다.
   const scene = deck.parent;
   if (scene) {
-    const sky = scene.getObjectByName('sky');
-    if (sky) {
-      sky.visible = (spec.sky ?? 'night') !== 'night';
-      const want = skyTexture(spec.sky ?? 'night');
-      if (sky.material.map !== want) {
-        sky.material.map = want;
-        sky.material.needsUpdate = true;
-      }
-    }
     if (scene.fog) scene.fog.color.setHex(spec.fog ?? COLORS.haze);
     // 떠다니는 입자도 스킨에 맞춘다 — 눈밭엔 눈이 내리고, 은하수엔 별가루가 뜬다
     scene.getObjectByName('pollen')?.userData.setMode?.(spec.particles ?? 'pollen');

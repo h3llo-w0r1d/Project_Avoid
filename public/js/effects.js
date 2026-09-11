@@ -101,7 +101,6 @@ export const ARENAS = [
     // 빛나게 해야 '눈' 으로 보인다. 반질함도 조금 올려 표면이 살짝 반사되게.
     topEmissive: 0x33506e, topEmissiveIntensity: 0.42, topRoughness: 0.72,
     cliff: 0xa9bccd,         // 절벽은 차갑게 — 눈 밑 언 바위
-    sky: 'snow',             // 하늘도 눈 내린 흐린 날로
     fog: 0x9fbcd2,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
     snowfall: true,          // 눈이 내린다(떠다니는 꽃가루를 눈송이로)
     lightHud: true,          // 배경이 밝아 흐린 HUD 글씨가 묻힌다 → 어둡게 뒤집는다
@@ -118,7 +117,6 @@ export const ARENAS = [
     rouletteOnly: true,
     desc: '밟고 선 곳이 밤하늘. 룰렛으로만 얻을 수 있어요',
     topMap: 'galaxy',
-    sky: 'galaxy',
     fog: 0x140f2e,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
     cliff: 0x5b4a86,         // 절벽은 보랏빛 암석
     // 돌·고드름은 우주와 안 어울린다. 빛나는 경계 고리와 떠 있는 운석으로.

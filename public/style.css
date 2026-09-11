@@ -53,6 +53,31 @@ html, body {
       url("img/ingame-bg-sm.webp");
   }
 }
+/* 설원·은하수 스킨 하늘. main.js applyArena 가 루트에 data-arena 를 적는다.
+   설원은 그림이 밝아 흰 무대와 붙어 버리니 푸른빛으로 누르고, 은하수는 성운이
+   밝게 튀어 기본과 비슷하게 누른다. 흐림은 기본 하늘처럼 파일에 구워 뒀다. */
+:root[data-arena="snow"] #stage {
+  background-image:
+    linear-gradient(rgba(10, 24, 48, 0.42), rgba(10, 24, 48, 0.42)),
+    url("img/snow-bg.webp");
+}
+:root[data-arena="galaxy"] #stage {
+  background-image:
+    linear-gradient(rgba(5, 6, 15, 0.45), rgba(5, 6, 15, 0.45)),
+    url("img/galaxy-bg.webp");
+}
+@media (max-width: 900px) {
+  :root[data-arena="snow"] #stage {
+    background-image:
+      linear-gradient(rgba(10, 24, 48, 0.42), rgba(10, 24, 48, 0.42)),
+      url("img/snow-bg-sm.webp");
+  }
+  :root[data-arena="galaxy"] #stage {
+    background-image:
+      linear-gradient(rgba(5, 6, 15, 0.45), rgba(5, 6, 15, 0.45)),
+      url("img/galaxy-bg-sm.webp");
+  }
+}
 
 .hidden { display: none !important; }
 
