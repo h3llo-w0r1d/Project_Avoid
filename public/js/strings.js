@@ -1,10 +1,11 @@
 // 화면 문구 사전. ko/en 을 나란히 둔다 — 따로 파일을 두면 한쪽만 넣고
 // 잊어버린 걸 코드 리뷰에서나 알아채게 된다.
 //
-// 1단계 범위: 처음 들어온 사람이 보는 화면(타이틀·로그인·닉네임 정하기·
-// 일시정지·설정 창)까지만. 상점·캐릭터·프로필·게시판·탑·서버 문구는
-// 2·3단계다. 캐릭터 이름(만드라고라 등)은 말장난이라 여기 넣지 않는다 —
-// 번역하면 뜻도 웃음도 죽는다.
+// 1단계: 처음 들어온 사람이 보는 화면(타이틀·로그인·닉네임 정하기·
+// 일시정지·설정 창). 2단계(이번): 판이 도는 동안 보는 화면(결과창·탑
+// 오르기·봇전·1v1·룰렛·코인 알림·캐릭터 선물·새 소식). 상점·프로필·
+// 게시판·칭호 문구는 3단계다. 캐릭터 이름(만드라고라 등)은 말장난이라
+// 여기 넣지 않는다 — 번역하면 뜻도 웃음도 죽는다.
 export const STRINGS = {
   // ── 타이틀 화면 ──────────────────────────────────────────────
   'menu.solo': { ko: '혼자 하기', en: 'Solo Run' },
@@ -37,6 +38,15 @@ export const STRINGS = {
   'common.off': { ko: '꺼짐', en: 'Off' },
   // 숫자 뒤에 바로 붙인다 — 영어는 '1.20s' 처럼 띄지 않는 쪽이 짧고 읽기 쉽다.
   'common.sec': { ko: '초', en: 's' },
+  'common.close': { ko: '닫기', en: 'Close' },
+  // 봇전·1v1 에서 내 머리 위에 뜨는 이름표. 짧게 '나'.
+  'common.me': { ko: '나', en: 'Me' },
+  // 봇전·탑 오르기 결과창에 그대로 나오는 문장이라 통째로 한 키에 담는다.
+  'common.survived': { ko: '{secs}{sec} 버팀', en: 'Survived {secs}{sec}' },
+  // 안내 창이 저 혼자 서 있을 때만 쓴다(다른 문장과 이어 붙이는 곳은 각자
+  // 문장 전체를 한 키로 갖고 있다 — 가운뎃점으로 이어 붙이면 어순이 다른
+  // 언어에서 어색해진다).
+  'common.tapContinue': { ko: '화면을 누르면 넘어가요', en: 'Tap to continue' },
 
   // ── 로그인 / 닉네임 ─────────────────────────────────────────
   'auth.guest': { ko: '게스트로 로그인', en: 'Continue as Guest' },
@@ -98,5 +108,160 @@ export const STRINGS = {
   'voice.play': { ko: '듣기', en: 'Play' },
   'voice.erase': { ko: '지우기', en: 'Erase' },
   'voice.micAllowError': { ko: '마이크 사용을 허용해 주세요', en: 'Please allow microphone access' },
-  'voice.micOpenError': { ko: '마이크를 열지 못했습니다', en: 'Could not open microphone' }
+  'voice.micOpenError': { ko: '마이크를 열지 못했습니다', en: 'Could not open microphone' },
+
+  // ── 결과창(기록 등록) ───────────────────────────────────────
+  'result.needOneSecond': { ko: '1초 이상 버텨야 랭킹에 등록됩니다', en: 'Survive at least 1s to rank' },
+  'result.submitting': { ko: '기록 등록 중…', en: 'Submitting run…' },
+  'result.adminExcluded': { ko: '🛠 관리자 계정이라 집계에서 제외됩니다', en: "🛠 Admin accounts don't count toward rankings" },
+  // {tag} 자리에 아래 하드코어·마이크 표시가 들어간다(없으면 빈 문자열).
+  'result.rankMsg': { ko: '{tag}전체 {rank}위 등록!', en: '{tag}Rank #{rank} overall!' },
+  'result.registered': { ko: '{tag}기록이 등록되었습니다', en: '{tag}Run recorded' },
+  'result.submitFailed': { ko: '기록 등록 실패: {msg}', en: 'Failed to submit run: {msg}' },
+  'result.tagHardcore': { ko: '🔥 하드코어', en: '🔥 Hardcore' },
+  'result.tagVoice': { ko: '🎤 마이크', en: '🎤 Mic' },
+  'result.tagVoiceHard': { ko: '🎤🔥 마이크·하드코어', en: '🎤🔥 Mic+Hardcore' },
+
+  // ── 탑 오르기 ───────────────────────────────────────────────
+  'tower.title': { ko: '탑 오르기', en: 'Tower Climb' },
+  'tower.loading': { ko: '불러오는 중…', en: 'Loading…' },
+  'tower.loadError': { ko: '불러오지 못했습니다.', en: "Couldn't load." },
+  // 이 층까지 열렸다는 덧붙임. 안 열린 층이 남았을 때만 뒤에 붙는다.
+  'tower.upTo': { ko: ' · {n}층까지 열렸어요', en: ' · up to Floor {n} unlocked' },
+  'tower.hintSignedIn': { ko: '{cleared}층까지 통전됐어요{upTo}', en: 'Floor {cleared} powered{upTo}' },
+  'tower.hintGuest': { ko: '한 층씩 올라가며 깨는 모드예요{upTo}', en: 'Climb one floor at a time{upTo}' },
+  'tower.hintAdmin': { ko: '관리자 — 모든 층이 열려 있고, 기록은 남지 않아요', en: "Admin — every floor is open, nothing is recorded" },
+  'tower.meterAdmin': { ko: '{top}F 전부', en: 'All {top}F' },
+  'tower.comingSoon': { ko: '업데이트 중', en: 'Coming soon' },
+  'tower.floorSoon': { ko: '준비 중인 층이에요', en: 'Coming soon' },
+  'tower.floorDone': { ko: '통전 완료', en: 'Fully Powered' },
+  'tower.powered': { ko: '통전', en: 'Powered' },
+  'tower.play': { ko: '도전', en: 'Play' },
+  'tower.open': { ko: '열림', en: 'Open' },
+  'tower.locked': { ko: '잠김', en: 'Locked' },
+  'tower.loginKicker': { ko: '🔒 로그인이 필요해요', en: '🔒 Login required' },
+  'tower.loginName': { ko: '게스트는 탑 오르기를 할 수 없어요', en: "Guests can't play Tower Climb" },
+  'tower.loginHint': { ko: '로그인하면 층을 깨고 어디까지 올랐는지 남아요', en: 'Log in to clear floors and keep your progress' },
+  'tower.later': { ko: '나중에', en: 'Later' },
+  'tower.loginGo': { ko: '로그인하러 가기', en: 'Go to login' },
+  'tower.clearedKicker': { ko: '🏆 층 클리어!', en: '🏆 Floor cleared!' },
+  'tower.failedKicker': { ko: '😢 실패', en: '😢 Failed' },
+  'tower.floorLabel': { ko: '{floor}층', en: 'Floor {floor}' },
+  'tower.floorGoal': { ko: '{floor}층 — {goal}', en: 'Floor {floor} — {goal}' },
+  'tower.killedByBot': { ko: '봇에게 먼저 죽었습니다 · {secs}{sec}', en: 'The bot got you first · {secs}{sec}' },
+  'tower.clearedAdmin': { ko: '{floor}층 클리어 (관리자 — 기록은 남지 않아요)', en: 'Floor {floor} cleared (Admin — not recorded)' },
+  'tower.clearedProgress': { ko: '{cleared} / {top}층 클리어', en: '{cleared} / {top} floors cleared' },
+  'tower.saveError': { ko: '진행 저장에 실패했습니다.', en: "Couldn't save progress." },
+  'tower.retry': { ko: '다시', en: 'Retry' },
+  'tower.backToTower': { ko: '탑으로', en: 'Back to Tower' },
+  'tower.pads': { ko: '발판 {done} / {n}', en: 'Pads {done} / {n}' },
+  'tower.coins': { ko: '코인 {done} / {n}', en: 'Coins {done} / {n}' },
+  'tower.outlastBot': { ko: '봇보다 오래 버티기', en: 'Outlast the bot' },
+  'tower.remaining': { ko: '남은 {secs}{sec}', en: '{secs}{sec} left' },
+  'tower.jumpsLeft': { ko: '점프 {n}', en: 'Jumps {n}' },
+  'tower.physSlip': { ko: '미끄러움', en: 'Slippery' },
+  'tower.physHeavy': { ko: '무거움', en: 'Heavy' },
+  'tower.physFast': { ko: '과속', en: 'Speedy' },
+  'tower.physAll': { ko: '미끄러움+무거움+과속', en: 'Slippery+Heavy+Speedy' },
+
+  // ── 봇전 ────────────────────────────────────────────────────
+  'bot.title': { ko: '봇전 난이도', en: 'Bot Match Difficulty' },
+  'bot.hint': { ko: '봇이랑 같은 빔을 피하다가 오래 버티는 쪽이 승리! (연습 · 랭킹 반영 안 됨)', en: 'Dodge the same beams as the bot — whoever lasts longer wins! (Practice only, not ranked)' },
+  'bot.win': { ko: '🏆 승리!', en: '🏆 Victory!' },
+  'bot.lose': { ko: '😢 패배', en: '😢 Defeat' },
+  'bot.beatMsg': { ko: '봇({tname})을 이겼어요', en: 'You beat Bot ({tname})' },
+  'bot.lostMsg': { ko: '봇({tname})에게 졌어요', en: 'Bot ({tname}) beat you' },
+  'bot.retry': { ko: '다시', en: 'Retry' },
+  'bot.exit': { ko: '나가기', en: 'Exit' },
+  'bot.vsLabel': { ko: '봇 · {name}', en: 'Bot · {name}' },
+  // 봇 실력 이름. bot-ai.js 의 한국어 이름은 그대로 두고(서버·기존 표시와
+  // 어긋나지 않게), 화면에는 이 표로 옮긴 이름을 쓴다.
+  'bot.tierRookie': { ko: '왕초보', en: 'Rookie' },
+  'bot.tierNovice': { ko: '초보', en: 'Novice' },
+  'bot.tierMid': { ko: '중수', en: 'Skilled' },
+  'bot.tierExpert': { ko: '고수', en: 'Expert' },
+  'bot.tierMaster': { ko: '초고수 (발명)', en: 'Master' },
+  'bot.tierVeteran': { ko: '고인물', en: 'Veteran' },
+
+  // ── 온라인 1v1 ──────────────────────────────────────────────
+  'versus.connecting': { ko: '서버에 연결하는 중…', en: 'Connecting to server…' },
+  'versus.connectFailed': { ko: '서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.', en: "Couldn't connect to the server. Please try again shortly." },
+  'versus.disconnectedRetry': { ko: '서버와 연결이 끊겼습니다. 처음으로 돌아가 다시 시도해 주세요.', en: 'Lost connection to the server. Return to the title and try again.' },
+  'versus.finding': { ko: '상대를 찾는 중…', en: 'Finding an opponent…' },
+  'versus.creatingRoom': { ko: '방을 만드는 중…', en: 'Creating room…' },
+  'versus.joiningRoom': { ko: '방에 들어가는 중…', en: 'Joining room…' },
+  'versus.roomWait': { ko: '친구가 코드를 넣고 들어오면 시작합니다.', en: 'The match starts once your friend enters the code.' },
+  'versus.roomClosed': { ko: '방장이 방을 닫았습니다.', en: 'The host closed the room.' },
+  'versus.disconnected': { ko: '연결이 끊겼습니다.', en: 'Connection lost.' },
+  'versus.rival': { ko: '상대', en: 'Opponent' },
+
+  // ── 룰렛 ────────────────────────────────────────────────────
+  'roulette.hint': { ko: '게임 시간이 <b>{per}{sec}</b> 쌓일 때마다 룰렛 <b>1회</b>! 돌려서 코인 획득', en: 'Every <b>{per}{sec}</b> of play time earns <b>1</b> spin! Spin for coins' },
+  'roulette.blank': { ko: '꽝', en: 'Blank' },
+  'roulette.wheelCustom': { ko: '🎨 나만의<br>캐릭터 제작', en: '🎨 Custom<br>Character' },
+  'roulette.wheelSong': { ko: '개발자가<br>불러주는<br>노래', en: 'A Song<br>from the<br>Dev' },
+  'roulette.wheelLucky': { ko: '🐶 가나디라고라<br><small>(룰렛 전용)</small>', en: '🐶 가나디라고라<br><small>(Roulette only)</small>' },
+  'roulette.wheelArena': { ko: '🌌 은하수<br><small>(룰렛 전용)</small>', en: '🌌 은하수<br><small>(Roulette only)</small>' },
+  'roulette.hubUnlimited': { ko: '무제한', en: 'Unlimited' },
+  'roulette.hubHave': { ko: '보유 {secs}{sec}', en: '{secs}{sec} saved' },
+  'roulette.hubSpins': { ko: '{n}회', en: '{n} spins' },
+  'roulette.hubNext': { ko: '다음까지 {secs}{sec}', en: 'Next in {secs}{sec}' },
+  'roulette.spin': { ko: '돌리기', en: 'Spin' },
+  'roulette.spinning': { ko: '돌리는 중…', en: 'Spinning…' },
+  'roulette.notEnough': { ko: '아직 부족해요', en: 'Not enough yet' },
+  'roulette.spin10': { ko: '10회 돌리기', en: 'Spin 10x' },
+  'roulette.goldReady': { ko: '<b>✨ 황금 룰렛 <small>(광고시청)</small></b><span>꽝 없음 · 초대박 2.5배 · 오늘 {n}회 남음</span>', en: '<b>✨ Golden Spin <small>(watch ad)</small></b><span>No blanks · 2.5x jackpot odds · {n} left today</span>' },
+  'roulette.goldDone': { ko: '<b>✨ 황금 룰렛</b><span>오늘은 다 썼어요 · 내일 다시</span>', en: '<b>✨ Golden Spin</b><span>Used up for today · come back tomorrow</span>' },
+  'roulette.needTen': { ko: '한 번에 10회를 돌리려면 {times}회가 있어야 해요 (지금 {left}회)', en: 'You need {times} spins to spin 10x at once (you have {left})' },
+  'roulette.needMore': { ko: '게임을 {secs}{sec} 더 하면 한 번 돌릴 수 있어요', en: 'Play {secs}{sec} more to earn a spin' },
+  'roulette.goldDaily': { ko: '황금 룰렛은 하루 {n}번까지예요. 내일 다시 오세요', en: 'Golden Spin is limited to {n} times a day. Come back tomorrow' },
+  'roulette.adTitle': { ko: '📺 광고', en: '📺 Ad' },
+  'roulette.adWait': { ko: '잠시만요…', en: 'One moment…' },
+  'roulette.adHint': { ko: '아직 광고가 붙지 않아 대기로 대신합니다', en: "Ads aren't wired up yet, so we simulate a wait" },
+  'roulette.resultLuckyDup': { ko: '가나디라고라는 이미 있어요! 대신 100코인 지급', en: "You already have 가나디라고라! Here's 100 coins instead" },
+  'roulette.resultLucky': { ko: '🎉 초대박! 한정 캐릭터 가나디라고라 획득!', en: '🎉 Jackpot! You got the limited character 가나디라고라!' },
+  'roulette.resultArenaDup': { ko: '은하수는 이미 있어요! 대신 100코인 지급', en: "You already have 은하수! Here's 100 coins instead" },
+  'roulette.resultArena': { ko: '🌌 초대박! 한정 경기장 「은하수」 획득!<br><small>상점 → 경기장 스킨에서 켤 수 있어요</small>', en: '🌌 Jackpot! You got the limited arena 「은하수」!<br><small>Turn it on in Shop → Arena Skins</small>' },
+  'roulette.resultJackpot': { ko: '💰🎉 잭팟! 300코인 획득!!', en: '💰🎉 Jackpot! You won 300 coins!!' },
+  'roulette.resultCustom': { ko: '🎨🎉 초대박! 「나만의 캐릭터 제작」 당첨!<br><small>관리자에게 원하는 유형의 캐릭터를 말하면 커스텀 캐릭터를 만들어드립니다</small>', en: "🎨🎉 Jackpot! You won 「Custom Character」!<br><small>Tell the admin what kind of character you want and we'll make it for you</small>" },
+  'roulette.resultSong': { ko: '🎉 초대박! 개발자가 불러주는 노래 🎵', en: '🎉 Jackpot! A song from the dev 🎵' },
+  'roulette.resultBlank': { ko: '꽝! 다음 기회에…', en: 'Blank! Better luck next time…' },
+  'roulette.resultCoins': { ko: '<span class="coin-ico"></span> {coins}코인 당첨!', en: '<span class="coin-ico"></span> Won {coins} coins!' },
+  'roulette.tenSummary': { ko: '10회 결과 — <span class="coin-ico"></span> 합계 {coins}코인', en: '10x Result — <span class="coin-ico"></span> {coins} coins total' },
+  'roulette.tenKicker': { ko: '🎰 10회 결과', en: '🎰 10x Results' },
+  'roulette.tenTotal': { ko: '<span class="coin-ico"></span> 합계 {coins}코인', en: '<span class="coin-ico"></span> {coins} coins total' },
+  'roulette.customFull': { ko: '🎨 나만의 캐릭터 제작', en: '🎨 Custom Character' },
+  'roulette.songFull': { ko: '🎵 개발자가 불러주는 노래', en: '🎵 A Song from the Dev' },
+  'roulette.jackpotName': { ko: '💰 300코인 잭팟', en: '💰 300 Coin Jackpot' },
+  'roulette.cellCustom': { ko: '캐릭터 제작', en: 'Custom' },
+  'roulette.cellSong': { ko: '노래', en: 'Song' },
+  'roulette.oddsArena': { ko: '🌌 은하수 (한정 경기장)', en: '🌌 은하수 (Limited Arena)' },
+  'roulette.oddsJackpot': { ko: '💰 코인 300 잭팟', en: '💰 300 Coin Jackpot' },
+  'roulette.oddsLucky': { ko: '🐶 가나디라고라 (한정 캐릭터)', en: '🐶 가나디라고라 (Limited Character)' },
+  'roulette.oddsCoins': { ko: '<span class="coin-ico"></span> {coins}코인', en: '<span class="coin-ico"></span> {coins} coins' },
+  'roulette.loginKicker': { ko: '🔒 로그인 필요', en: '🔒 Login required' },
+  'roulette.loginName': { ko: '로그인 후 이용 가능', en: 'Log in to use this' },
+  'roulette.loginHint': { ko: '로그인하면 룰렛을 돌릴 수 있어요 · 화면을 누르면 넘어가요', en: 'Log in to spin the roulette · Tap to continue' },
+
+  // ── 코인 알림 ───────────────────────────────────────────────
+  'coin.lostKicker': { ko: '코인 {count}개 무효', en: '{count} Coins Voided' },
+  'coin.lostName': { ko: '10초 안에 끝났어요', en: 'Game ended within 10s' },
+  'coin.lostHint': { ko: '10초 넘게 버텨야 코인이 쌓여요 · 화면을 누르면 넘어가요', en: 'Survive more than 10s to earn coins · Tap to continue' },
+  'coin.giftKicker': { ko: '🎁 선물 도착!', en: '🎁 Gift arrived!' },
+  'coin.giftName': { ko: '코인 {count}개를 받았어요', en: 'You received {count} coins' },
+  'coin.loginKicker': { ko: '코인 {count}개 획득!', en: '{count} Coins Earned!' },
+  'coin.loginName': { ko: '게스트는 코인이 쌓이지 않아요', en: "Guests don't earn coins" },
+  'coin.loginHint': { ko: '로그인하면 코인이 모여 캐릭터를 해금할 수 있어요 · 화면을 누르면 넘어가요', en: 'Log in to collect coins and unlock characters · Tap to continue' },
+
+  // ── 캐릭터 선물 창 ──────────────────────────────────────────
+  'gift.kicker': { ko: '🎁 개발자의 선물입니다', en: "🎁 A gift from the dev" },
+  'gift.name': { ko: '「{name}」 캐릭터를 받았어요', en: 'You received 「{name}」' },
+  'gift.hint': { ko: '캐릭터 창에서 바로 쓸 수 있어요 · 화면을 누르면 넘어가요', en: 'Use it right away from the Characters screen · Tap to continue' },
+
+  // ── 새 소식(PROMO) ──────────────────────────────────────────
+  'promo.title': { ko: '탑 오르기 OPEN!', en: 'Tower Climb OPEN!' },
+  'promo.lead': { ko: '1층부터 정상까지, 한 층씩 조건을 깨고 올라가는 새 모드예요.', en: 'A new mode where you climb floor by floor, clearing a challenge each time, from Floor 1 to the top.' },
+  'promo.foot': { ko: '누가 제일 높이 올라가나? 랭킹에 「탑 오르기」 가 생겼어요.', en: 'Who can climb the highest? There\'s a new 「Tower Climb」 leaderboard.' },
+  'promo.cta': { ko: '지금 도전하기', en: 'Play now' },
+  'promo.today': { ko: '오늘 하루 안 보기', en: "Don't show today" }
 };

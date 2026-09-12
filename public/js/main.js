@@ -28,7 +28,7 @@ import { TrailFX, findTrail, findArena, DEFAULT_ARENA } from './effects.js';
 import { ShopUI } from './shop-ui.js';
 import { SafeZone, Pads } from './challenge-extras.js';
 import { drawPylon } from './pylon-art.js';
-import { applyStatic, onLangChange } from './i18n.js';
+import { applyStatic, onLangChange, t } from './i18n.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
 // 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
@@ -464,7 +464,7 @@ const state = {
   // 대전용
   serverTime: 0,        // 서버가 마지막으로 알려 준 경과 시간
   serverAt: 0,          // 그걸 받은 순간(로컬 시계)
-  rivalName: '상대',
+  rivalName: t('versus.rival'),
   rivalAlive: true,
   myAlive: true,
   // 봇전용
@@ -612,12 +612,12 @@ const PROMO = {
   id: 'tower-open',                 // 「오늘 하루 안 보기」 를 기억하는 열쇠
   until: '2026-10-31',              // 이 날까지만 뜬다
   badge: 'NEW MODE',
-  title: '탑 오르기 OPEN!',
+  title: t('promo.title'),
   lead: [
-    '1층부터 정상까지, 한 층씩 조건을 깨고 올라가는 새 모드예요.'
+    t('promo.lead')
   ],
-  foot: '누가 제일 높이 올라가나? 랭킹에 「탑 오르기」 가 생겼어요.',
-  cta: '지금 도전하기'
+  foot: t('promo.foot'),
+  cta: t('promo.cta')
 };
 
 const PROMO_KEY = 'avoidarc.promo';
@@ -657,8 +657,8 @@ function openPromo(promo) {
     `<p class="promo-foot">${promo.foot}</p>` +
     `<button type="button" class="primary promo-go">${promo.cta}</button>` +
     '<div class="promo-acts">' +
-    '<button type="button" class="ghost small promo-today">오늘 하루 안 보기</button>' +
-    '<button type="button" class="ghost small promo-close">닫기</button>' +
+    `<button type="button" class="ghost small promo-today">${t('promo.today')}</button>` +
+    `<button type="button" class="ghost small promo-close">${t('common.close')}</button>` +
     '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
@@ -1018,8 +1018,8 @@ const adminCoins = (() => {
   // 한쪽만 고쳐져 "80초" 라고 적힌 채 150초씩 걸리는 일이 생긴다.
   const needEl = document.getElementById('roulette-need');
   if (needEl) {
-    needEl.innerHTML = `게임 시간이 <b>${PER}초</b> 쌓일 때마다 룰렛 <b>1회</b>!`
-      + ' 돌려서 코인 획득 <span class="coin-ico"></span>';
+    needEl.innerHTML = t('roulette.hint', { per: PER, sec: t('common.sec') })
+      + ' <span class="coin-ico"></span>';
   }
   const BLANK_STREAK_KEY = 'avoidarc.roul.blankStreak';   // 룰렛 꽝 연속 횟수(불운·저주 업적용)
   // 게스트가 뽑은 희귀 보상 횟수. 서버에 쌓을 계정이 없어 브라우저에만 센다.
@@ -1098,12 +1098,12 @@ const adminCoins = (() => {
       // 특별 칸은 이름을 그대로, 코인 칸은 값에 아이콘을 붙인다.
       // 마지막 갈래가 '코인이 없으면 꽝' 이라, 특별 칸을 여기 빠뜨리면
       // 그 칸이 통째로 '꽝' 으로 찍힌다(은하수를 넣고 실제로 그랬다).
-      const txt = s.custom ? '🎨 나만의<br>캐릭터 제작'
-        : s.song ? '개발자가<br>불러주는<br>노래'
-        : s.lucky ? '🐶 가나디라고라<br><small>(룰렛 전용)</small>'
-        : s.arena ? '🌌 은하수<br><small>(룰렛 전용)</small>'
+      const txt = s.custom ? t('roulette.wheelCustom')
+        : s.song ? t('roulette.wheelSong')
+        : s.lucky ? t('roulette.wheelLucky')
+        : s.arena ? t('roulette.wheelArena')
         : s.jackpot ? '💰300'
-        : (s.coins ? `<span class="coin-ico"></span>${s.label}` : '꽝');
+        : (s.coins ? `<span class="coin-ico"></span>${s.label}` : t('roulette.blank'));
       const cls = (s.song || s.lucky || s.arena || s.custom) ? 'roul-label roul-label-song' : 'roul-label';
       return `<span class="${cls}" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(calc(var(--wheel, 300px) * -0.345))">${txt}</span>`;
     }).join('');
@@ -1120,19 +1120,19 @@ const adminCoins = (() => {
       // 다음 1회까지 더 필요한 시간(진행 표시). 관리자는 무제한.
       const toNext = isAdmin ? 0 : PER - (secs % PER);
       hubEl.innerHTML = isAdmin
-        ? '<span class="hub-secs">∞</span><span class="hub-spins">무제한</span>'
-        : `<span class="hub-secs">보유 ${Math.floor(secs)}초</span>` +
-          `<span class="hub-spins">${left}회</span>` +
-          `<span class="hub-next">다음까지 ${Math.ceil(toNext)}초</span>`;
+        ? `<span class="hub-secs">∞</span><span class="hub-spins">${t('roulette.hubUnlimited')}</span>`
+        : `<span class="hub-secs">${t('roulette.hubHave', { secs: Math.floor(secs), sec: t('common.sec') })}</span>` +
+          `<span class="hub-spins">${t('roulette.hubSpins', { n: left })}</span>` +
+          `<span class="hub-next">${t('roulette.hubNext', { secs: Math.ceil(toNext), sec: t('common.sec') })}</span>`;
     }
     // 남은 횟수는 가운데 원이 이미 보여 준다. 버튼이 둘이라 글씨가 길면
     // 좁은 화면에서 두 줄로 접히므로, 버튼에는 짧게만 적는다.
     spinBtn.disabled = spinning || (!isAdmin && left <= 0);
-    spinBtn.textContent = spinning ? '돌리는 중…'
-      : (isAdmin || left > 0) ? '돌리기' : '아직 부족해요';
+    spinBtn.textContent = spinning ? t('roulette.spinning')
+      : (isAdmin || left > 0) ? t('roulette.spin') : t('roulette.notEnough');
     if (spin10Btn) {
       spin10Btn.disabled = spinning || (!isAdmin && left < 10);
-      spin10Btn.textContent = spinning ? '…' : '10회 돌리기';
+      spin10Btn.textContent = spinning ? '…' : t('roulette.spin10');
     }
     if (goldBtn) {
       // 광고를 아직 안 붙였다. 붙기 전까지는 공짜로 좋은 확률판을 돌리는
@@ -1141,9 +1141,8 @@ const adminCoins = (() => {
       const g = goldLeft();
       goldBtn.disabled = spinning || g <= 0;
       goldBtn.innerHTML = g > 0
-        ? '<b>✨ 황금 룰렛 <small>(광고시청)</small></b>'
-          + '<span>꽝 없음 · 초대박 2.5배 · 오늘 ' + g + '회 남음</span>'
-        : '<b>✨ 황금 룰렛</b><span>오늘은 다 썼어요 · 내일 다시</span>';
+        ? t('roulette.goldReady', { n: g })
+        : t('roulette.goldDone');
     }
   };
 
@@ -1284,12 +1283,12 @@ const adminCoins = (() => {
     const left = wallet.spinsAvailable();
     if (left >= times) return true;
     if (times > 1) {
-      resultEl.textContent = '한 번에 10회를 돌리려면 ' + times + '회가 있어야 해요 (지금 ' + left + '회)';
+      resultEl.textContent = t('roulette.needTen', { times, left });
       resultEl.className = 'roulette-result lose';
       return false;
     }
     const toNext = PER - (wallet.playtime() % PER);
-    resultEl.textContent = '게임을 ' + Math.ceil(toNext) + '초 더 하면 한 번 돌릴 수 있어요';
+    resultEl.textContent = t('roulette.needMore', { secs: Math.ceil(toNext), sec: t('common.sec') });
     resultEl.className = 'roulette-result lose';
     return false;
   }
@@ -1319,9 +1318,9 @@ const adminCoins = (() => {
       const ov = document.createElement('div');
       ov.className = 'unlock-overlay ad-wait';
       ov.innerHTML = '<div class="unlock-card">'
-        + '<div class="unlock-kicker">📺 광고</div>'
-        + '<div class="unlock-name">잠시만요…</div>'
-        + '<div class="unlock-hint">아직 광고가 붙지 않아 대기로 대신합니다</div></div>';
+        + '<div class="unlock-kicker">' + t('roulette.adTitle') + '</div>'
+        + '<div class="unlock-name">' + t('roulette.adWait') + '</div>'
+        + '<div class="unlock-hint">' + t('roulette.adHint') + '</div></div>';
       document.body.appendChild(ov);
       requestAnimationFrame(() => ov.classList.add('show'));
       setTimeout(() => {
@@ -1336,7 +1335,7 @@ const adminCoins = (() => {
     if (spinning) return;
     if (!isAdmin) return;            // 아직 관리자 전용
     if (goldLeft() <= 0) {
-      resultEl.textContent = '황금 룰렛은 하루 ' + GOLD_PER_DAY + '번까지예요. 내일 다시 오세요';
+      resultEl.textContent = t('roulette.goldDaily', { n: GOLD_PER_DAY });
       resultEl.className = 'roulette-result lose';
       return;
     }
@@ -1375,36 +1374,34 @@ const adminCoins = (() => {
 
       if (g.lucky) {
         resultEl.textContent = g.dupLucky
-          ? '가나디라고라는 이미 있어요! 대신 100코인 지급'
-          : '🎉 초대박! 한정 캐릭터 가나디라고라 획득!';
+          ? t('roulette.resultLuckyDup')
+          : t('roulette.resultLucky');
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
       } else if (g.arena) {
         resultEl.innerHTML = g.dupArena
-          ? '은하수는 이미 있어요! 대신 100코인 지급'
-          : '🌌 초대박! 한정 경기장 「은하수」 획득!<br>'
-            + '<small>상점 → 경기장 스킨에서 켤 수 있어요</small>';
+          ? t('roulette.resultArenaDup')
+          : t('roulette.resultArena');
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
       } else if (g.jackpot) {
-        resultEl.textContent = '💰🎉 잭팟! 300코인 획득!!';
+        resultEl.textContent = t('roulette.resultJackpot');
         resultEl.className = 'roulette-result win jackpot';
         audio.coin?.(); audio.stageUp?.();
       } else if (g.custom) {
-        resultEl.innerHTML = '🎨🎉 초대박! 「나만의 캐릭터 제작」 당첨!<br>'
-          + '<small>관리자에게 원하는 유형의 캐릭터를 말하면 커스텀 캐릭터를 만들어드립니다</small>';
+        resultEl.innerHTML = t('roulette.resultCustom');
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
       } else if (g.song) {
-        resultEl.textContent = '🎉 초대박! 개발자가 불러주는 노래 🎵';
+        resultEl.textContent = t('roulette.resultSong');
         resultEl.className = 'roulette-result win jackpot';
         audio.stageUp?.();
         playDevSong();
       } else if (g.coins === 0) {
-        resultEl.textContent = '꽝! 다음 기회에…';
+        resultEl.textContent = t('roulette.resultBlank');
         resultEl.className = 'roulette-result lose';
       } else {
-        resultEl.innerHTML = '<span class="coin-ico"></span> ' + g.coins + '코인 당첨!';
+        resultEl.innerHTML = t('roulette.resultCoins', { coins: g.coins });
         resultEl.className = 'roulette-result win' + (g.coins >= 50 ? ' jackpot' : '');
         audio.coin?.();
         if (g.coins >= 50) audio.stageUp?.();
@@ -1449,7 +1446,7 @@ const adminCoins = (() => {
       // '초대박 N번' 은 실제로 받은 것만 센다. 이미 가진 한정 보상이 또
       // 나오면 100코인으로 바뀌므로, 그걸 세면 코인만 받고 초대박이라 뜬다.
       const rare = given.filter((g) => isRare(g) && !g.dupLucky && !g.dupArena).length;
-      resultEl.innerHTML = '10회 결과 — <span class="coin-ico"></span> 합계 ' + coins + '코인';
+      resultEl.innerHTML = t('roulette.tenSummary', { coins });
       resultEl.className = 'roulette-result win' + (rare ? ' jackpot' : '');
       if (rare) audio.stageUp?.(); else if (coins > 0) audio.coin?.();
       if (given.some((g) => g.song)) playDevSong();
@@ -1468,11 +1465,11 @@ const adminCoins = (() => {
     const count = new Map();
     for (const g of given) {
       let name = null;
-      if (g.custom) name = '🎨 나만의 캐릭터 제작';
-      else if (g.song) name = '🎵 개발자가 불러주는 노래';
+      if (g.custom) name = t('roulette.customFull');
+      else if (g.song) name = t('roulette.songFull');
       else if (g.lucky && !g.dupLucky) name = '🐶 가나디라고라';
       else if (g.arena && !g.dupArena) name = '🌌 은하수';
-      else if (g.jackpot) name = '💰 300코인 잭팟';
+      else if (g.jackpot) name = t('roulette.jackpotName');
       if (!name) continue;
       if (!count.has(name)) order.push(name);
       count.set(name, (count.get(name) || 0) + 1);
@@ -1482,8 +1479,8 @@ const adminCoins = (() => {
 
   // 칸 하나에 뭐라고 그릴지.
   function cellOf(g) {
-    if (g.custom) return { ico: '🎨', text: '캐릭터 제작', cls: 'rare' };
-    if (g.song) return { ico: '🎵', text: '노래', cls: 'rare' };
+    if (g.custom) return { ico: '🎨', text: t('roulette.cellCustom'), cls: 'rare' };
+    if (g.song) return { ico: '🎵', text: t('roulette.cellSong'), cls: 'rare' };
     if (g.lucky) return g.dupLucky
       ? { ico: '<span class="coin-ico"></span>', text: '100', cls: 'coin' }
       : { ico: '🐶', text: '가나디라고라', cls: 'rare' };
@@ -1492,7 +1489,7 @@ const adminCoins = (() => {
       : { ico: '🌌', text: '은하수', cls: 'rare' };
     if (g.jackpot) return { ico: '💰', text: '300', cls: 'rare' };
     if (g.coins > 0) return { ico: '<span class="coin-ico"></span>', text: String(g.coins), cls: 'coin' };
-    return { ico: '', text: '꽝', cls: 'blank' };
+    return { ico: '', text: t('roulette.blank'), cls: 'blank' };
   }
 
   // 열 개를 한 화면에 펼친다.
@@ -1509,11 +1506,11 @@ const adminCoins = (() => {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card roul10-card">'
-      + '<div class="unlock-kicker">🎰 10회 결과</div>'
+      + '<div class="unlock-kicker">' + t('roulette.tenKicker') + '</div>'
       + '<ul class="roul10-grid">' + cells + '</ul>'
-      + '<div class="unlock-name"><span class="coin-ico"></span> 합계 ' + coins + '코인</div>'
+      + '<div class="unlock-name">' + t('roulette.tenTotal', { coins }) + '</div>'
       + (names.length ? '<div class="coin-gift-msg">' + names.join('<br>') + '</div>' : '')
-      + '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
+      + '<div class="unlock-hint">' + t('common.tapContinue') + '</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const done = () => {
@@ -1533,13 +1530,13 @@ const adminCoins = (() => {
     const total = WEIGHTS.reduce((s, w) => s + w.p, 0);
     // 표시 정보(라벨·정렬순서·강조). 초대박 3종을 맨 위, 그다음 코인 큰 순, 꽝은 맨 아래.
     const info = (w) => {
-      if (w.custom) return { label: '🎨 나만의 캐릭터 제작', ord: 1001, special: true };
-      if (w.song) return { label: '🎵 개발자가 불러주는 노래', ord: 1000, special: true };
-      if (w.arena) return { label: '🌌 은하수 (한정 경기장)', ord: 997, special: true };
-      if (w.jackpot) return { label: '💰 코인 300 잭팟', ord: 999, special: true };
-      if (w.lucky) return { label: '🐶 가나디라고라 (한정 캐릭터)', ord: 998, special: true };
-      if (w.coins) return { label: `<span class="coin-ico"></span> ${w.coins}코인`, ord: w.coins, special: false };
-      return { label: '꽝', ord: -1, special: false };
+      if (w.custom) return { label: t('roulette.customFull'), ord: 1001, special: true };
+      if (w.song) return { label: t('roulette.songFull'), ord: 1000, special: true };
+      if (w.arena) return { label: t('roulette.oddsArena'), ord: 997, special: true };
+      if (w.jackpot) return { label: t('roulette.oddsJackpot'), ord: 999, special: true };
+      if (w.lucky) return { label: t('roulette.oddsLucky'), ord: 998, special: true };
+      if (w.coins) return { label: t('roulette.oddsCoins', { coins: w.coins }), ord: w.coins, special: false };
+      return { label: t('roulette.blank'), ord: -1, special: false };
     };
     const rows = WEIGHTS.map((w) => ({ ...info(w), p: w.p })).sort((a, b) => b.ord - a.ord);
     oddsList.innerHTML = rows.map((r) => {
@@ -1557,10 +1554,10 @@ const adminCoins = (() => {
       ov.className = 'unlock-overlay';
       ov.innerHTML =
         '<div class="unlock-card">' +
-        '<div class="unlock-kicker">🔒 로그인 필요</div>' +
+        '<div class="unlock-kicker">' + t('roulette.loginKicker') + '</div>' +
         '<div class="unlock-lockface">🎰</div>' +
-        '<div class="unlock-name">로그인 후 이용 가능</div>' +
-        '<div class="unlock-hint">로그인하면 룰렛을 돌릴 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+        '<div class="unlock-name">' + t('roulette.loginName') + '</div>' +
+        '<div class="unlock-hint">' + t('roulette.loginHint') + '</div></div>';
       document.body.appendChild(ov);
       requestAnimationFrame(() => ov.classList.add('show'));
       ov.addEventListener('click', () => { ov.classList.remove('show'); setTimeout(() => ov.remove(), 260); });
@@ -1650,9 +1647,9 @@ ui.onPlayableChange = (canOpen) => characters.setAvailable(canOpen);
 const versus = new VersusUI({
   onOpen: openVersus,
   onBack: leaveVersus,
-  onQueue: () => sendLobby({ type: 'queue-join' }, '상대를 찾는 중…'),
-  onCreateRoom: () => sendLobby({ type: 'room-create' }, '방을 만드는 중…'),
-  onJoinRoom: (code) => sendLobby({ type: 'room-join', code }, '방에 들어가는 중…'),
+  onQueue: () => sendLobby({ type: 'queue-join' }, t('versus.finding')),
+  onCreateRoom: () => sendLobby({ type: 'room-create' }, t('versus.creatingRoom')),
+  onJoinRoom: (code) => sendLobby({ type: 'room-join', code }, t('versus.joiningRoom')),
   onCancel: cancelWaiting
 });
 
@@ -1912,10 +1909,10 @@ async function openTower() {
   overlay.className = 'modal tower-modal';
   overlay.innerHTML =
     '<div class="modal-card panel tower-card">' +
-    '<div class="modal-head"><h2>탑 오르기</h2>' +
+    `<div class="modal-head"><h2>${t('tower.title')}</h2>` +
     '<span class="tower-meter"></span>' +
-    '<button type="button" class="icon-btn tower-close" aria-label="닫기">✕</button></div>' +
-    '<p class="board-hint tower-hint">불러오는 중…</p>' +
+    `<button type="button" class="icon-btn tower-close" aria-label="${t('common.close')}">✕</button></div>` +
+    `<p class="board-hint tower-hint">${t('tower.loading')}</p>` +
     '<div class="pylon-scroll"></div></div>';
   document.body.appendChild(overlay);
   const close = () => overlay.remove();
@@ -1924,23 +1921,23 @@ async function openTower() {
 
   let data;
   try { data = await api.challenge(); }
-  catch { overlay.querySelector('.tower-hint').textContent = '불러오지 못했습니다.'; return; }
+  catch { overlay.querySelector('.tower-hint').textContent = t('tower.loadError'); return; }
 
   const hint = overlay.querySelector('.tower-hint');
   // 관리자는 확인용이라 모든 층이 열려 있고 진행도를 남기지 않는다.
   const admin = data.admin ?? isAdmin;
   // 아직 안 내놓은 층이 남아 있으면 어디까지 열렸는지도 같이 알려 준다.
   const upTo = data.released && data.released < data.top
-    ? ` · ${data.released}층까지 열렸어요` : '';
+    ? t('tower.upTo', { n: data.released }) : '';
   // 게스트에게 「로그인하세요」 를 여기 적어 두면 눈에 안 들어온다 —
   // 층을 눌렀을 때 화면 가운데에서 알려 준다(askTowerLogin).
   hint.textContent = admin
-    ? '관리자 — 모든 층이 열려 있고, 기록은 남지 않아요'
+    ? t('tower.hintAdmin')
     : data.signedIn
-      ? `${data.cleared}층까지 통전됐어요${upTo}`
-      : `한 층씩 올라가며 깨는 모드예요${upTo}`;
+      ? t('tower.hintSignedIn', { cleared: data.cleared, upTo })
+      : t('tower.hintGuest', { upTo });
   overlay.querySelector('.tower-meter').textContent = admin
-    ? `${data.top}F 전부` : `${data.cleared} / ${data.top}F`;
+    ? t('tower.meterAdmin', { top: data.top }) : `${data.cleared} / ${data.top}F`;
 
   let face = '';
   try { face = characters.preview(player.characterId); } catch { /* 미리보기 실패는 무시 */ }
@@ -1961,7 +1958,7 @@ async function openTower() {
         `<div class="pz${data.cleared >= z.to ? ' lit' : ''}${zSoon ? ' soon' : ''}">` +
         `<span class="pz-range">${z.from}–${z.to}F</span>` +
         `<span class="pz-name">${z.name}</span>` +
-        (zSoon ? '<span class="pz-soon">업데이트 중</span>' : '') +
+        (zSoon ? `<span class="pz-soon">${t('tower.comingSoon')}</span>` : '') +
         '</div>');
     }
     const st = f.soon ? 'soon' : (f.done ? 'done' : (f.open ? 'open' : 'lock'));
@@ -1974,10 +1971,10 @@ async function openTower() {
       `<button type="button" class="pf-hit"${canGo ? '' : ' disabled'}>` +
       `<span class="pf-plate">` +
       `<b class="pf-num">${f.floor}<i>F</i></b>` +
-      `<span class="pf-goal">${f.soon ? '준비 중인 층이에요' : f.done ? '통전 완료' : f.goal}</span>` +
+      `<span class="pf-goal">${f.soon ? t('tower.floorSoon') : f.done ? t('tower.floorDone') : f.goal}</span>` +
       me +
-      `<span class="pf-state">${f.soon ? '업데이트 중'
-        : f.done ? '통전' : here ? '도전' : f.open ? '열림' : '잠김'}</span>` +
+      `<span class="pf-state">${f.soon ? t('tower.comingSoon')
+        : f.done ? t('tower.powered') : here ? t('tower.play') : f.open ? t('tower.open') : t('tower.locked')}</span>` +
       '</span></button></div>');
   }
 
@@ -2021,13 +2018,13 @@ function askTowerLogin(closeTower) {
   overlay.className = 'unlock-overlay';
   overlay.innerHTML =
     '<div class="unlock-card bot-result">' +
-    '<div class="unlock-kicker">🔒 로그인이 필요해요</div>' +
+    `<div class="unlock-kicker">${t('tower.loginKicker')}</div>` +
     '<div class="bot-result-face">🗼</div>' +
-    '<div class="unlock-name">게스트는 탑 오르기를 할 수 없어요</div>' +
-    '<div class="unlock-hint">로그인하면 층을 깨고 어디까지 올랐는지 남아요</div>' +
+    `<div class="unlock-name">${t('tower.loginName')}</div>` +
+    `<div class="unlock-hint">${t('tower.loginHint')}</div>` +
     '<div class="bot-result-row">' +
-    '<button type="button" class="ghost small tower-later">나중에</button>' +
-    '<button type="button" class="primary small tower-login">로그인하러 가기</button>' +
+    `<button type="button" class="ghost small tower-later">${t('tower.later')}</button>` +
+    `<button type="button" class="primary small tower-login">${t('tower.loginGo')}</button>` +
     '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
@@ -2167,18 +2164,18 @@ function stepChallenge(dt) {
 function renderChalHud() {
   if (!chalHud || !chal) return;
   const f = chal.f;
-  const bits = [`<b>${f.floor}층</b>`];
+  const bits = [`<b>${t('tower.floorLabel', { floor: f.floor })}</b>`];
 
-  if (f.kind === 'survive') bits.push(`${Math.min(state.elapsed, f.seconds).toFixed(1)} / ${f.seconds}초`);
-  else if (f.kind === 'circuit') bits.push(`발판 ${chal.pads} / ${f.n}`);
-  else if (f.kind === 'coins') bits.push(`코인 ${chal.coins} / ${f.n}`);
-  else if (f.kind === 'bot') bits.push('봇보다 오래 버티기');
+  if (f.kind === 'survive') bits.push(`${Math.min(state.elapsed, f.seconds).toFixed(1)} / ${f.seconds}${t('common.sec')}`);
+  else if (f.kind === 'circuit') bits.push(t('tower.pads', { done: chal.pads, n: f.n }));
+  else if (f.kind === 'coins') bits.push(t('tower.coins', { done: chal.coins, n: f.n }));
+  else if (f.kind === 'bot') bits.push(t('tower.outlastBot'));
 
   if (chal.limit !== null) {
-    bits.push(`남은 ${Math.max(0, chal.limit - state.elapsed).toFixed(1)}초`);
+    bits.push(t('tower.remaining', { secs: Math.max(0, chal.limit - state.elapsed).toFixed(1), sec: t('common.sec') }));
   }
   if (chal.jumpsLeft !== Infinity) {
-    bits.push(`<i class="${chal.jumpsLeft <= 1 ? 'low' : ''}">점프 ${Math.max(0, chal.jumpsLeft)}</i>`);
+    bits.push(`<i class="${chal.jumpsLeft <= 1 ? 'low' : ''}">${t('tower.jumpsLeft', { n: Math.max(0, chal.jumpsLeft) })}</i>`);
   }
   if (f.phys) bits.push(PHYS_LABEL[f.phys] ?? '');
 
@@ -2187,7 +2184,10 @@ function renderChalHud() {
 }
 
 const PHYS_LABEL = {
-  slip: '미끄러움', heavy: '무거움', fast: '과속', all: '미끄러움+무거움+과속'
+  get slip() { return t('tower.physSlip'); },
+  get heavy() { return t('tower.physHeavy'); },
+  get fast() { return t('tower.physFast'); },
+  get all() { return t('tower.physAll'); }
 };
 // 그 층에 도전한다. 일반 판과 같은 게임이지만 목표를 채우면 바로 클리어.
 function startChallenge(f) {
@@ -2210,7 +2210,7 @@ function challengeFailed(secs, why = '', addTime = true) {
   api.recordChallenge(f.floor, f.goal, false, secs,
     auth.signedIn ? undefined : auth.displayName);
   clearChallengeGear();
-  showTowerResult(false, f, why || `${secs.toFixed(2)}초 버팀`);
+  showTowerResult(false, f, why || t('common.survived', { secs: secs.toFixed(2), sec: t('common.sec') }));
 }
 
 // 목표를 채웠다. 서버에 보고하고 결과창을 띄운다.
@@ -2230,9 +2230,9 @@ async function challengeCleared() {
   try {
     const r = await api.clearFloor(f.floor);
     msg = r.admin
-      ? `${f.floor}층 클리어 (관리자 — 기록은 남지 않아요)`
-      : `${r.cleared} / ${r.top}층 클리어`;
-  } catch (e) { msg = '진행 저장에 실패했습니다.'; }
+      ? t('tower.clearedAdmin', { floor: f.floor })
+      : t('tower.clearedProgress', { cleared: r.cleared, top: r.top });
+  } catch (e) { msg = t('tower.saveError'); }
   showTowerResult(true, f, msg);
 }
 
@@ -2242,13 +2242,13 @@ function showTowerResult(win, f, msg) {
   overlay.className = 'unlock-overlay';
   overlay.innerHTML =
     '<div class="unlock-card bot-result">' +
-    `<div class="unlock-kicker">${win ? '🏆 층 클리어!' : '😢 실패'}</div>` +
+    `<div class="unlock-kicker">${win ? t('tower.clearedKicker') : t('tower.failedKicker')}</div>` +
     `<div class="bot-result-face">${win ? '🗼' : '💥'}</div>` +
-    `<div class="unlock-name">${f.floor}층 — ${f.goal}</div>` +
+    `<div class="unlock-name">${t('tower.floorGoal', { floor: f.floor, goal: f.goal })}</div>` +
     `<div class="unlock-hint">${msg}</div>` +
     '<div class="bot-result-row">' +
-    '<button type="button" class="ghost small tower-again">다시</button>' +
-    '<button type="button" class="primary small tower-back">탑으로</button>' +
+    `<button type="button" class="ghost small tower-again">${t('tower.retry')}</button>` +
+    `<button type="button" class="primary small tower-back">${t('tower.backToTower')}</button>` +
     '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
@@ -2260,6 +2260,17 @@ function showTowerResult(win, f, msg) {
 // ── 봇전(연습) ──────────────────────────────────────────────
 // 봇이랑 나란히 같은 빔을 피하다가 오래 버티는 쪽이 승리. 서버·랭킹과 무관한
 // 연습 모드다. 난이도(초보~고인물)는 봇 AI 의 실력만 바꾼다.
+
+// 봇 실력 이름을 화면 언어로. bot-ai.js 의 한국어 이름(BOT_TIERS[tier].name)은
+// 서버·기존 표시와 어긋나지 않게 그대로 두고, 화면에는 이 표로 옮긴 이름만 쓴다.
+const BOT_TIER_KEY = {
+  rookie: 'bot.tierRookie', novice: 'bot.tierNovice', mid: 'bot.tierMid',
+  expert: 'bot.tierExpert', master: 'bot.tierMaster', godwater: 'bot.tierVeteran'
+};
+function botTierName(tier) {
+  return BOT_TIER_KEY[tier] ? t(BOT_TIER_KEY[tier]) : (BOT_TIERS[tier]?.name ?? '');
+}
+
 function startBotMatch(tier) {
   clearChallengeGear();
   state.mode = 'bot';
@@ -2283,8 +2294,8 @@ function startBotMatch(tier) {
   player.reset(Math.cos(a) * r, Math.sin(a) * r);
   rival.reset(-Math.cos(a) * r, -Math.sin(a) * r);
   rival.mesh.visible = true; rival.blob.visible = true; rival.halo.visible = true;
-  player.setLabel('나', '#4fd6ff');
-  rival.setLabel(`봇 · ${BOT_TIERS[tier]?.name ?? ''}`, '#c07dff');
+  player.setLabel(t('common.me'), '#4fd6ff');
+  rival.setLabel(t('bot.vsLabel', { name: botTierName(tier) }), '#c07dff');
 
   state.botAI = new BotAI(tier);
   state.botAlive = true;
@@ -2327,7 +2338,7 @@ function endBotMatch(win) {
   // 도전모드의 봇 층이면 봇전 결과창 대신 층 결과창으로 보낸다.
   if (state.challenge) {
     if (win) challengeCleared();
-    else challengeFailed(secs, `봇에게 먼저 죽었습니다 · ${secs.toFixed(2)}초`, false);
+    else challengeFailed(secs, t('tower.killedByBot', { secs: secs.toFixed(2), sec: t('common.sec') }), false);
     return;
   }
   showBotResult(win, secs, state.botTier);
@@ -2379,18 +2390,18 @@ function spaceToRestart(overlay, run) {
 
 // 봇전 결과 오버레이(승리/패배 + 버틴 시간 + 다시/나가기).
 function showBotResult(win, secs, tier) {
-  const tname = BOT_TIERS[tier]?.name ?? '';
+  const tname = botTierName(tier);
   const overlay = document.createElement('div');
   overlay.className = 'unlock-overlay';
   overlay.innerHTML =
     '<div class="unlock-card bot-result">' +
-    `<div class="unlock-kicker">${win ? '🏆 승리!' : '😢 패배'}</div>` +
+    `<div class="unlock-kicker">${win ? t('bot.win') : t('bot.lose')}</div>` +
     `<div class="bot-result-face">${win ? '🎉' : '🤖'}</div>` +
-    `<div class="unlock-name">${win ? `봇(${tname})을 이겼어요` : `봇(${tname})에게 졌어요`}</div>` +
-    `<div class="unlock-hint">${secs.toFixed(2)}초 버팀</div>` +
+    `<div class="unlock-name">${win ? t('bot.beatMsg', { tname }) : t('bot.lostMsg', { tname })}</div>` +
+    `<div class="unlock-hint">${t('common.survived', { secs: secs.toFixed(2), sec: t('common.sec') })}</div>` +
     '<div class="bot-result-row">' +
-    `<button type="button" class="ghost small bot-again">다시</button>` +
-    `<button type="button" class="primary small bot-exit">나가기</button>` +
+    `<button type="button" class="ghost small bot-again">${t('bot.retry')}</button>` +
+    `<button type="button" class="primary small bot-exit">${t('bot.exit')}</button>` +
     '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
@@ -2411,12 +2422,12 @@ function pickBotDifficulty() {
   const overlay = document.createElement('div');
   overlay.className = 'modal bot-pick';
   const btns = Object.entries(BOT_TIERS)
-    .map(([k, v]) => `<button type="button" class="bot-tier" data-tier="${k}">${v.name}</button>`).join('');
+    .map(([k]) => `<button type="button" class="bot-tier" data-tier="${k}">${botTierName(k)}</button>`).join('');
   overlay.innerHTML =
     '<div class="modal-card panel" style="max-width:360px">' +
-    '<div class="modal-head"><h2>봇전 난이도</h2>' +
-    '<button type="button" class="icon-btn bot-pick-close" aria-label="닫기">✕</button></div>' +
-    '<p class="board-hint">봇이랑 같은 빔을 피하다가 오래 버티는 쪽이 승리! (연습 · 랭킹 반영 안 됨)</p>' +
+    `<div class="modal-head"><h2>${t('bot.title')}</h2>` +
+    `<button type="button" class="icon-btn bot-pick-close" aria-label="${t('common.close')}">✕</button></div>` +
+    `<p class="board-hint">${t('bot.hint')}</p>` +
     `<div class="bot-tier-list">${btns}</div></div>`;
   document.body.appendChild(overlay);
   const close = () => overlay.remove();
@@ -2718,10 +2729,10 @@ function showCoinLost(count) {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker"><span class="coin-ico"></span> 코인 ' + count + '개 무효</div>' +
+      '<div class="unlock-kicker"><span class="coin-ico"></span> ' + t('coin.lostKicker', { count }) + '</div>' +
       '<div class="unlock-lockface">⏱️</div>' +
-      '<div class="unlock-name">10초 안에 끝났어요</div>' +
-      '<div class="unlock-hint">10초 넘게 버텨야 코인이 쌓여요 · 화면을 누르면 넘어가요</div></div>';
+      '<div class="unlock-name">' + t('coin.lostName') + '</div>' +
+      '<div class="unlock-hint">' + t('coin.lostHint') + '</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const done = () => {
@@ -2743,11 +2754,11 @@ function showCharacterGift(spec, message = '') {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker">🎁 개발자의 선물입니다</div>' +
+      '<div class="unlock-kicker">' + t('gift.kicker') + '</div>' +
       '<img class="unlock-face" src="' + characters.preview(spec.id) + '" alt="">' +
-      '<div class="unlock-name">「' + esc(spec.name) + '」 캐릭터를 받았어요</div>' +
+      '<div class="unlock-name">' + t('gift.name', { name: esc(spec.name) }) + '</div>' +
       (message ? '<div class="coin-gift-msg">“' + esc(message) + '”</div>' : '') +
-      '<div class="unlock-hint">캐릭터 창에서 바로 쓸 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+      '<div class="unlock-hint">' + t('gift.hint') + '</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const done = () => {
@@ -2766,11 +2777,11 @@ function showCoinGift(count, message = '') {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker">🎁 선물 도착!</div>' +
+      '<div class="unlock-kicker">' + t('coin.giftKicker') + '</div>' +
       '<div class="unlock-lockface"><span class="coin-ico"></span></div>' +
-      '<div class="unlock-name">코인 ' + count + '개를 받았어요</div>' +
+      '<div class="unlock-name">' + t('coin.giftName', { count }) + '</div>' +
       (message ? '<div class="coin-gift-msg">“' + esc(message) + '”</div>' : '') +
-      '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
+      '<div class="unlock-hint">' + t('common.tapContinue') + '</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const done = () => {
@@ -2789,10 +2800,10 @@ function showCoinLogin(count) {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker"><span class="coin-ico"></span> 코인 ' + count + '개 획득!</div>' +
+      '<div class="unlock-kicker"><span class="coin-ico"></span> ' + t('coin.loginKicker', { count }) + '</div>' +
       '<div class="unlock-lockface"><span class="coin-ico"></span></div>' +
-      '<div class="unlock-name">게스트는 코인이 쌓이지 않아요</div>' +
-      '<div class="unlock-hint">로그인하면 코인이 모여 캐릭터를 해금할 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+      '<div class="unlock-name">' + t('coin.loginName') + '</div>' +
+      '<div class="unlock-hint">' + t('coin.loginHint') + '</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const done = () => {
@@ -2993,24 +3004,27 @@ async function finishGame() {
   // 모드마다 랭킹이 따로 있다(버티기·하드코어·마이크·마이크 하드코어).
   const mode = state.runMode ?? runModeOf(state.hardcore, state.voice);
   const board = MODE_BOARD[mode] ?? 'time';
-  const tag = { normal: '', hardcore: '🔥 하드코어 ', voice: '🎤 마이크 ', voicehard: '🎤🔥 마이크·하드코어 ' }[mode] ?? '';
+  const tagKey = { normal: null, hardcore: 'result.tagHardcore', voice: 'result.tagVoice', voicehard: 'result.tagVoiceHard' }[mode];
+  const tag = tagKey ? t(tagKey) + ' ' : '';
 
   // 1초도 못 버틴 기록은 랭킹을 어지럽히므로 올리지 않는다
   if (score < 1) {
-    ui.setSubmitState('1초 이상 버텨야 랭킹에 등록됩니다');
+    ui.setSubmitState(t('result.needOneSecond'));
     refreshLeaderboard(board);
     return;
   }
 
-  ui.setSubmitState('기록 등록 중…');
+  ui.setSubmitState(t('result.submitting'));
   try {
     const ticket = await state.ticket;
     // 로그인했으면 서버가 계정 닉네임을 쓴다. 여기서 보내는 이름은 게스트용.
     const result = await api.submit(auth.displayName, score, ticket, mode);
     if (result.excluded) {
-      ui.setSubmitState('🛠 관리자 계정이라 집계에서 제외됩니다');
+      ui.setSubmitState(t('result.adminExcluded'));
     } else {
-      ui.setSubmitState(result.rank ? `${tag}전체 ${result.rank}위 등록!` : `${tag}기록이 등록되었습니다`);
+      ui.setSubmitState(result.rank
+        ? t('result.rankMsg', { tag, rank: result.rank })
+        : t('result.registered', { tag }));
     }
     ui.renderLeaderboard(result, result.id, board);
 
@@ -3034,7 +3048,7 @@ async function finishGame() {
       }
     }
   } catch (err) {
-    ui.setSubmitState(`기록 등록 실패: ${err.message}`, true);
+    ui.setSubmitState(t('result.submitFailed', { msg: err.message }), true);
     refreshLeaderboard(board);
   }
 
@@ -3096,18 +3110,18 @@ async function openVersus() {
   versus.showMenu();
 
   if (net.connected) return;
-  versus.setStatus('서버에 연결하는 중…');
+  versus.setStatus(t('versus.connecting'));
   try {
     await net.connect(auth.displayName, player.characterId);
     versus.setStatus('');
   } catch {
-    versus.setStatus('서버에 연결하지 못했습니다. 잠시 뒤 다시 시도해 주세요.', true);
+    versus.setStatus(t('versus.connectFailed'), true);
   }
 }
 
 function sendLobby(msg, waitingText) {
   if (!net.connected) {
-    versus.setStatus('서버와 연결이 끊겼습니다. 처음으로 돌아가 다시 시도해 주세요.', true);
+    versus.setStatus(t('versus.disconnectedRetry'), true);
     return;
   }
   net.send(msg);
@@ -3151,19 +3165,19 @@ function hideRival() {
   player.clearLabel();
 }
 
-net.on('room-created', (msg) => versus.showWaiting('친구가 코드를 넣고 들어오면 시작합니다.', msg.code));
+net.on('room-created', (msg) => versus.showWaiting(t('versus.roomWait'), msg.code));
 net.on('room-error', (msg) => {
   versus.showMenu();
   versus.setStatus(msg.error, true);
 });
 net.on('room-closed', () => {
   versus.showMenu();
-  versus.setStatus('방장이 방을 닫았습니다.', true);
+  versus.setStatus(t('versus.roomClosed'), true);
 });
-net.on('queued', () => versus.showWaiting('상대를 찾는 중…'));
+net.on('queued', () => versus.showWaiting(t('versus.finding')));
 net.on('disconnected', () => {
   if (state.mode !== 'versus') return;
-  versus.setStatus('연결이 끊겼습니다.', true);
+  versus.setStatus(t('versus.disconnected'), true);
   leaveVersus();
 });
 
@@ -3203,7 +3217,7 @@ function beginVersusMatch(msg) {
 
   const me = msg.players.find((p) => p.id === net.id);
   const other = msg.players.find((p) => p.id !== net.id);
-  state.rivalName = other?.name ?? '상대';
+  state.rivalName = other?.name ?? t('versus.rival');
   // 상대가 고른 캐릭터를 그대로 보여 준다
   rival.setCharacter(findCharacter(other?.character).id);
 
@@ -3223,8 +3237,8 @@ function beginVersusMatch(msg) {
   rival.mesh.visible = true;
 
   // 머리 위 이름표. 색은 발밑 링과 맞춰 둔다.
-  player.setLabel('나', '#4fd6ff');
-  rival.setLabel('상대', '#c07dff');
+  player.setLabel(t('common.me'), '#4fd6ff');
+  rival.setLabel(t('versus.rival'), '#c07dff');
 
   net.beginMatch(player.body, theirs);
 
