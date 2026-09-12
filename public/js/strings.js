@@ -503,5 +503,23 @@ export const STRINGS = {
   'title.loginKicker': { ko: '🔒 칭호 조건 달성!', en: '🔒 Title condition met!' },
   'title.loginHint': { ko: '칭호는 계정에 저장돼요 · 로그인하면 바로 받을 수 있어요', en: 'Titles are saved to your account · Log in to claim it right away' },
   'title.fxLevelUp': { ko: '✨ 「{name}」 {level}단계!<br><small>발자국이 더 화려해졌어요</small>', en: '✨ 「{name}」 Level {level}!<br><small>Your footsteps got flashier</small>' },
-  'title.fxDefaultName': { ko: '발자국 효과', en: 'Footstep Effect' }
+  'title.fxDefaultName': { ko: '발자국 효과', en: 'Footstep Effect' },
+
+  // ── 탑 층 조건 문구(challenge-text.js) ─────────────────────
+  // lib/challenge.js 의 goalText()/baseText() 와 문장을 같게 맞춘다(한국어 기준).
+  'goal.survive': { ko: '{n}초 버티기', en: 'Survive {n}s' },
+  'goal.circuit': { ko: '{limit}초 안에 발판 {n}곳 밟기', en: 'Step on {n} pads within {limit}s' },
+  'goal.coins': { ko: '코인 {n}개 모으기', en: 'Collect {n} coins' },
+  'goal.coinsLimit': { ko: '{limit}초 안에 코인 {n}개', en: 'Collect {n} coins within {limit}s' },
+  'goal.bot': { ko: '봇({tier}) 이기기', en: 'Beat the bot ({tier})' },
+  'goal.tagJumps': { ko: '점프 {n}번 제한', en: 'Limited to {n} jumps' },
+  'goal.tagZone': { ko: '좁아지는 안전지대', en: 'Shrinking safe zone' },
+  'goal.physSlip': { ko: '미끄러운 바닥', en: 'Slippery floor' },
+  'goal.physHeavy': { ko: '무거운 중력', en: 'Heavy gravity' },
+  'goal.physFast': { ko: '과속', en: 'Overspeed' },
+  'goal.physAll': { ko: '미끄럽고 무겁고 빠름', en: 'Slippery, heavy and fast' },
+  'goal.zoneTutorial': { ko: '튜토리얼', en: 'Tutorial' },
+  'goal.zoneJumps': { ko: '점프 제한', en: 'Jump Limit' },
+  'goal.zoneCoins': { ko: '코인 수집', en: 'Coin Collecting' },
+  'goal.zonePhys': { ko: '물리 조작', en: 'Physics Twist' }
 };

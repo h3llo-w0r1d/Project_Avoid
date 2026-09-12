@@ -29,6 +29,7 @@ import { ShopUI } from './shop-ui.js';
 import { SafeZone, Pads } from './challenge-extras.js';
 import { drawPylon } from './pylon-art.js';
 import { applyStatic, onLangChange, t } from './i18n.js';
+import { floorGoal, zoneName } from './challenge-text.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
 // 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
@@ -1959,7 +1960,7 @@ async function openTower() {
       parts.push(
         `<div class="pz${data.cleared >= z.to ? ' lit' : ''}${zSoon ? ' soon' : ''}">` +
         `<span class="pz-range">${z.from}–${z.to}F</span>` +
-        `<span class="pz-name">${z.name}</span>` +
+        `<span class="pz-name">${zoneName(z)}</span>` +
         (zSoon ? `<span class="pz-soon">${t('tower.comingSoon')}</span>` : '') +
         '</div>');
     }
@@ -1973,7 +1974,7 @@ async function openTower() {
       `<button type="button" class="pf-hit"${canGo ? '' : ' disabled'}>` +
       `<span class="pf-plate">` +
       `<b class="pf-num">${f.floor}<i>F</i></b>` +
-      `<span class="pf-goal">${f.soon ? t('tower.floorSoon') : f.done ? t('tower.floorDone') : f.goal}</span>` +
+      `<span class="pf-goal">${f.soon ? t('tower.floorSoon') : f.done ? t('tower.floorDone') : floorGoal(f)}</span>` +
       me +
       `<span class="pf-state">${f.soon ? t('tower.comingSoon')
         : f.done ? t('tower.powered') : here ? t('tower.play') : f.open ? t('tower.open') : t('tower.locked')}</span>` +
@@ -2246,7 +2247,7 @@ function showTowerResult(win, f, msg) {
     '<div class="unlock-card bot-result">' +
     `<div class="unlock-kicker">${win ? t('tower.clearedKicker') : t('tower.failedKicker')}</div>` +
     `<div class="bot-result-face">${win ? '🗼' : '💥'}</div>` +
-    `<div class="unlock-name">${t('tower.floorGoal', { floor: f.floor, goal: f.goal })}</div>` +
+    `<div class="unlock-name">${t('tower.floorGoal', { floor: f.floor, goal: floorGoal(f) })}</div>` +
     `<div class="unlock-hint">${msg}</div>` +
     '<div class="bot-result-row">' +
     `<button type="button" class="ghost small tower-again">${t('tower.retry')}</button>` +

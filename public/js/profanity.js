@@ -91,7 +91,12 @@ function fuzzyIncludes(hay, word, maxGap = 2) {
 
 /**
  * 닉네임을 검사한다.
- * @returns {{ok: true, name: string} | {ok: false, reason: string}}
+ *
+ * reason 은 화면에 바로 띄울 한국어 문장이 아니라 lib/strings.js 의 키다 —
+ * 이 파일은 서버에서만 쓰이고(브라우저는 GUEST_PATTERN 만 가져다 쓴다),
+ * 실제 문구는 호출한 쪽이 lib/i18n.js 의 t(req, reason, vars) 로 지금
+ * 언어에 맞게 만든다.
+ * @returns {{ok: true, name: string} | {ok: false, reason: string, vars?: object}}
  */
 export function checkNickname(raw) {
   // 제어문자를 걷어내고 연속 공백을 하나로 줄인다
@@ -105,22 +110,22 @@ export function checkNickname(raw) {
 
   // 이모지 같은 글자는 코드 단위가 둘이라 length 로 세면 안 된다
   if (Array.from(name).length > MAX_LENGTH) {
-    return { ok: false, reason: `닉네임은 ${MAX_LENGTH}자까지 쓸 수 있습니다.` };
+    return { ok: false, reason: 'api.nicknameTooLong', vars: { n: MAX_LENGTH } };
   }
 
   if (!MEANINGFUL.test(name)) {
-    return { ok: false, reason: '글자나 숫자를 하나 이상 넣어 주세요.' };
+    return { ok: false, reason: 'api.nicknameNeedChar' };
   }
 
   // 계정 닉네임이 게스트 이름 모양이면 누가 게스트인지 알 수 없게 된다
   if (GUEST_PATTERN.test(name)) {
-    return { ok: false, reason: 'Guest 로 시작하는 이름은 쓸 수 없습니다.' };
+    return { ok: false, reason: 'api.nicknameGuestLike' };
   }
 
   for (const flat of variants(name)) {
     for (const word of BLOCKED) {
       if (fuzzyIncludes(flat, word)) {
-        return { ok: false, reason: '사용할 수 없는 표현이 들어 있습니다.' };
+        return { ok: false, reason: 'api.badWord' };
       }
     }
   }
@@ -139,7 +144,8 @@ export const MAX_MESSAGE = 200;
  * 멀쩡한 글이 걸린다. 그래서 여기서는 공백만 없앤 본과 숫자를 글자로
  * 되돌린 본에서 금지어가 통째로 들어 있는지만 본다.
  *
- * @returns {{ok: true, text: string} | {ok: false, reason: string}}
+ * reason 은 checkNickname 과 마찬가지로 lib/strings.js 의 키다.
+ * @returns {{ok: true, text: string} | {ok: false, reason: string, vars?: object}}
  */
 export function checkMessage(raw, maxLen = MAX_MESSAGE) {
   const text = String(raw ?? '')
@@ -149,12 +155,12 @@ export function checkMessage(raw, maxLen = MAX_MESSAGE) {
     .replace(/\n{3,}/g, '\n\n')       // 개행 도배 방지
     .replace(/^\s+|\s+$/g, '');
 
-  if (!text) return { ok: false, reason: '내용을 입력해 주세요.' };
+  if (!text) return { ok: false, reason: 'api.messageEmpty' };
   if (Array.from(text).length > maxLen) {
-    return { ok: false, reason: `${maxLen}자까지 쓸 수 있습니다.` };
+    return { ok: false, reason: 'api.messageTooLong', vars: { n: maxLen } };
   }
   if (!MEANINGFUL.test(text)) {
-    return { ok: false, reason: '글자나 숫자를 넣어 주세요.' };
+    return { ok: false, reason: 'api.messageNeedChar' };
   }
 
   // 공백을 없애 '시 발' 같은 우회를 잡고, 멀쩡한 낱말(essex 등)은 먼저 뺀다.
@@ -164,7 +170,7 @@ export function checkMessage(raw, maxLen = MAX_MESSAGE) {
 
   for (const word of BLOCKED) {
     if (despaced.includes(word) || leet.includes(word)) {
-      return { ok: false, reason: '사용할 수 없는 표현이 들어 있습니다.' };
+      return { ok: false, reason: 'api.badWord' };
     }
   }
 

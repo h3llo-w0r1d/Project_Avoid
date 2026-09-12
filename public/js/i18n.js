@@ -25,9 +25,16 @@ export function getLang() {
   return resolve(getLangPref());
 }
 
+// 서버도 같은 언어로 오류·안내 문구를 만들어야 하므로 쿠키에도 남긴다
+// (lib/i18n.js 가 이 쿠키를 읽는다).
+function saveLangCookie() {
+  document.cookie = 'lang=' + getLang() + ';path=/;max-age=31536000;samesite=lax';
+}
+
 export function setLang(pref) {
   settings.set('lang', pref);
   document.documentElement.lang = getLang();
+  saveLangCookie();
 }
 
 // 언어가 바뀔 때(또는 설정을 통째로 초기화했을 때) 부른다. 떼는 함수를 돌려준다.
@@ -64,3 +71,6 @@ export function applyStatic(root = document) {
 // 로딩 시점부터 <html lang> 을 실제 언어에 맞춘다. index.html 은 'ko' 로 박아
 // 두기만 하고, 여기서 실제 값으로 갈아 끼운다.
 document.documentElement.lang = getLang();
+// 언어를 한 번도 고른 적 없는 첫 방문(auto)도 쿠키를 남겨야, 그 다음 API
+// 요청부터 서버가 브라우저 언어에 맞는 문구를 바로 보낼 수 있다.
+saveLangCookie();

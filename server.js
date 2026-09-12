@@ -29,6 +29,7 @@ import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 import { describe as describeTitles, sanitizeEquipped, earnedIds as earnedTitleIds, titleById, isAwardable } from './lib/titles.js';
 import { describe as describeChallenge, floorAt, TOP_FLOOR, RELEASED } from './lib/challenge.js';
+import { t } from './lib/i18n.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -161,7 +162,7 @@ app.disable('x-powered-by');
 const jsonSmall = express.json({ limit: '4kb' });
 const jsonBig = express.json({ limit: '2mb' });
 app.use((req, res, next) => (req.path === '/api/replay' ? jsonBig : jsonSmall)(req, res, next));
-// 쿠키는 session·oauth_state·adminkey 셋뿐이라 의존성을 두지 않는다.
+// 쿠키는 session·oauth_state·adminkey·lang 넷뿐이라 의존성을 두지 않는다.
 // res.cookie / clearCookie 는 express 가 원래 갖고 있다.
 app.use((req, _res, next) => {
   req.cookies = {};
@@ -338,7 +339,7 @@ function totalPlaysOf(name, user = null) {
 // 형식만 쓸 수 있어서, 이름 하나로 사람을 특정할 수 있다.
 app.get('/api/profile', (req, res) => {
   const name = String(req.query.name ?? '').trim();
-  if (!name) return res.status(400).json({ error: '이름이 필요합니다.' });
+  if (!name) return res.status(400).json({ error: t(req, 'api.nameRequired') });
 
   const user = users.byNickname(name);
   const best = scores.bestOf({ name, mode: 'normal' });
@@ -405,7 +406,7 @@ app.post('/api/scores', async (req, res) => {
   const ip = clientIp(req);
   const now = Date.now();
   if (now - (lastPost.get(ip) || 0) < POST_COOLDOWN_MS) {
-    return res.status(429).json({ error: '너무 빠릅니다. 잠시 후 다시 시도하세요.' });
+    return res.status(429).json({ error: t(req, 'api.tooFast') });
   }
   lastPost.set(ip, now);
 
@@ -418,16 +419,17 @@ app.post('/api/scores', async (req, res) => {
     return res.json({ excluded: true, rank: null, top: scores.top(SOLO_TOP_N, mode), me: null, season: seasonInfo() });
   }
 
-  const t = Number(time);
+  // 이름을 timeNum 으로 둔다 — t 는 이 파일에서 번역 함수 이름이라 겹치면 안 된다.
+  const timeNum = Number(time);
   // 상한 3600초 — 실수로든 조작으로든 말도 안 되는 값이 들어오는 걸 막는다.
-  if (!Number.isFinite(t) || t < 1 || t > 3600) {
-    return res.status(400).json({ error: '기록 값이 올바르지 않습니다.' });
+  if (!Number.isFinite(timeNum) || timeNum < 1 || timeNum > 3600) {
+    return res.status(400).json({ error: t(req, 'api.invalidTime') });
   }
 
   // 값을 먼저 보고 표를 본다. 표는 한 번 쓰면 버려지므로, 어차피 거절할
   // 요청 때문에 멀쩡한 표를 태우지 않는다.
-  const check = runTickets.redeem(String(ticket ?? ''), t, { ip, userId: req.user?.id ?? null });
-  if (check.error) return res.status(400).json({ error: check.error });
+  const check = runTickets.redeem(String(ticket ?? ''), timeNum, { ip, userId: req.user?.id ?? null });
+  if (check.error) return res.status(400).json({ error: t(req, check.error) });
 
   // 로그인했으면 계정 닉네임을 쓴다. 브라우저가 보낸 이름은 무시한다.
   // 안 그러면 로그인한 채로 남의 이름을 사칭해 기록을 올릴 수 있다.
@@ -436,23 +438,23 @@ app.post('/api/scores', async (req, res) => {
     // 로그인은 했는데 닉네임을 아직 안 정한 경우. 게스트 경로로 흘려보내면
     // 로그인한 채로 아무 이름이나 붙일 수 있게 되므로 여기서 막는다.
     if (!req.user.nickname) {
-      return res.status(400).json({ error: '닉네임을 먼저 정해 주세요.' });
+      return res.status(400).json({ error: t(req, 'api.needNickname') });
     }
     finalName = req.user.nickname;
   } else {
     // 게스트는 Guest0000 형식만 쓸 수 있다. 아무 이름이나 허용하면
     // 로그인한 사람의 닉네임을 그대로 적어 랭킹에서 사칭할 수 있다.
     if (!GUEST_PATTERN.test(String(name ?? ''))) {
-      return res.status(400).json({ error: '게스트 이름 형식이 아닙니다.' });
+      return res.status(400).json({ error: t(req, 'api.badGuestName') });
     }
     finalName = name;
   }
 
   try {
     await scores.rollSeasons();
-    const seconds = Math.round(t * 100) / 100;
+    const seconds = Math.round(timeNum * 100) / 100;
     const entry = await scores.add(finalName, seconds, req.user?.id ?? null, mode);
-    stats.runFinished(t);
+    stats.runFinished(timeNum);
     // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
     plays.add({ name: finalName, seconds, userId: req.user?.id ?? null,
       mobile: isMobile(req.get('user-agent')), mode });
@@ -470,16 +472,16 @@ app.post('/api/scores', async (req, res) => {
     const ctxBefore = { plays: Math.max(0, playsNow - 1), isAdmin, bestTime: bestBefore };
     const gainedIds = earnedTitleIds(ctxNow)
       .filter((id) => !earnedTitleIds(ctxBefore).includes(id));
-    const newTitles = gainedIds.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
+    const newTitles = gainedIds.map((id) => { const title = titleById(id); return { id, name: title?.name ?? id }; });
     // 판수로 새로 딴 칭호도 기록에 남긴다. 게스트는 칭호를 저장할 계정이 없어
     // 실제로 얻은 게 아니다 — 기록에도 그렇게 적어 둔다(로그만 보고 오해하지 않게).
-    for (const t of newTitles) {
+    for (const nt of newTitles) {
       try {
         modeLogs.title.add({
           name: finalName, userId: req.user?.id ?? null,
-          title_id: t.id, title: t.name,
+          title_id: nt.id, title: nt.name,
           // 어떻게 땄는지. 판수 칭호와 기록 칭호는 딴 이유가 다르다.
-          how: (titleById(t.id)?.bestTime ? `버티기 ${bestNow.toFixed(2)}초` : `${playsNow}판 달성`)
+          how: (titleById(nt.id)?.bestTime ? `버티기 ${bestNow.toFixed(2)}초` : `${playsNow}판 달성`)
             + (req.user ? '' : ' · 게스트(미획득)')
         });
       } catch (err) { console.error('칭호 기록 실패:', err); }
@@ -498,7 +500,7 @@ app.post('/api/scores', async (req, res) => {
     });
   } catch (err) {
     console.error('기록 저장 실패:', err);
-    res.status(500).json({ error: '서버에 기록을 저장하지 못했습니다.' });
+    res.status(500).json({ error: t(req, 'api.saveScoreFailed') });
   }
 });
 
@@ -511,36 +513,36 @@ const REPLAY_MAX_BYTES = 1_000_000;   // 입력 버퍼 원본 상한(정상 최�
 app.post('/api/replay', (req, res) => {
   const { scoreId, seed, mode, time, frames, data, name } = req.body ?? {};
   const row = typeof scoreId === 'string' ? scores.rowById(scoreId) : null;
-  if (!row) return res.status(400).json({ error: '기록을 찾을 수 없습니다.' });
+  if (!row) return res.status(400).json({ error: t(req, 'api.scoreNotFound') });
 
   // 이 점수 줄이 올리는 사람 것인지 확인한다(남의 기록에 못 매달게).
   if (row.user_id) {
     if (!req.user || req.user.id !== row.user_id) {
-      return res.status(403).json({ error: '자기 기록만 올릴 수 있습니다.' });
+      return res.status(403).json({ error: t(req, 'api.notYourScore') });
     }
   } else if (!req.user) {
     if (String(name ?? '') !== row.name) {
-      return res.status(403).json({ error: '자기 기록만 올릴 수 있습니다.' });
+      return res.status(403).json({ error: t(req, 'api.notYourScore') });
     }
   } else {
-    return res.status(403).json({ error: '자기 기록만 올릴 수 있습니다.' });
+    return res.status(403).json({ error: t(req, 'api.notYourScore') });
   }
 
   // 지금 그 줄의 기록과 시간이 맞아야 한다(옛 판을 매달지 못하게).
-  const t = Number(time);
-  if (!Number.isFinite(t) || Math.abs(t - row.time) > 0.02) {
-    return res.status(400).json({ error: '기록 시간이 맞지 않습니다.' });
+  const timeNum = Number(time);
+  if (!Number.isFinite(timeNum) || Math.abs(timeNum - row.time) > 0.02) {
+    return res.status(400).json({ error: t(req, 'api.timeMismatch') });
   }
   const seedInt = Number(seed);
-  if (!Number.isInteger(seedInt)) return res.status(400).json({ error: 'seed 가 올바르지 않습니다.' });
+  if (!Number.isInteger(seedInt)) return res.status(400).json({ error: t(req, 'api.badSeed') });
   const rowMode = row.mode ?? 'normal';
-  if (mode !== rowMode) return res.status(400).json({ error: '모드가 맞지 않습니다.' });
+  if (mode !== rowMode) return res.status(400).json({ error: t(req, 'api.modeMismatch') });
 
   let raw;
   try { raw = Buffer.from(String(data ?? ''), 'base64'); }
-  catch { return res.status(400).json({ error: '기록 데이터가 올바르지 않습니다.' }); }
+  catch { return res.status(400).json({ error: t(req, 'api.badReplayData') }); }
   if (raw.length === 0 || raw.length > REPLAY_MAX_BYTES) {
-    return res.status(400).json({ error: '기록 데이터 크기가 올바르지 않습니다.' });
+    return res.status(400).json({ error: t(req, 'api.badReplaySize') });
   }
 
   try {
@@ -552,7 +554,7 @@ app.post('/api/replay', (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('다시보기 저장 실패:', err);
-    res.status(500).json({ error: '다시보기를 저장하지 못했습니다.' });
+    res.status(500).json({ error: t(req, 'api.saveReplayFailed') });
   }
 });
 
@@ -560,13 +562,14 @@ app.post('/api/replay', (req, res) => {
 
 // 로그인했으면 계정 닉네임을, 게스트면 Guest#### 형식만 허용한다.
 // 기록 올리기와 같은 규칙 — 로그인한 채로 남의 이름을 사칭하지 못하게.
+// error 는 lib/strings.js 의 키다 — 부르는 쪽이 t(req, who.error) 로 문구를 만든다.
 function posterName(req, name) {
   if (req.user) {
-    if (!req.user.nickname) return { error: '닉네임을 먼저 정해 주세요.' };
+    if (!req.user.nickname) return { error: 'api.needNickname' };
     return { name: req.user.nickname };
   }
   if (!GUEST_PATTERN.test(String(name ?? ''))) {
-    return { error: '게스트 이름 형식이 아닙니다.' };
+    return { error: 'api.badGuestName' };
   }
   return { name };
 }
@@ -608,16 +611,16 @@ app.post('/api/board', (req, res) => {
   const now = Date.now();
   const wait = BOARD_COOLDOWN_MS - (now - (lastPostBoard.get(ip) || 0));
   if (wait > 0) {
-    return res.status(429).json({ error: `잠시 후 다시 올려 주세요. (${Math.ceil(wait / 1000)}초)` });
+    return res.status(429).json({ error: t(req, 'api.boardCooldown', { secs: Math.ceil(wait / 1000) }) });
   }
 
   const who = posterName(req, req.body?.name);
-  if (who.error) return res.status(400).json({ error: who.error });
+  if (who.error) return res.status(400).json({ error: t(req, who.error) });
 
   // 답글이면 다는 대상(원글)이 실제로 있어야 한다. 답글에 답글은 원글로 붙는다.
   const parentId = typeof req.body?.parentId === 'string' ? req.body.parentId : null;
   if (parentId && !board.canReplyTo(parentId)) {
-    return res.status(400).json({ error: '답글을 달 글을 찾지 못했습니다.' });
+    return res.status(400).json({ error: t(req, 'api.replyTargetMissing') });
   }
 
   // 원글의 칸(카테고리). 답글은 칸이 없다. 패치노트 칸은 관리자만.
@@ -626,7 +629,7 @@ app.post('/api/board', (req, res) => {
   if (!parentId) {
     category = CATEGORIES.includes(req.body?.category) ? req.body.category : 'chat';
     if (ADMIN_CATEGORIES.has(category) && !isAdmin) {
-      return res.status(403).json({ error: '이 칸에는 운영자만 글을 쓸 수 있습니다.' });
+      return res.status(403).json({ error: t(req, 'api.staffOnlyCategory') });
     }
   }
 
@@ -634,7 +637,7 @@ app.post('/api/board', (req, res) => {
   // 패치노트(운영자)는 길게 쓸 수 있게 길이 제한을 크게 둔다.
   const maxLen = category === 'patch' ? 6000 : 200;
   const checked = checkMessage(req.body?.body, maxLen);
-  if (!checked.ok) return res.status(400).json({ error: checked.reason });
+  if (!checked.ok) return res.status(400).json({ error: t(req, checked.reason, checked.vars) });
 
   lastPostBoard.set(ip, now);
   try {
@@ -642,7 +645,7 @@ app.post('/api/board', (req, res) => {
     res.json({ posts: board.latest(100) });
   } catch (err) {
     console.error('게시글 저장 실패:', err);
-    res.status(500).json({ error: '글을 저장하지 못했습니다.' });
+    res.status(500).json({ error: t(req, 'api.savePostFailed') });
   }
 });
 
@@ -652,19 +655,19 @@ app.post('/api/board', (req, res) => {
 app.post('/api/purchase', (req, res) => {
   if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
   const who = posterName(req, req.body?.name);
-  if (who.error) return res.status(400).json({ error: who.error });
+  if (who.error) return res.status(400).json({ error: t(req, who.error) });
 
   const character = String(req.body?.character ?? '').slice(0, 40);
   const charName = String(req.body?.charName ?? '').slice(0, 40);
   const cost = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.cost) || 0)));
-  if (!character) return res.status(400).json({ error: '캐릭터가 필요합니다.' });
+  if (!character) return res.status(400).json({ error: t(req, 'api.characterRequired') });
 
   try {
     purchases.add({ name: who.name, userId: req.user?.id ?? null, character, charName, cost });
     res.json({ ok: true });
   } catch (err) {
     console.error('구매 기록 저장 실패:', err);
-    res.status(500).json({ error: '기록에 실패했습니다.' });
+    res.status(500).json({ error: t(req, 'api.logFailed') });
   }
 });
 
@@ -675,7 +678,7 @@ app.post('/api/purchase', (req, res) => {
 app.post('/api/challenge-log', (req, res) => {
   if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
   const who = posterName(req, req.body?.name);
-  if (who.error) return res.status(400).json({ error: who.error });
+  if (who.error) return res.status(400).json({ error: t(req, who.error) });
   const floor = Math.max(0, Math.min(999, Math.floor(Number(req.body?.floor) || 0)));
   const goal = typeof req.body?.goal === 'string' ? req.body.goal.slice(0, 60) : '';
   const ok = req.body?.ok ? 1 : 0;
@@ -690,7 +693,7 @@ app.post('/api/challenge-log', (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('도전 기록 저장 실패:', err);
-    res.status(500).json({ error: '기록 저장 실패' });
+    res.status(500).json({ error: t(req, 'api.saveLogFailed') });
   }
 });
 
@@ -698,7 +701,7 @@ app.post('/api/challenge-log', (req, res) => {
 app.post('/api/bot-log', (req, res) => {
   if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
   const who = posterName(req, req.body?.name);
-  if (who.error) return res.status(400).json({ error: who.error });
+  if (who.error) return res.status(400).json({ error: t(req, who.error) });
   const tier = typeof req.body?.tier === 'string' ? req.body.tier.slice(0, 20) : '';
   const win = req.body?.win ? 1 : 0;
   // 소수점 둘째 자리까지만. 기록 제출 쪽과 같은 정밀도로 맞춘다 —
@@ -712,14 +715,14 @@ app.post('/api/bot-log', (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('봇전 기록 저장 실패:', err);
-    res.status(500).json({ error: '기록 저장 실패' });
+    res.status(500).json({ error: t(req, 'api.saveLogFailed') });
   }
 });
 
 app.post('/api/spin', (req, res) => {
   if (isAdminUser(req.user)) return res.json({ ok: true });   // 관리자는 기록 안 함
   const who = posterName(req, req.body?.name);
-  if (who.error) return res.status(400).json({ error: who.error });
+  if (who.error) return res.status(400).json({ error: t(req, who.error) });
 
   const cost = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.cost) || 0)));
   const reward = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.reward) || 0)));
@@ -730,7 +733,7 @@ app.post('/api/spin', (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('룰렛 기록 저장 실패:', err);
-    res.status(500).json({ error: '기록에 실패했습니다.' });
+    res.status(500).json({ error: t(req, 'api.logFailed') });
   }
 });
 
@@ -1045,9 +1048,9 @@ app.post('/api/me/coins/claim', (req, res) => {
 // 칭호 장착(최대 3개, 얻은 것만). 로그인·닉네임이 있어야 한다.
 // 판수는 서버가 아는 제출된 판수(두 모드 합)로 판정한다 — 클라 조작 무시.
 app.post('/api/titles', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   const name = req.user.nickname;
-  if (!name) return res.status(400).json({ error: '닉네임을 먼저 정해 주세요.' });
+  if (!name) return res.status(400).json({ error: t(req, 'api.needNickname') });
   const acct = users.byId(req.user.id);
   const plays = totalPlaysOf(name, req.user);
   // 기록 칭호를 달려면 서버가 아는 최고 기록이 필요하다. 클라가 보낸 값은 안 쓴다.
@@ -1139,9 +1142,7 @@ app.get('/api/play-ranks', (req, res) => {
   const at = rows.findIndex((r) => r.name === myName);
   res.json({
     season: seasonInfo(),
-    note: bySeconds
-      ? '시즌과 상관없는 통산 플레이 시간입니다 · 모든 모드를 셉니다'
-      : '시즌과 상관없는 통산 판수입니다 · 혼자 하기·탑 오르기·봇전·1대1 을 모두 셉니다',
+    note: t(req, bySeconds ? 'api.notePlaytime' : 'api.notePlays'),
     top: rows.slice(0, TOP_N),
     me: at >= 0 ? { ...rows[at], rank: at + 1 } : null
   });
@@ -1179,18 +1180,18 @@ app.delete('/api/poll/:id', requireAdmin, (req, res) => {
 
 app.get('/api/poll/:id', (req, res) => {
   const id = String(req.params.id);
-  if (!POLLS[id]) return res.status(404).json({ error: '없는 투표입니다.' });
+  if (!POLLS[id]) return res.status(404).json({ error: t(req, 'api.pollNotFound') });
   res.json({ id, choices: POLLS[id], ...polls.result(id, voterOf(req)) });
 });
 
 app.post('/api/poll/:id', (req, res) => {
   const id = String(req.params.id);
   const choices = POLLS[id];
-  if (!choices) return res.status(404).json({ error: '없는 투표입니다.' });
+  if (!choices) return res.status(404).json({ error: t(req, 'api.pollNotFound') });
   const choice = String(req.body?.choice ?? '');
-  if (!choices.includes(choice)) return res.status(400).json({ error: '고를 수 없는 항목입니다.' });
+  if (!choices.includes(choice)) return res.status(400).json({ error: t(req, 'api.badPollChoice') });
   const voter = voterOf(req);
-  if (!voter) return res.status(400).json({ error: '누구인지 알 수 없습니다.' });
+  if (!voter) return res.status(400).json({ error: t(req, 'api.unknownVoter') });
   // 관리자는 집계에서 뺀다(다른 기록과 같은 규칙).
   if (isAdminUser(req.user)) return res.json({ id, choices, ...polls.result(id, voter) });
   res.json({ id, choices, ...polls.vote(id, voter, choice) });
@@ -1204,25 +1205,25 @@ app.get('/api/me/gifts', (req, res) => {
 
 // 아직 안 본 선물을 받아 간다(선물 창을 띄우려고). 소유는 그대로 남는다.
 app.post('/api/me/gifts/claim', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   res.json({ gifts: charGifts.claim(req.user.id) });
 });
 
 app.get('/api/me/wallet', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   res.json(users.byId(req.user.id)?.wallet ?? null);
 });
 
 // 지갑을 통째로 저장한다. 쓰거나 사면 줄어들 수도 있어야 해서 덮어쓴다.
 app.post('/api/me/wallet', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   res.json(users.saveWallet(req.user.id, req.body ?? {}));
 });
 
 // 이 기기에 있던 지갑을 계정에 합친다. 더하기와 합집합만 하므로 어느 쪽도
 // 잃지 않는다. 기기마다 한 번만 부르는 건 클라가 표시를 남겨 관리한다.
 app.post('/api/me/wallet/merge', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   res.json(users.mergeWallet(req.user.id, req.body ?? {}));
 });
 
@@ -1250,9 +1251,9 @@ app.get('/api/challenge', (req, res) => {
 // 한 층을 깼다고 알린다. 순서대로만(지금 층 +1) 인정한다.
 // 조건 달성 자체는 클라가 판정한다(코인·판정이 원래 클라 신뢰 모델이라 동일).
 app.post('/api/challenge/clear', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   const floor = Math.floor(Number(req.body?.floor) || 0);
-  if (!floorAt(floor)) return res.status(400).json({ error: '없는 층입니다.' });
+  if (!floorAt(floor)) return res.status(400).json({ error: t(req, 'api.floorNotFound') });
   // 관리자는 확인용 계정이라 진행도를 남기지 않는다. 어차피 모든 층이 열려
   // 있어서 진행도가 뜻이 없고, 랭킹에 끼면 남의 순위만 한 칸씩 민다.
   // (한 판 기록도 /api/challenge-log 에서 같은 이유로 건너뛴다.)
@@ -1260,7 +1261,7 @@ app.post('/api/challenge/clear', (req, res) => {
     return res.json({ ok: true, admin: true, ...describeChallenge(0, true) });
   }
   // 아직 안 내놓은 층은 클라가 뭐라 하든 인정하지 않는다.
-  if (floor > RELEASED) return res.status(403).json({ error: '아직 준비 중인 층입니다.' });
+  if (floor > RELEASED) return res.status(403).json({ error: t(req, 'api.floorNotReady') });
   const me = users.byId(req.user.id);
   const cleared = me?.challenge ?? 0;
   if (floor !== cleared + 1) {
@@ -1274,18 +1275,18 @@ app.post('/api/challenge/clear', (req, res) => {
 // 룰렛에서 희귀 보상(0.1~3%)을 뽑았다고 알린다. 누적 횟수를 올리고, 그것으로
 // 새로 얻은 칭호(럭키가이 3회·행운의 여신 10회)가 있으면 알려 준다.
 app.post('/api/titles/lucky-hit', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   const before = users.byId(req.user.id)?.luckyHits ?? 0;
   const after = users.bumpLuckyHit(req.user.id);
   const isAdmin = isAdminUser(req.user);
   const gained = earnedTitleIds({ luckyHits: after, isAdmin })
     .filter((id) => !earnedTitleIds({ luckyHits: before, isAdmin }).includes(id));
-  const newTitles = gained.map((id) => { const t = titleById(id); return { id, name: t?.name ?? id }; });
-  for (const t of newTitles) {
+  const newTitles = gained.map((id) => { const title = titleById(id); return { id, name: title?.name ?? id }; });
+  for (const nt of newTitles) {
     try {
       modeLogs.title.add({
         name: req.user.nickname ?? '(닉네임 없음)', userId: req.user.id,
-        title_id: t.id, title: t.name, how: `룰렛 희귀 보상 ${after}회`
+        title_id: nt.id, title: nt.name, how: `룰렛 희귀 보상 ${after}회`
       });
     } catch (err) { console.error('칭호 기록 실패:', err); }
   }
@@ -1296,21 +1297,21 @@ app.post('/api/titles/lucky-hit', (req, res) => {
 // 룰렛/코인은 원래 클라 신뢰 모델이라(코인이 localStorage), 여기서도
 // 클라 요청을 믿되, 수여 가능한 업적 id 만 받는다. fresh 면 이번에 처음 얻음.
 app.post('/api/titles/award', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: '로그인이 필요합니다.' });
+  if (!req.user) return res.status(401).json({ error: t(req, 'api.needLogin') });
   const id = String(req.body?.id ?? '');
-  if (!isAwardable(id)) return res.status(400).json({ error: '수여할 수 없는 칭호입니다.' });
+  if (!isAwardable(id)) return res.status(400).json({ error: t(req, 'api.titleNotAwardable') });
   const { user, fresh } = users.awardTitle(req.user.id, id);
-  const t = titleById(id);
+  const title = titleById(id);
   // 처음 얻은 순간만 기록에 남긴다(관리 화면 '칭호 획득 기록').
   if (fresh) {
     try {
       modeLogs.title.add({
         name: req.user.nickname ?? '(닉네임 없음)', userId: req.user.id,
-        title_id: id, title: t?.name ?? id, how: '룰렛'
+        title_id: id, title: title?.name ?? id, how: '룰렛'
       });
     } catch (err) { console.error('칭호 기록 실패:', err); }
   }
-  res.json({ ok: true, fresh, title: fresh ? { id, name: t?.name ?? id } : null });
+  res.json({ ok: true, fresh, title: fresh ? { id, name: title?.name ?? id } : null });
 });
 
 // 계정 전적 초기화. 계정과 닉네임은 남긴다.
@@ -1431,7 +1432,9 @@ app.patch('/api/admin/board/:id', requireAdmin, (req, res) => {
 
   const maxLen = category === 'patch' ? 6000 : 200;
   const checked = checkMessage(req.body?.body, maxLen);
-  if (!checked.ok) return res.status(400).json({ error: checked.reason });
+  // 관리자 화면은 늘 한국어다 — checkMessage 가 돌려주는 건 문구가 아니라
+  // 키라서, 언어 쿠키와 무관하게 한국어로 강제해 번역한다.
+  if (!checked.ok) return res.status(400).json({ error: t({ cookies: { lang: 'ko' } }, checked.reason, checked.vars) });
 
   try {
     if (!board.edit(req.params.id, checked.text)) return res.status(404).json({ error: '이미 없는 글입니다.' });
