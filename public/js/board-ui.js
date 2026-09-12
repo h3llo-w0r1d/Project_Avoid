@@ -11,27 +11,30 @@
 //  - 상세: 글 하나를 크게 + 그 밑에 댓글 목록과 댓글 입력칸.
 // 댓글(답글)은 한 단계만 — 상세에서만 달 수 있고 원글에 붙는다.
 
+import { t, onLangChange } from './i18n.js';
+
 const $ = (id) => document.getElementById(id);
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// 칸 정보: 이름·아이콘·뱃지 색 클래스.
+// 칸 정보: 이름·아이콘·뱃지 색 클래스. label 은 t() 로 매번 다시 구한다
+// (탭 이름이라 언어가 바뀌면 즉시 따라가야 한다).
 const CATS = {
-  patch: { label: '패치노트', icon: '📢', cls: 'cat-patch' },
-  chat: { label: '잡담', icon: '💬', cls: 'cat-chat' },
-  idea: { label: '건의사항', icon: '💡', cls: 'cat-idea' },
-  bug: { label: '버그 제보', icon: '🐞', cls: 'cat-bug' },
-  qna: { label: 'Q&A', icon: '❓', cls: 'cat-qna' }
+  patch: { labelKey: 'board.catPatch', icon: '📢', cls: 'cat-patch' },
+  chat: { labelKey: 'board.catChat', icon: '💬', cls: 'cat-chat' },
+  idea: { labelKey: 'board.catIdea', icon: '💡', cls: 'cat-idea' },
+  bug: { labelKey: 'board.catBug', icon: '🐞', cls: 'cat-bug' },
+  qna: { labelKey: 'board.catQna', icon: '❓', cls: 'cat-qna' }
 };
 
 // 칸마다 입력칸에 뜨는 안내 문구.
 const PLACEHOLDER = {
-  patch: '패치노트를 적으세요. 글자를 선택하고 색을 눌러 색을 입힐 수 있어요.',
-  chat: '자유롭게 남겨 보세요 (200자)',
-  idea: '이런 게 있으면 좋겠어요 하는 부분이 있으면 편하게 적어 주세요 (200자)',
-  bug: '어떤 상황에서 생겼는지 적어 주시면 고치는 데 큰 도움이 됩니다 (200자)',
-  qna: '궁금한 점을 물어보세요 (200자)'
+  patch: 'board.placeholderPatch',
+  chat: 'board.placeholderChat',
+  idea: 'board.placeholderIdea',
+  bug: 'board.placeholderBug',
+  qna: 'board.placeholderQna'
 };
 
 // 이름 색 → 실제 색(화이트리스트). 임의 CSS 주입을 막는다.
@@ -107,9 +110,9 @@ const PALETTE = [
 // 언제 올렸는지 사람이 읽기 좋게. 방금·N분 전·N시간 전·날짜.
 function ago(at) {
   const s = Math.floor((Date.now() - at) / 1000);
-  if (s < 60) return '방금';
-  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
-  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
+  if (s < 60) return t('board.agoNow');
+  if (s < 3600) return t('board.agoMin', { n: Math.floor(s / 60) });
+  if (s < 86400) return t('board.agoHour', { n: Math.floor(s / 3600) });
   const d = new Date(at);
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
@@ -154,15 +157,29 @@ export class BoardUI {
     }
 
     this.buildPalette();
+
+    // 창을 열어 둔 채로 언어를 바꿀 수도 있다. 입력칸 placeholder 는
+    // JS 가 매번 다시 써넣는 값이라 static 갱신(applyStatic)이 못 건드린다.
+    onLangChange(() => {
+      this.syncWriteMode();
+      // 팔레트는 한 번만 그리므로(buildPalette 의 dataset.built), 굵게·기본
+      // 버튼의 글자·툴팁만 여기서 다시 써넣는다. 색 이름은 서식 문법이라 그대로.
+      const bold = this.el.colors?.querySelector('.patch-swatch.bold');
+      if (bold) { bold.textContent = t('board.boldSample'); bold.title = t('board.boldSample'); }
+      const clear = this.el.colors?.querySelector('.patch-swatch.clear:not(.bold)');
+      if (clear) { clear.textContent = t('board.clearFormat'); clear.title = t('board.clearFormat'); }
+      if (this.el.modal.classList.contains('hidden')) return;
+      this.openId ? this.renderDetail() : this.render(this.posts);
+    });
   }
 
   async open() {
     this.el.modal.classList.remove('hidden');
     this.el.error.textContent = '';
     this.showList();
-    this.el.list.innerHTML = '<li class="board-empty">불러오는 중…</li>';
+    this.el.list.innerHTML = `<li class="board-empty">${t('tower.loading')}</li>`;
     try { this.render(await this.h.list()); }
-    catch { this.el.list.innerHTML = '<li class="board-empty">불러오지 못했습니다.</li>'; }
+    catch { this.el.list.innerHTML = `<li class="board-empty">${t('tower.loadError')}</li>`; }
   }
 
   close() { this.el.modal.classList.add('hidden'); this.exitEdit(); this.showList(); }
@@ -189,7 +206,7 @@ export class BoardUI {
     this.el.input.maxLength = isPatch ? 6000 : 200;
     // 칸마다 안내 문구를 달리한다. 무엇을 쓰는 곳인지 한눈에 보이면
     // 엉뚱한 칸에 올리는 일이 줄어든다.
-    this.el.input.placeholder = PLACEHOLDER[this.writeCat] ?? PLACEHOLDER.chat;
+    this.el.input.placeholder = t(PLACEHOLDER[this.writeCat] ?? PLACEHOLDER.chat);
     this.el.count.textContent = `${[...this.el.input.value].length} / ${this.el.input.maxLength}`;
   }
 
@@ -223,7 +240,7 @@ export class BoardUI {
   // ── 새 원글 올리기 / 수정 저장(목록 상단 입력칸) ─────────
   async submit() {
     const body = this.el.input.value.trim();
-    if (!body) { this.el.error.textContent = '내용을 입력해 주세요.'; return; }
+    if (!body) { this.el.error.textContent = t('board.enterContent'); return; }
     this.el.send.disabled = true;
     try {
       let posts, targetTab;
@@ -252,7 +269,7 @@ export class BoardUI {
     this.syncWriteMode();                 // 그 칸에 맞는 색 팔레트·길이 제한
     this.el.input.value = post.body;
     this.el.count.textContent = `${[...post.body].length} / ${this.el.input.maxLength}`;
-    this.el.send.textContent = '수정 저장';
+    this.el.send.textContent = t('board.saveEdit');
     this.el.editCancel.classList.remove('hidden');
     this.el.error.textContent = '';
     this.el.write.scrollIntoView({ block: 'nearest' });
@@ -265,13 +282,13 @@ export class BoardUI {
     this.editingId = null;
     this.writeCat = this.tab;              // 다시 보고 있는 탭 기준으로
     this.el.input.value = '';
-    this.el.send.textContent = '남기기';
+    this.el.send.textContent = t('board.send');
     this.el.editCancel.classList.add('hidden');
     this.syncWriteMode();
   }
 
   async remove(id) {
-    if (!confirm('이 글을 지웁니다.')) return;
+    if (!confirm(t('board.confirmDelete'))) return;
     try { this.render(await this.h.remove(id)); }
     catch (err) { this.el.error.textContent = err.message; }
   }
@@ -285,7 +302,7 @@ export class BoardUI {
     const shown = this.posts.filter((p) => (p.category || 'chat') === this.tab);
 
     if (shown.length === 0) {
-      this.el.list.innerHTML = '<li class="board-empty">이 칸에는 아직 글이 없습니다.</li>';
+      this.el.list.innerHTML = `<li class="board-empty">${t('board.empty')}</li>`;
       return;
     }
     const admin = this.h.isAdmin();
@@ -326,7 +343,7 @@ export class BoardUI {
     const back = document.createElement('button');
     back.type = 'button';
     back.className = 'board-back';
-    back.textContent = '← 목록';
+    back.textContent = t('board.back');
     back.addEventListener('click', () => this.backToList());
     d.appendChild(back);
 
@@ -349,13 +366,13 @@ export class BoardUI {
     sec.className = 'board-comments-sec';
     const title = document.createElement('h3');
     title.className = 'board-comments-title';
-    title.textContent = `댓글 ${replies.length}`;
+    title.textContent = t('board.commentsCount', { n: replies.length });
     sec.appendChild(title);
 
     if (replies.length === 0) {
       const empty = document.createElement('p');
       empty.className = 'board-empty';
-      empty.textContent = '첫 댓글을 남겨보세요.';
+      empty.textContent = t('board.firstComment');
       sec.appendChild(empty);
     } else {
       const ul = document.createElement('ul');
@@ -383,14 +400,14 @@ export class BoardUI {
       const edit = document.createElement('button');
       edit.type = 'button';
       edit.className = 'board-edit';
-      edit.textContent = '수정';
+      edit.textContent = t('board.edit');
       edit.addEventListener('click', (e) => { e.stopPropagation(); this.enterEdit(p); });
       tools.appendChild(edit);
     }
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'board-del';
-    del.textContent = '삭제';
+    del.textContent = t('board.delete');
     // 목록 카드는 눌러서 상세로 가므로, 버튼 클릭이 상세를 열지 않게 막는다.
     del.addEventListener('click', (e) => { e.stopPropagation(); this.remove(p.id); });
     tools.appendChild(del);
@@ -403,7 +420,7 @@ export class BoardUI {
     head.className = 'board-post-head';
     const cat = CATS[p.category];
     const badge = (withBadge && cat)
-      ? `<span class="board-cat-badge ${cat.cls}">${cat.icon} ${esc(cat.label)}</span>` : '';
+      ? `<span class="board-cat-badge ${cat.cls}">${cat.icon} ${esc(t(cat.labelKey))}</span>` : '';
     head.innerHTML = badge +
       `<span class="board-name${p.member ? ' member' : ''}">${esc(p.name)}</span>` +
       `<span class="board-time">${ago(p.at)}</span>`;
@@ -445,9 +462,12 @@ export class BoardUI {
     const bar = this.el.colors;
     if (!bar || bar.dataset.built) return;
     bar.dataset.built = '1';
+    // 색·굵게 키(빨강·굵게 등)는 게시글 서식 문법 그 자체라 번역하지 않는다
+    // (이미 올라온 글이 이 이름을 그대로 쓰고 있다). '가' 글자 샘플과
+    // '기본'(모든 서식 지우기)만 화면 문구라 번역한다.
     const make = (key, bg, text, cls) => {
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'patch-swatch'; b.title = text || key || '서식 지우기';
+      b.type = 'button'; b.className = 'patch-swatch'; b.title = text || key || t('board.clearFormatTitle');
       if (cls) b.classList.add(cls);
       if (bg) b.style.background = bg; else { b.classList.add('clear'); b.textContent = text; }
       b.addEventListener('mousedown', (e) => { e.preventDefault(); this.applyStyle(key); });
@@ -455,8 +475,8 @@ export class BoardUI {
     };
     for (const name of PALETTE) make(name, COLOR_NAMES[name]);
     make('검정', COLOR_NAMES['검정']);   // 검정 색(어두운 배경이라 테두리로 보이게)
-    make('굵게', null, '가', 'bold');    // 굵게 토글(색과 함께 쓸 수 있다)
-    make(null, null, '기본');            // 모든 서식 지우기
+    make('굵게', null, t('board.boldSample'), 'bold');    // 굵게 토글(색과 함께 쓸 수 있다)
+    make(null, null, t('board.clearFormat'));            // 모든 서식 지우기
   }
 
   // 선택한 글자에 서식을 씌운다. 색은 하나만(바꾸면 교체), 굵게는 토글.
@@ -498,7 +518,7 @@ export class BoardUI {
     const ta = document.createElement('textarea');
     ta.maxLength = 200;
     ta.rows = 2;
-    ta.placeholder = '댓글을 남겨 보세요 (200자)';
+    ta.placeholder = t('board.commentPlaceholder');
     const row = document.createElement('div');
     row.className = 'board-write-row';
     const err = document.createElement('em');
@@ -506,7 +526,7 @@ export class BoardUI {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'primary small';
-    btn.textContent = '댓글';
+    btn.textContent = t('board.commentBtn');
     row.appendChild(err);
     row.appendChild(btn);
     form.appendChild(ta);
@@ -522,7 +542,7 @@ export class BoardUI {
 
   async submitComment(parentId, textarea, errEl, btn) {
     const body = textarea.value.trim();
-    if (!body) { errEl.textContent = '내용을 입력해 주세요.'; return; }
+    if (!body) { errEl.textContent = t('board.enterContent'); return; }
     btn.disabled = true;
     try {
       const posts = await this.h.post(body, parentId);

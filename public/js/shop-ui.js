@@ -12,9 +12,16 @@
 import { TRAILS, ARENAS, DEFAULT_ARENA } from './effects.js';
 import { FX_LEVEL_AT } from './wallet.js';
 import { wallet } from './wallet.js';
+import { t, onLangChange } from './i18n.js';
 
 const esc = (s) => String(s).replace(/[&<>"']/g,
   (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// item.name(한국어 원문)은 소유 로그용으로 그대로 두고, 화면에는 nameKey 로
+// 옮긴 문구를 쓴다. nameKey 가 없는 항목('사용 안 함' 같은 즉석 객체)은
+// name 을 이미 번역된 문자열로 채워 뒀으므로 그대로 쓴다.
+const itemName = (item) => item.nameKey ? t(item.nameKey) : item.name;
+const itemDesc = (item) => item.descKey ? t(item.descKey) : (item.desc ?? '');
 
 const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 
@@ -113,8 +120,8 @@ function arenaThumb(spec) {
 //  swatch    : 카드 위 색 미리보기. 사기 전에 무슨 색인지 보여 준다.
 export const CATEGORIES = [
   {
-    id: 'trail', kind: 'trail', name: '발자국 효과',
-    hint: '움직일 때 발밑에 남는 효과예요 · 켠 채로 오래 버티면 단계가 올라 더 화려해져요',
+    id: 'trail', kind: 'trail', name: '발자국 효과', nameKey: 'shop.tabTrail',
+    hint: '움직일 때 발밑에 남는 효과예요 · 켠 채로 오래 버티면 단계가 올라 더 화려해져요', hintKey: 'shop.hintTrail',
     allowNone: true,
     // 카드에는 이름과 색만. 설명은 살 때 확인창에서 보여 준다.
     hideDesc: true,
@@ -125,8 +132,8 @@ export const CATEGORIES = [
       : `linear-gradient(90deg,${s.colors.map(hex).join(',')})`
   },
   {
-    id: 'arena', kind: 'arena', name: '경기장 스킨',
-    hint: '전기선을 피하는 무대의 모습이에요 · 새 스킨은 곧 추가됩니다',
+    id: 'arena', kind: 'arena', name: '경기장 스킨', nameKey: 'shop.tabArena',
+    hint: '전기선을 피하는 무대의 모습이에요 · 새 스킨은 곧 추가됩니다', hintKey: 'shop.hintArena',
     allowNone: false,
     free: DEFAULT_ARENA,
     items: ARENAS,
@@ -144,6 +151,8 @@ export class ShopUI {
     this.onBuy = null;      // (item, category) => boolean — 코인을 깎고 소유 처리
     this.onEquip = null;    // (kind, id|null) => void — 켜고 끈다
     this.isAdmin = () => false;
+    // 창을 열어 둔 채로 언어를 바꿀 수도 있다. 열려 있을 때만 다시 그린다.
+    onLangChange(() => { if (this.overlay) this.paint(); });
   }
 
   open() {
@@ -153,13 +162,13 @@ export class ShopUI {
     overlay.innerHTML = `
       <div class="modal-card panel shop-card">
         <div class="modal-head">
-          <h2>상점</h2>
+          <h2>${t('menu.shop')}</h2>
           <span class="shop-coins"></span>
-          <button type="button" class="icon-btn shop-close" aria-label="닫기">✕</button>
+          <button type="button" class="icon-btn shop-close" aria-label="${t('common.close')}">✕</button>
         </div>
         <nav class="shop-tabs">
           ${CATEGORIES.map((c) =>
-            `<button type="button" data-cat="${c.id}">${esc(c.name)}</button>`).join('')}
+            `<button type="button" data-cat="${c.id}">${esc(t(c.nameKey))}</button>`).join('')}
         </nav>
         <p class="board-hint shop-hint"></p>
         <div class="shop-grid"></div>
@@ -205,8 +214,10 @@ export class ShopUI {
 
     this.overlay.querySelector('.shop-coins').innerHTML =
       admin ? '<b><span class="coin-ico"></span> ∞</b>' : `<b><span class="coin-ico"></span> ${coins.toLocaleString('ko-KR')}</b>`;
-    this.overlay.querySelector('.shop-hint').textContent = cat.hint;
+    this.overlay.querySelector('.shop-hint').textContent = t(cat.hintKey);
     for (const b of this.overlay.querySelectorAll('.shop-tabs button')) {
+      const c = CATEGORIES.find((x) => x.id === b.dataset.cat);
+      b.textContent = t(c.nameKey);
       b.classList.toggle('current', b.dataset.cat === cat.id);
     }
 
@@ -216,7 +227,7 @@ export class ShopUI {
     // 끌 수 있는 항목은 '사용 안 함' 칸을 맨 앞에. 켠 걸 되돌릴 길이
     // 없으면 답답하다.
     if (cat.allowNone) {
-      grid.appendChild(this.#card(cat, { id: null, name: '사용 안 함', desc: '이 효과를 끕니다', plain: true },
+      grid.appendChild(this.#card(cat, { id: null, name: t('shop.none'), desc: t('shop.noneDesc'), plain: true },
         { owned: true, on: !on, afford: true }));
     }
 
@@ -241,28 +252,28 @@ export class ShopUI {
       : `<span class="shop-swatch" style="background:${cat.swatch(item)}"></span>`;
 
     const foot = on
-      ? '<span class="shop-state">사용 중</span>'
+      ? `<span class="shop-state">${t('shop.using')}</span>`
       : owned
         ? (item.plain
-          ? '<span class="shop-state dim">누르면 끕니다</span>'
-          : '<span class="shop-state">누르면 사용</span>')
+          ? `<span class="shop-state dim">${t('shop.tapOff')}</span>`
+          : `<span class="shop-state">${t('shop.tapUse')}</span>`)
         // 룰렛 전용은 값을 매기지 않는다 — 코인으로는 살 수 없다.
         : item.rouletteOnly
-          ? '<span class="shop-cost roul">🎰 룰렛 전용</span>'
-          : `<span class="shop-cost${afford ? '' : ' short'}"><span class="coin-ico"></span> ${item.cost}${afford ? '' : ' 필요'}</span>`;
+          ? `<span class="shop-cost roul">${t('shop.rouletteOnly')}</span>`
+          : `<span class="shop-cost${afford ? '' : ' short'}"><span class="coin-ico"></span> ${afford ? item.cost : t('shop.costNeed', { cost: item.cost })}</span>`;
 
     // 단계가 있는 항목(발자국)은 가진 것에 한해 단계와 진행도를 보여 준다.
     // 아직 안 산 것에까지 붙이면 살지 말지 정하는 데 방해만 된다.
     // 지금 몇 단계로 쓰는지 + 다음 단계까지. 산 것에만 붙인다.
     const lvLine = (cat.levels && owned && !item.plain)
-      ? `<span class="shop-lv">${wallet.fxPick(item.id)}단계${wallet.fxLevel(item.id) > wallet.fxPick(item.id) ? ` <em>(${wallet.fxLevel(item.id)}단계까지 열림)</em>` : (wallet.fxToNext(item.id) === null ? ' <em>최대</em>' : ` <em>다음까지 ${wallet.fxToNext(item.id)}초</em>`)}</span>`
+      ? `<span class="shop-lv">${t('shop.lvPick', { lv: wallet.fxPick(item.id) })}${wallet.fxLevel(item.id) > wallet.fxPick(item.id) ? ` <em>${t('shop.lvOpenUpTo', { lv: wallet.fxLevel(item.id) })}</em>` : (wallet.fxToNext(item.id) === null ? ` <em>${t('shop.lvMax')}</em>` : ` <em>${t('shop.lvNext', { secs: wallet.fxToNext(item.id), sec: t('common.sec') })}</em>`)}</span>`
       : '';
     if (cat.tallSwatch) el.classList.add('tall');
     el.innerHTML = `
       ${bar}
-      <span class="shop-name">${esc(item.name)}</span>
+      <span class="shop-name">${esc(itemName(item))}</span>
       ${lvLine}
-      ${cat.hideDesc ? '' : `<span class="shop-desc">${esc(item.desc ?? '')}</span>`}
+      ${cat.hideDesc ? '' : `<span class="shop-desc">${esc(itemDesc(item))}</span>`}
       ${foot}`;
 
     el.addEventListener('click', () => this.#tap(cat, item, owned, on));
@@ -283,7 +294,7 @@ export class ShopUI {
       return;
     }
     // 룰렛 전용은 구매창을 띄우지 않는다. 코인이 아무리 많아도 못 산다.
-    if (item.rouletteOnly) { this.#toast('룰렛에서만 얻을 수 있어요'); return; }
+    if (item.rouletteOnly) { this.#toast(t('shop.rouletteOnlyToast')); return; }
     this.#confirmBuy(cat, item);
   }
 
@@ -303,17 +314,17 @@ export class ShopUI {
       const open = lv <= max;
       const on = lv === now;
       const need = open ? null : FX_LEVEL_AT[lv - 2] - wallet.fxTime(item.id);
-      const note = open ? '' : `${Math.ceil(need)}초 더 버티면 열려요`;
+      const note = open ? '' : t('shop.lvUnlockIn', { secs: Math.ceil(need), sec: t('common.sec') });
       return `<button type="button" class="lv-row${on ? ' on' : ''}${open ? '' : ' locked'}"
-        data-lv="${lv}"${open ? '' : ' disabled'}><span class="lv-num">${lv}단계</span><span class="lv-note">${esc(note)}</span><span class="lv-state">${on ? '사용 중' : open ? '고르기' : '🔒'}</span></button>`;
+        data-lv="${lv}"${open ? '' : ' disabled'}><span class="lv-num">${t('shop.lvPick', { lv })}</span><span class="lv-note">${esc(note)}</span><span class="lv-state">${on ? t('shop.using') : open ? t('shop.lvChoose') : '🔒'}</span></button>`;
     }).join('');
 
     ask.innerHTML = `
       <div class="modal-card panel buy-card lv-card">
-        <p class="buy-msg"><b>${esc(item.name)}</b> 단계 고르기</p>
-        <p class="buy-note">단계가 높을수록 더 많고 화려해져요. 낮춰 써도 됩니다.</p>
+        <p class="buy-msg">${t('shop.pickLevelTitle', { name: esc(itemName(item)) })}</p>
+        <p class="buy-note">${t('shop.pickLevelNote')}</p>
         <div class="lv-list">${rows}</div>
-        <div class="buy-actions"><button type="button" class="ghost small lv-close">닫기</button></div>
+        <div class="buy-actions"><button type="button" class="ghost small lv-close">${t('common.close')}</button></div>
       </div>`;
     document.body.appendChild(ask);
     const bye = () => ask.remove();
@@ -338,12 +349,11 @@ export class ShopUI {
     ask.style.zIndex = '70';
     ask.innerHTML = `
       <div class="modal-card panel buy-card">
-        <p class="buy-msg"><b>${esc(item.name)}</b> 을(를)<br>
-          <b class="buy-cost">${item.cost} 코인</b> 으로 구매할까요?</p>
-        <p class="buy-note">${esc(item.desc ?? '')}</p>
+        <p class="buy-msg">${t('shop.buyMsg', { name: esc(itemName(item)), cost: item.cost })}</p>
+        <p class="buy-note">${esc(itemDesc(item))}</p>
         <div class="buy-actions">
-          <button type="button" class="ghost small buy-no">취소</button>
-          <button type="button" class="buy-yes">구매</button>
+          <button type="button" class="ghost small buy-no">${t('common.cancel')}</button>
+          <button type="button" class="buy-yes">${t('shop.buyDo')}</button>
         </div>
       </div>`;
     document.body.appendChild(ask);
@@ -356,22 +366,22 @@ export class ShopUI {
       if (ok) {
         this.onEquip?.(cat.kind, item.id);   // 산 즉시 켜 준다
         this.paint();
-        this.#toast(`「${item.name}」 구매 완료! 바로 켰어요`);
+        this.#toast(t('shop.boughtToast', { name: itemName(item) }));
       } else {
-        this.#toast('코인이 모자랍니다');
+        this.#toast(t('shop.notEnoughCoins'));
       }
     });
   }
 
   #toast(text) {
-    const t = document.createElement('div');
-    t.className = 'shop-toast';
-    t.textContent = text;
-    document.body.appendChild(t);
-    requestAnimationFrame(() => t.classList.add('show'));
+    const el = document.createElement('div');
+    el.className = 'shop-toast';
+    el.textContent = text;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
     setTimeout(() => {
-      t.classList.remove('show');
-      setTimeout(() => t.remove(), 240);
+      el.classList.remove('show');
+      setTimeout(() => el.remove(), 240);
     }, 1900);
   }
 }

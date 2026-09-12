@@ -22,45 +22,49 @@ const MAX = 420;
                    // 양을 늘린 만큼 동시에 살아 있는 수도 늘어 넉넉히 잡는다.
 
 // 살 수 있는 발자국 효과들. cost 는 코인.
+//
+// name·desc 는 소유 로그(recordPurchase)·기존 표시에 쓰던 한국어 원문이라
+// 그대로 둔다. 화면에는 nameKey·descKey 로 옮긴 문구를 쓴다(strings.js 의
+// item.trail.* — shop-ui.js·main.js 가 t() 로 꺼내 쓴다).
 export const TRAILS = [
   {
-    id: 'sparkle', name: '반짝이', cost: 150,
-    desc: '걸을 때마다 발밑에서 별가루가 반짝여요',
+    id: 'sparkle', name: '반짝이', nameKey: 'item.trail.sparkle', cost: 150,
+    desc: '걸을 때마다 발밑에서 별가루가 반짝여요', descKey: 'item.trail.sparkleDesc',
     shape: 'star', size: 0.46, rate: 52, life: 0.90,
     rise: 0.9, spread: 0.30, gravity: -0.4,
     colors: [0xfff6c8, 0xffd76a, 0xffffff]
   },
   {
-    id: 'bubble', name: '비눗방울', cost: 150,
-    desc: '동글동글한 비눗방울이 떠올라요',
+    id: 'bubble', name: '비눗방울', nameKey: 'item.trail.bubble', cost: 150,
+    desc: '동글동글한 비눗방울이 떠올라요', descKey: 'item.trail.bubbleDesc',
     shape: 'ring', size: 0.58, rate: 26, life: 1.60,
     rise: 1.5, spread: 0.22, gravity: 0.35,
     colors: [0x9fe6ff, 0xc9f2ff, 0x7ec8ff]
   },
   {
-    id: 'flame', name: '불꽃', cost: 150,
-    desc: '지나간 자리에 불티가 흩날려요',
+    id: 'flame', name: '불꽃', nameKey: 'item.trail.flame', cost: 150,
+    desc: '지나간 자리에 불티가 흩날려요', descKey: 'item.trail.flameDesc',
     shape: 'dot', size: 0.48, rate: 64, life: 0.72,
     rise: 1.5, spread: 0.24, gravity: 0.6,
     colors: [0xffb03a, 0xff5e2a, 0xffe08a]
   },
   {
-    id: 'snow', name: '눈꽃', cost: 150,
-    desc: '차가운 눈송이가 천천히 내려앉아요',
+    id: 'snow', name: '눈꽃', nameKey: 'item.trail.snow', cost: 150,
+    desc: '차가운 눈송이가 천천히 내려앉아요', descKey: 'item.trail.snowDesc',
     shape: 'star', size: 0.42, rate: 32, life: 2.0,
     rise: 0.5, spread: 0.42, gravity: -0.55,
     colors: [0xffffff, 0xd6f0ff, 0xaadcff]
   },
   {
-    id: 'heart', name: '하트', cost: 150,
-    desc: '작은 하트가 퐁퐁 피어나요',
+    id: 'heart', name: '하트', nameKey: 'item.trail.heart', cost: 150,
+    desc: '작은 하트가 퐁퐁 피어나요', descKey: 'item.trail.heartDesc',
     shape: 'heart', size: 0.56, rate: 24, life: 1.5,
     rise: 1.3, spread: 0.20, gravity: 0.25,
     colors: [0xff8fc4, 0xff5f9e, 0xffd0e4]
   },
   {
-    id: 'rainbow', name: '무지개', cost: 150,
-    desc: '일곱 빛깔이 차례로 흘러나와요',
+    id: 'rainbow', name: '무지개', nameKey: 'item.trail.rainbow', cost: 150,
+    desc: '일곱 빛깔이 차례로 흘러나와요', descKey: 'item.trail.rainbowDesc',
     shape: 'dot', size: 0.50, rate: 58, life: 1.15,
     rise: 1.0, spread: 0.26, gravity: 0.1,
     rainbow: true, colors: [0xffffff]
@@ -88,14 +92,14 @@ export const FX_LEVELS = [
 // 색을 안 적으면 원래 색 그대로다.
 export const ARENAS = [
   {
-    id: 'grass', name: '풀숲', cost: 0,
+    id: 'grass', name: '풀숲', nameKey: 'item.arena.grass', cost: 0,
     // 상점 미리보기용. 실제 하늘·바닥 색을 작은 그림으로 그린다.
     thumbSky: ['#0d1524', '#31414a', '#7a6647'],
     swatchTop: 0x6f9e4a, swatchSide: 0x7a5a3a, thumbEdge: 'stone'
   },
   {
-    id: 'snow', name: '설원', cost: 300,
-    desc: '눈 덮인 벌판. 가장자리엔 얼음 기둥이 솟아 있어요',
+    id: 'snow', name: '설원', nameKey: 'item.arena.snow', cost: 300,
+    desc: '눈 덮인 벌판. 가장자리엔 얼음 기둥이 솟아 있어요', descKey: 'item.arena.snowDesc',
     topMap: 'snow',          // 상판 무늬를 눈으로 갈아 끼운다
     // 밤 무대라 흰 바닥이 그냥 두면 잿빛으로 가라앉는다. 눈이 스스로 은은히
     // 빛나게 해야 '눈' 으로 보인다. 반질함도 조금 올려 표면이 살짝 반사되게.
@@ -113,9 +117,9 @@ export const ARENAS = [
   {
     // 은하수 — 코인으로 못 사고 오직 룰렛(1%)으로만 얻는 한정 스킨.
     // 가나디라고라와 같은 급이다.
-    id: 'galaxy', name: '은하수', cost: 0,
+    id: 'galaxy', name: '은하수', nameKey: 'item.arena.galaxy', cost: 0,
     rouletteOnly: true,
-    desc: '밟고 선 곳이 밤하늘. 룰렛으로만 얻을 수 있어요',
+    desc: '밟고 선 곳이 밤하늘. 룰렛으로만 얻을 수 있어요', descKey: 'item.arena.galaxyDesc',
     topMap: 'galaxy',
     fog: 0x140f2e,           // 안개(=지평선 색)를 하늘 아래쪽과 맞춘다
     cliff: 0x5b4a86,         // 절벽은 보랏빛 암석

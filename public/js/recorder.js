@@ -4,6 +4,8 @@
 // 허용되지만, 배포한 사이트라면 https 여야 한다. http 로 열면
 // navigator.mediaDevices 자체가 없다 — 그래서 지원 여부부터 확인한다.
 
+import { t } from './i18n.js';
+
 const MAX_MS = 1500;   // 점프 소리라 길 이유가 없다. 길면 착지 후까지 이어진다.
 
 export const recorder = {
@@ -13,9 +15,9 @@ export const recorder = {
 
   // 왜 못 쓰는지 사람이 읽을 수 있게 알려 준다
   unsupportedReason() {
-    if (!window.isSecureContext) return 'https 로 접속해야 마이크를 쓸 수 있습니다.';
-    if (!navigator.mediaDevices?.getUserMedia) return '이 브라우저는 마이크 녹음을 지원하지 않습니다.';
-    if (!window.MediaRecorder) return '이 브라우저는 녹음 저장을 지원하지 않습니다.';
+    if (!window.isSecureContext) return t('voice.needHttps');
+    if (!navigator.mediaDevices?.getUserMedia) return t('voice.micUnsupported');
+    if (!window.MediaRecorder) return t('voice.recordUnsupported');
     return '';
   },
 
@@ -43,7 +45,7 @@ export const recorder = {
       };
       rec.onerror = (e) => {
         for (const track of stream.getTracks()) track.stop();
-        reject(e.error ?? new Error('녹음에 실패했습니다.'));
+        reject(e.error ?? new Error(t('voice.recordFailed')));
       };
     });
 

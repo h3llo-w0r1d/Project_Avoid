@@ -246,13 +246,13 @@ function showTitleAvailable(list) {
   overlay.className = 'unlock-overlay';
   overlay.innerHTML =
     '<div class="unlock-card bot-result">' +
-    '<div class="unlock-kicker">🏆 새 칭호</div>' +
+    '<div class="unlock-kicker">' + t('title.newAvailableKicker') + '</div>' +
     '<div class="bot-result-face">🏷️</div>' +
-    `<div class="unlock-name">${list.map((t) => '「' + t.name + '」').join(' ')}</div>` +
-    `<div class="unlock-hint">${list[0].cond} — 이미 채우셨어요. 프로필에서 장착할 수 있어요.</div>` +
+    `<div class="unlock-name">${list.map((title) => '「' + title.name + '」').join(' ')}</div>` +
+    `<div class="unlock-hint">${t('title.availableHint', { cond: list[0].cond })}</div>` +
     '<div class="bot-result-row">' +
-    '<button type="button" class="ghost small tt-later">나중에</button>' +
-    '<button type="button" class="primary small tt-go">장착하러 가기</button>' +
+    '<button type="button" class="ghost small tt-later">' + t('title.later') + '</button>' +
+    '<button type="button" class="primary small tt-go">' + t('title.goEquip') + '</button>' +
     '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
@@ -430,9 +430,9 @@ function paintVoice() {
 paintVoice();
 voiceToggle?.addEventListener('click', async () => {
   if (!voiceOn) {
-    if (!voiceJump.supported()) { alert('이 브라우저는 마이크를 지원하지 않습니다.'); return; }
+    if (!voiceJump.supported()) { alert(t('voice.jumpUnsupported')); return; }
     try { await voiceJump.open(); voiceOn = true; }       // 권한 프롬프트 → 켜 둔다
-    catch { alert('마이크 권한을 허용해야 소리 질러 점프를 쓸 수 있어요.'); voiceOn = false; }
+    catch { alert(t('voice.jumpMicDenied')); voiceOn = false; }
   } else {
     voiceOn = false; voiceJump.close();
   }
@@ -516,7 +516,7 @@ async function showProfile(name) {
   try {
     profile.draw(await api.profile(name));
   } catch {
-    profile.error('프로필을 불러오지 못했습니다');
+    profile.error(t('profile.loadFailed'));
   }
 }
 
@@ -709,10 +709,11 @@ function paintPoll(box, data) {
       + `<span class="poll-pct">${total ? pct + '%' : ''}</span>`
       + '</button>';
   }).join('');
-  box.innerHTML = '<div class="poll-kicker">더 맘에 드는 디자인에 투표해주세요!</div>'
-    + '<div class="poll-sub">캐릭터 창에서 둘 다 써 볼 수 있어요</div>'
+  box.innerHTML = `<div class="poll-kicker">${t('poll.kicker')}</div>`
+    + `<div class="poll-sub">${t('poll.sub')}</div>`
     + rows
-    + `<div class="poll-foot">${total ? total + '명 참여' + (mine ? ' · 다시 눌러 바꿀 수 있어요' : '') : '첫 표를 던져 보세요'}</div>`;
+    + `<div class="poll-foot">${total ? t(mine ? 'poll.footVoted' : 'poll.footPlain', { n: total }) : t('poll.footEmpty')}</div>`;
+  box.dataset.painted = '1';
   box.classList.remove('hidden');
 }
 
@@ -733,6 +734,8 @@ function setupPoll() {
       .catch(() => {});
   });
   load();
+  // 언어를 바꿔도 다시 그린다. 서버를 다시 부르지 않고 화면만 새로 채운다.
+  onLangChange(() => { if (box.dataset.painted) load(); });
   // 타이틀로 돌아올 때마다 새로 받는다(다른 사람 표가 늘었을 수 있다).
   return load;
 }
@@ -888,12 +891,12 @@ function showShopLoginPrompt() {
   overlay.className = 'unlock-overlay';
   overlay.innerHTML =
     '<div class="unlock-card">' +
-    '<div class="unlock-kicker">🔒 로그인이 필요해요</div>' +
+    '<div class="unlock-kicker">' + t('tower.loginKicker') + '</div>' +
     '<div class="unlock-lockface">🛍️</div>' +
-    '<div class="unlock-name">상점</div>' +
-    '<div class="unlock-hint">산 것은 계정에 저장돼요 · 로그인하면 기기를 바꿔도 그대로예요</div>' +
-    '<button type="button" class="unlock-login">구글로 로그인</button>' +
-    '<div class="unlock-hint dim-hint">화면을 누르면 닫혀요</div></div>';
+    '<div class="unlock-name">' + t('menu.shop') + '</div>' +
+    '<div class="unlock-hint">' + t('shop.loginHint') + '</div>' +
+    '<button type="button" class="unlock-login">' + t('auth.googleLogin') + '</button>' +
+    '<div class="unlock-hint dim-hint">' + t('shop.loginCloseHint') + '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
   const close = () => {
@@ -1785,7 +1788,7 @@ addEventListener('resize', () => fitCamera(camera, renderer));
 
     // 신호를 잠깐 기다렸다가 오면 바로 설치창을 띄운다.
     btn.disabled = true;
-    btn.textContent = '설치 준비 중…';
+    btn.textContent = t('install.preparing');
     const got = await waitForSignal(2500);
     btn.disabled = false;
     btn.textContent = label;
@@ -1798,14 +1801,13 @@ addEventListener('resize', () => fitCamera(camera, renderer));
     // 아예 안 되므로, 다른 방법을 안내하기 전에 "크롬으로 열라"고 먼저 알린다.
     let msg;
     if (inApp) {
-      msg = '지금은 링크를 통해 들어온 브라우저예요. ' +
-        '크롬에서 연 다음 다시 누르면 설치돼요.';
+      msg = t('install.inAppBrowser');
     } else if (isIOS) {
-      msg = '사파리 아래 공유 버튼( ⬆️ )을 누르고 "홈 화면에 추가"를 선택하세요.';
+      msg = t('install.ios');
     } else if (touch) {
-      msg = '크롬 오른쪽 위 ⋮ 메뉴 → "앱 설치" 또는 "홈 화면에 추가"를 누르세요.';
+      msg = t('install.androidMenu');
     } else {
-      msg = '주소창 왼쪽 아이콘을 바탕화면으로 끌어다 놓으면 바로가기가 생겨요.';
+      msg = t('install.desktop');
     }
     help.textContent = msg;
     help.classList.remove('hidden');
@@ -2707,10 +2709,10 @@ function showLoginUnlock(count) {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker">🔒 새 캐릭터 조건 달성!</div>' +
+      '<div class="unlock-kicker">' + t('char.loginUnlockKicker') + '</div>' +
       '<div class="unlock-lockface">🔒</div>' +
-      '<div class="unlock-name">캐릭터 ' + count + '종 대기 중</div>' +
-      '<div class="unlock-hint">로그인하면 바로 사용할 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+      '<div class="unlock-name">' + t('char.loginUnlockName', { n: count }) + '</div>' +
+      '<div class="unlock-hint">' + t('char.loginUnlockHint') + '</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
     const done = () => {
@@ -2822,10 +2824,10 @@ function showUnlock(list) {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker">새 캐릭터 해금!</div>' +
+      '<div class="unlock-kicker">' + t('char.newUnlockKicker') + '</div>' +
       '<img class="unlock-face" alt="">' +
       '<div class="unlock-name"></div>' +
-      '<div class="unlock-hint">화면을 누르면 넘어가요</div></div>';
+      '<div class="unlock-hint">' + t('common.tapContinue') + '</div></div>';
     document.body.appendChild(overlay);
     const face = overlay.querySelector('.unlock-face');
     const nameEl = overlay.querySelector('.unlock-name');
@@ -2862,10 +2864,10 @@ function showTitleUnlock(list) {
     overlay.className = 'unlock-overlay';
     overlay.innerHTML =
       '<div class="unlock-card">' +
-      '<div class="unlock-kicker">🏆 새 칭호 획득!</div>' +
+      '<div class="unlock-kicker">' + t('title.newUnlockKicker') + '</div>' +
       '<div class="unlock-lockface">🏷️</div>' +
       '<div class="unlock-name"></div>' +
-      '<div class="unlock-hint">프로필에서 장착할 수 있어요 · 화면을 누르면 넘어가요</div></div>';
+      '<div class="unlock-hint">' + t('title.equipHint') + '</div></div>';
     document.body.appendChild(overlay);
     const nameEl = overlay.querySelector('.unlock-name');
     requestAnimationFrame(() => overlay.classList.add('show'));
@@ -2897,12 +2899,12 @@ function showTitleLoginPrompt(names) {
   overlay.className = 'unlock-overlay';
   overlay.innerHTML =
     '<div class="unlock-card">' +
-    '<div class="unlock-kicker">🔒 칭호 조건 달성!</div>' +
+    '<div class="unlock-kicker">' + t('title.loginKicker') + '</div>' +
     '<div class="unlock-lockface">🏷️</div>' +
     '<div class="unlock-name"></div>' +
-    '<div class="unlock-hint">칭호는 계정에 저장돼요 · 로그인하면 바로 받을 수 있어요</div>' +
-    '<button type="button" class="unlock-login">구글로 로그인</button>' +
-    '<div class="unlock-hint dim-hint">화면을 누르면 넘어가요</div></div>';
+    '<div class="unlock-hint">' + t('title.loginHint') + '</div>' +
+    '<button type="button" class="unlock-login">' + t('auth.googleLogin') + '</button>' +
+    '<div class="unlock-hint dim-hint">' + t('common.tapContinue') + '</div></div>';
   document.body.appendChild(overlay);
   overlay.querySelector('.unlock-name').textContent =
     names.map((n) => `「${n}」`).join(' ');
@@ -2932,20 +2934,21 @@ function addTrailTime(seconds) {
   const after = wallet.fxLevel(id);
   if (after > before) {
     refreshTrail();
-    showFxLevelUp(findTrail(id)?.name ?? '발자국 효과', after);
+    const trail = findTrail(id);
+    showFxLevelUp(trail?.nameKey ? t(trail.nameKey) : t('title.fxDefaultName'), after);
   }
 }
 
 // 단계가 올랐을 때 한 번 알려 준다.
 function showFxLevelUp(name, level) {
-  const t = document.createElement('div');
-  t.className = 'shop-toast center';
-  t.innerHTML = `✨ 「${name}」 ${level}단계!<br><small>발자국이 더 화려해졌어요</small>`;
-  document.body.appendChild(t);
-  requestAnimationFrame(() => t.classList.add('show'));
+  const el = document.createElement('div');
+  el.className = 'shop-toast center';
+  el.innerHTML = t('title.fxLevelUp', { name, level });
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
   setTimeout(() => {
-    t.classList.remove('show');
-    setTimeout(() => t.remove(), 240);
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 240);
   }, 2600);
 }
 
@@ -3060,9 +3063,9 @@ async function finishGame() {
 // 랭킹은 세 가지다. 오래 버티기는 기록 저장소에서, 다승·승률은
 // 계정에서 온다. 창을 열거나 탭을 누를 때 그때 필요한 것만 받아 온다.
 const VERSUS_NOTE = {
-  wins: () => '이번 시즌 · 로그인한 계정만 오릅니다',
-  rate: (d) => `이번 시즌 · ${d.minGames}전 이상 치른 계정만 오릅니다`,
-  streak: () => '지금 달리고 있는 연승만 셉니다. 한 번 지면 0 으로 돌아갑니다'
+  wins: () => t('rank.noteWins'),
+  rate: (d) => t('rank.noteRate', { n: d.minGames }),
+  streak: () => t('rank.noteStreak')
 };
 
 async function refreshLeaderboard(kind = 'time') {
@@ -3095,7 +3098,7 @@ async function refreshLeaderboard(kind = 'time') {
       note: VERSUS_NOTE[kind](data)
     }, null, kind);
   } catch {
-    ui.leaderboardError('랭킹을 불러오지 못했습니다');
+    ui.leaderboardError(t('rank.loadFailed'));
   }
 }
 

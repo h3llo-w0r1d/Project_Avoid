@@ -1,6 +1,8 @@
 // 온라인 1v1 화면. 로비 조작과 결과 표시만 담당하고,
 // 통신은 net.js, 게임 진행은 main.js 가 맡는다.
 
+import { t } from './i18n.js';
+
 const $ = (id) => document.getElementById(id);
 
 export class VersusUI {
@@ -42,14 +44,14 @@ export class VersusUI {
 
     $('copy-code-btn').addEventListener('click', () => {
       navigator.clipboard?.writeText(this.el.codeValue.textContent)
-        .then(() => this.setStatus('코드를 복사했습니다. 친구에게 보내세요.'))
-        .catch(() => this.setStatus('복사에 실패했습니다. 직접 알려 주세요.', true));
+        .then(() => this.setStatus(t('versus.copied')))
+        .catch(() => this.setStatus(t('versus.copyFailed'), true));
     });
   }
 
   joinRoom() {
     const code = this.el.roomInput.value.trim().toUpperCase();
-    if (!code) return this.setStatus('방 코드를 입력해 주세요.', true);
+    if (!code) return this.setStatus(t('versus.enterCode'), true);
     this.h.onJoinRoom(code);
   }
 
@@ -108,8 +110,8 @@ export class VersusUI {
 
   updateVersusHud({ opponentName, opponentAlive, ping }) {
     this.el.opponentState.textContent = opponentAlive
-      ? `상대 ${opponentName} 생존`
-      : `상대 ${opponentName} 탈락`;
+      ? t('versus.opponentAlive', { name: opponentName })
+      : t('versus.opponentDown', { name: opponentName });
     this.el.opponentState.classList.toggle('down', !opponentAlive);
     this.el.pingLabel.textContent = ping ? `${ping}ms` : '';
   }
@@ -120,7 +122,7 @@ export class VersusUI {
     this.el.screen.classList.add('hidden');
     this.el.result.classList.remove('hidden');
 
-    const title = { win: '승리', lose: '패배', draw: '무승부' }[outcome];
+    const title = { win: t('versus.outcomeWin'), lose: t('versus.outcomeLose'), draw: t('versus.outcomeDraw') }[outcome];
     this.el.resultTitle.textContent = title;
     this.el.resultTitle.className = `panel-title ${outcome}`;
 
@@ -128,10 +130,10 @@ export class VersusUI {
 
     if (reason === 'left') {
       this.el.resultNote.textContent = outcome === 'win'
-        ? '상대가 나갔습니다'
-        : '연결이 끊겼습니다';
+        ? t('versus.opponentLeft')
+        : t('versus.lostConnectionNote');
     } else {
-      this.el.resultNote.textContent = '한 판 길이';
+      this.el.resultNote.textContent = t('versus.roundLength');
     }
 
     this.el.resultPlayers.innerHTML = '';
@@ -143,14 +145,14 @@ export class VersusUI {
         <span class="tag"></span>
         <span class="secs">${Number(p.survived).toFixed(2)}s</span>`;
       li.querySelector('.who').textContent = p.name;
-      li.querySelector('.tag').textContent = CAUSE_LABEL[p.cause] ?? '생존';
+      li.querySelector('.tag').textContent = CAUSE_LABEL[p.cause]?.() ?? t('versus.causeSurvived');
       this.el.resultPlayers.appendChild(li);
     }
   }
 }
 
 const CAUSE_LABEL = {
-  zap: '감전',
-  fall: '낙사',
-  left: '나감'
+  zap: () => t('versus.causeZap'),
+  fall: () => t('versus.causeFall'),
+  left: () => t('versus.causeLeft')
 };

@@ -141,8 +141,8 @@
   <div id="char-modal" class="modal hidden">
     <div class="modal-card panel">
       <div class="modal-head">
-        <h2>캐릭터</h2>
-        <button id="char-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+        <h2 data-i18n="menu.char">캐릭터</h2>
+        <button id="char-close" class="icon-btn" type="button" data-i18n-attr="aria-label:common.close" aria-label="닫기">✕</button>
       </div>
       <p id="char-hint" class="char-hint"></p>
       <div id="char-grid" class="char-grid"></div>
@@ -155,33 +155,33 @@
   <div id="board-modal" class="modal hidden">
     <div class="modal-card panel community">
       <div class="modal-head">
-        <h2>커뮤니티</h2>
-        <button id="board-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+        <h2 data-i18n="menu.community">커뮤니티</h2>
+        <button id="board-close" class="icon-btn" type="button" data-i18n-attr="aria-label:common.close" aria-label="닫기">✕</button>
       </div>
       <!-- 칸(카테고리) 탭. 눌러서 그 칸 글만 본다. -->
       <nav id="board-tabs" class="board-tabs">
-        <button type="button" data-cat="patch" class="current">📢 패치노트</button>
-        <button type="button" data-cat="chat">💬 잡담</button>
-        <button type="button" data-cat="idea">💡 건의사항</button>
-        <button type="button" data-cat="bug">🐞 버그 제보</button>
-        <button type="button" data-cat="qna">❓ Q&amp;A</button>
+        <button type="button" data-cat="patch" class="current">📢 <span data-i18n="board.catPatch">패치노트</span></button>
+        <button type="button" data-cat="chat">💬 <span data-i18n="board.catChat">잡담</span></button>
+        <button type="button" data-cat="idea">💡 <span data-i18n="board.catIdea">건의사항</span></button>
+        <button type="button" data-cat="bug">🐞 <span data-i18n="board.catBug">버그 제보</span></button>
+        <button type="button" data-cat="qna">❓ <span data-i18n="board.catQna">Q&amp;A</span></button>
       </nav>
       <div class="board-write">
         <!-- 칸 선택은 없앴다: 글은 지금 보고 있는 탭으로 자동 분류된다 -->
         <!-- 패치노트(운영자)만: 선택 글자에 색을 입히는 팔레트 -->
         <div id="board-colors" class="patch-colors hidden"></div>
         <textarea id="board-input" maxlength="200" rows="2"
-          placeholder="자유롭게 남겨 보세요 (200자)"></textarea>
+          data-i18n-attr="placeholder:board.placeholderChat" placeholder="자유롭게 남겨 보세요 (200자)"></textarea>
         <div class="board-write-row">
           <span id="board-count" class="board-count">0 / 200</span>
           <div class="board-write-btns">
-            <button id="board-edit-cancel" class="ghost small hidden" type="button">취소</button>
-            <button id="board-send" class="primary small" type="button">남기기</button>
+            <button id="board-edit-cancel" class="ghost small hidden" type="button" data-i18n="common.cancel">취소</button>
+            <button id="board-send" class="primary small" type="button" data-i18n="board.send">남기기</button>
           </div>
         </div>
         <em id="board-error" class="field-error"></em>
       </div>
-      <ol id="board-list" class="board-list"><li class="board-empty">불러오는 중…</li></ol>
+      <ol id="board-list" class="board-list"><li class="board-empty" data-i18n="tower.loading">불러오는 중…</li></ol>
       <div id="board-detail" class="board-detail hidden"></div>
     </div>
   </div>
@@ -235,7 +235,7 @@
     <div class="modal-card panel settings-card">
       <div class="modal-head">
         <h2 data-i18n="settings.title">설정</h2>
-        <button id="settings-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+        <button id="settings-close" class="icon-btn" type="button" data-i18n-attr="aria-label:common.close" aria-label="닫기">✕</button>
       </div>
       <div id="settings-body" class="settings-body"></div>
     </div>
@@ -250,7 +250,7 @@
           <span id="profile-titles" class="profile-titles"></span>
         </div>
         <button id="profile-replay" class="profile-replay-btn hidden" type="button">▶ 다시보기</button>
-        <button id="profile-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+        <button id="profile-close" class="icon-btn" type="button" data-i18n-attr="aria-label:common.close" aria-label="닫기">✕</button>
       </div>
       <div id="profile-body" class="profile-body"></div>
     </div>
@@ -260,24 +260,24 @@
   <div id="rank-modal" class="modal hidden">
     <div class="modal-card panel board">
       <div class="modal-head">
-        <h2>전체 랭킹</h2>
+        <h2 data-i18n="rank.title">전체 랭킹</h2>
         <span id="rank-me" class="rank-me hidden"></span>
         <span id="season-label" class="season-label"></span>
-        <button id="rank-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
+        <button id="rank-close" class="icon-btn" type="button" data-i18n-attr="aria-label:common.close" aria-label="닫기">✕</button>
       </div>
       <nav id="rank-tabs" class="rank-tabs">
-        <button type="button" data-board="time" class="current">버티기</button>
-        <button type="button" data-board="hardcore">하드코어</button>
-        <button type="button" data-board="tower">탑 오르기</button>
-        <button type="button" data-board="plays">판수</button>
-        <button type="button" data-board="playtime">누적 시간</button>
-        <button type="button" data-board="voice">마이크</button>
-        <button type="button" data-board="voicehard">마이크·하드</button>
-        <button type="button" data-board="wins">다승</button>
-        <button type="button" data-board="hall">역대</button>
+        <button type="button" data-board="time" class="current" data-i18n="rank.tabTime">버티기</button>
+        <button type="button" data-board="hardcore" data-i18n="rank.tabHardcore">하드코어</button>
+        <button type="button" data-board="tower" data-i18n="menu.tower">탑 오르기</button>
+        <button type="button" data-board="plays" data-i18n="rank.tabPlays">판수</button>
+        <button type="button" data-board="playtime" data-i18n="rank.tabPlaytime">누적 시간</button>
+        <button type="button" data-board="voice" data-i18n="rank.tabVoice">마이크</button>
+        <button type="button" data-board="voicehard" data-i18n="rank.tabVoiceHard">마이크·하드</button>
+        <button type="button" data-board="wins" data-i18n="rank.tabWins">다승</button>
+        <button type="button" data-board="hall" data-i18n="rank.tabHall">역대</button>
       </nav>
       <p id="rank-note" class="rank-note"></p>
-      <ol id="leaderboard"><li class="empty">불러오는 중…</li></ol>
+      <ol id="leaderboard"><li class="empty" data-i18n="tower.loading">불러오는 중…</li></ol>
       <nav id="rank-pager" class="pager"></nav>
       <div id="my-rank" class="my-rank"></div>
     </div>

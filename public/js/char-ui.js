@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { PLAYABLE, playableFor, isUnlocked, isCoinChar, isRouletteChar, findCharacter } from './characters.js';
 import { buildFallbackAvatar, buildModelAvatarSync, modelReady, modelSpecOf, preloadModel } from './avatar.js';
+import { t, onLangChange } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const SIZE = 132;
@@ -79,6 +80,8 @@ export class CharacterUI {
     this.el.modal.addEventListener('click', (e) => {
       if (e.target === this.el.modal) this.close();
     });
+    // 창을 열어 둔 채로 언어를 바꿀 수도 있다.
+    onLangChange(() => { if (this.open$) this.draw(); });
   }
 
   get open$() { return !this.el.modal.classList.contains('hidden'); }
@@ -150,12 +153,12 @@ export class CharacterUI {
       this.el.hint.classList.remove('hidden');
       // 코인 잔액도 같이 보여 준다(코인 상점 캐릭터가 있으니).
       // hint 는 textContent 라 그린 아이콘을 못 넣는다. 글자로만 쓴다.
-      const coinTag = ` · 코인 ${coins} 보유`;
+      const coinTag = t('char.coinTag', { coins });
       this.el.hint.textContent = (!signedIn
-        ? '🔒 로그인하면 캐릭터를 해금할 수 있어요'
+        ? t('char.loginToUnlock')
         : (locked.length
-            ? `기록을 세우면 하나씩 열립니다 · 내 최고 ${best.toFixed(1)}초`
-            : `내 최고 ${best.toFixed(1)}초`)) + coinTag;
+            ? t('char.hintLocked', { secs: best.toFixed(1), sec: t('common.sec') })
+            : t('char.hintAllUnlocked', { secs: best.toFixed(1), sec: t('common.sec') }))) + coinTag;
     }
 
     this.el.grid.innerHTML = '';
@@ -190,7 +193,7 @@ export class CharacterUI {
 
         const note = document.createElement('span');
         note.className = 'char-note';
-        note.textContent = c.id === chosen ? '사용 중' : '';
+        note.textContent = c.id === chosen ? t('shop.using') : '';
         card.appendChild(note);
       } else if (shop) {
         // 코인 상점 캐릭터: 모습·이름을 공개하고 가격표를 붙인다. 코인이
@@ -207,7 +210,9 @@ export class CharacterUI {
 
         const price = document.createElement('span');
         price.className = 'char-note price';
-        price.textContent = affordable ? `코인 ${c.coinCost} 해금` : `코인 ${c.coinCost} 필요`;
+        price.textContent = affordable
+          ? t('char.priceUnlock', { cost: c.coinCost })
+          : t('char.priceNeed', { cost: c.coinCost });
         card.appendChild(price);
       } else if (roul) {
         // 룰렛 전용: 모습·이름을 공개하고 '룰렛에서만' 이라고 알린다(구매 불가).
@@ -223,7 +228,7 @@ export class CharacterUI {
 
         const note = document.createElement('span');
         note.className = 'char-note price';
-        note.textContent = '🎰 룰렛 전용';
+        note.textContent = t('shop.rouletteOnly');
         card.appendChild(note);
       } else {
         // 잠긴 캐릭터는 모습도 이름도 숨긴다. "???" 와 해금 조건만 보여
@@ -241,7 +246,9 @@ export class CharacterUI {
         const note = document.createElement('span');
         note.className = 'char-note goal';
         // 게스트에게는 "로그인 후 해금", 로그인 유저에게는 "N초 달성 시".
-        note.textContent = (!signedIn && c.unlockAt > 0) ? '로그인 후 해금' : `${c.unlockAt}초 달성 시`;
+        note.textContent = (!signedIn && c.unlockAt > 0)
+          ? t('char.loginToUnlockGoal')
+          : t('char.unlockAtGoal', { n: c.unlockAt });
         card.appendChild(note);
 
         const lock = document.createElement('span');
@@ -278,10 +285,10 @@ export class CharacterUI {
       overlay.innerHTML = `
         <div class="modal-card panel">
           <div class="buy-ico"><span class="coin-ico"></span></div>
-          <p class="buy-msg"><b>${spec.name}</b> 을(를)<br><b class="buy-cost">${spec.coinCost} 코인</b> 으로 구매할까요?</p>
+          <p class="buy-msg">${t('shop.buyMsg', { name: spec.name, cost: spec.coinCost })}</p>
           <div class="buy-row">
-            <button type="button" class="ghost small buy-cancel">취소</button>
-            <button type="button" class="primary small buy-ok">확인</button>
+            <button type="button" class="ghost small buy-cancel">${t('common.cancel')}</button>
+            <button type="button" class="primary small buy-ok">${t('common.confirm')}</button>
           </div>
         </div>`;
       document.body.appendChild(overlay);

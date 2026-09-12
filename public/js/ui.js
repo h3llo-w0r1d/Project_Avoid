@@ -1,6 +1,7 @@
 import { STAGES } from './config.js';
 import { settings } from './settings.js';
 import { GUEST_PATTERN } from './profanity.js';
+import { t, onLangChange } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -15,46 +16,47 @@ const HC_KEY = 'voltline.best.hardcore';   // 하드코어 개인 최고기록
 const HC_ON_KEY = 'voltline.hardcore';     // 하드코어 토글 상태
 
 // 랭킹 종류. 줄 오른쪽에 무엇을 어떻게 보여 줄지까지 여기서 정한다.
+// empty·value·mine 은 함수라 호출 시점의 언어로 매번 다시 구해진다.
 const BOARDS = {
   time: {
-    empty: '아직 기록이 없습니다',
-    value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
-    mine: (me) => `내 최고 기록 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
+    empty: () => t('rank.emptyTime'),
+    value: (e) => t('rank.rowTime', { secs: Number(e.time).toFixed(2) }),
+    mine: (me) => t('rank.mineTime', { rank: me.rank, secs: Number(me.time).toFixed(2), sec: t('common.sec') })
   },
   hardcore: {
-    empty: '아직 하드코어 기록이 없습니다',
-    value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
-    mine: (me) => `내 하드코어 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
+    empty: () => t('rank.emptyHardcore'),
+    value: (e) => t('rank.rowTime', { secs: Number(e.time).toFixed(2) }),
+    mine: (me) => t('rank.mineHardcore', { rank: me.rank, secs: Number(me.time).toFixed(2), sec: t('common.sec') })
   },
   voice: {
-    empty: '아직 마이크 기록이 없습니다',
-    value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
-    mine: (me) => `내 마이크 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
+    empty: () => t('rank.emptyVoice'),
+    value: (e) => t('rank.rowTime', { secs: Number(e.time).toFixed(2) }),
+    mine: (me) => t('rank.mineVoice', { rank: me.rank, secs: Number(me.time).toFixed(2), sec: t('common.sec') })
   },
   voicehard: {
-    empty: '아직 마이크(하드코어) 기록이 없습니다',
-    value: (e) => `${Number(e.time).toFixed(2)}<em>초</em>`,
-    mine: (me) => `내 마이크·하드코어 ${me.rank}위 · ${Number(me.time).toFixed(2)}초`
+    empty: () => t('rank.emptyVoiceHard'),
+    value: (e) => t('rank.rowTime', { secs: Number(e.time).toFixed(2) }),
+    mine: (me) => t('rank.mineVoiceHard', { rank: me.rank, secs: Number(me.time).toFixed(2), sec: t('common.sec') })
   },
   wins: {
-    empty: '아직 대전 기록이 없습니다',
-    value: (e) => `${e.wins}<em>승</em> <span class="dim">${e.losses}패</span>`,
-    mine: (me) => `내 순위 ${me.rank}위 · ${me.wins}승 ${me.losses}패`
+    empty: () => t('rank.emptyWins'),
+    value: (e) => t('rank.rowWins', { wins: e.wins, losses: e.losses }),
+    mine: (me) => t('rank.mineWins', { rank: me.rank, wins: me.wins, losses: me.losses })
   },
   tower: {
-    empty: '아직 도전모드를 깬 사람이 없습니다',
-    value: (e) => `${e.floor}<em>층</em>`,
-    mine: (me) => `내 순위 ${me.rank}위 · ${me.floor}층`
+    empty: () => t('rank.emptyTower'),
+    value: (e) => t('rank.rowFloor', { floor: e.floor }),
+    mine: (me) => t('rank.mineTower', { rank: me.rank, floor: me.floor })
   },
   plays: {
-    empty: '아직 판 기록이 없습니다',
-    value: (e) => `${Number(e.plays).toLocaleString('ko-KR')}<em>판</em>`,
-    mine: (me) => `내 순위 ${me.rank}위 · ${Number(me.plays).toLocaleString('ko-KR')}판`
+    empty: () => t('rank.emptyPlays'),
+    value: (e) => t('rank.rowPlays', { plays: Number(e.plays).toLocaleString('ko-KR') }),
+    mine: (me) => t('rank.minePlays', { rank: me.rank, plays: Number(me.plays).toLocaleString('ko-KR') })
   },
   playtime: {
-    empty: '아직 플레이 기록이 없습니다',
-    value: (e) => `${Number(e.seconds).toLocaleString('ko-KR')}<em>초</em> <span class="dim apart">${hms(e.seconds)}</span>`,
-    mine: (me) => `내 순위 ${me.rank}위 · ${Number(me.seconds).toLocaleString('ko-KR')}초 (${hms(me.seconds)})`
+    empty: () => t('rank.emptyPlaytime'),
+    value: (e) => t('rank.rowPlaytime', { secs: Number(e.seconds).toLocaleString('ko-KR'), hms: hms(e.seconds) }),
+    mine: (me) => t('rank.minePlaytime', { rank: me.rank, secs: Number(me.seconds).toLocaleString('ko-KR'), sec: t('common.sec'), hms: hms(me.seconds) })
   },
 };
 
@@ -63,9 +65,9 @@ function hms(sec) {
   const n = Math.max(0, Math.round(Number(sec) || 0));
   const h = Math.floor(n / 3600);
   const m = Math.floor((n % 3600) / 60);
-  if (h) return `${h}시간 ${m}분`;
-  if (m) return `${m}분`;
-  return `${n}초`;
+  if (h) return t('rank.hmsHM', { h, m });
+  if (m) return t('rank.hmsM', { m });
+  return t('rank.hmsS', { n });
 }
 
 // 기록 막대(1위 대비 비율)를 그릴 때 쓸 숫자값. 보드마다 무엇이 값인지 다르다.
@@ -180,6 +182,15 @@ export class UI {
 
     // 모바일이면 가상 조작을 켠다
     this.isTouch = matchMedia('(hover: none) and (pointer: coarse)').matches;
+
+    // 하드코어 시작 버튼·최고기록 표시는 JS 가 textContent 를 직접 써넣는
+    // 자리라 data-i18n 의 전역 재적용(applyStatic)이 못 건드린다. 여기서
+    // 다시 그린다.
+    onLangChange(() => {
+      this.#paintHardcore();
+      this.el.bestInline.textContent = this.best ? t('rank.myBest', { secs: this.best.toFixed(2), sec: t('common.sec') }) : '';
+      if (!this.el.rankModal.classList.contains('hidden')) this.drawPage();
+    });
   }
 
   // 랭킹 창을 열 때마다 최신 목록을 받아 온다
@@ -209,7 +220,7 @@ export class UI {
 
     if (!seasons?.length) {
       this.el.board.innerHTML =
-        '<li class="empty">아직 끝난 시즌이 없습니다. 이번 달이 첫 시즌입니다.</li>';
+        `<li class="empty">${t('rank.emptyHall')}</li>`;
       return;
     }
 
@@ -225,7 +236,7 @@ export class UI {
         li.innerHTML = `
           <span class="rank medal medal-${i + 1}">${i + 1}</span>
           <button type="button" class="who"></button>
-          <span class="secs">${Number(e.time).toFixed(2)}<em>초</em></span>`;
+          <span class="secs">${t('rank.rowTime', { secs: Number(e.time).toFixed(2) })}</span>`;
         const who = li.querySelector('.who');
         who.textContent = e.name;
         who.addEventListener('click', () => this.onName?.(e.name));
@@ -238,14 +249,14 @@ export class UI {
   showSeason(season) {
     if (!season) return;
     const days = Math.max(0, Math.ceil(season.msLeft / 86400_000));
-    this.el.season.textContent = `${season.name} 시즌 · ${days}일 남음`;
+    this.el.season.textContent = t('rank.seasonDays', { name: season.name, days });
   }
 
   // 탭 바꾸기. 종류마다 받아오는 곳이 달라 main.js 에 다시 물어본다.
   setBoard(kind) {
     if (!BOARDS[kind] && kind !== 'hall') return;
     this.setBoardQuiet(kind);
-    this.el.board.innerHTML = '<li class="empty">불러오는 중…</li>';
+    this.el.board.innerHTML = `<li class="empty">${t('tower.loading')}</li>`;
     this.el.pager.innerHTML = '';
     this.el.myRank.textContent = '';
     this.onRankOpen?.(kind);
@@ -258,7 +269,7 @@ export class UI {
     this.bestHardcore = Number(hardcore) || 0;
     localStorage.setItem(BEST_KEY, String(this.best));
     localStorage.setItem(HC_KEY, String(this.bestHardcore));
-    this.el.bestInline.textContent = this.best ? `내 최고 ${this.best.toFixed(2)}초` : '';
+    this.el.bestInline.textContent = this.best ? t('rank.myBest', { secs: this.best.toFixed(2), sec: t('common.sec') }) : '';
   }
 
   // 온라인 화면으로 넘어갈 때처럼, 내가 관리하는 화면을 전부 내린다
@@ -300,7 +311,7 @@ export class UI {
     this.el.rankBtn.classList.add('hidden');
     this.setRankOpen(false);
     this.onPlayableChange?.(false);
-    this.el.bestInline.textContent = this.best ? `내 최고 ${this.best.toFixed(2)}초` : '';
+    this.el.bestInline.textContent = this.best ? t('rank.myBest', { secs: this.best.toFixed(2), sec: t('common.sec') }) : '';
   }
 
   // 스테이지가 막 바뀌었으면 true 를 돌려준다 (소리를 낼 타이밍)
@@ -340,7 +351,7 @@ export class UI {
       if (state) state.textContent = on ? 'ON' : 'OFF';
     }
     const start = $('start-btn');
-    if (start) start.textContent = on ? '🔥 하드코어 시작' : '혼자 하기';
+    if (start) start.textContent = on ? t('game.hardcoreStart') : t('menu.solo');
     document.body.classList.toggle('hardcore', on);
   }
 
@@ -363,11 +374,11 @@ export class UI {
     }
     const bestNow = hardcore ? this.bestHardcore : this.best;
 
-    const causeText = cause === 'fall' ? '무대 밖으로 떨어졌습니다' : '전기선에 닿았습니다';
-    const tag = hardcore ? '🔥 하드코어 · ' : '';
+    const causeText = cause === 'fall' ? t('result.causeFall') : t('result.causeZap');
+    const tag = hardcore ? t('result.tagHardcore') + ' · ' : '';
     this.el.finalNote.textContent = isBest
-      ? `${tag}${causeText} · 개인 최고 기록 경신!`
-      : `${tag}${causeText} · 내 최고 ${bestNow.toFixed(2)}초`;
+      ? t('result.newBest', { tag, cause: causeText })
+      : t('result.notBest', { tag, cause: causeText, secs: bestNow.toFixed(2), sec: t('common.sec') });
 
     this.el.submitState.textContent = '';
     this.el.submitState.classList.remove('error');
@@ -407,7 +418,7 @@ export class UI {
     const kindOf = BOARDS[this.boardKind];
 
     if (this.entries.length === 0) {
-      board.innerHTML = `<li class="empty">${kindOf.empty}</li>`;
+      board.innerHTML = `<li class="empty">${kindOf.empty()}</li>`;
       this.el.pager.innerHTML = '';
       this.drawMyRank();
       return;
@@ -482,7 +493,7 @@ export class UI {
     // 헤더에 늘 보이는 짧은 내 순위(100위 밖으로 밀려도 보이게).
     if (this.el.rankMe) {
       if (me) {
-        this.el.rankMe.textContent = `내 순위 ${me.rank}위`;
+        this.el.rankMe.textContent = t('rank.myRankShort', { rank: me.rank });
         this.el.rankMe.classList.remove('hidden');
       } else {
         this.el.rankMe.textContent = '';
@@ -494,7 +505,7 @@ export class UI {
       return;
     }
     const line = BOARDS[this.boardKind].mine(me);
-    this.el.myRank.textContent = me.rank > this.entries.length ? `${line} (100위 밖)` : line;
+    this.el.myRank.textContent = me.rank > this.entries.length ? t('rank.outOfTop', { line }) : line;
   }
 
   leaderboardError(msg) {

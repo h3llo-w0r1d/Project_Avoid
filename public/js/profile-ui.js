@@ -4,6 +4,8 @@
 // 것을 연다. 둘 다 같은 화면이다 — 남의 프로필이라고 다르게 보여 줄
 // 이유가 없고, 하나만 만들면 어긋날 일도 없다.
 
+import { t, onLangChange } from './i18n.js';
+
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -42,6 +44,9 @@ export class ProfileUI {
     this.me = null;         // 지금 로그인한 사람의 닉네임 (게스트면 null)
     this.replayId = null;   // 지금 프로필의 최고기록 점수 id (다시보기 대상)
     this.data = null;       // 지금 그린 프로필 원본(칭호 창에서 다시 쓴다)
+
+    // 창을 열어 둔 채로 언어를 바꿀 수도 있다. 원본 데이터가 있으면 다시 그린다.
+    onLangChange(() => { if (this.isOpen && this.data) this.draw(this.data); });
   }
 
   get isOpen() { return !this.el.modal.classList.contains('hidden'); }
@@ -51,7 +56,7 @@ export class ProfileUI {
   loading(name) {
     this.el.modal.classList.remove('hidden');
     this.el.name.textContent = name;
-    this.el.body.innerHTML = '<p class="profile-empty">불러오는 중…</p>';
+    this.el.body.innerHTML = `<p class="profile-empty">${t('tower.loading')}</p>`;
     this.replayId = null;
     this.el.replayBtn?.classList.add('hidden');
   }
@@ -71,7 +76,7 @@ export class ProfileUI {
   }
 
   static rankText(rank) {
-    return rank ? `${rank}위` : '순위 밖';
+    return rank ? t('profile.rankN', { rank }) : t('profile.rankOut');
   }
 
   draw(p) {
@@ -85,56 +90,57 @@ export class ProfileUI {
     this.el.replayBtn?.classList.toggle('hidden', !this.replayId);
 
     const parts = [];
+    const sec = t('common.sec');
 
     // ---- 혼자 하기 ----
-    parts.push('<h3 class="profile-section">혼자 하기</h3>');
+    parts.push(`<h3 class="profile-section">${t('profile.soloTitle')}</h3>`);
     if (p.best) {
       parts.push(`<div class="stat-row">
-        ${ProfileUI.stat('최고 기록', `${p.best.time.toFixed(2)}<em>초</em>`)}
-        ${ProfileUI.stat('순위', `${p.best.rank}<em>위</em>`)}
-        ${ProfileUI.stat('플레이', `${p.plays ?? 0}<em>판</em>`)}
+        ${ProfileUI.stat(t('profile.statBest'), `${p.best.time.toFixed(2)}<em>${sec}</em>`)}
+        ${ProfileUI.stat(t('profile.statRank'), t('profile.rankValue', { n: p.best.rank }))}
+        ${ProfileUI.stat(t('profile.statPlays'), `${p.plays ?? 0}<em>${t('profile.unitRun')}</em>`)}
       </div>`);
       // 하드코어 기록이 있으면 한 줄 더.
       if (p.hardcore) {
-        parts.push(`<p class="profile-total">🔥 하드코어 최고 ` +
-          `${p.hardcore.time.toFixed(2)}초 · ${ProfileUI.rankText(p.hardcore.rank)}</p>`);
+        parts.push(`<p class="profile-total">${t('profile.hardcoreLine', {
+          secs: p.hardcore.time.toFixed(2), sec, rankText: ProfileUI.rankText(p.hardcore.rank)
+        })}</p>`);
       }
     } else if (p.plays > 0) {
       // 기록은 시즌 밖으로 밀렸지만 플레이한 적은 있는 경우
-      parts.push(`<p class="profile-empty">이번 시즌 순위권 기록은 없지만 ${p.plays}판 플레이했습니다</p>`);
+      parts.push(`<p class="profile-empty">${t('profile.seasonPlays', { n: p.plays })}</p>`);
     } else {
-      parts.push('<p class="profile-empty">이번 시즌 기록이 없습니다</p>');
+      parts.push(`<p class="profile-empty">${t('profile.seasonNone')}</p>`);
     }
 
     // ---- 1v1 ----
-    parts.push('<h3 class="profile-section">온라인 1v1</h3>');
+    parts.push(`<h3 class="profile-section">${t('profile.versusTitle')}</h3>`);
     const v = p.versus;
     if (!v) {
       // 게스트다. 계정이 없으니 쌓일 곳이 없다.
-      parts.push('<p class="profile-empty">게스트는 대전 전적이 남지 않습니다. ' +
-        '로그인하면 승패와 연승이 쌓입니다.</p>');
+      parts.push(`<p class="profile-empty">${t('profile.guestNoVersus')}</p>`);
     } else if (v.games === 0) {
-      parts.push('<p class="profile-empty">이번 시즌 대전 기록이 없습니다</p>');
+      parts.push(`<p class="profile-empty">${t('profile.versusSeasonNone')}</p>`);
     } else {
       const rate = v.rate === null ? '–' : `${(v.rate * 100).toFixed(1)}<em>%</em>`;
       // 승률은 최소 판수를 넘겨야 랭킹에 오른다. 몇 판 남았는지 알려 준다.
       const rateSub = v.rateRank
         ? ProfileUI.rankText(v.rateRank)
-        : `${v.minGames}전부터 (${Math.max(0, v.minGames - v.games)}전 남음)`;
+        : t('profile.rateFromN', { n: v.minGames, left: Math.max(0, v.minGames - v.games) });
 
       parts.push(`<div class="stat-row">
-        ${ProfileUI.stat('전적', `${v.wins}<em>승</em> ${v.losses}<em>패</em>`, ProfileUI.rankText(v.winRank))}
-        ${ProfileUI.stat('승률', rate, rateSub)}
-        ${ProfileUI.stat('연승', `${v.streak}<em>연승</em>`,
-    v.streak >= 2 ? ProfileUI.rankText(v.streakRank) : `최고 ${v.bestStreak}연승`)}
+        ${ProfileUI.stat(t('profile.record'), `${v.wins}<em>${t('profile.unitWin')}</em> ${v.losses}<em>${t('profile.unitLoss')}</em>`, ProfileUI.rankText(v.winRank))}
+        ${ProfileUI.stat(t('profile.winRate'), rate, rateSub)}
+        ${ProfileUI.stat(t('profile.streak'), `${v.streak}<em>${t('profile.unitStreak')}</em>`,
+    v.streak >= 2 ? ProfileUI.rankText(v.streakRank) : t('profile.bestStreak', { n: v.bestStreak }))}
       </div>`);
 
-      parts.push(`<p class="profile-total">통산 ${v.totalWins}승 ${v.totalLosses}패 ` +
-        `· 최고 ${v.bestStreak}연승</p>`);
+      parts.push(`<p class="profile-total">${t('profile.versusTotal', {
+        wins: v.totalWins, losses: v.totalLosses, best: v.bestStreak
+      })}</p>`);
     }
 
-    parts.push(`<p class="profile-note">${p.season.name} 시즌 기준입니다. ` +
-      '통산 기록만 시즌이 바뀌어도 남습니다.</p>');
+    parts.push(`<p class="profile-note">${t('profile.seasonNote', { season: p.season.name })}</p>`);
 
     this.el.body.innerHTML = parts.join('');
 
@@ -148,7 +154,7 @@ export class ProfileUI {
         const tbtn = document.createElement('button');
         tbtn.type = 'button';
         tbtn.className = 'ghost small';
-        tbtn.textContent = '칭호';
+        tbtn.textContent = t('profile.titlesBtn');
         tbtn.addEventListener('click', () => this.openTitles());
         row.appendChild(tbtn);
       }
@@ -156,7 +162,7 @@ export class ProfileUI {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'ghost small';
-        btn.textContent = '닉네임 바꾸기';
+        btn.textContent = t('profile.renameBtn');
         btn.addEventListener('click', () => this.askRename(p.name));
         row.appendChild(btn);
       }
@@ -168,14 +174,14 @@ export class ProfileUI {
   renderChips(p) {
     if (!this.el.titles) return;
     const all = p.titles?.all ?? [];
-    const equipped = all.filter((t) => t.equipped);
+    const equipped = all.filter((title) => title.equipped);
     this.el.titles.innerHTML = equipped
-      .map((t) => {
+      .map((title) => {
         // 칭호마다 색이 있으면 그 색으로(테두리·글자·은은한 배경). 없으면 기본 금색.
-        const style = t.color
-          ? ` style="color:${t.color};border-color:${t.color};background:${hexA(t.color, 0.15)}"`
+        const style = title.color
+          ? ` style="color:${title.color};border-color:${title.color};background:${hexA(title.color, 0.15)}"`
           : '';
-        return `<span class="title-chip"${style}>${t.icon ? t.icon + ' ' : ''}${esc(t.name)}</span>`;
+        return `<span class="title-chip"${style}>${title.icon ? title.icon + ' ' : ''}${esc(title.name)}</span>`;
       })
       .join('');
   }
@@ -185,7 +191,7 @@ export class ProfileUI {
     const p = this.data;
     if (!p || !p.titles) return;
     // 지금 장착 상태를 로컬로 들고 편집하다가, 바뀔 때마다 서버에 저장한다.
-    let equipped = p.titles.all.filter((t) => t.equipped).map((t) => t.id);
+    let equipped = p.titles.all.filter((title) => title.equipped).map((title) => title.id);
 
     const overlay = document.createElement('div');
     overlay.className = 'modal';
@@ -193,10 +199,10 @@ export class ProfileUI {
     overlay.innerHTML = `
       <div class="modal-card panel" style="width:min(1200px,92vw);max-width:none">
         <div class="modal-head">
-          <h2>칭호</h2>
-          <button type="button" class="icon-btn tt-close" aria-label="닫기">✕</button>
+          <h2>${t('profile.titlesModalTitle')}</h2>
+          <button type="button" class="icon-btn tt-close" aria-label="${t('common.close')}">✕</button>
         </div>
-        <p class="tt-hint">얻은 칭호만 장착할 수 있어요 · 최대 3개</p>
+        <p class="tt-hint"></p>
         <div class="tt-list"></div>
       </div>`;
     document.body.appendChild(overlay);
@@ -208,24 +214,26 @@ export class ProfileUI {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 
     const paint = () => {
-      hintEl.textContent = `얻은 칭호만 장착할 수 있어요 · 장착 ${equipped.length}/3`;
+      hintEl.textContent = t('profile.titlesHint', { n: equipped.length });
       listEl.innerHTML = '';
-      for (const t of p.titles.all) {
-        const on = equipped.includes(t.id);
+      for (const title of p.titles.all) {
+        const on = equipped.includes(title.id);
         const card = document.createElement('button');
         card.type = 'button';
         card.className = 'tt-item';
-        card.classList.toggle('earned', t.earned);
-        card.classList.toggle('locked', !t.earned);
+        card.classList.toggle('earned', title.earned);
+        card.classList.toggle('locked', !title.earned);
         card.classList.toggle('on', on);
-        card.disabled = !t.earned;
+        card.disabled = !title.earned;
         // 칭호 색이 있으면 이름을 그 색으로(획득한 경우만 또렷하게).
-        const nameStyle = (t.color && t.earned) ? ` style="color:${t.color}"` : '';
+        const nameStyle = (title.color && title.earned) ? ` style="color:${title.color}"` : '';
         card.innerHTML = `
-          ${t.icon ? `<span class="tt-ico">${t.icon}</span>` : ''}
-          <span class="tt-name"${nameStyle}>${esc(t.name)}</span>
-          <span class="tt-cond">${t.earned ? (on ? '장착 중' : '장착 가능') : (t.cond || `${t.plays}판 달성 시`)}</span>`;
-        if (t.earned) card.addEventListener('click', () => toggle(t.id));
+          ${title.icon ? `<span class="tt-ico">${title.icon}</span>` : ''}
+          <span class="tt-name"${nameStyle}>${esc(title.name)}</span>
+          <span class="tt-cond">${title.earned
+    ? (on ? t('profile.titleEquipped') : t('profile.titleEquippable'))
+    : (title.cond || t('profile.titleCondPlays', { n: title.plays }))}</span>`;
+        if (title.earned) card.addEventListener('click', () => toggle(title.id));
         listEl.appendChild(card);
       }
     };
@@ -242,7 +250,7 @@ export class ProfileUI {
         const res = await this.onEquipTitles(equipped);
         if (res) {
           p.titles = res;
-          equipped = res.all.filter((t) => t.equipped).map((t) => t.id);
+          equipped = res.all.filter((title) => title.equipped).map((title) => title.id);
           this.renderChips(p);
           paint();
         }
@@ -261,12 +269,12 @@ export class ProfileUI {
       overlay.style.zIndex = '60';   // 프로필(45) 위에
       overlay.innerHTML = `
         <div class="modal-card panel" style="max-width:340px">
-          <div class="modal-head"><h2>닉네임 바꾸기</h2></div>
+          <div class="modal-head"><h2>${t('profile.renamePromptTitle')}</h2></div>
           <label class="field"><span>${label}</span>
             <input class="cp-input" type="text" maxlength="10" autocomplete="off" /></label>
           <div class="board-write-row" style="justify-content:flex-end;gap:8px;margin-top:12px">
-            <button type="button" class="ghost small cp-cancel">취소</button>
-            <button type="button" class="primary small cp-ok">확인</button>
+            <button type="button" class="ghost small cp-cancel">${t('common.cancel')}</button>
+            <button type="button" class="primary small cp-ok">${t('common.confirm')}</button>
           </div>
         </div>`;
       document.body.appendChild(overlay);
@@ -286,14 +294,14 @@ export class ProfileUI {
   }
 
   async askRename(current) {
-    const next = await this.centerPrompt('새 닉네임 (10자 이내)', current);
+    const next = await this.centerPrompt(t('profile.renamePromptLabel'), current);
     if (next === null) return;                 // 취소
     const name = next.trim();
     if (!name || name === current) return;
 
     const note = document.createElement('p');
     note.className = 'profile-empty';
-    note.textContent = '바꾸는 중…';
+    note.textContent = t('profile.renaming');
     this.el.body.appendChild(note);
 
     try {
