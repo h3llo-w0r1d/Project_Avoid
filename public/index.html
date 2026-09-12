@@ -74,14 +74,14 @@
     <div id="corner-buttons">
       <button id="admin-coin-btn" class="hidden" type="button" aria-label="코인 지급" title="코인 지급(관리자)">💰</button>
       <button id="notice-btn" class="hidden" type="button" aria-label="공지 작성" title="공지 작성(관리자)">📢</button>
-      <button id="board-btn" type="button" aria-label="커뮤니티" title="커뮤니티">💬</button>
-      <button id="profile-btn" type="button" aria-label="내 프로필" title="내 프로필">👤</button>
-      <button id="char-btn" type="button" aria-label="캐릭터 고르기" title="캐릭터">🌱</button>
-      <button id="rank-btn" type="button" aria-label="전체 랭킹 보기" title="전체 랭킹">🏆</button>
+      <button id="board-btn" type="button" data-i18n-attr="aria-label:menu.community;title:menu.community" aria-label="커뮤니티" title="커뮤니티">💬</button>
+      <button id="profile-btn" type="button" data-i18n-attr="aria-label:menu.profile;title:menu.profile" aria-label="프로필" title="프로필">👤</button>
+      <button id="char-btn" type="button" data-i18n-attr="aria-label:menu.char;title:menu.char" aria-label="캐릭터 고르기" title="캐릭터">🌱</button>
+      <button id="rank-btn" type="button" data-i18n-attr="aria-label:menu.rank;title:menu.rank" aria-label="전체 랭킹 보기" title="전체 랭킹">🏆</button>
       <!-- 폰에서만 보인다. 눌러서 주소창·내비바를 숨기고 화면을 꽉 채운다.
            전체화면을 지원하지 않는 기기(아이폰 사파리)에서는 JS 가 숨긴다.
            ⛶ 글자는 기기에 따라 얇은 테두리로만 보여서 SVG 로 그린다. -->
-      <button id="fullscreen-btn" type="button" aria-label="전체화면" title="전체화면">
+      <button id="fullscreen-btn" type="button" data-i18n-attr="aria-label:common.fullscreen;title:common.fullscreen" aria-label="전체화면" title="전체화면">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M4 9V5a1 1 0 0 1 1-1h4" />
@@ -96,7 +96,7 @@
            톱니는 글꼴에 기대지 않게 SVG 로 그린다. 선이 아니라 면으로 채워야
            작은 크기에서 형태가 뭉개지지 않는다 — 가는 선은 24px 에서 흐릿해진다.
            가운데 구멍은 fill-rule="evenodd" 로 뚫는다. -->
-      <button id="settings-btn" type="button" aria-label="설정" title="설정">
+      <button id="settings-btn" type="button" data-i18n-attr="aria-label:settings.title;title:settings.title" aria-label="설정" title="설정">
         <svg viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" aria-hidden="true">
           <path d="M9.85 1.62A10.6 10.6 0 0 1 14.15 1.62L14.03 4.26A8 8 0 0 1 16.03 5.09L17.82 3.14A10.6 10.6 0 0 1 20.86 6.18L18.91 7.97A8 8 0 0 1 19.74 9.97L22.38 9.85A10.6 10.6 0 0 1 22.38 14.15L19.74 14.03A8 8 0 0 1 18.91 16.03L20.86 17.82A10.6 10.6 0 0 1 17.82 20.86L16.03 18.91A8 8 0 0 1 14.03 19.74L14.15 22.38A10.6 10.6 0 0 1 9.85 22.38L9.97 19.74A8 8 0 0 1 7.97 18.91L6.18 20.86A10.6 10.6 0 0 1 3.14 17.82L5.09 16.03A8 8 0 0 1 4.26 14.03L1.62 14.15A10.6 10.6 0 0 1 1.62 9.85L4.26 9.97A8 8 0 0 1 5.09 7.97L3.14 6.18A10.6 10.6 0 0 1 6.18 3.14L7.97 5.09A8 8 0 0 1 9.97 4.26ZM12 7.95A4.05 4.05 0 1 0 12 16.05A4.05 4.05 0 1 0 12 7.95Z"></path>
         </svg>
@@ -234,7 +234,7 @@
   <div id="settings-modal" class="modal hidden">
     <div class="modal-card panel settings-card">
       <div class="modal-head">
-        <h2>설정</h2>
+        <h2 data-i18n="settings.title">설정</h2>
         <button id="settings-close" class="icon-btn" type="button" aria-label="닫기">✕</button>
       </div>
       <div id="settings-body" class="settings-body"></div>
@@ -356,13 +356,13 @@
     </div>
     <div class="panel">
       <h1 class="logo">Avoid<span>Arc</span></h1>
-      <p class="tagline">붉은 전기선에 닿으면 GAMEOVER</p>
+      <p class="tagline" data-i18n="menu.tagline">붉은 전기선에 닿으면 GAMEOVER</p>
 
       <!-- 로그인 안 했을 때 -->
       <div id="signed-out">
         <div id="auth-error" class="field-error"></div>
         <div id="provider-buttons"></div>
-        <button id="guest-btn" class="ghost">게스트로 로그인</button>
+        <button id="guest-btn" class="ghost" data-i18n="auth.guest">게스트로 로그인</button>
       </div>
 
       <!-- 로그인했거나 게스트로 들어왔을 때 -->
@@ -375,21 +375,21 @@
       </div>
 
       <div id="play-buttons" class="hidden">
-        <button id="start-btn" class="primary">혼자 하기</button>
+        <button id="start-btn" class="primary" data-i18n="menu.solo">혼자 하기</button>
         <div class="split-row">
-          <button id="bot-btn" class="ghost">🤖 봇전</button>
-          <button id="versus-btn" class="ghost">⚔️ 온라인 1v1</button>
+          <button id="bot-btn" class="ghost">🤖 <span data-i18n="menu.bot">봇전</span></button>
+          <button id="versus-btn" class="ghost">⚔️ <span data-i18n="menu.versus">온라인 1v1</span></button>
         </div>
         <button id="hardcore-toggle" class="hc-toggle" type="button" aria-pressed="false">
-          <span class="hc-label">하드코어 모드</span>
+          <span class="hc-label" data-i18n="menu.hardcore">하드코어 모드</span>
           <span class="hc-state">OFF</span>
         </button>
-        <p class="hc-hint">2단 점프 불가능 · 맵 사라짐 및 난이도 증가</p>
+        <p class="hc-hint" data-i18n="menu.hardcoreHint">2단 점프 불가능 · 맵 사라짐 및 난이도 증가</p>
         <button id="voice-toggle" class="hc-toggle" type="button" aria-pressed="false">
-          <span class="hc-label">음성 인식 점프 모드</span>
+          <span class="hc-label" data-i18n="menu.voiceJump">음성 인식 점프 모드</span>
           <span class="hc-state">OFF</span>
         </button>
-        <p class="hc-hint">오로지 음성으로만 점프 가능</p>
+        <p class="hc-hint" data-i18n="menu.voiceJumpHint">오로지 음성으로만 점프 가능</p>
       </div>
 
       <!-- 홈 화면에 앱으로 추가. 폰에서만, 아직 설치 안 했을 때만 뜬다.
@@ -401,20 +401,20 @@
 
       <div class="bottom-row">
         <div class="controls">
-          <div><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> — 이동 <span class="alt"></span></div>
-          <div><kbd>Space</kbd> — 점프 (2단 점프 가능)</div>
-          <div><kbd>Esc</kbd> — 일시정지</div>
-          <div class="touch-only">화면 왼쪽 드래그 — 이동 · 오른쪽 탭 — 점프</div>
+          <div><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> — <span data-i18n="common.move">이동</span> <span class="alt"></span></div>
+          <div><kbd>Space</kbd> — <span data-i18n="common.jump">점프 (2단 점프 가능)</span></div>
+          <div><kbd>Esc</kbd> — <span data-i18n="common.pauseHint">일시정지</span></div>
+          <div class="touch-only" data-i18n="common.touchControls">화면 왼쪽 드래그 — 이동 · 오른쪽 탭 — 점프</div>
         </div>
 
         <!-- 점프할 때 낼 내 목소리 -->
         <div id="voice-panel" class="voice-panel">
-          <span class="voice-label">점프 소리</span>
-          <button id="voice-record" type="button" class="voice-mic">🎤 녹음</button>
+          <span class="voice-label" data-i18n="voice.title">점프 소리</span>
+          <button id="voice-record" type="button" class="voice-mic">🎤 <span data-i18n="voice.record">녹음</span></button>
           <div id="voice-extra" class="voice-extra hidden">
             <div class="voice-links">
-              <button id="voice-play" type="button">▶ 듣기</button>
-              <button id="voice-erase" type="button">지우기</button>
+              <button id="voice-play" type="button">▶ <span data-i18n="voice.play">듣기</span></button>
+              <button id="voice-erase" type="button" data-i18n="voice.erase">지우기</button>
             </div>
           </div>
           <em id="voice-state" class="voice-state"></em>
@@ -427,8 +427,8 @@
       <!-- 구글 로그인 심사가 개인정보처리방침 링크를 화면에서 찾을 수 있어야 한다.
            새 탭으로 여는 이유: 같은 탭에서 나가면 하던 게임이 통째로 날아간다. -->
       <div class="legal-links">
-        <a href="/privacy" target="_blank" rel="noopener">개인정보처리방침</a>
-        <a href="/terms" target="_blank" rel="noopener">이용약관</a>
+        <a href="/privacy" target="_blank" rel="noopener" data-i18n="common.privacy">개인정보처리방침</a>
+        <a href="/terms" target="_blank" rel="noopener" data-i18n="common.terms">이용약관</a>
       </div>
     </div>
 
@@ -436,12 +436,12 @@
          버튼은 상단바의 진짜 버튼(숨김)을 대신 눌러 준다(data-forward).
          타이틀 화면 안에 있어 게임이 시작되면 함께 사라진다. -->
     <nav id="side-menu" aria-label="메뉴">
-      <button type="button" data-forward="profile-btn"><span class="sm-ico">👤</span><span class="sm-label">프로필</span></button>
-      <button type="button" data-forward="char-btn"><span class="sm-ico">🌱</span><span class="sm-label">캐릭터</span></button>
-      <button type="button" id="roulette-btn"><span class="sm-ico">🎰</span><span class="sm-label">룰렛</span></button>
-      <button type="button" data-forward="rank-btn"><span class="sm-ico">🏆</span><span class="sm-label">랭킹</span></button>
-      <button type="button" data-forward="board-btn"><span class="sm-ico">💬</span><span class="sm-label">커뮤니티</span></button>
-      <button type="button" id="shop-btn"><span class="sm-ico">🛍️</span><span class="sm-label">상점</span></button>
+      <button type="button" data-forward="profile-btn"><span class="sm-ico">👤</span><span class="sm-label" data-i18n="menu.profile">프로필</span></button>
+      <button type="button" data-forward="char-btn"><span class="sm-ico">🌱</span><span class="sm-label" data-i18n="menu.char">캐릭터</span></button>
+      <button type="button" id="roulette-btn"><span class="sm-ico">🎰</span><span class="sm-label" data-i18n="menu.roulette">룰렛</span></button>
+      <button type="button" data-forward="rank-btn"><span class="sm-ico">🏆</span><span class="sm-label" data-i18n="menu.rank">랭킹</span></button>
+      <button type="button" data-forward="board-btn"><span class="sm-ico">💬</span><span class="sm-label" data-i18n="menu.community">커뮤니티</span></button>
+      <button type="button" id="shop-btn"><span class="sm-ico">🛍️</span><span class="sm-label" data-i18n="menu.shop">상점</span></button>
     </nav>
 
     <!-- 도전모드(탑). 왼쪽 아래 동그란 버튼. 타이틀에서만 보인다.
@@ -454,7 +454,7 @@
            속불(파선) → 흩어진 불티 → 네 방향의 별
          몸통·껍질·속불은 feTurbulence 로 미세하게 일그러뜨려 손으로 그은
          선처럼 보이게 한다. 정지 필터라 매 프레임 계산하지 않는다. -->
-    <button id="tower-btn" type="button" aria-label="탑 오르기" title="탑 오르기 — 층을 올라가며 깨기">
+    <button id="tower-btn" type="button" data-i18n-attr="aria-label:menu.tower;title:menu.tower" aria-label="탑 오르기" title="탑 오르기 — 층을 올라가며 깨기">
       <svg class="tower-ring" viewBox="0 0 100 100" aria-hidden="true">
         <defs>
           <linearGradient id="towerRing" x1="0.12" y1="0" x2="0.88" y2="1">
@@ -517,7 +517,7 @@
           <path d="M90.8 50Q95 50 95 45.8Q95 50 99.2 50Q95 50 95 54.2Q95 50 90.8 50z" />
         </g>
       </svg>
-      <span class="tower-label">탑 오르기<i class="tl-go">→</i></span>
+      <span class="tower-label"><span data-i18n="menu.tower">탑 오르기</span><i class="tl-go">→</i></span>
     </button>
 
     <!-- 오른쪽 빈 자리에 두는 누적 판수 카드. 이 사이트에서 지금까지 몇 판이
@@ -534,16 +534,16 @@
   <!-- 첫 로그인 뒤 닉네임 정하기 -->
   <div id="setup-screen" class="screen hidden">
     <div class="panel">
-      <h2 class="panel-title">닉네임 정하기</h2>
-      <p class="tagline">랭킹과 대전에서 이 이름으로 보입니다. 나중에 프로필(👤)에서 바꿀 수 있습니다.</p>
+      <h2 class="panel-title" data-i18n="auth.setupTitle">닉네임 정하기</h2>
+      <p class="tagline" data-i18n="auth.setupDesc">랭킹과 대전에서 이 이름으로 보입니다. 나중에 프로필(👤)에서 바꿀 수 있습니다.</p>
 
       <label class="field">
-        <span>닉네임</span>
-        <input id="setup-nickname" type="text" maxlength="10" placeholder="10자 이내" autocomplete="off" />
+        <span data-i18n="auth.nickname">닉네임</span>
+        <input id="setup-nickname" type="text" maxlength="10" data-i18n-attr="placeholder:auth.nicknamePlaceholder" placeholder="10자 이내" autocomplete="off" />
         <em id="setup-error" class="field-error"></em>
       </label>
 
-      <button id="setup-save-btn" class="primary">시작하기</button>
+      <button id="setup-save-btn" class="primary" data-i18n="common.start">시작하기</button>
     </div>
   </div>
 
@@ -596,11 +596,11 @@
   <!-- 일시정지 (ESC) -->
   <div id="pause-screen" class="screen hidden">
     <div class="panel">
-      <h2 class="panel-title">일시정지</h2>
+      <h2 class="panel-title" data-i18n="pause.title">일시정지</h2>
       <p id="pause-note" class="tagline"></p>
-      <button id="resume-btn" class="primary">계속하기</button>
-      <button id="restart-btn" class="ghost">다시 시작</button>
-      <button id="pause-home-btn" class="ghost">처음으로</button>
+      <button id="resume-btn" class="primary" data-i18n="pause.resume">계속하기</button>
+      <button id="restart-btn" class="ghost" data-i18n="pause.restart">다시 시작</button>
+      <button id="pause-home-btn" class="ghost" data-i18n="common.home">처음으로</button>
     </div>
   </div>
 

@@ -5,6 +5,7 @@
 // 대신, XSS 로 세션을 훔쳐가지도 못한다.
 
 import { GUEST_PATTERN } from './profanity.js';
+import { t, onLangChange } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -63,6 +64,11 @@ export class Auth {
     this.el.setupInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') this.saveNickname();
     });
+
+    // 계정 전적·로그아웃 버튼처럼 JS 가 직접 채운 문구는 data-i18n 으로
+    // 못 잡는다. 언어가 바뀌면 init 이 끝난 뒤에만 다시 그린다 — 그
+    // 전이면 로그인 여부가 아직 안 정해져 화면이 잘못 깜빡인다.
+    onLangChange(() => { if (this.ready) this.render(); });
   }
 
   get signedIn() { return Boolean(this.user); }
@@ -102,6 +108,8 @@ export class Auth {
     if (params.has('authError') || params.has('setup')) {
       history.replaceState(null, '', location.pathname);
     }
+
+    this.ready = true;   // 이제부터는 언어가 바뀌면 다시 그려도 안전하다
   }
 
   renderProviders(providers) {
@@ -112,7 +120,7 @@ export class Auth {
       // 그래도 게스트로는 놀 수 있어야 한다.
       const note = document.createElement('p');
       note.className = 'hint';
-      note.textContent = '로그인이 설정되어 있지 않습니다. 게스트로 플레이할 수 있습니다.';
+      note.textContent = t('auth.noProviders');
       this.el.providers.appendChild(note);
       return;
     }
@@ -125,7 +133,7 @@ export class Auth {
       // 로고는 코드에 박아 둔 고정 SVG 라 innerHTML 로 넣어도 안전하다.
       // 이름(p.label)은 서버에서 온 값이므로 textContent 로만 넣는다.
       btn.querySelector('.mark').innerHTML = MARKS[p.name] ?? '';
-      btn.querySelector('.text').textContent = `${p.label}로 로그인`;
+      btn.querySelector('.text').textContent = t('auth.providerLogin', { label: p.label });
       btn.addEventListener('click', () => { location.href = `/auth/${p.name}`; });
       this.el.providers.appendChild(btn);
     }
@@ -144,17 +152,19 @@ export class Auth {
       // 이번 시즌 전적을 보여 준다. 통산으로 보여 주면 시즌 랭킹의
       // 순위와 숫자가 달라 헷갈린다.
       const { seasonWins = 0, seasonLosses = 0, streak = 0 } = this.user;
-      const record = seasonWins + seasonLosses > 0 ? `${seasonWins}승 ${seasonLosses}패` : '';
+      const record = seasonWins + seasonLosses > 0
+        ? t('auth.record', { wins: seasonWins, losses: seasonLosses }) : '';
       // 2연승부터 보여 준다. 1연승은 그냥 한 판 이긴 것이다.
-      this.el.accountRecord.textContent = streak >= 2 ? `${record} · ${streak}연승` : record;
-      this.el.logoutBtn.textContent = '로그아웃';
+      this.el.accountRecord.textContent = streak >= 2
+        ? t('auth.streak', { record, streak }) : record;
+      this.el.logoutBtn.textContent = t('auth.logout');
       this.el.logoutBtn.classList.remove('hidden');
     } else if (this.guest) {
       // 게스트도 자기 이름을 보여 준다. 전적은 계정에만 쌓인다.
       this.el.accountName.textContent = guestName();
-      this.el.accountRecord.textContent = '게스트';
+      this.el.accountRecord.textContent = t('auth.guestLabel');
       // 로그인 수단이 아예 없는 서버라면 되돌아갈 곳도 없다
-      this.el.logoutBtn.textContent = '로그인';
+      this.el.logoutBtn.textContent = t('auth.login');
       this.el.logoutBtn.classList.toggle('hidden', !this.hasProviders);
     }
 

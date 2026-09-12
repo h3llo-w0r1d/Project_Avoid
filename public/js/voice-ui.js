@@ -4,6 +4,7 @@
 // 뛰든 그 소리가 난다.
 
 import { recorder } from './recorder.js';
+import { t, onLangChange } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,6 +29,10 @@ export class VoiceUI {
     });
 
     this.draw();
+
+    // 이 칸의 글자는 자바스크립트가 써넣은 것이라 언어를 바꿔도 저절로 안 바뀐다.
+    // 녹음 중에는 다시 그리지 않는다 — 「멈추기」 가 「녹음」 으로 되돌아가 버린다.
+    onLangChange(() => { if (!this.taking) this.draw(); });
   }
 
   async toggle() {
@@ -47,14 +52,14 @@ export class VoiceUI {
     } catch (err) {
       // 대부분 사용자가 마이크 권한을 거절한 경우다
       const denied = err.name === 'NotAllowedError' || err.name === 'SecurityError';
-      this.say(denied ? '마이크 사용을 허용해 주세요' : `마이크를 열지 못했습니다: ${err.message}`, true);
+      this.say(denied ? t('voice.micAllowError') : `${t('voice.micOpenError')}: ${err.message}`, true);
       return;
     }
 
     this.taking = take;
-    this.el.mic.textContent = '⏹ 멈추기';
+    this.el.mic.textContent = `⏹ ${t('voice.stop')}`;
     this.el.mic.classList.add('recording');
-    this.say('녹음 중…');
+    this.say(t('voice.recording'));
 
     const blob = await take.done;
     this.taking = null;
@@ -63,7 +68,7 @@ export class VoiceUI {
     const result = await this.h.onRecorded(blob);
     this.draw();
     if (!result.ok) this.say(result.reason, true);
-    else this.say(`저장했습니다 · ${result.seconds.toFixed(2)}초`);
+    else this.say(`${t('voice.saved')} · ${result.seconds.toFixed(2)}${t('common.sec')}`);
   }
 
   say(text, isError = false) {
@@ -73,9 +78,9 @@ export class VoiceUI {
 
   draw() {
     const has = this.h.hasVoice();
-    this.el.mic.textContent = has ? '🎤 다시 녹음' : '🎤 녹음';
+    this.el.mic.textContent = has ? `🎤 ${t('voice.rerecord')}` : `🎤 ${t('voice.record')}`;
     this.el.extra.classList.toggle('hidden', !has);
-    if (!has) this.say('점프할 때 낼 내 목소리');
+    if (!has) this.say(t('voice.hint'));
   }
 
   // 게임에 들어가면 녹음을 멈춘다. 마이크가 켜진 채로 남으면 안 된다.

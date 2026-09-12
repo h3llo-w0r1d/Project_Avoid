@@ -20,7 +20,8 @@ export const DEFAULTS = {
   musicOn: true,
   musicSource: 'default',    // 'default' | 'custom'
   jumpKeys: ['Space'],       // 점프 키 하나. 설정에서 바꿀 수 있다.
-  lowEffects: false          // 화면 효과 줄이기
+  lowEffects: false,         // 화면 효과 줄이기
+  lang: 'auto'               // 'auto' | 'ko' | 'en' — auto 는 브라우저 언어를 본다
 };
 
 // 설정 창이 생기기 전에 쓰던 🔊 음소거. 그 버튼은 없어졌는데 값은 남아

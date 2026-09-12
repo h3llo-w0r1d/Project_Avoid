@@ -28,6 +28,7 @@ import { TrailFX, findTrail, findArena, DEFAULT_ARENA } from './effects.js';
 import { ShopUI } from './shop-ui.js';
 import { SafeZone, Pads } from './challenge-extras.js';
 import { drawPylon } from './pylon-art.js';
+import { applyStatic, onLangChange } from './i18n.js';
 
 // 하드코어 모드 난이도. 1) 1단 점프만 2) 예열 25% 단축 3) 빔 20% 빠름
 // 6) 동시 전기선 +1·가로볼리 +1. (무대 축소·시야 제한 등은 나중에 추가)
@@ -1677,6 +1678,10 @@ player.onJump = (isDouble) => {
 player.onLand = () => audio.land();
 hazards.onWarn = () => audio.warn();
 hazards.onFire = () => audio.zap();
+
+// 고정 문구를 지금 언어로 채운다. 설정에서 언어를 바꾸면 다시 채운다.
+applyStatic();
+onLangChange(() => applyStatic());
 
 // 세로로 열린 폰이면 화면을 가로로 돌린다. 방향이 바뀔 때 resize 를 쏴서
 // 아래 fitCamera 가 다시 맞추게 한다.

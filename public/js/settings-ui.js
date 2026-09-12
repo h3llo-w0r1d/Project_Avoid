@@ -5,6 +5,7 @@
 // 소리가 바뀌면 어느 지점이 맞는지 가늠할 수가 없다.
 
 import { settings, DEFAULTS } from './settings.js';
+import { t, getLangPref, setLang } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -19,7 +20,7 @@ function keyLabel(code) {
   if (KEY_NAME[code]) return KEY_NAME[code];
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
-  if (code.startsWith('Numpad')) return '숫자판 ' + code.slice(6);
+  if (code.startsWith('Numpad')) return t('settings.numpad') + ' ' + code.slice(6);
   return code;
 }
 
@@ -64,7 +65,7 @@ export class SettingsUI {
     this.listening = false;
     if (e.code === 'Escape') { this.draw(); return; }
     if (MOVE_KEYS.has(e.code)) {
-      this.warn = '이동에 쓰는 키예요';
+      this.warn = t('settings.moveKeyWarn');
       this.draw();
       return;
     }
@@ -84,62 +85,71 @@ export class SettingsUI {
     const musicPct = s.musicOn ? pct(s.musicVolume) : 0;
     // 점프 키는 하나만 둔다. 여러 개면 무엇이 눌리는지 헷갈리기만 한다.
     const jumpKey = `<button type="button" class="set-key${this.listening ? ' waiting' : ''}" data-jump>`
-      + (this.listening ? '원하는 키 입력' : keyLabel(s.jumpKeys[0])) + '</button>';
+      + (this.listening ? t('settings.pressKey') : keyLabel(s.jumpKeys[0])) + '</button>';
+    const langPref = getLangPref();
 
     b.innerHTML = `
       <section class="set-sec">
-        <h3>소리</h3>
+        <h3>${t('settings.lang')}</h3>
+        <div class="set-picks">
+          <button type="button" class="set-pick${langPref === 'auto' ? ' on' : ''}" data-lang="auto">${t('settings.langAuto')}</button>
+          <button type="button" class="set-pick${langPref === 'ko' ? ' on' : ''}" data-lang="ko">${t('settings.langKo')}</button>
+          <button type="button" class="set-pick${langPref === 'en' ? ' on' : ''}" data-lang="en">${t('settings.langEn')}</button>
+        </div>
+      </section>
+
+      <section class="set-sec">
+        <h3>${t('settings.sound')}</h3>
         <label class="set-row${s.musicOn ? '' : ' off'}">
-          <span>배경음</span>
+          <span>${t('settings.music')}</span>
           <input type="range" min="0" max="100" value="${musicPct}" data-vol="musicVolume"
             ${s.musicOn ? '' : 'disabled'}>
           <b>${musicPct}%</b>
         </label>
         <label class="set-row">
-          <span>효과음</span>
+          <span>${t('settings.sfx')}</span>
           <input type="range" min="0" max="100" value="${pct(s.sfxVolume)}" data-vol="sfxVolume">
           <b>${pct(s.sfxVolume)}%</b>
         </label>
       </section>
 
       <section class="set-sec">
-        <h3>배경음악</h3>
+        <h3>${t('settings.bgm')}</h3>
         <div class="set-picks">
           <button type="button" class="set-pick${s.musicOn ? ' on' : ''}" data-act="toggle">
-            ${s.musicOn ? '켜짐' : '꺼짐'}</button>
+            ${s.musicOn ? t('common.on') : t('common.off')}</button>
           <button type="button" class="set-pick${s.musicSource === 'custom' ? ' on' : ''}" data-act="mine">
-            내 음악</button>
+            ${t('settings.myMusic')}</button>
         </div>
         ${this.h.audio?.userMusicName ? `
         <div class="set-music">
           <span class="set-note">${(s.musicSource === 'custom' ? '▶ ' : '')
             + escapeHtml(this.h.audio.userMusicName)}</span>
-          <button type="button" id="set-music-clear" class="set-clear">지우고 기본 곡으로</button>
+          <button type="button" id="set-music-clear" class="set-clear">${t('settings.clearMusic')}</button>
         </div>` : `
-        <p class="set-hint">「내 음악」 을 누르면 파일을 고릅니다
-          (mp3 · m4a · wav · ogg · flac)</p>`}
+        <p class="set-hint">${t('settings.myMusicHint')}</p>`}
       </section>
 
       <section class="set-sec">
-        <h3>조작</h3>
+        <h3>${t('settings.controls')}</h3>
         <div class="set-row">
-          <span>점프</span>
+          <span>${t('settings.jump')}</span>
           <div class="set-keys">${jumpKey}</div>
         </div>
-        <p class="set-hint">${this.warn ? '<b class="set-warn">' + this.warn + '</b> · ' : ''}키를 눌러 바꿉니다.
-          이동(WASD·화살표)은 고정입니다.</p>
+        <p class="set-hint">${this.warn ? '<b class="set-warn">' + this.warn + '</b> · ' : ''}${t('settings.pressToChange')}
+          ${t('settings.moveFixedHint')}</p>
       </section>
 
       <section class="set-sec">
-        <h3>화면</h3>
+        <h3>${t('settings.screen')}</h3>
         <label class="set-row set-check">
           <input type="checkbox" data-flag="lowEffects"${s.lowEffects ? ' checked' : ''}>
-          <span>화면 효과 줄이기</span>
+          <span>${t('settings.lowEffects')}</span>
         </label>
-        <p class="set-hint">감전 번쩍임과 발자국 효과를 끕니다. (렉 걸림 감소)</p>
+        <p class="set-hint">${t('settings.lowEffectsHint')}</p>
       </section>
 
-      <button type="button" id="set-reset" class="ghost small">모두 기본값으로</button>
+      <button type="button" id="set-reset" class="ghost small">${t('settings.resetAll')}</button>
     `;
     this.warn = '';
     this.#bind();
@@ -158,7 +168,14 @@ export class SettingsUI {
       });
     }
 
-    for (const btn of b.querySelectorAll('.set-pick')) {
+    for (const btn of b.querySelectorAll('.set-pick[data-lang]')) {
+      btn.addEventListener('click', () => {
+        setLang(btn.dataset.lang);
+        this.draw();
+      });
+    }
+
+    for (const btn of b.querySelectorAll('.set-pick[data-act]')) {
       btn.addEventListener('click', async () => {
         if (btn.dataset.act === 'toggle') {
           settings.set('musicOn', !settings.get('musicOn'));
@@ -210,10 +227,10 @@ export class SettingsUI {
       const f = inp.files?.[0];
       if (!f) return;
       const nameEl = $('set-music-name');
-      if (nameEl) nameEl.textContent = '읽는 중…';
+      if (nameEl) nameEl.textContent = t('settings.loadingFile');
       const ok = await this.h.audio?.setUserMusic(f);
       if (!ok) {
-        if (nameEl) nameEl.textContent = '이 파일은 읽지 못했어요 (mp3·m4a·ogg·wav)';
+        if (nameEl) nameEl.textContent = t('settings.fileError');
         return;
       }
       settings.set('musicSource', 'custom');

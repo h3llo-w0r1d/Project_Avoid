@@ -4,6 +4,8 @@
 // 온라인 대전은 서버가 계속 돌기 때문에 멈출 수 없다. 메뉴만 띄우고
 // 게임은 그대로 진행되며, '다시 시작' 대신 '대전 포기'를 보여 준다.
 
+import { t } from './i18n.js';
+
 const $ = (id) => document.getElementById(id);
 
 export class PauseUI {
@@ -27,11 +29,9 @@ export class PauseUI {
 
   show(mode) {
     const versus = mode === 'versus';
-    this.el.title.textContent = versus ? '메뉴' : '일시정지';
-    this.el.note.textContent = versus
-      ? '대전은 계속 진행됩니다. 나가면 패배 처리됩니다.'
-      : '';
-    this.el.restart.textContent = versus ? '대전 포기' : '다시 시작';
+    this.el.title.textContent = versus ? t('pause.menuTitle') : t('pause.title');
+    this.el.note.textContent = versus ? t('pause.versusNote') : '';
+    this.el.restart.textContent = versus ? t('pause.giveUp') : t('pause.restart');
     this.el.home.classList.toggle('hidden', versus);
     this.el.screen.classList.remove('hidden');
   }
