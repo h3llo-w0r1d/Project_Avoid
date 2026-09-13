@@ -537,17 +537,24 @@ export const api = {
   },
 
   // 공지 — 누구나 읽고, 관리자만 저장한다.
-  // 공지 목록(줄마다 하나). 여러 개면 화면에서 번갈아 뜬다.
+  // 공지 목록(줄마다 하나). 여러 개면 화면에서 번갈아 뜬다. 접속자 언어에
+  // 맞춰 서버가 골라 주므로(비면 다른 언어로 폴백) 여기서는 언어를 안 밝힌다.
   async notices() {
     const res = await fetch('/api/notice');
     return res.ok ? ((await res.json()).notices ?? []) : [];
   },
 
-  async saveNotice(text) {
+  // 관리자 창이 특정 언어 원문을 콕 집어 볼 때 쓴다(폴백 없음).
+  async noticeLang(lang) {
+    const res = await fetch('/api/notice?lang=' + lang);
+    return res.ok ? (await res.json()) : { notices: [], text: '' };
+  },
+
+  async saveNotice(text, lang) {
     const res = await fetch('/api/admin/notice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, lang })
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);

@@ -29,7 +29,7 @@ import { GUEST_PATTERN, checkMessage } from './public/js/profanity.js';
 import { msLeftInSeason, seasonName, seasonOf } from './lib/season.js';
 import { describe as describeTitles, sanitizeEquipped, earnedIds as earnedTitleIds, titleById, isAwardable } from './lib/titles.js';
 import { describe as describeChallenge, floorAt, TOP_FLOOR, RELEASED } from './lib/challenge.js';
-import { t } from './lib/i18n.js';
+import { t, langOf } from './lib/i18n.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -874,31 +874,48 @@ app.get('/api/admin/me', (req, res) => {
 
 // ── 공지 ────────────────────────────────────────────────────────────
 // 타이틀 상단에 뜨는 공지. 줄마다 하나씩 여러 개 둘 수 있고, 여러 개면 화면에서
-// 번갈아 뜬다. 파일 하나에 줄바꿈으로 담아 두고, 관리자만 고친다.
-const NOTICE_FILE = join(DATA_DIR, 'notice.txt');
+// 번갈아 뜬다. 한국어·영어를 각자 파일(notice.txt / notice.en.txt)에 담아 두고
+// langOf(req) 로 접속자 언어를 골라 준다. 관리자만 고친다.
+const NOTICE_FILES = { ko: join(DATA_DIR, 'notice.txt'), en: join(DATA_DIR, 'notice.en.txt') };
 const NOTICE_MAX = 12;   // 공지 최대 개수
-let noticeText = '';
-try { noticeText = await readFile(NOTICE_FILE, 'utf8'); } catch { noticeText = ''; }
+const noticeText = { ko: '', en: '' };
+for (const lang of ['ko', 'en']) {
+  try { noticeText[lang] = await readFile(NOTICE_FILES[lang], 'utf8'); } catch { noticeText[lang] = ''; }
+}
 
 // 저장된 원문 → 공지 배열(빈 줄 제거, 개수·길이 제한).
-const noticeList = () => noticeText.split('\n')
+const noticeList = (lang) => noticeText[lang].split('\n')
   .map((s) => s.trim()).filter(Boolean).slice(0, NOTICE_MAX);
 
-app.get('/api/notice', (req, res) => res.json({ notices: noticeList(), text: noticeText }));
+app.get('/api/notice', (req, res) => {
+  const q = req.query.lang;
+  if (q === 'ko' || q === 'en') {
+    // 관리자 창이 특정 언어를 콕 집어 달라고 할 때 — 폴백 없이 그 언어 원문 그대로.
+    return res.json({ notices: noticeList(q), text: noticeText[q], lang: q });
+  }
+  // 접속자 언어를 우선하되, 그 언어 공지가 비어 있으면 다른 언어 것이라도 준다
+  // — 점검 안내처럼 중요한 공지가 언어 때문에 통째로 안 보이면 안 된다.
+  const lang = langOf(req);
+  const other = lang === 'ko' ? 'en' : 'ko';
+  const pick = noticeText[lang].trim() ? lang : (noticeText[other].trim() ? other : lang);
+  res.json({ notices: noticeList(pick), text: noticeText[pick], lang: pick });
+});
 
 app.post('/api/admin/notice', requireAdmin, async (req, res) => {
+  // lang 이 없으면 기존 호출(한국어 전용 시절)과 호환되게 한국어로 본다.
+  const lang = req.body?.lang === 'en' ? 'en' : 'ko';
   // 줄마다 하나의 공지로 정리한다(각 줄 200자, 최대 NOTICE_MAX 개).
   const lines = String(req.body?.text ?? '').split('\n')
     .map((s) => s.replace(/[ \t]+/g, ' ').trim()).filter(Boolean)
     .slice(0, NOTICE_MAX).map((s) => s.slice(0, 200));
-  noticeText = lines.join('\n');
+  noticeText[lang] = lines.join('\n');
   try {
-    await writeFile(NOTICE_FILE, noticeText, 'utf8');
+    await writeFile(NOTICE_FILES[lang], noticeText[lang], 'utf8');
   } catch (err) {
     console.error('공지 저장 실패:', err);
     return res.status(500).json({ error: '공지를 저장하지 못했습니다.' });
   }
-  res.json({ ok: true, notices: noticeList(), text: noticeText });
+  res.json({ ok: true, notices: noticeList(lang), text: noticeText[lang], lang });
 });
 
 // 관리 창을 한 번에 채운다

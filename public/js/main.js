@@ -602,6 +602,9 @@ function renderNotice() {
 }
 
 api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); }).catch(() => {});
+// 설정에서 언어를 바꾸면 그 언어 공지로 다시 받아 그린다 — setLang 이 이미
+// lang 쿠키를 남기므로, 다시 요청하면 서버가 알아서 맞는 언어를 골라 준다.
+onLangChange(() => { api.notices().then((list) => { notices = list; noticeIndex = 0; renderNotice(); }).catch(() => {}); });
 
 // ── 새 소식 알림 ──────────────────────────────────────────
 // 새 모드를 내놔도 사람들이 모르면 없는 것과 같다. 접속하면 한 번 크게
@@ -797,28 +800,55 @@ function setupNoticeAdmin() {
   const fields = [1, 2, 3, 4].map((n) => document.getElementById('notice-' + n));
   const count = document.getElementById('notice-count');
   const errEl = document.getElementById('notice-error');
-  if (!btn || !modal || fields.some((f) => !f)) return;
+  const langBtns = { ko: document.getElementById('notice-lang-ko'), en: document.getElementById('notice-lang-en') };
+  if (!btn || !modal || fields.some((f) => !f) || !langBtns.ko || !langBtns.en) return;
+
+  let editLang = 'ko';   // 지금 창에서 편집 중인 언어
 
   const filled = () => fields.map((f) => f.value.trim()).filter(Boolean);
   const paintCount = () => { count.textContent = `공지 ${filled().length}개`; };
+  // 지금 편집 중인 언어 쪽 버튼만 채운 색으로 — 새 CSS 없이 기존 버튼 색만 바꾼다.
+  const paintLangBtns = () => {
+    langBtns.ko.className = editLang === 'ko' ? 'primary small' : 'ghost small';
+    langBtns.en.className = editLang === 'en' ? 'primary small' : 'ghost small';
+  };
 
   btn.classList.remove('hidden');
   const close = () => modal.classList.add('hidden');
-  const open = () => {
-    fields.forEach((f, i) => { f.value = notices[i] ?? ''; });   // 칸마다 하나씩
-    paintCount();
+
+  // 고른 언어의 공지 원문을 서버에서 받아 칸을 채운다(폴백 없음 — 관리자는
+  // 지금 그 언어에 실제로 뭐가 들어있는지 봐야 한다).
+  const loadLang = async (lang) => {
+    editLang = lang;
+    paintLangBtns();
     errEl.textContent = '';
+    errEl.style.color = '';
+    const { notices: list } = await api.noticeLang(lang);
+    fields.forEach((f, i) => { f.value = list[i] ?? ''; });
+    paintCount();
+  };
+
+  const open = () => {
+    loadLang(editLang);
     modal.classList.remove('hidden');
     fields[0].focus();
   };
   // 빈 칸은 빼고, 채운 순서대로 저장한다.
   const save = async () => {
     try {
-      notices = await api.saveNotice(filled().join('\n'));
+      await api.saveNotice(filled().join('\n'), editLang);
+      // 배너는 접속자 언어를 따라가므로(폴백 포함) 다시 받아 새로 그린다.
+      notices = await api.notices();
       noticeIndex = 0;
       renderNotice();
-      close();
+      const label = editLang === 'en' ? 'English' : '한국어';
+      // 이 자리는 원래 오류를 붉게 띄우는 칸이다. 저장 성공까지 붉게 뜨면
+      // 잘된 건지 만 건지 알 수가 없어서 이때만 색을 평소 글자색으로 돌린다.
+      errEl.style.color = 'var(--text)';
+      errEl.textContent = `${label} 공지로 저장했습니다.`;
+      setTimeout(close, 700);
     } catch (e) {
+      errEl.style.color = '';
       errEl.textContent = e.message;
     }
   };
@@ -828,6 +858,8 @@ function setupNoticeAdmin() {
   modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
   for (const f of fields) f.addEventListener('input', paintCount);
   document.getElementById('notice-save').addEventListener('click', save);
+  langBtns.ko.addEventListener('click', () => loadLang('ko'));
+  langBtns.en.addEventListener('click', () => loadLang('en'));
   // 비우기: 네 칸을 모두 지운다(저장을 눌러야 실제로 사라진다).
   document.getElementById('notice-clear').addEventListener('click', () => {
     fields.forEach((f) => { f.value = ''; });
