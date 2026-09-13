@@ -66,13 +66,10 @@ function addArena(scene) {
   const group = new THREE.Group();
 
   // 상판 — 잔디
-  const topCircle = new THREE.CircleGeometry(ARENA_RADIUS, 96);
   const top = new THREE.Mesh(
-    topCircle,
+    new THREE.CircleGeometry(ARENA_RADIUS, 96),
     new THREE.MeshStandardMaterial({ map: topTexture('grass'), roughness: 0.95, metalness: 0 })
   );
-  top.userData.circleGeometry = topCircle;
-  top.userData.sourceGeometry = new THREE.PlaneGeometry(ARENA_RADIUS * 2, ARENA_RADIUS * 2);
   top.name = 'deck-top';
   top.rotation.x = -Math.PI / 2;
   top.receiveShadow = true;
@@ -811,12 +808,11 @@ export function paintArena(deck, spec = {}) {
   const top = deck.getObjectByName('deck-top');
   if (top) {
     const want = topTexture(spec.topMap ?? 'grass');
-    top.geometry = sourceIsland ? top.userData.sourceGeometry : top.userData.circleGeometry;
     if (top.material.map !== want || top.material.emissiveMap !== (sourceIsland ? want : null)) {
       top.material.map = want;
       top.material.emissiveMap = sourceIsland ? want : null;
-      top.material.transparent = sourceIsland;
-      top.material.alphaTest = sourceIsland ? 0.02 : 0;
+      top.material.transparent = false;
+      top.material.alphaTest = 0;
       top.material.needsUpdate = true;
     }
     // 원본 사진은 이미 조명과 입체감이 완성돼 있어 장면 조명을 다시 곱하면 탁해진다.
