@@ -1695,7 +1695,7 @@ const versus = new VersusUI({
 
 // 봇전 버튼 — 난이도 고르는 창을 연다.
 document.getElementById('bot-btn')?.addEventListener('click', pickBotDifficulty);
-// 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼. 40층까지 열려 있고 그 위는
+// 도전모드(탑) 버튼 — 왼쪽 아래 동그란 버튼. 50층까지 열려 있고 그 위는
 // 목록에 「업데이트 중」 으로 뜬다(관리자는 전부 들어갈 수 있다).
 document.getElementById('tower-btn')?.addEventListener('click', openTower);
 
