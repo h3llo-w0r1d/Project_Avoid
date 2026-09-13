@@ -2291,8 +2291,17 @@ function showTowerResult(win, f, msg) {
     '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('show'));
-  const close = () => { overlay.classList.remove('show'); setTimeout(() => overlay.remove(), 200); };
-  overlay.querySelector('.tower-again').addEventListener('click', () => { close(); startChallenge(f); });
+  // 스페이스로 바로 다시 도전한다. 혼자 하기·봇전과 같은 손놀림이라
+  // 층을 여러 번 두드릴 때 마우스로 옮겨 갈 일이 없다.
+  let stopKeys = null;
+  const close = () => {
+    stopKeys?.();
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.remove(), 200);
+  };
+  const again = () => { close(); startChallenge(f); };
+  stopKeys = spaceToRestart(overlay, again);
+  overlay.querySelector('.tower-again').addEventListener('click', again);
   overlay.querySelector('.tower-back').addEventListener('click', () => { close(); goHome(); openTower(); });
 }
 
