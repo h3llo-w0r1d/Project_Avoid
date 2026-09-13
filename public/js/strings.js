@@ -49,6 +49,8 @@ export const STRINGS = {
   // 문장 전체를 한 키로 갖고 있다 — 가운뎃점으로 이어 붙이면 어순이 다른
   // 언어에서 어색해진다).
   'common.tapContinue': { ko: '화면을 누르면 넘어가요', en: 'Tap to continue' },
+  // 관리자가 한 사람에게만 보내는 알림. 멘트 자체는 관리자가 쓴 글 그대로 나간다.
+  'admin.msgKicker': { ko: '📢 관리자 알림', en: '📢 Message from the admin' },
 
   // ── 로그인 / 닉네임 ─────────────────────────────────────────
   'auth.guest': { ko: '게스트로 로그인', en: 'Continue as Guest' },

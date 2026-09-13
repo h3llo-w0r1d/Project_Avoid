@@ -288,6 +288,10 @@ async function claimCoinsNow() {
       renderCoinHud();
       if (characters.open$) characters.draw();
       showCoinGift(amount, message);
+    } else if (message) {
+      // 코인 없이 멘트만 온 경우 — 관리자가 한 사람에게 전할 말이 있을 때다.
+      // 코인 창을 그대로 쓰면 「0 코인」 이 뜨므로 알림 전용 창으로 보낸다.
+      showAdminMessage(message);
     }
   } catch { /* 무시 */ }
 }
@@ -2816,6 +2820,30 @@ function showCoinGift(count, message = '') {
       '<div class="unlock-lockface"><span class="coin-ico"></span></div>' +
       '<div class="unlock-name">' + t('coin.giftName', { count }) + '</div>' +
       (message ? '<div class="coin-gift-msg">“' + esc(message) + '”</div>' : '') +
+      '<div class="unlock-hint">' + t('common.tapContinue') + '</div></div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    const done = () => {
+      overlay.classList.remove('show');
+      setTimeout(() => { overlay.remove(); resolve(); }, 260);
+    };
+    overlay.addEventListener('click', done);
+  });
+}
+
+// 관리자가 한 사람에게만 보내는 한 줄 알림. 받아 가면 서버에서 지워지므로
+// 다음 접속 때 딱 한 번만 뜬다. 코인 선물 창과 같은 틀을 쓴다(새 CSS 없음).
+function showAdminMessage(message) {
+  return new Promise((resolve) => {
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const overlay = document.createElement('div');
+    overlay.className = 'unlock-overlay';
+    overlay.innerHTML =
+      '<div class="unlock-card">' +
+      '<div class="unlock-kicker">' + t('admin.msgKicker') + '</div>' +
+      '<div class="bot-result-face">📢</div>' +
+      '<div class="unlock-name">' + esc(message) + '</div>' +
       '<div class="unlock-hint">' + t('common.tapContinue') + '</div></div>';
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('show'));
