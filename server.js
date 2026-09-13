@@ -56,19 +56,26 @@ else console.log('ASN DB 없음(클라우드 자동판별은 CIDR 만 사용):',
 
 // 이 IP 가 '진짜 사람'이 아닌지(=집계에서 뺄지) 판단한다. 다음이면 봇으로 본다:
 //   1) 알려진 데이터센터 CIDR       2) ASN 조직이 클라우드/호스팅
-//   3) 국가가 한국이 아님 — 이 게임은 한국 대상이라 해외 접속은 사람으로 세지 않는다
-// GeoLite2 DB 가 없으면 2·3 은 자동으로 꺼지고 1(CIDR)만 쓴다(안전한 축소).
+// 예전엔 "국가가 한국이 아니면 봇"도 있었지만, 이제 영어를 지원하고 해외
+// 홍보를 시작해서 해외 접속도 진짜 사람으로 센다 — 국가로는 거르지 않는다.
+// GeoLite2 DB 가 없으면 2 는 자동으로 꺼지고 1(CIDR)만 쓴다(안전한 축소).
 function isNonHumanIp(ip) {
   if (isDatacenterIp(ip)) return true;
   if (isCloudOrg(asnOrg(ip))) return true;
-  const cc = countryCode(ip);
-  if (cc && cc !== 'KR') return true;
   return false;
 }
 
 // UA 까지 함께 보는 판정(접속 시점용). 방문 기록의 옛 행 재계산에는 IP 판정만 쓴다.
 function isNonHuman(ip, ua) {
   return isBot(ua) || isNonHumanIp(ip);
+}
+
+// Accept-Language 머리말 맨 앞 언어를 소문자 두 글자로 잘라 낸다('ko-KR' → 'ko').
+// 지역 변형까지 남기면 'ko-KR'과 'ko'가 갈려 언어별 집계가 쪼개지므로 두 글자만 쓴다.
+function browserLang(req) {
+  const accept = req.headers?.['accept-language'];
+  const m = typeof accept === 'string' ? accept.match(/^([a-zA-Z]{2})/) : null;
+  return m ? m[1].toLowerCase() : null;
 }
 
 const scores = await openScoreStore(DATA_DIR, db);
@@ -457,7 +464,8 @@ app.post('/api/scores', async (req, res) => {
     stats.runFinished(timeNum);
     // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
     plays.add({ name: finalName, seconds, userId: req.user?.id ?? null,
-      mobile: isMobile(req.get('user-agent')), mode, country: countryCode(clientIp(req)) });
+      mobile: isMobile(req.get('user-agent')), mode, country: countryCode(clientIp(req)),
+      isp: asnOrg(clientIp(req)), lang: browserLang(req) });
 
     // 이번 판으로 새로 얻은 칭호(판수 문턱을 넘겼는지). 판수는 두 모드 합이고
     // 이번 제출로 정확히 1 늘었으므로, 직전 판수는 (지금-1) 이다. 축하 연출용.
@@ -689,7 +697,8 @@ app.post('/api/challenge-log', (req, res) => {
     modeLogs.challenge.add({ name: who.name, userId: req.user?.id ?? null, floor, goal, ok, seconds });
     // 판수에도 넣는다. 탑 오르기도 엄연히 한 판이다.
     plays.add({ name: who.name, seconds, userId: req.user?.id ?? null,
-      mobile: isMobile(req.get('user-agent')), mode: 'tower', country: countryCode(clientIp(req)) });
+      mobile: isMobile(req.get('user-agent')), mode: 'tower', country: countryCode(clientIp(req)),
+      isp: asnOrg(clientIp(req)), lang: browserLang(req) });
     res.json({ ok: true });
   } catch (err) {
     console.error('도전 기록 저장 실패:', err);
@@ -711,7 +720,8 @@ app.post('/api/bot-log', (req, res) => {
     modeLogs.bot.add({ name: who.name, userId: req.user?.id ?? null, tier, win, seconds });
     // 판수에도 넣는다.
     plays.add({ name: who.name, seconds, userId: req.user?.id ?? null,
-      mobile: isMobile(req.get('user-agent')), mode: 'bot', country: countryCode(clientIp(req)) });
+      mobile: isMobile(req.get('user-agent')), mode: 'bot', country: countryCode(clientIp(req)),
+      isp: asnOrg(clientIp(req)), lang: browserLang(req) });
     res.json({ ok: true });
   } catch (err) {
     console.error('봇전 기록 저장 실패:', err);
