@@ -66,10 +66,13 @@ function addArena(scene) {
   const group = new THREE.Group();
 
   // 상판 — 잔디
+  const topCircle = new THREE.CircleGeometry(ARENA_RADIUS, 96);
   const top = new THREE.Mesh(
-    new THREE.CircleGeometry(ARENA_RADIUS, 96),
+    topCircle,
     new THREE.MeshStandardMaterial({ map: topTexture('grass'), roughness: 0.95, metalness: 0 })
   );
+  top.userData.circleGeometry = topCircle;
+  top.userData.sourceGeometry = new THREE.PlaneGeometry(ARENA_RADIUS * 2, ARENA_RADIUS * 2);
   top.name = 'deck-top';
   top.rotation.x = -Math.PI / 2;
   top.receiveShadow = true;
@@ -795,6 +798,7 @@ function islandTexture() {
 //   hideTufts : 풀포기를 감춘다. 눈밭에 초록 풀이 서 있으면 어색하다.
 export function paintArena(deck, spec = {}) {
   if (!deck) return;
+  const sourceIsland = spec.topMap === 'snow' || spec.topMap === 'galaxy';
 
   const tint = (name, hex) => {
     const o = deck.getObjectByName(name);
@@ -807,25 +811,36 @@ export function paintArena(deck, spec = {}) {
   const top = deck.getObjectByName('deck-top');
   if (top) {
     const want = topTexture(spec.topMap ?? 'grass');
-    if (top.material.map !== want) {
+    top.geometry = sourceIsland ? top.userData.sourceGeometry : top.userData.circleGeometry;
+    if (top.material.map !== want || top.material.emissiveMap !== (sourceIsland ? want : null)) {
       top.material.map = want;
+      top.material.emissiveMap = sourceIsland ? want : null;
+      top.material.transparent = sourceIsland;
+      top.material.alphaTest = sourceIsland ? 0.02 : 0;
       top.material.needsUpdate = true;
     }
-    top.material.color.setHex(spec.top ?? 0xffffff);
+    // 원본 사진은 이미 조명과 입체감이 완성돼 있어 장면 조명을 다시 곱하면 탁해진다.
+    top.material.color.setHex(sourceIsland ? 0x000000 : (spec.top ?? 0xffffff));
   }
 
   // 밤 무대라 흰 바닥은 그냥 두면 잿빛으로 가라앉는다. 스킨이 재질을
   // 조금 손볼 수 있게 열어 둔다(눈은 스스로 은은히 빛나게).
   if (top) {
     top.material.roughness = spec.topRoughness ?? 0.95;
-    top.material.emissive.setHex(spec.topEmissive ?? 0x000000);
-    top.material.emissiveIntensity = spec.topEmissiveIntensity ?? 1;
+    top.material.emissive.setHex(sourceIsland ? 0xffffff : (spec.topEmissive ?? 0x000000));
+    top.material.emissiveIntensity = sourceIsland ? 1 : (spec.topEmissiveIntensity ?? 1);
   }
 
   tint('deck-cliff', spec.cliff);
   tint('deck-under', spec.under ?? 0x9c8874);
   tint('deck-stones', spec.stone);
   tint('deck-tufts', spec.tuft);
+
+  // 원본 상판에 옆면까지 들어 있으므로 공통 흙섬 밑동을 겹치지 않는다.
+  for (const name of ['deck-cliff', 'deck-under']) {
+    const part = deck.getObjectByName(name);
+    if (part) part.visible = !sourceIsland;
+  }
 
   // 밝은 배경에서도 절벽 실루엣이 검은 띠로 뭉개지지 않게 스킨 빛을 약하게 받친다.
   for (const [name, color, intensity] of [
@@ -862,15 +877,15 @@ export function paintArena(deck, spec = {}) {
   const orbit = deck.getObjectByName('deck-orbit');
   const stones = deck.getObjectByName('deck-stones');
   if (ice) {
-    ice.visible = spec.edge === 'ice';
+    ice.visible = !sourceIsland && spec.edge === 'ice';
     ice.traverse((m) => {
       if (!m.material?.color) return;
       m.material.color.setHex(spec.edgeColor ?? 0xdcefff);
       m.material.emissive?.setHex(spec.edgeGlow ?? 0x2f5075);
     });
   }
-  if (snowy) snowy.visible = spec.edge === 'ice';
-  if (orbit) orbit.visible = spec.edge === 'orbit';
+  if (snowy) snowy.visible = !sourceIsland && spec.edge === 'ice';
+  if (orbit) orbit.visible = !sourceIsland && spec.edge === 'orbit';
   // 돌무리·바위는 무대 끝을 알려 주는 표시라 스킨마다 둘 중 하나는 켠다.
   // 은하수만 대신할 표시(빛나는 고리)가 있어 둘 다 끈다.
   const rocks = deck.getObjectByName('deck-rocks');
