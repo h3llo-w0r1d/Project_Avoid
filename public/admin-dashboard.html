@@ -336,6 +336,11 @@
     <h1>Avoid<em>Arc</em> 관리</h1>
     <span class="meta" id="meta">불러오는 중…</span>
     <span class="spacer"></span>
+    <!-- 접속 알림 토글은 상단 줄에 둔다. 접속 카드(#present-box)는 화면 폭이
+         1560px 이하면 통째로 숨겨져서, 거기 두면 노트북이나 배율 125% 화면에서는
+         버튼을 찾을 수가 없다. -->
+    <button id="notify-toggle" type="button"></button>
+    <span class="gate-err hidden" id="notify-msg"></span>
     <button id="pw-btn" type="button">비밀번호</button>
     <button id="refresh" type="button">새로고침</button>
     <a href="/">← 게임으로</a>
@@ -610,6 +615,75 @@ function drawPresent(present, list) {
   $('present-sub').textContent = unknown
     ? `${present}명 접속 · 이름 모름 ${unknown}명`
     : `${present ?? 0}명 접속`;
+  noteNewComers(rows);
+}
+
+/* ---- 접속 알림 ---- */
+// 새로 나타난 '이름'만 알린다. 막 접속해 아직 이름이 안 붙은 사람은
+// present-names 목록 자체에 안 잡히므로(위 unknown 이 그 몫이다) 여기
+// 이름 집합에도 안 들어온다 — 쫓지 않고 놔두면 이름이 붙는 다음 조회에서
+// 저절로 '새 이름'으로 걸린다. 같은 이름이 탭만 늘려도 집합엔 그대로
+// 있으니 새 접속으로 안 잡힌다.
+let notifyOn = false;
+let knownNames = null; // null = 첫 조회 전. 첫 조회는 집합만 채우고 알리지 않는다.
+
+const notifySupported = () => typeof Notification !== 'undefined';
+
+function renderNotifyBtn() {
+  const btn = $('notify-toggle');
+  if (!btn) return;
+  btn.textContent = `🔔 접속 알림 ${notifyOn ? '켜짐' : '꺼짐'}`;
+  btn.classList.toggle('pw-ok', notifyOn);
+}
+
+function showNotifyMsg(text) {
+  $('notify-msg').textContent = text;
+  $('notify-msg').classList.toggle('hidden', !text);
+}
+
+// 저장된 켜짐 값이라도 실제 권한이 없으면 꺼진 걸로 되돌린다 — 다른 곳에서
+// 권한이 회수됐을 수 있다.
+function loadNotifyPref() {
+  let want = false;
+  try { want = localStorage.getItem('avoidarc.admin.notify') === '1'; } catch {}
+  notifyOn = want && notifySupported() && Notification.permission === 'granted';
+  renderNotifyBtn();
+}
+
+async function toggleNotify() {
+  if (notifyOn) {
+    notifyOn = false;
+    try { localStorage.setItem('avoidarc.admin.notify', '0'); } catch {}
+    showNotifyMsg('');
+    renderNotifyBtn();
+    return;
+  }
+  if (!notifySupported()) { showNotifyMsg('이 브라우저는 접속 알림을 지원하지 않습니다.'); return; }
+  const perm = await Notification.requestPermission();
+  notifyOn = perm === 'granted';
+  showNotifyMsg(notifyOn ? '' : '알림 권한이 없어 접속 알림을 켤 수 없습니다.');
+  try { localStorage.setItem('avoidarc.admin.notify', notifyOn ? '1' : '0'); } catch {}
+  renderNotifyBtn();
+}
+
+// 한 명이면 이름을 콕 집어, 여러 명이면 묶어서 알림 하나만 띄운다
+// (사람 수만큼 띄우면 시끄럽다).
+function notifyNewComers(names) {
+  if (!notifyOn || !notifySupported()) return;
+  if (names.length === 1) {
+    new Notification(`${names[0]} 님 접속`, { icon: '/icons/icon-192.png' });
+  } else {
+    new Notification(`새 접속 ${names.length}명`, { body: names.join(', '), icon: '/icons/icon-192.png' });
+  }
+}
+
+// 새로 나타난 이름 목록을 뽑아 notifyNewComers 로 넘긴다.
+function noteNewComers(rows) {
+  const names = rows.map((r) => r.name).filter(Boolean);
+  if (knownNames === null) { knownNames = new Set(names); return; }
+  const fresh = names.filter((n) => !knownNames.has(n));
+  knownNames = new Set(names);
+  if (fresh.length) notifyNewComers(fresh);
 }
 
 // 접속자는 계속 바뀐다. 목록만 따로 15초마다 새로 받는다.
@@ -1265,6 +1339,7 @@ async function clearUsage() {
 }
 
 $('refresh').addEventListener('click', load);
+$('notify-toggle').addEventListener('click', toggleNotify);
 $('acc-search').addEventListener('input', (e) => { query.acc = e.target.value.trim().toLowerCase(); page.acc = 0; drawAccounts(); });
 $('score-search').addEventListener('input', (e) => { query.score = e.target.value.trim().toLowerCase(); page.score = 0; drawScores(); });
 $('score-clear').addEventListener('click', clearScores);
@@ -1362,6 +1437,7 @@ $('pw-form').addEventListener('submit', async (e) => {
 });
 
 load();
+loadNotifyPref();
 // 접속자 목록은 overview 와 따로 돈다. 다른 표가 잘못돼도 이건 보여야 하고,
 // 계속 바뀌는 값이라 15초마다 새로 받는다.
 pollPresent();
