@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
-  makeSoilTexture, makeGrassTuftTexture, makeSoftDotTexture, makeSnowTexture, makeGalaxyTexture
+  makeSoilTexture, makeGrassTuftTexture, makeSoftDotTexture, makeSnowTexture, makeGalaxyTexture,
+  makeGalaxyEdgeTexture
 } from './textures.js';
 
 // a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
@@ -74,6 +75,20 @@ function addArena(scene) {
   top.rotation.x = -Math.PI / 2;
   top.receiveShadow = true;
   group.add(top);
+
+  const galaxyEdge = new THREE.Mesh(
+    new THREE.PlaneGeometry(ARENA_RADIUS * 2.28, ARENA_RADIUS * 2.28),
+    new THREE.MeshBasicMaterial({
+      map: makeGalaxyEdgeTexture(), transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending
+    })
+  );
+  galaxyEdge.name = 'deck-galaxy-edge';
+  galaxyEdge.rotation.x = -Math.PI / 2;
+  galaxyEdge.position.y = 0.01;
+  galaxyEdge.renderOrder = -1;
+  galaxyEdge.visible = false;
+  group.add(galaxyEdge);
 
   // 옆면 — 흙 절벽. 아래로 갈수록 좁아져서 떠 있는 섬처럼 보인다.
   const cliff = new THREE.Mesh(
@@ -818,6 +833,9 @@ export function paintArena(deck, spec = {}) {
     // 원본 사진은 이미 조명과 입체감이 완성돼 있어 장면 조명을 다시 곱하면 탁해진다.
     top.material.color.setHex(sourceIsland ? 0x000000 : (spec.top ?? 0xffffff));
   }
+
+  const galaxyEdge = deck.getObjectByName('deck-galaxy-edge');
+  if (galaxyEdge) galaxyEdge.visible = spec.topMap === 'galaxy';
 
   // 밤 무대라 흰 바닥은 그냥 두면 잿빛으로 가라앉는다. 스킨이 재질을
   // 조금 손볼 수 있게 열어 둔다(눈은 스스로 은은히 빛나게).

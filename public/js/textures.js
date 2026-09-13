@@ -495,3 +495,38 @@ export function makeGalaxyTexture(size = 1536) {
   applySourceCrop(tex, g, size, 'img/arena-galaxy-source.png', 410, 60, 850, 800);
   return tex;
 }
+
+// 원형 상판이 잘라 버리는 원본 고리 바깥 장식만 같은 좌표로 다시 잇는다.
+export function makeGalaxyEdgeTexture(size = 1536) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const g = cv.getContext('2d');
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 16;
+
+  const image = new Image();
+  image.addEventListener('load', () => {
+    g.drawImage(image, 350, 4, 969, 912, 0, 0, size, size);
+    g.globalCompositeOperation = 'destination-in';
+    const mask = g.createRadialGradient(size / 2, size / 2, size * 0.42, size / 2, size / 2, size * 0.56);
+    mask.addColorStop(0, 'rgba(255,255,255,0)');
+    mask.addColorStop(0.15, 'rgba(255,255,255,0)');
+    mask.addColorStop(0.25, '#fff');
+    mask.addColorStop(0.65, '#fff');
+    mask.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = mask;
+    g.fillRect(0, 0, size, size);
+    g.globalCompositeOperation = 'source-over';
+    // 배경까지 띠처럼 겹치지 않도록 원본의 밝은 장식 픽셀만 남긴다.
+    const pixels = g.getImageData(0, 0, size, size);
+    for (let i = 0; i < pixels.data.length; i += 4) {
+      const light = Math.max(pixels.data[i], pixels.data[i + 1], pixels.data[i + 2]);
+      pixels.data[i + 3] *= Math.max(0, Math.min(1, (light - 170) / 70));
+    }
+    g.putImageData(pixels, 0, 0);
+    tex.needsUpdate = true;
+  }, { once: true });
+  image.src = 'img/arena-galaxy-source.png';
+  return tex;
+}
