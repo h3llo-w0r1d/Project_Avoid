@@ -457,7 +457,7 @@ app.post('/api/scores', async (req, res) => {
     stats.runFinished(timeNum);
     // 최고 기록과 별개로, 이 판 자체를 로그에 남긴다.
     plays.add({ name: finalName, seconds, userId: req.user?.id ?? null,
-      mobile: isMobile(req.get('user-agent')), mode });
+      mobile: isMobile(req.get('user-agent')), mode, country: countryCode(clientIp(req)) });
 
     // 이번 판으로 새로 얻은 칭호(판수 문턱을 넘겼는지). 판수는 두 모드 합이고
     // 이번 제출로 정확히 1 늘었으므로, 직전 판수는 (지금-1) 이다. 축하 연출용.
@@ -689,7 +689,7 @@ app.post('/api/challenge-log', (req, res) => {
     modeLogs.challenge.add({ name: who.name, userId: req.user?.id ?? null, floor, goal, ok, seconds });
     // 판수에도 넣는다. 탑 오르기도 엄연히 한 판이다.
     plays.add({ name: who.name, seconds, userId: req.user?.id ?? null,
-      mobile: isMobile(req.get('user-agent')), mode: 'tower' });
+      mobile: isMobile(req.get('user-agent')), mode: 'tower', country: countryCode(clientIp(req)) });
     res.json({ ok: true });
   } catch (err) {
     console.error('도전 기록 저장 실패:', err);
@@ -711,7 +711,7 @@ app.post('/api/bot-log', (req, res) => {
     modeLogs.bot.add({ name: who.name, userId: req.user?.id ?? null, tier, win, seconds });
     // 판수에도 넣는다.
     plays.add({ name: who.name, seconds, userId: req.user?.id ?? null,
-      mobile: isMobile(req.get('user-agent')), mode: 'bot' });
+      mobile: isMobile(req.get('user-agent')), mode: 'bot', country: countryCode(clientIp(req)) });
     res.json({ ok: true });
   } catch (err) {
     console.error('봇전 기록 저장 실패:', err);
