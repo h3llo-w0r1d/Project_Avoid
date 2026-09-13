@@ -647,6 +647,14 @@ function loadNotifyPref() {
   let want = false;
   try { want = localStorage.getItem('avoidarc.admin.notify') === '1'; } catch {}
   notifyOn = want && notifySupported() && Notification.permission === 'granted';
+  // 새로고침으로 이미 켜진 채 열린 경우다. 브라우저는 사용자가 한 번은 건드려야
+  // 소리를 내주므로, 화면을 처음 누르거나 키를 누를 때 소리를 깨워 둔다.
+  if (notifyOn) {
+    beepReady();
+    const wake = () => { beepReady(); audioCtx?.resume?.(); };
+    addEventListener('click', wake, { once: true });
+    addEventListener('keydown', wake, { once: true });
+  }
   renderNotifyBtn();
 }
 
@@ -659,6 +667,7 @@ async function toggleNotify() {
     return;
   }
   if (!notifySupported()) { showNotifyMsg('이 브라우저는 접속 알림을 지원하지 않습니다.'); return; }
+  beepReady();   // 버튼을 누른 이 순간에 만들어 둬야 나중에 소리가 난다
   const perm = await Notification.requestPermission();
   notifyOn = perm === 'granted';
   showNotifyMsg(notifyOn ? '' : '알림 권한이 없어 접속 알림을 켤 수 없습니다.');
@@ -666,10 +675,38 @@ async function toggleNotify() {
   renderNotifyBtn();
 }
 
+// 알림음. 윈도우 기본 알림 소리는 설정에 따라 안 나는 일이 잦아서 직접 낸다.
+// 소리 파일을 두지 않고 짧은 두 음을 만들어 쓴다 — 게임 쪽 효과음과 같은 방식이다.
+// AudioContext 는 버튼을 누른 순간(사용자 동작) 만들어야 브라우저가 소리를 허용한다.
+let audioCtx = null;
+function beepReady() {
+  if (audioCtx) return;
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch { audioCtx = null; }
+}
+function beep() {
+  if (!audioCtx) return;
+  // 탭을 오래 놔두면 브라우저가 재워 둔다. 깨워야 소리가 난다.
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  [0, 0.14].forEach((at, i) => {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = i ? 1046 : 784;      // 솔 → 높은 도
+    gain.gain.setValueAtTime(0.0001, now + at);
+    gain.gain.exponentialRampToValueAtTime(0.25, now + at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.12);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now + at);
+    osc.stop(now + at + 0.13);
+  });
+}
+
 // 한 명이면 이름을 콕 집어, 여러 명이면 묶어서 알림 하나만 띄운다
 // (사람 수만큼 띄우면 시끄럽다).
 function notifyNewComers(names) {
   if (!notifyOn || !notifySupported()) return;
+  beep();
   if (names.length === 1) {
     new Notification(`${names[0]} 님 접속`, { icon: '/icons/icon-192.png' });
   } else {
