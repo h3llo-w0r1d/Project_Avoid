@@ -1439,9 +1439,11 @@ $('pw-form').addEventListener('submit', async (e) => {
 load();
 loadNotifyPref();
 // 접속자 목록은 overview 와 따로 돈다. 다른 표가 잘못돼도 이건 보여야 하고,
-// 계속 바뀌는 값이라 15초마다 새로 받는다.
+// 계속 바뀌는 값이라 자주 새로 받는다. 5초인 이유는 접속 알림 때문이다 —
+// 이 주기가 곧 "들어온 뒤 알림이 뜨기까지" 의 최대 지연이다. 받아오는 건
+// 접속자 목록 하나뿐이라 서버에 부담이 없다.
 pollPresent();
-setInterval(pollPresent, 15000);
+setInterval(pollPresent, 5000);
 </script>
 </body>
 </html>

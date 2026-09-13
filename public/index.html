@@ -717,6 +717,11 @@
       }
       beat(true);   // 열리면 숨은 탭이어도 방문은 한 번 기록
       setInterval(function () { beat(); }, 20000);
+      // 처음 온 사람은 이 시점에 아직 게스트 이름이 없어(auth.js 가 곧 짓는다)
+      // 이름 없는 접속으로 잡힌다. 이름이 생기는 순간 auth.js 가 이걸 불러
+      // 한 번 더 보내게 열어 둔다 — 안 그러면 다음 신호(20초 뒤)까지 관리
+      // 화면에 「이름 모름」 으로만 남는다.
+      window.__avoidarcBeat = beat;
       document.addEventListener('visibilitychange', function () { if (!document.hidden) beat(); });
       window.addEventListener('pagehide', bye);
     })();

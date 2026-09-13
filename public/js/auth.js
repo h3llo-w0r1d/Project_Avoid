@@ -20,6 +20,9 @@ export function guestName() {
   if (!GUEST_PATTERN.test(name ?? '')) {
     name = `Guest${String(Math.floor(Math.random() * 100000000)).padStart(8, '0')}`;
     localStorage.setItem(GUEST_KEY, name);
+    // 이름이 막 생겼다. 접속 신호를 한 번 더 보내 이름을 붙여 준다 —
+    // 페이지가 열릴 때 나간 첫 신호에는 이름이 비어 있었다.
+    window.__avoidarcBeat?.(true);
   }
   return name;
 }
