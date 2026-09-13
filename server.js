@@ -1262,7 +1262,10 @@ app.get('/api/challenge', (req, res) => {
   const admin = isAdminUser(req.user);
   const me = req.user ? users.byId(req.user.id) : null;
   // 관리자는 확인용이라 전부 열어 준다(진행도 자체는 그대로 쌓인다).
-  res.json({ signedIn: !!req.user, admin, ...describeChallenge(me?.challenge ?? 0, admin) });
+  // tower_free(지인용 표시)도 같은 대우를 받지만, admin 칸은 진짜 관리자일 때만
+  // true 여야 한다 — 화면이 그 값으로 "관리자" 문구를 띄운다.
+  const all = admin || !!me?.towerFree;
+  res.json({ signedIn: !!req.user, admin, ...describeChallenge(me?.challenge ?? 0, all) });
 });
 
 // 한 층을 깼다고 알린다. 순서대로만(지금 층 +1) 인정한다.
@@ -1277,9 +1280,14 @@ app.post('/api/challenge/clear', (req, res) => {
   if (isAdminUser(req.user)) {
     return res.json({ ok: true, admin: true, ...describeChallenge(0, true) });
   }
+  // 지인용 표시(tower_free)도 같은 이유로 진행도를 남기지 않는다 — 탑 랭킹에서
+  // 빼는 게 목적이니 여기서 더 쌓이면 안 되고, 이전에 실제로 깬 층은 그대로 둔다.
+  const me = users.byId(req.user.id);
+  if (me?.towerFree) {
+    return res.json({ ok: true, ...describeChallenge(me.challenge ?? 0, true) });
+  }
   // 아직 안 내놓은 층은 클라가 뭐라 하든 인정하지 않는다.
   if (floor > RELEASED) return res.status(403).json({ error: t(req, 'api.floorNotReady') });
-  const me = users.byId(req.user.id);
   const cleared = me?.challenge ?? 0;
   if (floor !== cleared + 1) {
     // 이미 깬 층을 다시 깨는 건 조용히 무시(진행도 그대로).
