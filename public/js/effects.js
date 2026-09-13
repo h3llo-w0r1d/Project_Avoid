@@ -105,6 +105,7 @@ export const ARENAS = [
     // 빛나게 해야 '눈' 으로 보인다. 반질함도 조금 올려 표면이 살짝 반사되게.
     topEmissive: 0x33506e, topEmissiveIntensity: 0.42, topRoughness: 0.72,
     cliff: 0xa9bccd,         // 절벽은 차갑게 — 눈 밑 언 바위
+    stone: 0x526b82,         // 흰 돌 테두리 대신 눈 아래 드러난 암반으로 보이게
     under: 0x748fa9,         // 아래 암반은 더 짙어야 눈 상판과 층이 분리된다
     cliffGlow: 0x28445f, cliffGlowIntensity: 0.65,
     underGlow: 0x203b57, underGlowIntensity: 0.9,

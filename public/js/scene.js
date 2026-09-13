@@ -328,43 +328,33 @@ function mergeTwo(a, b) {
   return geo;
 }
 
-// 설원용 가장자리 장식 — 솟아오른 얼음 기둥.
-//
-// 바위와 같은 자리에 서지만 생김새가 정반대다: 바위는 낮고 둥글게 굴러
-// 있고, 얼음은 뾰족하게 위로 솟는다. 그래야 스킨을 바꿨을 때 '색만 바뀐 게
-// 아니라' 는 느낌이 든다.
-//
-// 처음엔 바위처럼 둘레에 고르게 한 줄로 세웠더니 띄엄띄엄해서 허전했다.
-// 얼음은 원래 무리 지어 솟는다. 그래서 '무리' 를 잡고 그 언저리에 크고 작은
-// 조각을 몰아 심는다. 무리와 무리 사이가 비어야 오히려 뭉친 데가 도드라진다.
-// 큰 기둥 사이의 빈 곳은 낮은 조각으로 메워 바닥이 허전하지 않게 한다.
+// 설원 레퍼런스의 가장자리: 검푸른 암반 위에 눈이 얹히고, 큰 수정은 드문드문
+// 솟으며, 아래에는 긴 고드름이 매달린다. 작은 흰 조각을 한 줄로 두르면 섬이
+// 아니라 왕관처럼 보여 세 덩어리를 높이와 색으로 분리한다.
 function buildEdgeIce() {
   const group = new THREE.Group();
 
-  // 무리의 중심 각도. 고르게 두되 조금씩 흔들어 기계적이지 않게.
-  const CLUSTERS = 26;
+  // 큰 수정은 레퍼런스처럼 드문드문 무리 지어 둔다.
+  const CLUSTERS = 8;
   const centers = [];
   for (let i = 0; i < CLUSTERS; i++) {
-    centers.push((i / CLUSTERS) * Math.PI * 2 + (Math.random() - 0.5) * 0.14);
+    centers.push((i / CLUSTERS) * Math.PI * 2 + (Math.random() - 0.5) * 0.22);
   }
 
-  // 큰 기둥 · 중간 · 낮은 조각 세 층으로 쌓는다.
-  //   spread : 무리 중심에서 얼마나 벌어지나(라디안)
-  //   inset  : 무대 안쪽으로 얼마나 들어오나
   const LAYERS = [
-    { seg: 5, n: 2, h: [0.55, 1.15], w: [0.26, 0.44], spread: 0.055, inset: 0.10, rough: 0.24 },
-    { seg: 6, n: 2, h: [0.30, 0.62], w: [0.20, 0.34], spread: 0.100, inset: 0.22, rough: 0.30 },
-    { seg: 5, n: 3, h: [0.14, 0.34], w: [0.16, 0.30], spread: 0.150, inset: 0.34, rough: 0.36 }
+    { seg: 5, n: 1, h: [0.95, 1.50], w: [0.72, 0.98], spread: 0.04, inset: 0.10, rough: 0.18 },
+    { seg: 6, n: 2, h: [0.58, 0.96], w: [0.42, 0.66], spread: 0.11, inset: 0.24, rough: 0.24 },
+    { seg: 5, n: 2, h: [0.28, 0.54], w: [0.28, 0.44], spread: 0.18, inset: 0.38, rough: 0.30 }
   ];
 
   LAYERS.forEach((L, li) => {
-    const geo = new THREE.ConeGeometry(0.5, 1.6, L.seg);
+    const geo = new THREE.ConeGeometry(0.82, 1.6, L.seg);
     rockify(geo, L.rough * 0.6, 7 + li);
     const mat = new THREE.MeshStandardMaterial({
-      color: 0xdcefff, roughness: 0.26, metalness: 0.06,
+      color: 0x72dcff, roughness: 0.18, metalness: 0.10,
       flatShading: true,
-      // 밤이라 그냥 두면 시커멓게 죽는다. 얼음이 스스로 은은히 빛나게 한다.
-      emissive: 0x2f5075, emissiveIntensity: 0.6
+      // 밝은 설원에서도 수정의 파란 중심이 남아야 눈과 구분된다.
+      emissive: 0x2078a8, emissiveIntensity: 0.95
     });
 
     const count = CLUSTERS * L.n;
@@ -375,7 +365,6 @@ function buildEdgeIce() {
         const w = rnd(L.w[0], L.w[1]);
         const rr = ARENA_RADIUS - L.inset - Math.random() * 0.1;
         pos.set(Math.cos(a) * rr, -0.12 + h * 0.5, Math.sin(a) * rr);
-        // 안쪽으로 살짝 눕히고 축을 돌려 결이 제각각 보이게
         rot.set((Math.random() - 0.5) * 0.40, Math.random() * 6.3, (Math.random() - 0.5) * 0.40);
         scl.set(w, h * 1.5, w);
       },
@@ -387,6 +376,43 @@ function buildEdgeIce() {
     ));
   });
 
+  // 둥근 원통 옆면을 가려 레퍼런스의 두껍고 깨진 암반 실루엣을 만든다.
+  const rockGeo = new THREE.DodecahedronGeometry(1, 0);
+  rockify(rockGeo, 0.48, 23);
+  group.add(scatter(rockGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0x405b75, roughness: 0.9, metalness: 0.02, flatShading: true,
+      emissive: 0x172d43, emissiveIntensity: 0.55
+    }), 58,
+    (i, pos, rot, scl) => {
+      const a = (i / 58) * Math.PI * 2 + rnd(-0.045, 0.045);
+      const w = rnd(0.48, 0.88);
+      const rr = ARENA_RADIUS * rnd(0.94, 1.02);
+      pos.set(Math.cos(a) * rr, rnd(-1.75, -0.75), Math.sin(a) * rr);
+      rot.set(rnd(-0.5, 0.5), Math.random() * 6.3, rnd(-0.5, 0.5));
+      scl.set(w, rnd(0.65, 1.25), w * rnd(0.7, 1.15));
+    },
+    () => { const v = rnd(0.72, 1.08); return new THREE.Color(v * 0.58, v * 0.72, v * 0.86); }
+  ));
+
+  // 암반 윗부분의 눈턱이 있어야 눈 상판이 절벽 위에 두껍게 쌓여 보인다.
+  const capGeo = new THREE.SphereGeometry(1, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2);
+  rockify(capGeo, 0.24, 29);
+  group.add(scatter(capGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0xf5fbff, roughness: 0.72, flatShading: true,
+      emissive: 0x365a76, emissiveIntensity: 0.32
+    }), 34,
+    (i, pos, rot, scl) => {
+      const a = (i / 34) * Math.PI * 2 + rnd(-0.07, 0.07);
+      const w = rnd(0.42, 0.82);
+      const rr = ARENA_RADIUS * rnd(0.91, 0.99);
+      pos.set(Math.cos(a) * rr, -0.03, Math.sin(a) * rr);
+      rot.set(0, Math.random() * 6.3, 0);
+      scl.set(w, rnd(0.14, 0.28), w * rnd(0.75, 1.25));
+    }
+  ));
+
   // 레퍼런스처럼 눈섬의 무게가 아래로 이어져 보여야 얇은 접시처럼 보이지 않는다.
   const icicleGeo = new THREE.ConeGeometry(0.5, 1.8, 5);
   rockify(icicleGeo, 0.12, 17);
@@ -394,11 +420,11 @@ function buildEdgeIce() {
     color: 0xbfe7ff, roughness: 0.2, metalness: 0.08, flatShading: true,
     emissive: 0x244f78, emissiveIntensity: 0.72
   });
-  group.add(scatter(icicleGeo, icicleMat, 42,
+  group.add(scatter(icicleGeo, icicleMat, 36,
     (i, pos, rot, scl) => {
-      const a = (i / 42) * Math.PI * 2 + rnd(-0.045, 0.045);
-      const h = rnd(0.55, 2.1);
-      const w = rnd(0.12, 0.28);
+      const a = (i / 36) * Math.PI * 2 + rnd(-0.06, 0.06);
+      const h = rnd(0.75, 2.6);
+      const w = rnd(0.14, 0.30);
       const rr = ARENA_RADIUS * rnd(0.98, 1.02);
       pos.set(Math.cos(a) * rr, -2.25 - h * 0.5, Math.sin(a) * rr);
       rot.set(rnd(-0.12, 0.12), Math.random() * 6.3, Math.PI + rnd(-0.08, 0.08));
@@ -567,7 +593,45 @@ function buildSnowDetail() {
     () => { const v = 0.85 + Math.random() * 0.2; return new THREE.Color(v * 0.92, v * 0.97, v); }
   ));
 
-  // 전나무도 심어 봤는데, 멀리서 보면 초록 얼룩처럼 보여 걷어냈다.
+  // 눈 덮인 전나무 군락. 중앙 판정은 비우고 테두리에만 두며, 흰 눈층을 따로
+  // 얹어 예전의 단색 초록 얼룩처럼 보이지 않게 한다.
+  const trees = Array.from({ length: 14 }, (_, i) => ({
+    a: (i / 14) * Math.PI * 2 + rnd(-0.12, 0.12),
+    r: ARENA_RADIUS * rnd(0.78, 0.90),
+    h: rnd(0.78, 1.32)
+  }));
+  const treeGeo = new THREE.ConeGeometry(0.62, 0.62, 7);
+  group.add(scatter(treeGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0x294e58, roughness: 0.9, flatShading: true,
+      emissive: 0x142f3c, emissiveIntensity: 0.3
+    }), trees.length * 3,
+    (i, pos, rot, scl) => {
+      const t = trees[i % trees.length];
+      const layer = Math.floor(i / trees.length);
+      const y = t.h * (0.27 + layer * 0.25);
+      const w = t.h * (0.72 - layer * 0.16);
+      pos.set(Math.cos(t.a) * t.r, y, Math.sin(t.a) * t.r);
+      rot.set(0, rnd(0, 6.3), 0);
+      scl.set(w, t.h * 0.82, w);
+    }
+  ));
+  const snowTreeGeo = new THREE.ConeGeometry(0.52, 0.24, 7);
+  group.add(scatter(snowTreeGeo,
+    new THREE.MeshStandardMaterial({
+      color: 0xeaf7ff, roughness: 0.7, flatShading: true,
+      emissive: 0x31536d, emissiveIntensity: 0.34
+    }), trees.length * 3,
+    (i, pos, rot, scl) => {
+      const t = trees[i % trees.length];
+      const layer = Math.floor(i / trees.length);
+      const y = t.h * (0.48 + layer * 0.25);
+      const w = t.h * (0.66 - layer * 0.15);
+      pos.set(Math.cos(t.a) * t.r, y, Math.sin(t.a) * t.r);
+      rot.set(0, rnd(0, 6.3), 0);
+      scl.set(w, t.h * 0.42, w);
+    }
+  ));
 
   return group;
 }
