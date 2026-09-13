@@ -393,6 +393,21 @@ export function makeGalaxyTexture(size = 1536) {
     g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
   }
 
+  // 레퍼런스의 중심 소용돌이. 흐린 점을 나선으로 겹치면 띠보다 은하로 읽힌다.
+  for (let i = 0; i < 900; i++) {
+    const arm = i % 4;
+    const t = Math.random();
+    const a = arm * Math.PI / 2 + t * Math.PI * 3.4 + rnd(-0.18, 0.18);
+    const r = R * (0.04 + t * 0.72) + rnd(-R * 0.035, R * 0.035);
+    const x = c + Math.cos(a) * r, y = c + Math.sin(a) * r;
+    const rad = rnd(size * 0.004, size * 0.018) * (1.25 - t * 0.5);
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, `rgba(${arm % 2 ? '202,170,255' : '116,190,255'}, ${rnd(0.10, 0.28)})`);
+    gr.addColorStop(1, 'rgba(120,130,255,0)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+  }
+
   // ── 3) 별. 대부분은 아주 작고, 몇 개만 크고 밝다.
   //     띠 근처에 60% 를 몰아 심는다.
   const star = (x, y, rr, alpha, tint) => {
@@ -443,8 +458,8 @@ export function makeGalaxyTexture(size = 1536) {
   for (const rr of [0.32, 0.58, 0.80]) {
     g.beginPath();
     g.arc(0, 0, R * rr, 0, Math.PI * 2);
-    g.strokeStyle = 'rgba(150, 170, 255, 0.13)';
-    g.lineWidth = size * 0.010;
+    g.strokeStyle = 'rgba(255, 215, 145, 0.32)';
+    g.lineWidth = size * 0.003;
     g.stroke();
   }
 

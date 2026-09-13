@@ -118,7 +118,9 @@ function addArena(scene) {
   const tufts = buildGrassTufts();
   tufts.name = 'deck-tufts';
   group.add(tufts);
-  group.add(buildUnderside());
+  const under = buildUnderside();
+  under.name = 'deck-under';
+  group.add(under);
 
   scene.add(group);
   return group;
@@ -385,6 +387,26 @@ function buildEdgeIce() {
     ));
   });
 
+  // 레퍼런스처럼 눈섬의 무게가 아래로 이어져 보여야 얇은 접시처럼 보이지 않는다.
+  const icicleGeo = new THREE.ConeGeometry(0.5, 1.8, 5);
+  rockify(icicleGeo, 0.12, 17);
+  const icicleMat = new THREE.MeshStandardMaterial({
+    color: 0xbfe7ff, roughness: 0.2, metalness: 0.08, flatShading: true,
+    emissive: 0x244f78, emissiveIntensity: 0.72
+  });
+  group.add(scatter(icicleGeo, icicleMat, 42,
+    (i, pos, rot, scl) => {
+      const a = (i / 42) * Math.PI * 2 + rnd(-0.045, 0.045);
+      const h = rnd(0.55, 2.1);
+      const w = rnd(0.12, 0.28);
+      const rr = ARENA_RADIUS * rnd(0.98, 1.02);
+      pos.set(Math.cos(a) * rr, -2.25 - h * 0.5, Math.sin(a) * rr);
+      rot.set(rnd(-0.12, 0.12), Math.random() * 6.3, Math.PI + rnd(-0.08, 0.08));
+      scl.set(w, h, w);
+    },
+    () => { const v = rnd(0.82, 1.08); return new THREE.Color(v * 0.82, v * 0.94, v); }
+  ));
+
   return group;
 }
 
@@ -402,7 +424,8 @@ function buildEdgeOrbit() {
   // ── 빛나는 경계 고리. 두 겹으로 둘러 안쪽은 밝게, 바깥은 옅게 번지게.
   for (const [r, thick, color, opacity] of [
     [ARENA_RADIUS - 0.02, 0.055, 0xc9b6ff, 0.95],
-    [ARENA_RADIUS + 0.04, 0.16,  0x7a5ce0, 0.30]
+    [ARENA_RADIUS + 0.04, 0.16,  0x7a5ce0, 0.30],
+    [ARENA_RADIUS - 0.20, 0.022, 0xffd98a, 0.82]
   ]) {
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(r, thick, 8, 96),
@@ -415,6 +438,26 @@ function buildEdgeOrbit() {
     ring.position.y = 0.02;
     group.add(ring);
   }
+
+  // 보라 수정 받침이 테두리 아래로 이어져야 공중에 뜬 천체 무대처럼 읽힌다.
+  const crystalGeo = new THREE.ConeGeometry(0.5, 1.8, 5);
+  rockify(crystalGeo, 0.16, 19);
+  const crystalMat = new THREE.MeshStandardMaterial({
+    color: 0x9b79ff, roughness: 0.2, metalness: 0.18, flatShading: true,
+    emissive: 0x5426a8, emissiveIntensity: 0.9
+  });
+  group.add(scatter(crystalGeo, crystalMat, 28,
+    (i, pos, rot, scl) => {
+      const a = (i / 28) * Math.PI * 2 + rnd(-0.06, 0.06);
+      const h = rnd(0.55, 1.65);
+      const w = rnd(0.14, 0.30);
+      const rr = ARENA_RADIUS * rnd(0.98, 1.03);
+      pos.set(Math.cos(a) * rr, -2.15 - h * 0.5, Math.sin(a) * rr);
+      rot.set(rnd(-0.12, 0.12), Math.random() * 6.3, Math.PI + rnd(-0.08, 0.08));
+      scl.set(w, h, w);
+    },
+    () => { const v = rnd(0.82, 1.12); return new THREE.Color(v * 0.78, v * 0.65, v); }
+  ));
 
   // ── 떠 있는 운석 조각. 높이를 크게 벌려 '공중에 흩어져 있다' 는 걸 보인다.
   //    바닥에 붙여 놓으면 그냥 돌멩이로 보인다.
@@ -820,8 +863,21 @@ export function paintArena(deck, spec = {}) {
   }
 
   tint('deck-cliff', spec.cliff);
+  tint('deck-under', spec.under ?? 0x9c8874);
   tint('deck-stones', spec.stone);
   tint('deck-tufts', spec.tuft);
+
+  // 밝은 배경에서도 절벽 실루엣이 검은 띠로 뭉개지지 않게 스킨 빛을 약하게 받친다.
+  for (const [name, color, intensity] of [
+    ['deck-cliff', spec.cliffGlow, spec.cliffGlowIntensity],
+    ['deck-under', spec.underGlow, spec.underGlowIntensity]
+  ]) {
+    deck.getObjectByName(name)?.traverse((m) => {
+      if (!m.material?.emissive) return;
+      m.material.emissive.setHex(color ?? 0x000000);
+      m.material.emissiveIntensity = intensity ?? 1;
+    });
+  }
 
   const tufts = deck.getObjectByName('deck-tufts');
   if (tufts) tufts.visible = !spec.hideTufts;
