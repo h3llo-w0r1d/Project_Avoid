@@ -4,6 +4,18 @@ import * as THREE from 'three';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
 
+// 원본의 중앙 섬을 그대로 상판에 굽는다. 로딩 전에는 아래의 절차식 무늬가
+// 보이므로 느린 회선에서도 빈 바닥이 잠깐 나타나지 않는다.
+function applySourceCrop(tex, g, size, src, x, y, cropSize) {
+  const image = new Image();
+  image.addEventListener('load', () => {
+    g.clearRect(0, 0, size, size);
+    g.drawImage(image, x, y, cropSize, cropSize, 0, 0, size, size);
+    tex.needsUpdate = true;
+  }, { once: true });
+  image.src = src;
+}
+
 // ---------------------------------------------------------------- 흙 절벽
 
 // 무대 옆면. 지층처럼 가로줄이 쌓이고 돌이 박혀 있다.
@@ -335,6 +347,7 @@ export function makeSnowTexture(size = 1536) {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 16;
+  applySourceCrop(tex, g, size, 'img/arena-snow-source.png', 410, 72, 850);
   return tex;
 }
 
@@ -479,5 +492,6 @@ export function makeGalaxyTexture(size = 1536) {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 16;
+  applySourceCrop(tex, g, size, 'img/arena-galaxy-source.png', 408, 50, 880);
   return tex;
 }
