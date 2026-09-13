@@ -235,9 +235,8 @@ app.get(['/', '/index.html'], (req, res, next) => {
   next();
 });
 
-// 약관 문서들. 구글 로그인 심사에서 이 주소를 요구하고, 거기 적는 주소는
-// 확장자 없이 깔끔한 편이 낫다. 파일은 public/ 아래 html 하나씩이다.
-for (const page of ['privacy', 'terms']) {
+// 검색 크롤러와 로그인 심사가 확장자 없는 고정 주소를 따라갈 수 있게 한다.
+for (const page of ['guide', 'privacy', 'terms']) {
   app.get(`/${page}`, (req, res) => res.sendFile(join(root, 'public', `${page}.html`)));
 }
 

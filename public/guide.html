@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AvoidArc 게임 가이드 — 조작법, 모드, 전기선 공략</title>
+  <meta name="description" content="AvoidArc의 기본 조작, 전기선 패턴, 혼자 하기·하드코어·음성 점프·봇전·온라인 1v1·탑 오르기 규칙과 초보자 공략을 설명합니다.">
+  <link rel="canonical" href="https://avoidarc.kr/guide">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png?v=2">
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, "Noto Sans KR", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #05060f; color: #e9ecff; line-height: 1.75; }
+    a { color: #8fdcff; }
+    header, main, footer { width: min(880px, calc(100% - 32px)); margin: auto; }
+    header { padding: 48px 0 24px; }
+    header a { color: inherit; text-decoration: none; }
+    h1 { margin: 8px 0; font-size: clamp(2rem, 7vw, 3.4rem); line-height: 1.1; }
+    h1 span, h2 { color: #ff596e; }
+    h2 { margin-top: 48px; }
+    h3 { margin-top: 28px; }
+    p, li { color: #cbd0e8; }
+    nav { display: flex; flex-wrap: wrap; gap: 10px 18px; padding: 16px 0; border-block: 1px solid #252945; }
+    nav a { text-decoration: none; }
+    .lead { font-size: 1.12rem; color: #f5f6ff; }
+    .card { margin: 18px 0; padding: 18px 22px; border: 1px solid #292e4d; border-radius: 14px; background: #0d1020; }
+    .card h3 { margin-top: 0; }
+    kbd { padding: 2px 7px; border: 1px solid #586080; border-bottom-width: 3px; border-radius: 5px; background: #171b31; color: white; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border-bottom: 1px solid #292e4d; text-align: left; vertical-align: top; }
+    th { color: white; }
+    footer { margin-top: 56px; padding: 24px 0 48px; border-top: 1px solid #252945; color: #8990ad; }
+    footer a { margin-right: 16px; }
+    @media (max-width: 600px) { table { font-size: .92rem; } th, td { padding: 8px 5px; } }
+  </style>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7796561950971724"
+     crossorigin="anonymous"></script>
+</head>
+<body>
+  <header>
+    <a href="/"><strong>AVOIDARC</strong></a>
+    <h1>붉은 전기선을 피하는<br><span>생존 게임 가이드</span></h1>
+    <p class="lead">AvoidArc는 공중에 떠 있는 원형 무대에서 전기선을 피하며 최대한 오래 버티는 3D 웹게임입니다. 설치 없이 브라우저에서 바로 시작할 수 있고, 살아남은 시간이 점수가 됩니다.</p>
+    <nav aria-label="가이드 목차">
+      <a href="#basic">기본 조작</a>
+      <a href="#hazards">전기선 패턴</a>
+      <a href="#modes">게임 모드</a>
+      <a href="#ranking">기록과 랭킹</a>
+      <a href="#tips">초보자 공략</a>
+      <a href="#faq">자주 묻는 질문</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="basic">
+      <h2>기본 조작과 목표</h2>
+      <p>목표는 단순합니다. 무대 밖으로 떨어지거나 붉은 전기선에 닿지 않고 오래 살아남으면 됩니다. 전기선이 나타나기 전에는 노란 경고선이 먼저 보입니다. 경고선의 위치와 이동 방향을 확인한 뒤 안전한 자리로 움직이거나 점프하세요.</p>
+      <table>
+        <thead><tr><th>동작</th><th>PC</th><th>모바일</th></tr></thead>
+        <tbody>
+          <tr><td>이동</td><td>방향키 또는 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td>화면 왼쪽을 드래그</td></tr>
+          <tr><td>점프</td><td><kbd>Space</kbd>, 공중에서 한 번 더 누르면 2단 점프</td><td>화면 오른쪽 JUMP 버튼</td></tr>
+          <tr><td>일시정지</td><td><kbd>Esc</kbd></td><td>화면의 일시정지 버튼</td></tr>
+        </tbody>
+      </table>
+      <p>혼자 하기에서는 일시정지하면 시간과 전기선도 함께 멈춥니다. 온라인 1v1은 상대와 서버의 경기가 계속 진행되므로 메뉴를 열어도 멈추지 않습니다.</p>
+    </section>
+
+    <section id="hazards">
+      <h2>전기선 패턴 읽는 법</h2>
+      <p>게임이 길어질수록 새로운 패턴이 추가되고 전기선 속도도 빨라집니다. 모든 경고에 즉시 반응하기보다, 다음 전기선이 지나갈 공간까지 생각하며 움직이는 것이 중요합니다.</p>
+      <div class="card">
+        <h3>가로 훑기</h3>
+        <p>무대를 직선으로 가로지르는 기본 패턴입니다. 노란 경고선이 보이면 전기선이 닿기 직전에 점프하세요. 28초 이후에는 같은 방향에서 두세 줄이 연달아 올 수 있으므로 첫 줄을 너무 일찍 넘으면 뒤의 줄에 착지할 수 있습니다.</p>
+      </div>
+      <div class="card">
+        <h3>회전 빔</h3>
+        <p>무대 중앙을 축으로 긴 전기선이 회전합니다. 중앙 가까이에서는 작은 움직임도 큰 각도 차이를 만들기 때문에 바깥쪽에서 빔을 보며 이동하는 편이 읽기 쉽습니다.</p>
+      </div>
+      <div class="card">
+        <h3>V자 조이기와 격자</h3>
+        <p>V자 조이기는 양쪽 전기선이 중앙에서 겹치는 순간을 점프로 넘겨야 합니다. 격자와 십자는 두 줄이 직각으로 지나가므로 무작정 달리기보다 경고선 사이의 빈칸을 먼저 찾는 편이 안전합니다.</p>
+      </div>
+    </section>
+
+    <section id="modes">
+      <h2>여섯 가지 플레이 방식</h2>
+      <h3>혼자 하기</h3>
+      <p>가장 기본적인 생존 모드입니다. 로그인하지 않은 게스트도 플레이하고 버틴 시간을 랭킹에 올릴 수 있습니다. 처음이라면 이 모드에서 이동 범위와 2단 점프 시간을 익히는 것이 좋습니다.</p>
+      <h3>하드코어 모드</h3>
+      <p>2단 점프를 사용할 수 없고 시간이 흐를수록 무대의 안전한 공간이 줄어듭니다. 기본 모드보다 위치 선정이 중요하며 별도의 하드코어 기록으로 집계됩니다.</p>
+      <h3>음성 인식 점프</h3>
+      <p>키보드 대신 마이크에 입력되는 목소리로 점프합니다. 마이크 권한이 필요하며 HTTPS로 접속해야 사용할 수 있습니다. 녹음한 점프 소리는 현재 브라우저에만 저장되고 다른 이용자에게 전송되지 않습니다.</p>
+      <h3>봇전</h3>
+      <p>컴퓨터 상대와 같은 무대에서 대결하는 연습 모드입니다. 혼자 생존하는 것과 달리 상대의 위치를 읽고 밀치기에 대비해야 하므로 온라인 대전에 들어가기 전 감각을 익히기 좋습니다.</p>
+      <h3>온라인 1v1</h3>
+      <p>두 플레이어가 같은 전기선을 피하고 서로를 밀치며 마지막 생존자를 가립니다. 무작위 상대 찾기와 방 코드 참가를 지원합니다. 승패는 서버가 판정하며, 시즌 다승 기록은 로그인한 계정에 쌓입니다.</p>
+      <h3>탑 오르기</h3>
+      <p>층마다 정해진 조건을 통과해 50층까지 오르는 도전 모드입니다. 일반 생존과 다른 이동 속도나 점프 조건이 등장해 기본 조작을 얼마나 정확히 익혔는지 시험할 수 있습니다.</p>
+    </section>
+
+    <section id="ranking">
+      <h2>기록, 시즌, 계정</h2>
+      <p>생존 시간이 끝나면 최고 기록이 전체 랭킹에 반영됩니다. 한 사람이 여러 번 플레이해도 랭킹에는 최고 기록 한 줄만 남고, 최고 기록을 넘지 못한 도전도 플레이 횟수에는 포함됩니다. 버티기·하드코어·음성·탑 오르기처럼 규칙이 다른 기록은 각각 분리됩니다.</p>
+      <p>시즌은 한국 시간을 기준으로 한 달 동안 진행됩니다. 시즌이 끝나면 상위 기록은 명예의 전당으로 이동하고 새 시즌 랭킹이 시작됩니다. 개인 최고 기록과 캐릭터 해금 상태는 시즌이 바뀌어도 유지됩니다.</p>
+      <p>게스트도 기본 생존 랭킹에 참여할 수 있습니다. Google 또는 Apple 계정으로 로그인하면 닉네임과 온라인 1v1 승패를 계정에 연결해 다른 기기에서도 이어서 확인할 수 있습니다.</p>
+    </section>
+
+    <section id="tips">
+      <h2>처음 60초를 넘기기 위한 공략</h2>
+      <ol>
+        <li><strong>경고선부터 봅니다.</strong> 붉은 전기선이 나온 뒤 반응하면 늦습니다. 노란 선이 겹치는 지점을 먼저 피하세요.</li>
+        <li><strong>무대 끝을 등지지 않습니다.</strong> 바깥쪽은 회전 빔을 읽기 쉽지만, 계속 뒤로 물러나면 작은 충돌에도 떨어질 수 있습니다.</li>
+        <li><strong>2단 점프를 아껴 둡니다.</strong> 첫 점프가 짧았거나 여러 줄이 이어질 때 공중에서 한 번 더 눌러 체공 시간을 늘리세요.</li>
+        <li><strong>착지할 곳을 보고 뜁니다.</strong> 현재 전기선만 넘고 다음 경고선 위에 내려오면 피할 시간이 없습니다.</li>
+        <li><strong>1v1에서는 상대와 전기선을 함께 봅니다.</strong> 상대에게 가까이 붙으면 밀칠 기회가 생기지만 자신도 같은 위험을 받습니다.</li>
+      </ol>
+    </section>
+
+    <section id="faq">
+      <h2>자주 묻는 질문</h2>
+      <h3>설치해야 하나요?</h3>
+      <p>아니요. 최신 PC·모바일 브라우저에서 바로 실행됩니다. 지원하는 브라우저에서는 홈 화면에 추가해 앱처럼 열 수도 있습니다.</p>
+      <h3>로그인하지 않아도 플레이할 수 있나요?</h3>
+      <p>네. 게스트로 혼자 하기, 봇전과 여러 도전 모드를 이용할 수 있습니다. 계정 로그인이 필요한 기능은 닉네임 유지와 온라인 전적처럼 계정에 저장해야 하는 기능입니다.</p>
+      <h3>게임이 끊기면 어떻게 하나요?</h3>
+      <p>다른 탭과 무거운 프로그램을 닫고 브라우저를 새로고침해 보세요. 모바일에서는 가로 화면을 사용하고 절전 모드를 끄면 조작과 화면 갱신이 더 안정적입니다.</p>
+      <h3>마이크 소리가 서버에 저장되나요?</h3>
+      <p>아니요. 사용자가 녹음한 점프 소리는 해당 브라우저의 로컬 저장소에만 보관됩니다. 기기나 브라우저를 바꾸면 녹음도 따라가지 않습니다.</p>
+      <h3>새 기능과 오류는 어디서 확인하나요?</h3>
+      <p>게임 화면의 커뮤니티에서 패치노트와 공지를 확인할 수 있습니다. 버그 제보와 건의사항도 같은 메뉴에서 남길 수 있습니다.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>이 가이드는 AvoidArc의 현재 게임 규칙을 기준으로 작성했습니다.</p>
+    <a href="/">게임 시작</a>
+    <a href="/privacy">개인정보처리방침</a>
+    <a href="/terms">이용약관</a>
+  </footer>
+</body>
+</html>
