@@ -3,7 +3,7 @@ import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
   makeSoilTexture, makeGrassTuftTexture, makeSoftDotTexture, makeSnowTexture, makeGalaxyTexture,
-  makeGalaxyEdgeTexture
+  makeGalaxyEdgeTexture, makeSnowIslandTexture
 } from './textures.js';
 
 // a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
@@ -89,6 +89,18 @@ function addArena(scene) {
   galaxyEdge.renderOrder = -1;
   galaxyEdge.visible = false;
   group.add(galaxyEdge);
+
+  const snowIsland = new THREE.Mesh(
+    new THREE.PlaneGeometry(ARENA_RADIUS * 2.2, ARENA_RADIUS * 2.2),
+    new THREE.MeshBasicMaterial({
+      map: makeSnowIslandTexture(), alphaTest: 0.02
+    })
+  );
+  snowIsland.name = 'deck-snow-source';
+  snowIsland.rotation.x = -Math.PI / 2;
+  snowIsland.position.y = 0.01;
+  snowIsland.visible = false;
+  group.add(snowIsland);
 
   // 옆면 — 흙 절벽. 아래로 갈수록 좁아져서 떠 있는 섬처럼 보인다.
   const cliff = new THREE.Mesh(
@@ -832,10 +844,13 @@ export function paintArena(deck, spec = {}) {
     }
     // 원본 사진은 이미 조명과 입체감이 완성돼 있어 장면 조명을 다시 곱하면 탁해진다.
     top.material.color.setHex(sourceIsland ? 0x000000 : (spec.top ?? 0xffffff));
+    top.visible = spec.topMap !== 'snow';
   }
 
   const galaxyEdge = deck.getObjectByName('deck-galaxy-edge');
   if (galaxyEdge) galaxyEdge.visible = spec.topMap === 'galaxy';
+  const snowIsland = deck.getObjectByName('deck-snow-source');
+  if (snowIsland) snowIsland.visible = spec.topMap === 'snow';
 
   // 밤 무대라 흰 바닥은 그냥 두면 잿빛으로 가라앉는다. 스킨이 재질을
   // 조금 손볼 수 있게 열어 둔다(눈은 스스로 은은히 빛나게).
