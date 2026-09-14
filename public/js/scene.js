@@ -67,18 +67,17 @@ function buildSnowIsland() {
   const group = new THREE.Group();
   const source = [
     [835, 58], [930, 70], [1030, 90], [1105, 135], [1170, 190], [1215, 260],
-    [1252, 340], [1272, 430], [1260, 525], [1230, 620], [1155, 705], [1080, 780],
-    [1000, 835], [930, 880], [890, 920], [835, 945], [780, 920], [740, 880],
-    [670, 840], [590, 800], [515, 735], [445, 660], [410, 575], [395, 490],
+    [1252, 340], [1272, 430], [1260, 525], [1230, 620], [1155, 705], [1080, 770],
+    [1000, 810], [920, 835], [835, 845], [750, 835], [670, 810], [590, 770],
+    [515, 715], [445, 650], [410, 575], [395, 490],
     [400, 405], [420, 325], [455, 250], [500, 185], [560, 130], [650, 90], [745, 68]
   ];
   const scale = ARENA_RADIUS / 448;
-  const rim = source.map(([x, y]) => ({
-    x: (x - 835) * scale,
-    z: (y - 497) * scale
-  }));
+  const rim = new THREE.CatmullRomCurve3(source.map(([x, y]) => new THREE.Vector3(
+    (x - 835) * scale, 0, (y - 497) * scale
+  )), true, 'centripetal').getPoints(128);
 
-  // 원본 외곽선 자체를 상판 메시로 써서 배경까지 딸려 오는 사각 그림을 피한다.
+  // 하부 섬 끝점은 빼고 상단 테두리만 부드럽게 이어, 사진처럼 둥근 경기장으로 보이게 한다.
   const shape = new THREE.Shape(rim.map(({ x, z }) => new THREE.Vector2(x, -z)));
   const topGeometry = new THREE.ShapeGeometry(shape);
   const position = topGeometry.attributes.position;
