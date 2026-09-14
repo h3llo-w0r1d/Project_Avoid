@@ -347,50 +347,7 @@ export function makeSnowTexture(size = 1536) {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 16;
-  applySourceCrop(tex, g, size, 'img/arena-snow-source.png', 410, 72, 850);
-  return tex;
-}
-
-// 둥근 판으로 자르면 원본 절벽이 사라지므로 실제 섬 윤곽 전체를 그대로 남긴다.
-export function makeSnowIslandTexture(size = 1536) {
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = size;
-  const g = cv.getContext('2d');
-  const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 16;
-
-  const image = new Image();
-  image.addEventListener('load', () => {
-    const crop = { x: 367.5, y: 29.5, width: 935 };
-    g.drawImage(image, crop.x, crop.y, crop.width, crop.width, 0, 0, size, size);
-
-    const mask = document.createElement('canvas');
-    mask.width = mask.height = size;
-    const m = mask.getContext('2d');
-    const points = [
-      [835, 58], [930, 70], [1030, 90], [1105, 135], [1170, 190], [1215, 260],
-      [1252, 340], [1272, 430], [1260, 525], [1230, 620], [1155, 705], [1080, 780],
-      [1000, 835], [930, 880], [890, 920], [835, 945], [780, 920], [740, 880],
-      [670, 840], [590, 800], [515, 735], [445, 660], [410, 575], [395, 490],
-      [400, 405], [420, 325], [455, 250], [500, 185], [560, 130], [650, 90], [745, 68]
-    ];
-    m.filter = 'blur(7px)';
-    m.fillStyle = '#fff';
-    m.beginPath();
-    points.forEach(([x, y], i) => m[i ? 'lineTo' : 'moveTo'](
-      (x - crop.x) / crop.width * size,
-      (y - crop.y) / crop.width * size
-    ));
-    m.closePath();
-    m.fill();
-    m.filter = 'none';
-    g.globalCompositeOperation = 'destination-in';
-    g.drawImage(mask, 0, 0);
-    g.globalCompositeOperation = 'source-over';
-    tex.needsUpdate = true;
-  }, { once: true });
-  image.src = 'img/arena-snow-source.png';
+  applySourceCrop(tex, g, size, 'img/arena-snow-source.png', 367.5, 29.5, 935);
   return tex;
 }
 

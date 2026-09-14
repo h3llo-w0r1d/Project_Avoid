@@ -3,7 +3,7 @@ import { ARENA_RADIUS, CAMERA, COLORS } from './config.js';
 import { view } from './orientation.js';
 import {
   makeSoilTexture, makeGrassTuftTexture, makeSoftDotTexture, makeSnowTexture, makeGalaxyTexture,
-  makeGalaxyEdgeTexture, makeSnowIslandTexture
+  makeGalaxyEdgeTexture
 } from './textures.js';
 
 // a~b 사이 아무 수. textures.js 에도 같은 게 있지만 그건 내보내지 않는다.
@@ -63,6 +63,41 @@ function addLights(scene) {
   scene.add(fill);
 }
 
+function buildSnowIsland() {
+  const group = new THREE.Group();
+  const source = [
+    [835, 58], [930, 70], [1030, 90], [1105, 135], [1170, 190], [1215, 260],
+    [1252, 340], [1272, 430], [1260, 525], [1230, 620], [1155, 705], [1080, 780],
+    [1000, 835], [930, 880], [890, 920], [835, 945], [780, 920], [740, 880],
+    [670, 840], [590, 800], [515, 735], [445, 660], [410, 575], [395, 490],
+    [400, 405], [420, 325], [455, 250], [500, 185], [560, 130], [650, 90], [745, 68]
+  ];
+  const scale = ARENA_RADIUS / 448;
+  const rim = source.map(([x, y]) => ({
+    x: (x - 835) * scale,
+    z: (y - 497) * scale
+  }));
+
+  // 원본 외곽선 자체를 상판 메시로 써서 배경까지 딸려 오는 사각 그림을 피한다.
+  const shape = new THREE.Shape(rim.map(({ x, z }) => new THREE.Vector2(x, -z)));
+  const topGeometry = new THREE.ShapeGeometry(shape);
+  const position = topGeometry.attributes.position;
+  const uv = topGeometry.attributes.uv;
+  for (let i = 0; i < position.count; i++) {
+    uv.setXY(i,
+      position.getX(i) / (scale * 935) + 0.5,
+      position.getY(i) / (scale * 935) + 0.5);
+  }
+  uv.needsUpdate = true;
+  const top = new THREE.Mesh(topGeometry, new THREE.MeshBasicMaterial({ map: topTexture('snow') }));
+  top.rotation.x = -Math.PI / 2;
+  top.position.y = 0.02;
+  top.receiveShadow = true;
+  group.add(top);
+
+  return group;
+}
+
 function addArena(scene) {
   const group = new THREE.Group();
 
@@ -90,15 +125,8 @@ function addArena(scene) {
   galaxyEdge.visible = false;
   group.add(galaxyEdge);
 
-  const snowIsland = new THREE.Mesh(
-    new THREE.PlaneGeometry(ARENA_RADIUS * 2.2, ARENA_RADIUS * 2.2),
-    new THREE.MeshBasicMaterial({
-      map: makeSnowIslandTexture(), alphaTest: 0.02
-    })
-  );
+  const snowIsland = buildSnowIsland();
   snowIsland.name = 'deck-snow-source';
-  snowIsland.rotation.x = -Math.PI / 2;
-  snowIsland.position.y = 0.01;
   snowIsland.visible = false;
   group.add(snowIsland);
 
