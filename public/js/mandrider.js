@@ -23,8 +23,8 @@ renderer.toneMappingExposure = 1.18;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8ed5ff);
-scene.fog = new THREE.Fog(0x8ed5ff, 120, 300);
-const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 400);
+scene.fog = new THREE.Fog(0x8ed5ff, 650, 1900);
+const camera = new THREE.PerspectiveCamera(55, 1, 0.8, 2400);
 scene.add(new THREE.HemisphereLight(0xf4fff0, 0x55625a, 2.2));
 const sun = new THREE.DirectionalLight(0xffffff, 3.2);
 sun.position.set(-45, 90, 55);
@@ -35,17 +35,22 @@ sun.shadow.camera.right = sun.shadow.camera.top = 85;
 scene.add(sun);
 scene.add(sun.target);
 
-// 윤곽은 만드라고라이되 분기 없이 한 바퀴를 완주할 수 있는 레이싱 라인이다.
+// 원본보다 다섯 배 긴 단일 주행선으로 사진의 잎·팔·발 구성을 실제 레이스에 맞춘다.
+const MAP_SCALE = 5;
 const trackCurve = new THREE.CatmullRomCurve3([
-  [0, 72], [-13, 80], [-29, 80], [-40, 68], [-36, 54], [-25, 48],
-  [-39, 42], [-52, 32], [-57, 18], [-51, 4], [-36, 3], [-32, -14],
-  [-50, -30], [-58, -48], [-51, -65], [-36, -72], [-22, -59], [-17, -46],
-  [-18, -70], [-10, -88], [0, -97], [10, -88], [18, -70], [17, -46],
-  [22, -59], [36, -72], [51, -65], [58, -48], [50, -30], [32, -14],
-  [36, 3], [51, 4], [57, 18], [52, 32], [39, 42], [25, 48],
-  [36, 54], [40, 68], [29, 80], [13, 80]
-].map(([x, z]) => new THREE.Vector3(x, 0, z)), true, 'catmullrom', 0.32);
-const trackSamples = Array.from({ length: 360 }, (_, i) => trackCurve.getPointAt(i / 360));
+  [0, 64], [-22, 64], [-38, 64], [-48, 73], [-47, 86], [-38, 97],
+  [-24, 99], [-15, 90], [-14, 77], [-21, 68], [-38, 60],
+  [-51, 52], [-60, 41], [-63, 29], [-58, 19], [-49, 16], [-41, 22],
+  [-39, 34], [-31, 22], [-29, 5], [-39, -9],
+  [-52, -22], [-59, -37], [-57, -51], [-48, -61], [-38, -63], [-31, -55],
+  [-30, -43], [-23, -34], [-17, -45], [-19, -64], [-13, -82], [0, -98],
+  [13, -82], [19, -64], [17, -45], [23, -34], [30, -43], [31, -55],
+  [38, -63], [48, -61], [57, -51], [59, -37], [52, -22], [39, -9],
+  [29, 5], [31, 22], [39, 34], [41, 22], [49, 16], [58, 19], [63, 29],
+  [60, 41], [51, 52], [38, 60], [21, 68], [14, 77], [15, 90],
+  [24, 99], [38, 97], [47, 86], [48, 73], [38, 64], [22, 64]
+].map(([x, z]) => new THREE.Vector3(x * MAP_SCALE, 0, z * MAP_SCALE)), true, 'catmullrom', 0.3);
+const trackSamples = Array.from({ length: 720 }, (_, i) => trackCurve.getPointAt(i / 720));
 const trackNormals = trackSamples.map((point, i) => {
   const previous = trackSamples[(i - 1 + trackSamples.length) % trackSamples.length];
   const next = trackSamples[(i + 1) % trackSamples.length];
@@ -78,49 +83,72 @@ function stripGeometry(offsetA, offsetB, y) {
 
 const islandRock = new THREE.MeshStandardMaterial({ color: 0x52624a, roughness: 1 });
 const islandGrass = new THREE.MeshStandardMaterial({ color: 0x65a947, roughness: 1 });
+const islandSand = new THREE.MeshStandardMaterial({ color: 0xe7d39c, roughness: 1 });
 const islandSpecs = [
-  [0, 7, 45, 53, 0], [-45, 19, 18, 21, -.2], [45, 19, 18, 21, .2],
-  [-25, 66, 20, 21, -.25], [25, 66, 20, 21, .25],
-  [-39, -50, 21, 31, -.5], [0, -70, 20, 34, 0], [39, -50, 21, 31, .5]
+  [0, 25, 55, 58, 0, islandSand], [-51, 31, 17, 22, -.2, islandGrass], [51, 31, 17, 22, .2, islandGrass],
+  [-31, 84, 22, 23, -.2, islandGrass], [31, 84, 22, 23, .2, islandGrass],
+  [-44, -43, 22, 31, -.52, islandGrass], [0, -69, 21, 35, 0, islandGrass], [44, -43, 22, 31, .52, islandGrass]
 ];
-for (const [x, z, rx, rz, rotation] of islandSpecs) {
-  const rock = new THREE.Mesh(new THREE.CylinderGeometry(1, .72, 8, 28), islandRock);
-  rock.position.set(x, -4, z);
+for (const [x, z, rx, rz, rotation, topMaterial] of islandSpecs) {
+  const rock = new THREE.Mesh(new THREE.CylinderGeometry(1, .72, 30, 28), islandRock);
+  rock.position.set(x * MAP_SCALE, -15, z * MAP_SCALE);
   rock.rotation.y = rotation;
-  rock.scale.set(rx, 1, rz);
+  rock.scale.set(rx * MAP_SCALE, 1, rz * MAP_SCALE);
   rock.receiveShadow = true;
   scene.add(rock);
-  const grass = new THREE.Mesh(new THREE.CircleGeometry(1, 40), islandGrass);
-  grass.position.set(x, .03, z);
-  grass.rotation.set(-Math.PI / 2, 0, rotation);
-  grass.scale.set(rx * .98, rz * .98, 1);
-  grass.receiveShadow = true;
-  scene.add(grass);
+  const top = new THREE.Mesh(new THREE.CircleGeometry(1, 48), topMaterial);
+  top.position.set(x * MAP_SCALE, 1, z * MAP_SCALE);
+  top.rotation.set(-Math.PI / 2, 0, rotation);
+  top.scale.set(rx * MAP_SCALE * .98, rz * MAP_SCALE * .98, 1);
+  top.receiveShadow = true;
+  scene.add(top);
 }
 
 const roadMat = new THREE.MeshStandardMaterial({ color: 0x77766e, roughness: .92 });
-const road = new THREE.Mesh(stripGeometry(-7.05, 7.05, .13), roadMat);
+const road = new THREE.Mesh(stripGeometry(-7.05, 7.05, 2), roadMat);
 road.receiveShadow = true;
 scene.add(road);
-const edgeMat = new THREE.MeshStandardMaterial({ color: 0xf0a262, roughness: .75 });
+const curbGeo = new THREE.BoxGeometry(1, 1, 1);
+const curbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .76 });
+const curbs = new THREE.InstancedMesh(curbGeo, curbMat, trackSamples.length * 2);
+const curbMatrix = new THREE.Matrix4();
+const curbQuaternion = new THREE.Quaternion();
+const curbRed = new THREE.Color(0xd7352f);
+const curbWhite = new THREE.Color(0xffffff);
+let curbIndex = 0;
 for (const side of [-1, 1]) {
-  const edgeCurve = new THREE.CatmullRomCurve3(trackSamples.map((point, i) => new THREE.Vector3(
-    point.x + trackNormals[i].x * 7.15,
-    .28,
-    point.z + trackNormals[i].y * 7.15
-  )), true, 'catmullrom', .4);
-  scene.add(new THREE.Mesh(new THREE.TubeGeometry(edgeCurve, 360, .18, 5, true), edgeMat));
+  for (let i = 0; i < trackSamples.length; i++) {
+    const p = trackSamples[i];
+    const q = trackSamples[(i + 1) % trackSamples.length];
+    const angle = Math.atan2(q.x - p.x, q.z - p.z);
+    curbQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
+    curbMatrix.compose(
+      new THREE.Vector3(
+        (p.x + q.x) / 2 + trackNormals[i].x * side * 7.35,
+        2.12,
+        (p.z + q.z) / 2 + trackNormals[i].y * side * 7.35
+      ),
+      curbQuaternion,
+      new THREE.Vector3(.72, .22, p.distanceTo(q) + .18)
+    );
+    curbs.setMatrixAt(curbIndex, curbMatrix);
+    curbs.setColorAt(curbIndex++, Math.floor(i / 5) % 2 ? curbRed : curbWhite);
+  }
 }
+curbs.instanceMatrix.needsUpdate = true;
+curbs.instanceColor.needsUpdate = true;
+scene.add(curbs);
 
 const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf8dc77, roughness: .75 });
 const stripeGeo = new THREE.BoxGeometry(.15, .05, 2.4);
-const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, 90);
+const stripeCount = trackSamples.length / 4;
+const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripeCount);
 const stripeMatrix = new THREE.Matrix4();
-for (let i = 0; i < 90; i++) {
+for (let i = 0; i < stripeCount; i++) {
   const p = trackSamples[i * 4];
   const q = trackSamples[(i * 4 + 1) % trackSamples.length];
   stripeMatrix.makeRotationY(Math.atan2(q.x - p.x, q.z - p.z));
-  stripeMatrix.setPosition(p.x, .2, p.z);
+  stripeMatrix.setPosition(p.x, 2.06, p.z);
   stripes.setMatrixAt(i, stripeMatrix);
 }
 stripes.instanceMatrix.needsUpdate = true;
@@ -136,36 +164,97 @@ for (let i = 0; i < 10; i++) {
     new THREE.MeshStandardMaterial({ color: i % 2 ? 0x202522 : 0xffffff, roughness: .75 })
   );
   const across = (i - 4.5) * 1.36;
-  tile.position.set(start.x + startNormal.x * across, .23, start.z + startNormal.y * across);
+  tile.position.set(start.x + startNormal.x * across, 2.08, start.z + startNormal.y * across);
   tile.rotation.y = startAngle;
   scene.add(tile);
 }
 
-const pond = new THREE.Mesh(
-  new THREE.CircleGeometry(7, 40),
-  new THREE.MeshStandardMaterial({ color: 0x48bfe2, roughness: .25, metalness: .05 })
-);
-pond.rotation.x = -Math.PI / 2;
-pond.position.set(0, .08, 4);
-scene.add(pond);
+const discGeo = new THREE.CircleGeometry(1, 40);
+function addGroundDisc(x, z, rx, rz, material, y = 1.2) {
+  const disc = new THREE.Mesh(discGeo, material);
+  disc.position.set(x * MAP_SCALE, y, z * MAP_SCALE);
+  disc.rotation.x = -Math.PI / 2;
+  disc.scale.set(rx * MAP_SCALE, rz * MAP_SCALE, 1);
+  scene.add(disc);
+  return disc;
+}
+
+// 넓어진 광장이 비지 않도록 사진처럼 얼굴과 잎 속 정원을 코스 안쪽에 둔다.
+const soilMat = new THREE.MeshStandardMaterial({ color: 0x513624, roughness: 1 });
+const eyeMat = new THREE.MeshStandardMaterial({ color: 0x2b211b, roughness: .8 });
+const whiteMat = new THREE.MeshStandardMaterial({ color: 0xfffdf4, roughness: .8 });
+const cheekMat = new THREE.MeshStandardMaterial({ color: 0xf4a1a8, roughness: .9 });
+const mouthMat = new THREE.MeshStandardMaterial({ color: 0x8e2f32, roughness: .9 });
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x45bfe0, roughness: .25, metalness: .08 });
+for (const x of [-16, 16]) {
+  addGroundDisc(x, 17, 8.5, 10, whiteMat, 1.2);
+  addGroundDisc(x, 18, 6.3, 8, eyeMat, 1.4);
+  addGroundDisc(x - 2, 14.5, 1.6, 2, whiteMat, 1.6);
+}
+for (const [x, angle] of [[-16, -.18], [16, .18]]) {
+  const brow = new THREE.Mesh(new THREE.BoxGeometry(13 * MAP_SCALE, .2, 1.5 * MAP_SCALE), soilMat);
+  brow.position.set(x * MAP_SCALE, 1.5, 5 * MAP_SCALE);
+  brow.rotation.y = angle;
+  scene.add(brow);
+}
+for (const x of [-30, 30]) addGroundDisc(x, 34, 6, 3.8, cheekMat, 1.3);
+addGroundDisc(0, 39, 12, 8, soilMat, 1.2);
+addGroundDisc(0, 42, 9, 4.8, mouthMat, 1.4);
+addGroundDisc(0, 35, 7, 2.3, whiteMat, 1.6);
+
+for (const [x, z, rx, rz] of [
+  [-43, -42, 6, 9], [0, -66, 6, 10], [43, -42, 6, 9],
+  [-51, 31, 5, 7], [51, 31, 5, 7], [-31, 84, 6, 7], [31, 84, 6, 7]
+]) addGroundDisc(x, z, rx, rz, waterMat, 1.2);
 
 const bushGeo = new THREE.IcosahedronGeometry(1, 1);
 const bushMat = new THREE.MeshStandardMaterial({ color: 0x397d37, roughness: 1 });
-const bushes = new THREE.InstancedMesh(bushGeo, bushMat, 24);
+const bushes = new THREE.InstancedMesh(bushGeo, bushMat, 56);
 const bushMatrix = new THREE.Matrix4();
-for (let i = 0; i < 24; i++) {
+for (let i = 0; i < 56; i++) {
   const angle = i * 2.399;
-  const radius = 11 + (i % 4) * 4.2;
+  const radius = (27 + i % 4 * 1.5) * MAP_SCALE;
   bushMatrix.compose(
-    new THREE.Vector3(Math.cos(angle) * radius, .8, 4 + Math.sin(angle) * radius),
+    new THREE.Vector3(Math.cos(angle) * radius, 3.2, 25 * MAP_SCALE + Math.sin(angle) * radius * .9),
     new THREE.Quaternion(),
-    new THREE.Vector3(1.1 + i % 3 * .3, .8 + i % 2 * .4, 1.1 + i % 3 * .3)
+    new THREE.Vector3(1.5 + i % 3 * .6, 1.4 + i % 2 * .5, 1.5 + i % 3 * .6)
   );
   bushes.setMatrixAt(i, bushMatrix);
 }
 bushes.instanceMatrix.needsUpdate = true;
 bushes.castShadow = true;
 scene.add(bushes);
+
+const standBaseMat = new THREE.MeshStandardMaterial({ color: 0x4e514f, roughness: .8 });
+const seatMat = new THREE.MeshStandardMaterial({ color: 0xd63832, roughness: .75 });
+function addStand(x, z, rotation) {
+  const stand = new THREE.Group();
+  const base = new THREE.Mesh(new THREE.BoxGeometry(28, 2, 10), standBaseMat);
+  base.position.y = 1;
+  stand.add(base);
+  for (let row = 0; row < 3; row++) {
+    const seats = new THREE.Mesh(new THREE.BoxGeometry(25 - row * 2, 1.4, 2.2), seatMat);
+    seats.position.set(0, 2.2 + row * 1.2, 2.5 - row * 2.2);
+    stand.add(seats);
+  }
+  for (const side of [-1, 1]) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.28, .35, 12, 8), standBaseMat);
+    pole.position.set(side * 12, 6, -4);
+    stand.add(pole);
+    const light = new THREE.Mesh(new THREE.BoxGeometry(4.5, 2.6, .6), whiteMat);
+    light.position.set(side * 12, 12, -4);
+    stand.add(light);
+  }
+  stand.position.set(x * MAP_SCALE, 1, z * MAP_SCALE);
+  stand.rotation.y = rotation;
+  scene.add(stand);
+}
+addStand(-54, -62, -.35);
+addStand(54, -62, .35);
+addStand(-67, 32, Math.PI / 2);
+addStand(67, 32, -Math.PI / 2);
+addStand(-43, 92, -.2);
+addStand(43, 92, .2);
 
 function makeKart() {
   const kart = new THREE.Group();
@@ -368,11 +457,11 @@ const cameraTarget = new THREE.Vector3();
 const cameraLook = new THREE.Vector3();
 function updateScene(dt, now) {
   if (!raceActive) {
-    camera.position.set(0, 180, 5);
-    camera.lookAt(0, 0, -4);
+    camera.position.set(0, 1120, 10);
+    camera.lookAt(0, 0, 0);
     return;
   }
-  kart.position.set(state.x, state.hitWall ? 0.06 : 0, state.z);
+  kart.position.set(state.x, 1.94 + (state.hitWall ? .06 : 0), state.z);
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
