@@ -12,8 +12,10 @@ export const KART = Object.freeze({
   driftGrip: 13,
   steerRate: 6,
   turnRate: 1.55,
+  driftTurnRate: 0.48,
   driftMinSpeed: 10,
-  driftMinTime: 0.28,
+  driftMinTime: 0.18,
+  driftChainWindow: 0.48,
   boostSeconds: 2.35,
   instantSeconds: 0.72,
   instantWindow: 0.62
@@ -42,6 +44,7 @@ export function createKartState() {
   return {
     x: 0, z: 0, heading: 0, speed: 0, lateral: 0, steer: 0,
     drifting: false, driftDirection: 0, driftTime: 0,
+    driftChain: 0, driftChainTimer: 0,
     gauge: 0, boosts: 0, boostTimer: 0,
     instantTimer: 0, instantWindow: 0,
     startTimer: 3, startArmed: false, started: false,
@@ -90,6 +93,8 @@ export function stepKart(state, input, rawDt) {
   state.boostTimer = Math.max(0, state.boostTimer - dt);
   state.instantTimer = Math.max(0, state.instantTimer - dt);
   state.instantWindow = Math.max(0, state.instantWindow - dt);
+  state.driftChainTimer = Math.max(0, state.driftChainTimer - dt);
+  if (!state.drifting && state.driftChainTimer === 0) state.driftChain = 0;
 
   if (input.boostPressed && state.boosts > 0) {
     state.boosts--;
@@ -107,16 +112,26 @@ export function stepKart(state, input, rawDt) {
 
   const steerInput = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   state.steer = toward(state.steer, steerInput, KART.steerRate * dt);
-  const wantsDrift = input.drift && Math.abs(state.speed) >= KART.driftMinSpeed && Math.abs(state.steer) > 0.16;
-
-  if (wantsDrift && !state.drifting) {
+  const canDrift = Math.abs(state.speed) >= KART.driftMinSpeed && steerInput !== 0;
+  if (input.driftPressed && canDrift && !state.drifting) {
     state.drifting = true;
-    state.driftDirection = Math.sign(state.steer);
+    state.driftDirection = Math.sign(steerInput);
     state.driftTime = 0;
+    state.driftChain = state.driftChainTimer > 0 ? Math.min(3, state.driftChain + 1) : 1;
+    state.driftChainTimer = 0;
+    state.lateral -= state.driftDirection * Math.abs(state.speed) * 0.18;
+    if (state.driftChain > 1) flash(state, `${state.driftChain}연속 드리프트!`);
   }
-  if (state.drifting && !wantsDrift) {
+  const counterSteering = steerInput && Math.sign(steerInput) === -state.driftDirection;
+  const endsDrift = state.drifting && (
+    Math.abs(state.speed) < KART.driftMinSpeed * .75
+    || (!input.drift && state.driftTime > .12)
+    || (counterSteering && state.driftTime > KART.driftMinTime)
+  );
+  if (endsDrift) {
     if (state.driftTime >= KART.driftMinTime) {
       state.instantWindow = KART.instantWindow;
+      state.driftChainTimer = KART.driftChainWindow;
       flash(state, '가속키를 다시 눌러 순간 부스터');
     }
     state.drifting = false;
@@ -139,14 +154,16 @@ export function stepKart(state, input, rawDt) {
 
   const speedRatio = Math.min(Math.abs(state.speed) / KART.maxSpeed, 1);
   const reverse = state.speed < 0 ? -1 : 1;
-  const driftTurn = state.drifting ? 1.42 : 1;
-  state.heading += state.steer * reverse * KART.turnRate * (0.2 + speedRatio * 0.8) * driftTurn * dt;
+  const baseTurn = state.steer * KART.turnRate * (0.2 + speedRatio * 0.8);
+  const driftTurn = state.drifting ? state.driftDirection * KART.driftTurnRate * speedRatio : 0;
+  state.heading += (baseTurn * (state.drifting ? .82 : 1) + driftTurn) * reverse * dt;
 
   if (state.drifting) {
     state.driftTime += dt;
-    const slip = -state.driftDirection * Math.abs(state.speed) * 0.31;
+    const slip = -state.driftDirection * Math.abs(state.speed) * (0.34 + state.driftChain * .025);
     state.lateral = toward(state.lateral, slip, KART.driftGrip * dt);
-    charge(state, Math.abs(state.speed * state.steer) * 0.9 * dt);
+    state.speed = toward(state.speed, 0, 2.2 * dt);
+    charge(state, Math.abs(state.speed) * (0.55 + Math.abs(state.steer) * .5) * (1 + state.driftChain * .08) * dt);
   } else {
     state.lateral = toward(state.lateral, 0, KART.grip * dt);
   }

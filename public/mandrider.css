@@ -16,8 +16,9 @@ button, a { font: inherit; }
 .map-kicker { color: #a8ff70; font-size: 12px; font-weight: 1000; letter-spacing: .24em; }
 .map-panel h1 { margin: 6px 0 22px; font-size: clamp(25px, 4vw, 38px); }
 .map-card { width: 100%; display: grid; grid-template-columns: 105px 1fr auto; align-items: center; gap: 15px; padding: 12px; border: 2px solid #9cef67; border-radius: 19px; color: #fff; text-align: left; background: rgba(102,172,69,.18); cursor: pointer; }
-.map-thumb { position: relative; display: grid; place-items: center; width: 105px; height: 78px; overflow: hidden; border-radius: 13px; font-size: 42px; background: radial-gradient(ellipse, #83c650 0 45%, #7a6d52 46% 56%, #75cfff 57%); }
-.map-thumb b { position: absolute; right: 7px; bottom: 4px; font-size: 18px; }
+.map-thumb { position: relative; display: grid; place-items: center; width: 105px; height: 78px; overflow: hidden; border-radius: 13px; background: linear-gradient(145deg, #68ba47, #34774e); box-shadow: inset 0 0 24px rgba(5,31,16,.45); }
+.map-thumb svg { width: 88%; height: 88%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
+.map-thumb path { fill: none; stroke: #f8fbff; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
 .map-copy { display: grid; gap: 6px; }
 .map-copy strong { font-size: 18px; }
 .map-copy small { color: #d5e5d0; line-height: 1.4; }
@@ -36,11 +37,21 @@ button, a { font: inherit; }
 
 #race-hud {
   position: fixed; right: 24px; bottom: 26px; z-index: 2;
-  width: min(320px, 38vw); color: #fff; text-shadow: 0 2px 5px #000;
+  width: min(330px, 38vw); color: #fff; text-shadow: 0 2px 5px #000;
 }
-.speed { display: flex; justify-content: flex-end; align-items: baseline; gap: 7px; }
-.speed b { font-size: 58px; line-height: .9; font-variant-numeric: tabular-nums; }
-.speed span { font-weight: 800; opacity: .85; }
+.speed {
+  --speed-angle: 0deg; position: relative; display: grid; place-content: center; justify-items: center;
+  width: 138px; height: 138px; margin-left: auto; border-radius: 50%; overflow: hidden;
+  background: conic-gradient(from 225deg, #56e4ff var(--speed-angle), rgba(255,255,255,.16) 0 270deg, transparent 0);
+  filter: drop-shadow(0 5px 13px rgba(0,0,0,.35));
+}
+.speed::before { content: ""; position: absolute; inset: 9px; border-radius: inherit; background: rgba(16,24,29,.84); border: 1px solid rgba(255,255,255,.28); }
+.speed b, .speed span { position: relative; }
+.speed b { font-size: 54px; line-height: .88; font-variant-numeric: tabular-nums; }
+.speed span { margin-top: 7px; font-size: 12px; font-weight: 900; opacity: .9; }
+.race-time { display: flex; justify-content: flex-end; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+.race-time span { color: #9fe8ff; font-size: 11px; font-weight: 1000; }
+.race-time b { font-size: 18px; font-variant-numeric: tabular-nums; }
 .lap { display: flex; justify-content: flex-end; align-items: baseline; gap: 6px; margin-bottom: 8px; }
 .lap b { font-size: 22px; font-variant-numeric: tabular-nums; }
 .lap span { color: #caff9e; font-size: 12px; font-weight: 1000; }
@@ -49,8 +60,14 @@ button, a { font: inherit; }
 .meter-track { height: 13px; margin-top: 7px; overflow: hidden; border-radius: 9px; background: rgba(255,255,255,.12); }
 .meter-track i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #7ce751, #eaff55); box-shadow: 0 0 12px #8cff58; }
 .boost-slots { display: flex; justify-content: flex-end; gap: 7px; margin-top: 9px; }
-.boost-slots i { width: 54px; height: 17px; border: 2px solid rgba(123,224,255,.55); border-radius: 9px; background: rgba(50,106,116,.35); }
-.boost-slots i.on { background: linear-gradient(90deg, #38d8ff, #e6ffff); box-shadow: 0 0 13px #4ce3ff; }
+.boost-slots i { display: grid; place-items: center; width: 62px; height: 28px; border: 2px solid rgba(123,224,255,.55); border-radius: 7px; background: rgba(50,106,116,.35); font-style: normal; }
+.boost-slots i::after { content: "N₂O"; color: rgba(255,255,255,.45); font-size: 12px; font-weight: 1000; }
+.boost-slots i.on { background: linear-gradient(135deg, #148dd3, #67ecff); box-shadow: 0 0 13px #4ce3ff; }
+.boost-slots i.on::after { color: #fff; }
+
+.minimap-panel { position: fixed; left: 22px; bottom: 105px; z-index: 2; width: 190px; padding: 9px; border: 1px solid rgba(255,255,255,.24); border-radius: 15px; color: #fff; background: rgba(14,25,30,.72); box-shadow: 0 8px 25px rgba(0,0,0,.28); }
+.minimap-panel span { display: block; color: #bdefff; font-size: 10px; font-weight: 1000; letter-spacing: .12em; }
+.minimap-panel canvas { display: block; width: 100%; height: 190px; }
 
 #countdown {
   position: fixed; inset: 50% auto auto 50%; z-index: 3; transform: translate(-50%,-50%);
@@ -63,14 +80,18 @@ button, a { font: inherit; }
   text-shadow: 0 3px 7px #000, 0 0 14px #50ddff; pointer-events: none;
 }
 #drive-state { position: fixed; top: 24px; left: 50%; z-index: 2; transform: translateX(-50%); padding: 8px 14px; border-radius: 20px; color: #fff; background: rgba(15,24,21,.65); font-weight: 900; }
-.controls-help { position: fixed; left: 22px; bottom: 24px; z-index: 2; padding: 12px 15px; border-radius: 14px; color: #edf8ef; background: rgba(15,24,21,.72); line-height: 1.65; font-size: 13px; }
+.controls-help { position: fixed; left: 22px; bottom: 24px; z-index: 2; max-width: 550px; padding: 12px 15px; border-radius: 14px; color: #edf8ef; background: rgba(15,24,21,.72); line-height: 1.65; font-size: 13px; }
 .controls-help b { color: #d5ff93; }
 
 #race-touch { display: none; }
 @media (pointer: coarse) {
   .controls-help { display: none; }
+  .minimap-panel { top: 70px; left: 15px; bottom: auto; width: 120px; padding: 6px; }
+  .minimap-panel span { display: none; }
+  .minimap-panel canvas { height: 135px; }
   #race-hud { top: 15px; right: 15px; bottom: auto; width: 245px; }
-  .speed b { font-size: 38px; }
+  .speed { width: 92px; height: 92px; }
+  .speed b { font-size: 35px; }
   .meter { margin-top: 6px; padding: 8px 10px; }
   #race-touch { position: fixed; inset: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 18px max(18px, env(safe-area-inset-bottom)); pointer-events: none; }
   #race-touch > div { display: flex; gap: 9px; pointer-events: auto; }
