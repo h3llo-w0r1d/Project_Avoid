@@ -24,7 +24,7 @@ renderer.toneMappingExposure = 1.18;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x8ed5ff);
 scene.fog = new THREE.Fog(0x8ed5ff, 650, 1900);
-const camera = new THREE.PerspectiveCamera(55, 1, 0.8, 2400);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.8, 2400);
 scene.add(new THREE.HemisphereLight(0xf4fff0, 0x55625a, 2.2));
 const sun = new THREE.DirectionalLight(0xffffff, 3.2);
 sun.position.set(-45, 90, 55);
@@ -38,19 +38,20 @@ scene.add(sun.target);
 // 원본보다 다섯 배 긴 단일 주행선으로 사진의 잎·팔·발 구성을 실제 레이스에 맞춘다.
 const MAP_SCALE = 5;
 const trackCurve = new THREE.CatmullRomCurve3([
-  [0, 64], [-22, 64], [-38, 64], [-48, 73], [-47, 86], [-38, 97],
-  [-24, 99], [-15, 90], [-14, 77], [-21, 68], [-38, 60],
-  [-51, 52], [-60, 41], [-63, 29], [-58, 19], [-49, 16], [-41, 22],
-  [-39, 34], [-31, 22], [-29, 5], [-39, -9],
+  [0, 64], [-9, 65], [-16, 68], [-20, 73], [-18, 80], [-15, 90],
+  [-24, 99], [-38, 97], [-47, 86], [-48, 73], [-46, 60], [-51, 52],
+  [-60, 41], [-63, 29], [-58, 19], [-54, 16], [-49, 16], [-46, 24],
+  [-43, 31], [-36, 34], [-29, 31], [-26, 24], [-29, 5], [-39, -9],
   [-52, -22], [-59, -37], [-57, -51], [-48, -61], [-38, -63], [-31, -55],
-  [-30, -43], [-23, -34], [-17, -45], [-19, -64], [-13, -82], [0, -98],
-  [13, -82], [19, -64], [17, -45], [23, -34], [30, -43], [31, -55],
-  [38, -63], [48, -61], [57, -51], [59, -37], [52, -22], [39, -9],
-  [29, 5], [31, 22], [39, 34], [41, 22], [49, 16], [58, 19], [63, 29],
-  [60, 41], [51, 52], [38, 60], [21, 68], [14, 77], [15, 90],
-  [24, 99], [38, 97], [47, 86], [48, 73], [38, 64], [22, 64]
-].map(([x, z]) => new THREE.Vector3(x * MAP_SCALE, 0, z * MAP_SCALE)), true, 'catmullrom', 0.3);
-const trackSamples = Array.from({ length: 720 }, (_, i) => trackCurve.getPointAt(i / 720));
+  [-30, -43], [-25, -35], [-20, -37], [-17, -45], [-19, -64], [-13, -82],
+  [0, -98], [13, -82], [19, -64], [17, -45], [20, -37], [25, -35],
+  [30, -43], [31, -55], [38, -63], [48, -61], [57, -51], [59, -37],
+  [52, -22], [39, -9], [29, 5], [26, 24], [29, 31], [36, 34], [43, 31],
+  [46, 24], [49, 16], [54, 16], [58, 19], [63, 29], [60, 41], [51, 52],
+  [46, 60], [48, 73], [47, 86], [38, 97], [24, 99], [15, 90], [18, 80],
+  [20, 73], [16, 68], [9, 65]
+].map(([x, z]) => new THREE.Vector3(x * MAP_SCALE, 0, z * MAP_SCALE)), true, 'centripetal');
+const trackSamples = Array.from({ length: 960 }, (_, i) => trackCurve.getPointAt(i / 960));
 const trackNormals = trackSamples.map((point, i) => {
   const previous = trackSamples[(i - 1 + trackSamples.length) % trackSamples.length];
   const next = trackSamples[(i + 1) % trackSamples.length];
@@ -105,7 +106,7 @@ for (const [x, z, rx, rz, rotation, topMaterial] of islandSpecs) {
 }
 
 const roadMat = new THREE.MeshStandardMaterial({ color: 0x77766e, roughness: .92 });
-const road = new THREE.Mesh(stripGeometry(-7.05, 7.05, 2), roadMat);
+const road = new THREE.Mesh(stripGeometry(-14.1, 14.1, 2), roadMat);
 road.receiveShadow = true;
 scene.add(road);
 const curbGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -124,9 +125,9 @@ for (const side of [-1, 1]) {
     curbQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
     curbMatrix.compose(
       new THREE.Vector3(
-        (p.x + q.x) / 2 + trackNormals[i].x * side * 7.35,
+        (p.x + q.x) / 2 + trackNormals[i].x * side * 14.4,
         2.12,
-        (p.z + q.z) / 2 + trackNormals[i].y * side * 7.35
+        (p.z + q.z) / 2 + trackNormals[i].y * side * 14.4
       ),
       curbQuaternion,
       new THREE.Vector3(.72, .22, p.distanceTo(q) + .18)
@@ -139,17 +140,25 @@ curbs.instanceMatrix.needsUpdate = true;
 curbs.instanceColor.needsUpdate = true;
 scene.add(curbs);
 
-const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf8dc77, roughness: .75 });
-const stripeGeo = new THREE.BoxGeometry(.15, .05, 2.4);
-const stripeCount = trackSamples.length / 4;
-const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripeCount);
+const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf7f5e9, roughness: .75 });
+const stripeGeo = new THREE.BoxGeometry(.18, .05, 4.2);
+const stripePerLine = trackSamples.length / 2;
+const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripePerLine * 2);
 const stripeMatrix = new THREE.Matrix4();
-for (let i = 0; i < stripeCount; i++) {
-  const p = trackSamples[i * 4];
-  const q = trackSamples[(i * 4 + 1) % trackSamples.length];
-  stripeMatrix.makeRotationY(Math.atan2(q.x - p.x, q.z - p.z));
-  stripeMatrix.setPosition(p.x, 2.06, p.z);
-  stripes.setMatrixAt(i, stripeMatrix);
+let stripeIndex = 0;
+for (const lane of [-4.7, 4.7]) {
+  for (let i = 0; i < stripePerLine; i++) {
+    const sample = i * 2;
+    const p = trackSamples[sample];
+    const q = trackSamples[(sample + 1) % trackSamples.length];
+    stripeMatrix.makeRotationY(Math.atan2(q.x - p.x, q.z - p.z));
+    stripeMatrix.setPosition(
+      p.x + trackNormals[sample].x * lane,
+      2.06,
+      p.z + trackNormals[sample].y * lane
+    );
+    stripes.setMatrixAt(stripeIndex++, stripeMatrix);
+  }
 }
 stripes.instanceMatrix.needsUpdate = true;
 scene.add(stripes);
@@ -158,12 +167,12 @@ const start = trackSamples[0];
 const startNext = trackSamples[1];
 const startAngle = Math.atan2(startNext.x - start.x, startNext.z - start.z);
 const startNormal = new THREE.Vector2(startNext.z - start.z, -(startNext.x - start.x)).normalize();
-for (let i = 0; i < 10; i++) {
+for (let i = 0; i < 20; i++) {
   const tile = new THREE.Mesh(
     new THREE.BoxGeometry(1.36, .07, 1.35),
     new THREE.MeshStandardMaterial({ color: i % 2 ? 0x202522 : 0xffffff, roughness: .75 })
   );
-  const across = (i - 4.5) * 1.36;
+  const across = (i - 9.5) * 1.36;
   tile.position.set(start.x + startNormal.x * across, 2.08, start.z + startNormal.y * across);
   tile.rotation.y = startAngle;
   scene.add(tile);
@@ -392,7 +401,7 @@ document.getElementById('start-race').addEventListener('click', () => {
   reset();
   const forwardX = Math.sin(state.heading);
   const forwardZ = -Math.cos(state.heading);
-  camera.position.set(state.x - forwardX * 10, 5.4, state.z - forwardZ * 10);
+  camera.position.set(state.x - forwardX * 18, 9.5, state.z - forwardZ * 18);
   previous = performance.now();
 });
 
@@ -475,9 +484,9 @@ function updateScene(dt, now) {
 
   const forwardX = Math.sin(state.heading);
   const forwardZ = -Math.cos(state.heading);
-  cameraTarget.set(state.x - forwardX * 10, 5.4, state.z - forwardZ * 10);
+  cameraTarget.set(state.x - forwardX * 18, 9.5, state.z - forwardZ * 18);
   camera.position.lerp(cameraTarget, 1 - Math.exp(-dt * 7));
-  cameraLook.set(state.x + forwardX * 8, 1.15, state.z + forwardZ * 8);
+  cameraLook.set(state.x + forwardX * 15, 2.6, state.z + forwardZ * 15);
   camera.lookAt(cameraLook);
   sun.position.set(state.x - 18, 28, state.z + 16);
   sun.target.position.set(state.x, 0, state.z);

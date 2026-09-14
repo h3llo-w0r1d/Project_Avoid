@@ -1,5 +1,5 @@
 export const KART = Object.freeze({
-  roadHalfWidth: 6.15,
+  roadHalfWidth: 13,
   maxSpeed: 42,
   boostSpeed: 58,
   reverseSpeed: 12,
