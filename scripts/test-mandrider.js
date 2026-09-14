@@ -10,6 +10,12 @@ step(state, {}, 3.1);
 step(state, { up: true }, 2);
 assert(state.speed > 20 && state.z < -10, '가속 주행이 되어야 한다');
 
+const steering = createKartState();
+steering.started = true;
+steering.speed = 30;
+stepKart(steering, { up: true, left: true, leftPressed: true }, 1 / 60);
+assert(steering.heading < 0 && steering.steer < 0, '왼쪽 입력은 차체와 진행 방향을 함께 왼쪽으로 돌려야 한다');
+
 for (let i = 0; i < 210; i++) {
   stepKart(state, { up: true, right: true, drift: true, driftPressed: i === 0 }, 1 / 60);
   // 충돌과 별개인 충전 규칙을 검사하려고 넓은 시험장처럼 위치만 되돌린다.
@@ -19,10 +25,15 @@ for (let i = 0; i < 210; i++) {
 assert(state.boosts > 0 || state.gauge > 70, '드리프트가 부스터 게이지를 채워야 한다');
 stepKart(state, { up: true }, 1 / 60);
 assert(state.instantWindow > 0, '드리프트 종료 뒤 순간 부스터 창이 열려야 한다');
+assert(state.driftExitTimer > 0, '드리프트 탈출 뒤 그립 회복 구간이 있어야 한다');
 stepKart(state, { up: true, acceleratePressed: true }, 1 / 60);
 assert(state.instantTimer > 0, '가속키를 다시 누르면 순간 부스터가 나가야 한다');
 stepKart(state, { up: true, right: true, drift: true, driftPressed: true }, 1 / 60);
 assert.equal(state.driftChain, 2, '드리프트 직후 다시 진입하면 연속 드리프트가 되어야 한다');
+
+step(state, { up: true, right: true, drift: true }, .25);
+stepKart(state, { up: true, left: true, drift: true }, 1 / 60);
+assert(!state.drifting && state.notice.includes('커팅'), '반대 방향키로 커팅 드리프트가 되어야 한다');
 
 state.boosts = 1;
 stepKart(state, { up: true, boostPressed: true }, 1 / 60);

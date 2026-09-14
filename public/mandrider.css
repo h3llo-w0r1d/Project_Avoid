@@ -19,6 +19,7 @@ button, a { font: inherit; }
 .map-thumb { position: relative; display: grid; place-items: center; width: 105px; height: 78px; overflow: hidden; border-radius: 13px; background: linear-gradient(145deg, #68ba47, #34774e); box-shadow: inset 0 0 24px rgba(5,31,16,.45); }
 .map-thumb svg { width: 88%; height: 88%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
 .map-thumb path { fill: none; stroke: #f8fbff; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+.map-thumb circle { fill: #f8fbff; }
 .map-copy { display: grid; gap: 6px; }
 .map-copy strong { font-size: 18px; }
 .map-copy small { color: #d5e5d0; line-height: 1.4; }
