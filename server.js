@@ -207,6 +207,12 @@ app.get('/admin', (req, res) => {
   res.sendFile(join(root, 'public', 'admin-dashboard.html'));
 });
 
+// 개발 중인 미니게임은 관리자 세션 없이는 파일 자체를 내주지 않는다.
+app.get('/mandrider.html', requireAdmin, (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.sendFile(join(root, 'public', 'mandrider.html'));
+});
+
 // PWA 파일. 서비스워커는 절대 오래 캐시하면 안 된다 — 브라우저가 옛 워커를
 // 계속 쓰면 업데이트가 영영 안 먹는다. 매번 확인하게 no-cache 로 준다.
 app.get('/sw.js', (req, res) => {

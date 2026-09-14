@@ -549,6 +549,7 @@ profile.onEquipTitles = (equipped) => api.equipTitles(equipped);
 const adminReady = api.amIAdmin()
   .then((yes) => {
     isAdmin = yes;
+    document.getElementById('mandrider-btn')?.classList.toggle('hidden', !yes);
     if (yes) {
       setupNoticeAdmin();
       adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기

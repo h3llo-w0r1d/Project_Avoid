@@ -1,0 +1,66 @@
+:root {
+  color-scheme: dark;
+  font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #a8b4b1; touch-action: none; }
+button, a { font: inherit; }
+#race-stage { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+
+.race-head {
+  position: fixed; top: max(18px, env(safe-area-inset-top)); left: 22px; z-index: 2;
+  display: flex; align-items: center; gap: 14px; color: #fff; text-shadow: 0 2px 5px #000;
+}
+.race-head a { color: #fff; text-decoration: none; background: rgba(20,28,25,.72); border: 1px solid rgba(255,255,255,.3); border-radius: 13px; padding: 9px 13px; }
+.race-head div { display: grid; }
+.race-head strong { color: #d7ffad; font-size: 24px; }
+.race-head small { opacity: .82; }
+
+#race-hud {
+  position: fixed; right: 24px; bottom: 26px; z-index: 2;
+  width: min(320px, 38vw); color: #fff; text-shadow: 0 2px 5px #000;
+}
+.speed { display: flex; justify-content: flex-end; align-items: baseline; gap: 7px; }
+.speed b { font-size: 58px; line-height: .9; font-variant-numeric: tabular-nums; }
+.speed span { font-weight: 800; opacity: .85; }
+.meter { margin-top: 13px; padding: 13px; border-radius: 16px; background: rgba(17,25,23,.76); border: 1px solid rgba(255,255,255,.18); }
+.meter-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; }
+.meter-track { height: 13px; margin-top: 7px; overflow: hidden; border-radius: 9px; background: rgba(255,255,255,.12); }
+.meter-track i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #7ce751, #eaff55); box-shadow: 0 0 12px #8cff58; }
+.boost-slots { display: flex; justify-content: flex-end; gap: 7px; margin-top: 9px; }
+.boost-slots i { width: 54px; height: 17px; border: 2px solid rgba(123,224,255,.55); border-radius: 9px; background: rgba(50,106,116,.35); }
+.boost-slots i.on { background: linear-gradient(90deg, #38d8ff, #e6ffff); box-shadow: 0 0 13px #4ce3ff; }
+
+#countdown {
+  position: fixed; inset: 50% auto auto 50%; z-index: 3; transform: translate(-50%,-50%);
+  color: #fff; font-size: clamp(74px, 15vw, 160px); font-weight: 1000; font-style: italic;
+  text-shadow: 0 5px 0 #214b36, 0 0 28px #9aff5a; pointer-events: none;
+}
+#race-notice {
+  position: fixed; top: 24%; left: 50%; z-index: 3; transform: translateX(-50%);
+  color: #f3ffad; font-size: clamp(20px, 3vw, 36px); font-weight: 1000; font-style: italic;
+  text-shadow: 0 3px 7px #000, 0 0 14px #50ddff; pointer-events: none;
+}
+#drive-state { position: fixed; top: 24px; left: 50%; z-index: 2; transform: translateX(-50%); padding: 8px 14px; border-radius: 20px; color: #fff; background: rgba(15,24,21,.65); font-weight: 900; }
+.controls-help { position: fixed; left: 22px; bottom: 24px; z-index: 2; padding: 12px 15px; border-radius: 14px; color: #edf8ef; background: rgba(15,24,21,.72); line-height: 1.65; font-size: 13px; }
+.controls-help b { color: #d5ff93; }
+
+#race-touch { display: none; }
+@media (pointer: coarse) {
+  .controls-help { display: none; }
+  #race-hud { top: 15px; right: 15px; bottom: auto; width: 245px; }
+  .speed b { font-size: 38px; }
+  .meter { margin-top: 6px; padding: 8px 10px; }
+  #race-touch { position: fixed; inset: 0; z-index: 4; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 18px max(18px, env(safe-area-inset-bottom)); pointer-events: none; }
+  #race-touch > div { display: flex; gap: 9px; pointer-events: auto; }
+  #race-touch button { min-width: 68px; height: 68px; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; color: #fff; background: rgba(22,35,30,.72); font-weight: 900; }
+  #race-touch button.on { transform: scale(.92); background: rgba(108,177,72,.88); }
+  #race-touch .touch-actions { align-items: flex-end; }
+  #race-touch .drift { width: 78px; height: 78px; }
+  #race-touch .boost { color: #d9fbff; border-color: #60dcff; }
+  #race-touch .gas { width: 88px; height: 88px; background: rgba(71,132,48,.78); }
+}
+@media (max-width: 760px) {
+  .race-head div { display: none; }
+  #drive-state { top: 12px; }
+}

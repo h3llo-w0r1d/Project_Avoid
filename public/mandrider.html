@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>만드라이더 - 주행 테스트</title>
+  <link rel="stylesheet" href="./mandrider.css" />
+</head>
+<body>
+  <canvas id="race-stage"></canvas>
+
+  <header class="race-head">
+    <a href="/" aria-label="AvoidArc로 돌아가기">← 돌아가기</a>
+    <div><strong>만드라이더</strong><small>직선 주행 테스트</small></div>
+  </header>
+
+  <section id="race-hud" aria-label="주행 정보">
+    <div class="speed"><b id="speed">0</b><span>km/h</span></div>
+    <div class="meter">
+      <div class="meter-row"><span>드리프트 게이지</span><b id="drift-percent">0%</b></div>
+      <div class="meter-track"><i id="drift-fill"></i></div>
+      <div id="boost-slots" class="boost-slots" aria-label="부스터 0개"><i></i><i></i></div>
+    </div>
+  </section>
+
+  <div id="countdown" aria-live="assertive">3</div>
+  <div id="race-notice" aria-live="polite"></div>
+  <div id="drive-state">출발 준비</div>
+
+  <aside class="controls-help">
+    <b>방향키</b> 주행 · <b>Shift</b> 드리프트 · <b>Space</b> 부스터 · <b>R</b> 재시작<br />
+    드리프트 직후 가속키를 다시 누르면 순간 부스터
+  </aside>
+
+  <div id="race-touch" aria-label="모바일 조작">
+    <div class="touch-steer"><button data-drive="left">◀</button><button data-drive="right">▶</button></div>
+    <div class="touch-actions">
+      <button data-drive="brake">브레이크</button>
+      <button class="drift" data-drive="drift">드리프트</button>
+      <button class="boost" data-drive="boost">부스터</button>
+      <button class="gas" data-drive="up">가속</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  { "imports": { "three": "./js/vendor/three.module.min.js" } }
+  </script>
+  <script type="module" src="./js/mandrider.js"></script>
+</body>
+</html>
