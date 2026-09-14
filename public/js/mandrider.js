@@ -45,9 +45,8 @@ const trackCurve = new THREE.CatmullRomCurve3([
   [68, 23], [64, 19], [57, 17], [10, 17], [4, 15], [0, 11],
   [0, 7], [4, 3], [10, 1], [57, 1], [64, -1], [68, -5],
   [68, -9], [64, -13], [57, -15], [10, -15], [4, -17], [0, -21],
-  [0, -25], [4, -29], [10, -31], [70, -31], [77, -33], [82, -37],
-  [82, -41], [78, -45], [70, -47], [0, -47], [-6, -49], [-10, -53],
-  [-10, -57], [-6, -61]
+  [0, -25], [4, -29], [10, -31], [70, -31], [77, -33], [82, -38],
+  [82, -45], [79, -51], [74, -57], [67, -61], [58, -62]
 ].map(([x, z]) => new THREE.Vector3(x * MAP_SCALE, 0, z * MAP_SCALE)), true, 'centripetal');
 const trackSamples = Array.from({ length: 1200 }, (_, i) => trackCurve.getPointAt(i / 1200));
 const trackNormals = trackSamples.map((point, i) => {
@@ -104,31 +103,13 @@ function makePattern(base, fleckA, fleckB) {
   return texture;
 }
 
-const skyCanvas = document.createElement('canvas');
-skyCanvas.width = 1024;
-skyCanvas.height = 512;
-const skyContext = skyCanvas.getContext('2d');
-const skyGradient = skyContext.createLinearGradient(0, 0, 0, 512);
-skyGradient.addColorStop(0, '#48a9f2');
-skyGradient.addColorStop(.62, '#94d9ff');
-skyGradient.addColorStop(1, '#eef9ff');
-skyContext.fillStyle = skyGradient;
-skyContext.fillRect(0, 0, 1024, 512);
-skyContext.fillStyle = 'rgba(255,255,255,.72)';
-for (let i = 0; i < 34; i++) {
-  const x = (i * 137) % 1080 - 28;
-  const y = 125 + (i * 53) % 190;
-  const radius = 15 + i % 5 * 5;
-  for (let part = 0; part < 4; part++) {
-    skyContext.beginPath();
-    skyContext.arc(x + part * radius * .85, y + Math.sin(part) * 7, radius * (1 - part * .06), 0, Math.PI * 2);
-    skyContext.fill();
-  }
-}
-const skyTexture = new THREE.CanvasTexture(skyCanvas);
-skyTexture.colorSpace = THREE.SRGBColorSpace;
-skyTexture.mapping = THREE.EquirectangularReflectionMapping;
-scene.background = skyTexture;
+let raceSky;
+new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  raceSky = texture;
+  if (raceActive) scene.background = raceSky;
+});
 
 const grassTexture = makePattern('#6aa64f', '#d8ed78', '#315f35');
 grassTexture.repeat.set(14, 20);
@@ -523,6 +504,7 @@ function reset() {
 document.getElementById('start-race').addEventListener('click', () => {
   document.getElementById('map-select').classList.add('hidden');
   raceActive = true;
+  if (raceSky) scene.background = raceSky;
   kart.visible = true;
   reset();
   const forwardX = Math.sin(state.heading);
