@@ -347,7 +347,6 @@ export function makeSnowTexture(size = 1536) {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 16;
-  applySourceCrop(tex, g, size, 'img/arena-snow-source.png', 367.5, 29.5, 935);
   return tex;
 }
 

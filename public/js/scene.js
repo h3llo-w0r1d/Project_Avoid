@@ -63,40 +63,6 @@ function addLights(scene) {
   scene.add(fill);
 }
 
-function buildSnowIsland() {
-  const group = new THREE.Group();
-  const source = [
-    [835, 58], [930, 70], [1030, 90], [1105, 135], [1170, 190], [1215, 260],
-    [1252, 340], [1272, 430], [1260, 525], [1230, 620], [1155, 705], [1080, 770],
-    [1000, 810], [920, 835], [835, 845], [750, 835], [670, 810], [590, 770],
-    [515, 715], [445, 650], [410, 575], [395, 490],
-    [400, 405], [420, 325], [455, 250], [500, 185], [560, 130], [650, 90], [745, 68]
-  ];
-  const scale = ARENA_RADIUS / 448;
-  const rim = new THREE.CatmullRomCurve3(source.map(([x, y]) => new THREE.Vector3(
-    (x - 835) * scale, 0, (y - 497) * scale
-  )), true, 'centripetal').getPoints(128);
-
-  // 하부 섬 끝점은 빼고 상단 테두리만 부드럽게 이어, 사진처럼 둥근 경기장으로 보이게 한다.
-  const shape = new THREE.Shape(rim.map(({ x, z }) => new THREE.Vector2(x, -z)));
-  const topGeometry = new THREE.ShapeGeometry(shape);
-  const position = topGeometry.attributes.position;
-  const uv = topGeometry.attributes.uv;
-  for (let i = 0; i < position.count; i++) {
-    uv.setXY(i,
-      position.getX(i) / (scale * 935) + 0.5,
-      position.getY(i) / (scale * 935) + 0.5);
-  }
-  uv.needsUpdate = true;
-  const top = new THREE.Mesh(topGeometry, new THREE.MeshBasicMaterial({ map: topTexture('snow') }));
-  top.rotation.x = -Math.PI / 2;
-  top.position.y = 0.02;
-  top.receiveShadow = true;
-  group.add(top);
-
-  return group;
-}
-
 function addArena(scene) {
   const group = new THREE.Group();
 
@@ -123,11 +89,6 @@ function addArena(scene) {
   galaxyEdge.renderOrder = -1;
   galaxyEdge.visible = false;
   group.add(galaxyEdge);
-
-  const snowIsland = buildSnowIsland();
-  snowIsland.name = 'deck-snow-source';
-  snowIsland.visible = false;
-  group.add(snowIsland);
 
   // 옆면 — 흙 절벽. 아래로 갈수록 좁아져서 떠 있는 섬처럼 보인다.
   const cliff = new THREE.Mesh(
@@ -440,6 +401,26 @@ function buildEdgeIce() {
       }
     ));
   });
+
+  // 가장자리 아래로 고드름을 내려 원래 설원 섬의 두께를 만든다.
+  const icicleGeo = new THREE.ConeGeometry(0.5, 1.8, 5);
+  rockify(icicleGeo, 0.12, 17);
+  const icicleMat = new THREE.MeshStandardMaterial({
+    color: 0xbfe7ff, roughness: 0.2, metalness: 0.08, flatShading: true,
+    emissive: 0x244f78, emissiveIntensity: 0.72
+  });
+  group.add(scatter(icicleGeo, icicleMat, 42,
+    (i, pos, rot, scl) => {
+      const a = (i / 42) * Math.PI * 2 + rnd(-0.045, 0.045);
+      const h = rnd(0.55, 2.1);
+      const w = rnd(0.12, 0.28);
+      const rr = ARENA_RADIUS * rnd(0.98, 1.02);
+      pos.set(Math.cos(a) * rr, -2.25 - h * 0.5, Math.sin(a) * rr);
+      rot.set(rnd(-0.12, 0.12), Math.random() * 6.3, Math.PI + rnd(-0.08, 0.08));
+      scl.set(w, h, w);
+    },
+    () => { const v = rnd(0.82, 1.08); return new THREE.Color(v * 0.82, v * 0.94, v); }
+  ));
 
   return group;
 }
@@ -849,7 +830,7 @@ function islandTexture() {
 //   hideTufts : 풀포기를 감춘다. 눈밭에 초록 풀이 서 있으면 어색하다.
 export function paintArena(deck, spec = {}) {
   if (!deck) return;
-  const sourceIsland = spec.topMap === 'snow' || spec.topMap === 'galaxy';
+  const sourceIsland = spec.topMap === 'galaxy';
 
   const tint = (name, hex) => {
     const o = deck.getObjectByName(name);
@@ -871,13 +852,11 @@ export function paintArena(deck, spec = {}) {
     }
     // 원본 사진은 이미 조명과 입체감이 완성돼 있어 장면 조명을 다시 곱하면 탁해진다.
     top.material.color.setHex(sourceIsland ? 0x000000 : (spec.top ?? 0xffffff));
-    top.visible = spec.topMap !== 'snow';
+    top.visible = true;
   }
 
   const galaxyEdge = deck.getObjectByName('deck-galaxy-edge');
   if (galaxyEdge) galaxyEdge.visible = spec.topMap === 'galaxy';
-  const snowIsland = deck.getObjectByName('deck-snow-source');
-  if (snowIsland) snowIsland.visible = spec.topMap === 'snow';
 
   // 밤 무대라 흰 바닥은 그냥 두면 잿빛으로 가라앉는다. 스킨이 재질을
   // 조금 손볼 수 있게 열어 둔다(눈은 스스로 은은히 빛나게).
