@@ -1,5 +1,5 @@
 export const KART = Object.freeze({
-  roadHalfWidth: 8.1,
+  roadHalfWidth: 6.15,
   maxSpeed: 42,
   boostSpeed: 58,
   reverseSpeed: 12,
@@ -48,6 +48,22 @@ export function createKartState() {
     elapsed: 0, distance: 0, hitWall: 0,
     notice: '', noticeTimer: 0
   };
+}
+
+export function constrainToRoad(state, centerX, centerZ, halfWidth = KART.roadHalfWidth) {
+  const dx = state.x - centerX;
+  const dz = state.z - centerZ;
+  const distance = Math.hypot(dx, dz);
+  if (distance <= halfWidth) return false;
+  const scale = (halfWidth - .15) / distance;
+  state.x = centerX + dx * scale;
+  state.z = centerZ + dz * scale;
+  state.speed *= .68;
+  state.lateral *= -.3;
+  state.steer *= .35;
+  state.hitWall = .2;
+  flash(state, '충돌!', .35);
+  return true;
 }
 
 export function stepKart(state, input, rawDt) {
@@ -142,16 +158,6 @@ export function stepKart(state, input, rawDt) {
   state.x += (forwardX * state.speed + rightX * state.lateral) * dt;
   state.z += (forwardZ * state.speed + rightZ * state.lateral) * dt;
   state.distance += Math.max(0, state.speed) * dt;
-
-  if (Math.abs(state.x) > KART.roadHalfWidth) {
-    state.x = Math.sign(state.x) * (KART.roadHalfWidth - 0.15);
-    state.speed *= 0.68;
-    state.lateral *= -0.3;
-    state.heading = Math.atan2(Math.sin(state.heading), Math.cos(state.heading)) * 0.55;
-    state.steer *= 0.35;
-    state.hitWall = 0.2;
-    flash(state, '충돌!', 0.35);
-  }
 
   return state;
 }

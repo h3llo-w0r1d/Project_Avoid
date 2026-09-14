@@ -3,9 +3,27 @@
   font-family: "Pretendard", "Noto Sans KR", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #a8b4b1; touch-action: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #8ed5ff; touch-action: none; }
 button, a { font: inherit; }
 #race-stage { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+
+.map-select {
+  position: fixed; inset: 0; z-index: 10; display: grid; place-items: center;
+  padding: 24px; background: linear-gradient(90deg, rgba(7,20,15,.78), rgba(7,20,15,.22) 62%, transparent);
+}
+.map-select.hidden { display: none; }
+.map-panel { width: min(480px, 100%); padding: 30px; border: 1px solid rgba(226,255,210,.32); border-radius: 26px; color: #fff; background: rgba(13,31,22,.88); box-shadow: 0 24px 90px rgba(0,0,0,.42); backdrop-filter: blur(14px); }
+.map-kicker { color: #a8ff70; font-size: 12px; font-weight: 1000; letter-spacing: .24em; }
+.map-panel h1 { margin: 6px 0 22px; font-size: clamp(25px, 4vw, 38px); }
+.map-card { width: 100%; display: grid; grid-template-columns: 105px 1fr auto; align-items: center; gap: 15px; padding: 12px; border: 2px solid #9cef67; border-radius: 19px; color: #fff; text-align: left; background: rgba(102,172,69,.18); cursor: pointer; }
+.map-thumb { position: relative; display: grid; place-items: center; width: 105px; height: 78px; overflow: hidden; border-radius: 13px; font-size: 42px; background: radial-gradient(ellipse, #83c650 0 45%, #7a6d52 46% 56%, #75cfff 57%); }
+.map-thumb b { position: absolute; right: 7px; bottom: 4px; font-size: 18px; }
+.map-copy { display: grid; gap: 6px; }
+.map-copy strong { font-size: 18px; }
+.map-copy small { color: #d5e5d0; line-height: 1.4; }
+.map-check { align-self: start; padding: 5px 8px; border-radius: 9px; color: #17320c; background: #b9f486; font-size: 11px; font-weight: 1000; }
+#start-race { width: 100%; margin-top: 16px; padding: 14px; border: 0; border-radius: 14px; color: #16320c; background: linear-gradient(135deg, #d3ff92, #79e348); font-weight: 1000; cursor: pointer; box-shadow: 0 7px 24px rgba(119,231,73,.28); }
+.map-panel > a { display: block; margin-top: 13px; color: #d9e4d7; text-align: center; text-decoration: none; font-size: 13px; }
 
 .race-head {
   position: fixed; top: max(18px, env(safe-area-inset-top)); left: 22px; z-index: 2;
@@ -23,6 +41,9 @@ button, a { font: inherit; }
 .speed { display: flex; justify-content: flex-end; align-items: baseline; gap: 7px; }
 .speed b { font-size: 58px; line-height: .9; font-variant-numeric: tabular-nums; }
 .speed span { font-weight: 800; opacity: .85; }
+.lap { display: flex; justify-content: flex-end; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+.lap b { font-size: 22px; font-variant-numeric: tabular-nums; }
+.lap span { color: #caff9e; font-size: 12px; font-weight: 1000; }
 .meter { margin-top: 13px; padding: 13px; border-radius: 16px; background: rgba(17,25,23,.76); border: 1px solid rgba(255,255,255,.18); }
 .meter-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 800; }
 .meter-track { height: 13px; margin-top: 7px; overflow: hidden; border-radius: 9px; background: rgba(255,255,255,.12); }
@@ -61,6 +82,10 @@ button, a { font: inherit; }
   #race-touch .gas { width: 88px; height: 88px; background: rgba(71,132,48,.78); }
 }
 @media (max-width: 760px) {
+  .map-panel { padding: 21px; }
+  .map-card { grid-template-columns: 82px 1fr; }
+  .map-thumb { width: 82px; height: 68px; }
+  .map-check { display: none; }
   .race-head div { display: none; }
   #drive-state { top: 12px; }
 }

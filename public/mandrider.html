@@ -3,18 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>만드라이더 - 주행 테스트</title>
+  <title>만드라이더</title>
   <link rel="stylesheet" href="./mandrider.css" />
 </head>
 <body>
   <canvas id="race-stage"></canvas>
 
+  <section id="map-select" class="map-select" aria-labelledby="map-title">
+    <div class="map-panel">
+      <p class="map-kicker">MANDRIDER</p>
+      <h1 id="map-title">달릴 맵을 골라 주세요</h1>
+      <button class="map-card selected" type="button" aria-pressed="true">
+        <span class="map-thumb" aria-hidden="true"><i>🌿</i><b>🏁</b></span>
+        <span class="map-copy"><strong>만드라고라 가든</strong><small>기본 맵 · 순환형 테크니컬 코스</small></span>
+        <span class="map-check">선택됨</span>
+      </button>
+      <button id="start-race" type="button">이 맵으로 출발</button>
+      <a href="/">돌아가기</a>
+    </div>
+  </section>
+
   <header class="race-head">
     <a href="/" aria-label="AvoidArc로 돌아가기">← 돌아가기</a>
-    <div><strong>만드라이더</strong><small>직선 주행 테스트</small></div>
+    <div><strong>만드라이더</strong><small>만드라고라 가든</small></div>
   </header>
 
   <section id="race-hud" aria-label="주행 정보">
+    <div class="lap"><b id="lap">1 / 3</b><span>LAP</span></div>
     <div class="speed"><b id="speed">0</b><span>km/h</span></div>
     <div class="meter">
       <div class="meter-row"><span>드리프트 게이지</span><b id="drift-percent">0%</b></div>

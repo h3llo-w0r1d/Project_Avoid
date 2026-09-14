@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createKartState, stepKart } from '../public/js/mandrider-physics.js';
+import { constrainToRoad, createKartState, stepKart } from '../public/js/mandrider-physics.js';
 
 const step = (state, input, seconds) => {
   for (let t = 0; t < seconds; t += 1 / 60) stepKart(state, input, 1 / 60);
@@ -37,5 +37,11 @@ const reverse = createKartState();
 step(reverse, {}, 3.1);
 step(reverse, { brake: true }, 1.2);
 assert(reverse.speed < -5 && reverse.z > 0, '정지 상태에서 브레이크를 누르면 후진해야 한다');
+
+const collision = createKartState();
+collision.x = 10;
+collision.speed = 30;
+assert(constrainToRoad(collision, 0, 0, 6), '트랙 바깥이면 충돌해야 한다');
+assert(collision.x < 6 && collision.speed < 30, '충돌 시 트랙 안으로 밀고 감속해야 한다');
 
 console.log('만드라이더 물리 검사 통과');
