@@ -289,8 +289,130 @@ const hash = (value) => {
   const raw = Math.sin(value * 127.1) * 43758.5453;
   return raw - Math.floor(raw);
 };
+
+// 배경에 구워 넣으면 코너에서도 풍경이 따라오므로 조경과 관중은 코스 좌표에 고정한다.
+const vergeTexture = grassTexture.clone();
+vergeTexture.repeat.set(4, 1);
+vergeTexture.needsUpdate = true;
+const vergeMat = new THREE.MeshStandardMaterial({
+  map: vergeTexture, bumpMap: vergeTexture, bumpScale: .16, color: 0x87aa68, roughness: .96
+});
+for (const [inside, outside] of [[-33, -17.6], [17.6, 33]]) {
+  const verge = new THREE.Mesh(stripGeometry(inside, outside, 1.79), vergeMat);
+  verge.receiveShadow = true;
+  scene.add(verge);
+}
+
+const gardenStep = 8;
+const gardenCount = Math.ceil(trackSamples.length / gardenStep) * 2;
+const bushes = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(1, 14, 10),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .9 }),
+  gardenCount * 3
+);
+const flowerPetals = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(1, 8, 6),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .7 }),
+  gardenCount * 15
+);
+const flowerCenters = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(1, 8, 6),
+  new THREE.MeshStandardMaterial({ color: 0xffc64a, roughness: .62 }),
+  gardenCount * 3
+);
+const rocks = new THREE.InstancedMesh(
+  new THREE.DodecahedronGeometry(1, 1),
+  new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .98 }),
+  Math.ceil(trackSamples.length / 32) * 2
+);
+const gardenMatrix = new THREE.Matrix4();
+const gardenQuaternion = new THREE.Quaternion();
+const gardenScale = new THREE.Vector3();
+const upAxis = new THREE.Vector3(0, 1, 0);
+const bushColors = [new THREE.Color(0x2e6b35), new THREE.Color(0x4b8b3d), new THREE.Color(0x74a94c)];
+const flowerColors = [new THREE.Color(0xfff5d4), new THREE.Color(0xff9da8), new THREE.Color(0xf1d75c), new THREE.Color(0xc7adff)];
+const rockColors = [new THREE.Color(0x8f927f), new THREE.Color(0xaaa58e), new THREE.Color(0x767d71)];
+let bushIndex = 0;
+let petalIndex = 0;
+let centerIndex = 0;
+let rockIndex = 0;
+for (const side of [-1, 1]) {
+  for (let i = 0; i < trackSamples.length; i += gardenStep) {
+    const point = trackSamples[i];
+    const normal = trackNormals[i];
+    const offset = side * (25 + hash(i * 5 + side) * 3.6);
+    const radius = 1.15 + hash(i * 7 + side) * .85;
+    const x = point.x + normal.x * offset;
+    const z = point.z + normal.y * offset;
+    gardenQuaternion.setFromAxisAngle(upAxis, hash(i + side * 9) * Math.PI * 2);
+    for (let lobe = 0; lobe < 3; lobe++) {
+      const angle = lobe * Math.PI * 2 / 3 + hash(i + side) * .8;
+      const size = radius * (.72 + hash(i * 11 + lobe) * .2);
+      gardenMatrix.compose(
+        new THREE.Vector3(x + Math.sin(angle) * radius * .48, 1.8 + size * .58, z + Math.cos(angle) * radius * .48),
+        gardenQuaternion,
+        new THREE.Vector3(size * 1.3, size * .72, size)
+      );
+      bushes.setMatrixAt(bushIndex, gardenMatrix);
+      bushes.setColorAt(bushIndex++, bushColors[(Math.floor(i / gardenStep) + lobe) % bushColors.length]);
+    }
+    const flowerColor = flowerColors[(Math.floor(i / gardenStep) + (side > 0 ? 1 : 0)) % flowerColors.length];
+    for (let bloom = 0; bloom < 3; bloom++) {
+      const bloomAngle = bloom * Math.PI * 2 / 3 + hash(i + side * 3) * 1.4;
+      const bloomX = x + Math.sin(bloomAngle) * radius * .68;
+      const bloomZ = z + Math.cos(bloomAngle) * radius * .68;
+      const flowerY = 2.65 + radius * .72 + hash(i * 47 + bloom) * .2;
+      for (let petal = 0; petal < 5; petal++) {
+        const angle = petal * Math.PI * 2 / 5;
+        gardenQuaternion.setFromAxisAngle(upAxis, -angle);
+        gardenMatrix.compose(
+          new THREE.Vector3(bloomX + Math.sin(angle) * .34, flowerY, bloomZ + Math.cos(angle) * .34),
+          gardenQuaternion,
+          new THREE.Vector3(.18, .08, .34)
+        );
+        flowerPetals.setMatrixAt(petalIndex, gardenMatrix);
+        flowerPetals.setColorAt(petalIndex++, flowerColor);
+      }
+      gardenMatrix.compose(new THREE.Vector3(bloomX, flowerY + .04, bloomZ), gardenQuaternion, new THREE.Vector3(.16, .11, .16));
+      flowerCenters.setMatrixAt(centerIndex++, gardenMatrix);
+    }
+    if (i % 32 === 0) {
+      const rockSize = .65 + hash(i * 29 + side) * .8;
+      const rockOffset = side * (30 + hash(i * 31 + side) * 3);
+      gardenQuaternion.setFromAxisAngle(upAxis, hash(i * 17 + side) * Math.PI * 2);
+      gardenMatrix.compose(
+        new THREE.Vector3(point.x + normal.x * rockOffset, 1.8 + rockSize * .48, point.z + normal.y * rockOffset),
+        gardenQuaternion,
+        new THREE.Vector3(rockSize * 1.35, rockSize * .82, rockSize)
+      );
+      rocks.setMatrixAt(rockIndex, gardenMatrix);
+      rocks.setColorAt(rockIndex++, rockColors[Math.floor(hash(i + side * 31) * rockColors.length)]);
+    }
+  }
+}
+for (const mesh of [bushes, flowerPetals, flowerCenters, rocks]) {
+  mesh.instanceMatrix.needsUpdate = true;
+  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+  mesh.castShadow = mesh.receiveShadow = true;
+  mesh.computeBoundingSphere();
+  scene.add(mesh);
+}
+
 const treePositions = [];
-for (let i = 0; i < 420 && treePositions.length < 130; i++) {
+for (const side of [-1, 1]) {
+  for (let i = 12; i < trackSamples.length; i += 30) {
+    const point = trackSamples[i];
+    const normal = trackNormals[i];
+    const offset = side * (38 + hash(i * 37 + side) * 10);
+    const x = point.x + normal.x * offset;
+    const z = point.z + normal.y * offset;
+    const candidate = new THREE.Vector3(x, 0, z);
+    if (trackSamples.every((trackPoint) => trackPoint.distanceToSquared(candidate) > 23 ** 2)) {
+      treePositions.push([x, z, 7 + hash(i + 8) * 5, 4 + hash(i + 15) * 2.4]);
+    }
+  }
+}
+for (let i = 0; i < 560 && treePositions.length < 180; i++) {
   const x = (hash(i * 2 + 1) - .5) * 900;
   const z = (hash(i * 2 + 2) - .5) * 1240;
   const candidate = new THREE.Vector3(x, 0, z);
@@ -350,6 +472,38 @@ lowerCrowns.instanceMatrix.needsUpdate = upperCrowns.instanceMatrix.needsUpdate 
 lowerCrowns.instanceColor.needsUpdate = upperCrowns.instanceColor.needsUpdate = crownHighlights.instanceColor.needsUpdate = true;
 trunks.castShadow = lowerCrowns.castShadow = upperCrowns.castShadow = true;
 scene.add(trunks, lowerCrowns, upperCrowns, crownHighlights);
+
+const spectatorStep = 18;
+const spectatorPlacements = [];
+const spectatorMatrix = new THREE.Matrix4();
+const spectatorQuaternion = new THREE.Quaternion();
+const spectatorScale = new THREE.Vector3();
+for (const side of [-1, 1]) {
+  for (let i = 6; i < trackSamples.length; i += spectatorStep) {
+    const point = trackSamples[i];
+    const previous = trackSamples[(i - 1 + trackSamples.length) % trackSamples.length];
+    const normal = trackNormals[i];
+    const offset = side * (19.8 + hash(i * 41 + side) * 1.2);
+    const position = new THREE.Vector3(point.x + normal.x * offset, 2.15, point.z + normal.y * offset);
+    spectatorQuaternion.setFromAxisAngle(upAxis, Math.atan2(previous.x - point.x, previous.z - point.z));
+    spectatorScale.setScalar(3.15 + hash(i * 43 + side) * .55);
+    spectatorPlacements.push(spectatorMatrix.compose(position, spectatorQuaternion, spectatorScale).clone());
+  }
+}
+const spectatorTemplate = buildPlant('mandragora');
+const spectatorPartMatrix = new THREE.Matrix4();
+spectatorTemplate.updateMatrixWorld(true);
+spectatorTemplate.traverse((part) => {
+  if (!part.isMesh || !part.visible || part.material?.side === THREE.BackSide) return;
+  const instances = new THREE.InstancedMesh(part.geometry, part.material, spectatorPlacements.length);
+  spectatorPlacements.forEach((placement, i) => {
+    instances.setMatrixAt(i, spectatorPartMatrix.multiplyMatrices(placement, part.matrixWorld));
+  });
+  instances.instanceMatrix.needsUpdate = true;
+  instances.castShadow = part.castShadow;
+  instances.computeBoundingSphere();
+  scene.add(instances);
+});
 
 const gate = new THREE.Group();
 const gateStoneMat = new THREE.MeshStandardMaterial({ color: 0xe8d9b7, roughness: .68 });
