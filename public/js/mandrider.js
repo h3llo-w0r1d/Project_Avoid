@@ -97,6 +97,7 @@ function loadTiledTexture(path, repeatX, repeatY) {
 let raceSky;
 new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
   texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
   texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
   raceSky = texture;
   if (raceActive) scene.background = raceSky;
@@ -209,6 +210,7 @@ scene.add(stripes);
 const start = trackSamples[0];
 const startNext = trackSamples[1];
 const startAngle = Math.atan2(startNext.x - start.x, startNext.z - start.z);
+const startHeading = Math.atan2(startNext.x - start.x, -(startNext.z - start.z));
 const startNormal = new THREE.Vector2(startNext.z - start.z, -(startNext.x - start.x)).normalize();
 for (let i = 0; i < 20; i++) {
   const tile = new THREE.Mesh(
@@ -443,7 +445,7 @@ function reset() {
   state = createKartState();
   state.x = start.x;
   state.z = start.z;
-  state.heading = Math.atan2(startNext.x - start.x, -(startNext.z - start.z));
+  state.heading = startHeading;
   raceFinished = false;
   lap = 1;
   lapArmed = false;
@@ -570,6 +572,7 @@ function updateScene(dt, now) {
   camera.position.lerp(cameraTarget, 1 - Math.exp(-dt * 7));
   cameraLook.set(state.x + forwardX * 15, 2.6, state.z + forwardZ * 15);
   camera.lookAt(cameraLook);
+  if (raceSky) raceSky.offset.x = (state.heading - startHeading) / (Math.PI * 2) + state.elapsed * .0008;
   camera.rotateZ(-state.lateral * .0015);
   camera.fov += ((state.boostTimer > 0 ? 76 : state.drifting ? 73 : 70) - camera.fov) * (1 - Math.exp(-dt * 6));
   camera.updateProjectionMatrix();
