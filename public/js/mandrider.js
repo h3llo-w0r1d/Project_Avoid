@@ -95,7 +95,7 @@ function loadTiledTexture(path, repeatX, repeatY) {
 }
 
 let raceSky;
-new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
+new THREE.TextureLoader().load('./img/mandrider-sky-v2.webp', (texture) => {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
   raceSky = texture;
@@ -350,6 +350,76 @@ lowerCrowns.instanceMatrix.needsUpdate = upperCrowns.instanceMatrix.needsUpdate 
 lowerCrowns.instanceColor.needsUpdate = upperCrowns.instanceColor.needsUpdate = crownHighlights.instanceColor.needsUpdate = true;
 trunks.castShadow = lowerCrowns.castShadow = upperCrowns.castShadow = true;
 scene.add(trunks, lowerCrowns, upperCrowns, crownHighlights);
+
+function renderMandragoraSpectator() {
+  const spectatorScene = new THREE.Scene();
+  const plant = buildPlant('mandragora');
+  spectatorScene.add(plant);
+  const bounds = new THREE.Box3().setFromObject(plant);
+  const center = bounds.getCenter(new THREE.Vector3());
+  const size = bounds.getSize(new THREE.Vector3());
+  const half = Math.max(size.x, size.y) * .62;
+  const spectatorCamera = new THREE.OrthographicCamera(-half, half, half, -half, .1, 20);
+  spectatorCamera.position.set(center.x, center.y, center.z + 8);
+  spectatorCamera.lookAt(center);
+  spectatorScene.add(new THREE.HemisphereLight(0xffffff, 0x739167, 2.4));
+  const keyLight = new THREE.DirectionalLight(0xfff3cf, 3.2);
+  keyLight.position.set(-4, 7, 6);
+  spectatorScene.add(keyLight);
+  const target = new THREE.WebGLRenderTarget(512, 512, { format: THREE.RGBAFormat });
+  target.samples = 4;
+  target.texture.colorSpace = THREE.SRGBColorSpace;
+  const previousTarget = renderer.getRenderTarget();
+  const previousClear = renderer.getClearColor(new THREE.Color());
+  const previousAlpha = renderer.getClearAlpha();
+  renderer.setRenderTarget(target);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear();
+  renderer.render(spectatorScene, spectatorCamera);
+  renderer.setRenderTarget(previousTarget);
+  renderer.setClearColor(previousClear, previousAlpha);
+  return target.texture;
+}
+
+const spectatorStep = 6;
+const spectatorCount = Math.ceil((trackSamples.length - 4) / spectatorStep) * 2;
+const spectatorTexture = renderMandragoraSpectator();
+const spectators = new THREE.InstancedMesh(
+  new THREE.PlaneGeometry(6, 8.4),
+  new THREE.MeshBasicMaterial({
+    map: spectatorTexture, transparent: true, alphaTest: .08, depthWrite: true,
+    side: THREE.DoubleSide, toneMapped: false
+  }),
+  spectatorCount
+);
+const spectatorMatrix = new THREE.Matrix4();
+const spectatorQuaternion = new THREE.Quaternion();
+const spectatorScale = new THREE.Vector3();
+const upAxis = new THREE.Vector3(0, 1, 0);
+let spectatorIndex = 0;
+for (const side of [-1, 1]) {
+  for (let i = 4; i < trackSamples.length; i += spectatorStep) {
+    const point = trackSamples[i];
+    const previousPoint = trackSamples[(i - 1 + trackSamples.length) % trackSamples.length];
+    const normal = trackNormals[i];
+    const scale = .95 + hash(i * 3 + side) * .25;
+    spectatorQuaternion.setFromAxisAngle(upAxis, Math.atan2(previousPoint.x - point.x, previousPoint.z - point.z));
+    spectatorScale.setScalar(scale);
+    spectatorMatrix.compose(
+      new THREE.Vector3(
+        point.x + normal.x * side * 19.2,
+        1.58 + 4.2 * scale,
+        point.z + normal.y * side * 19.2
+      ),
+      spectatorQuaternion,
+      spectatorScale
+    );
+    spectators.setMatrixAt(spectatorIndex++, spectatorMatrix);
+  }
+}
+spectators.instanceMatrix.needsUpdate = true;
+spectators.computeBoundingSphere();
+scene.add(spectators);
 
 const gate = new THREE.Group();
 const gateStoneMat = new THREE.MeshStandardMaterial({ color: 0xe8d9b7, roughness: .68 });
