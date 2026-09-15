@@ -75,12 +75,6 @@ button, a { font: inherit; }
   color: #fff; font-size: clamp(74px, 15vw, 160px); font-weight: 1000; font-style: italic;
   text-shadow: 0 5px 0 #214b36, 0 0 28px #9aff5a; pointer-events: none;
 }
-#race-notice {
-  position: fixed; top: 24%; left: 50%; z-index: 3; transform: translateX(-50%);
-  color: #f3ffad; font-size: clamp(20px, 3vw, 36px); font-weight: 1000; font-style: italic;
-  text-shadow: 0 3px 7px #000, 0 0 14px #50ddff; pointer-events: none;
-}
-#drive-state { position: fixed; top: 24px; left: 50%; z-index: 2; transform: translateX(-50%); padding: 8px 14px; border-radius: 20px; color: #fff; background: rgba(15,24,21,.65); font-weight: 900; }
 .controls-help { position: fixed; left: 22px; bottom: 24px; z-index: 2; max-width: 550px; padding: 12px 15px; border-radius: 14px; color: #edf8ef; background: rgba(15,24,21,.72); line-height: 1.65; font-size: 13px; }
 .controls-help b { color: #d5ff93; }
 
@@ -110,5 +104,4 @@ button, a { font: inherit; }
   .map-thumb { width: 82px; height: 68px; }
   .map-check { display: none; }
   .race-head div { display: none; }
-  #drive-state { top: 12px; }
 }

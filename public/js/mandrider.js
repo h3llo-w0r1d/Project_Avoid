@@ -85,21 +85,12 @@ function stripGeometry(offsetA, offsetB, y) {
   return geometry;
 }
 
-function makePattern(base, fleckA, fleckB) {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 128;
-  const context = canvas.getContext('2d');
-  context.fillStyle = base;
-  context.fillRect(0, 0, 128, 128);
-  for (let i = 0; i < 520; i++) {
-    context.fillStyle = i % 3 ? fleckA : fleckB;
-    context.globalAlpha = .12 + (i % 5) * .025;
-    context.fillRect((i * 47) % 128, (i * 83) % 128, 1 + i % 3, 1 + (i >> 2) % 2);
-  }
-  context.globalAlpha = 1;
-  const texture = new THREE.CanvasTexture(canvas);
+function loadTiledTexture(path, repeatX, repeatY) {
+  const texture = new THREE.TextureLoader().load(path);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(repeatX, repeatY);
+  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
   return texture;
 }
 
@@ -111,38 +102,43 @@ new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
   if (raceActive) scene.background = raceSky;
 });
 
-const grassTexture = makePattern('#6aa64f', '#d8ed78', '#315f35');
-grassTexture.repeat.set(14, 20);
+const grassTexture = loadTiledTexture('./img/mandrider-grass-v1.webp', 30, 40);
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(980, 1320),
-  new THREE.MeshStandardMaterial({ map: grassTexture, color: 0xb9d994, roughness: 1 })
+  new THREE.MeshStandardMaterial({ map: grassTexture, bumpMap: grassTexture, bumpScale: .12, color: 0xcbe6b9, roughness: .95 })
 );
 ground.rotation.x = -Math.PI / 2;
+ground.position.y = 1.5;
 ground.receiveShadow = true;
 scene.add(ground);
 
+const shoulderTexture = grassTexture.clone();
+shoulderTexture.repeat.set(2, 1);
+shoulderTexture.needsUpdate = true;
 const shoulder = new THREE.Mesh(
   stripGeometry(-17.3, 17.3, 1.86),
-  new THREE.MeshStandardMaterial({ color: 0x355c38, roughness: 1 })
+  new THREE.MeshStandardMaterial({ map: shoulderTexture, bumpMap: shoulderTexture, bumpScale: .08, color: 0x75935e, roughness: .92 })
 );
 shoulder.receiveShadow = true;
 scene.add(shoulder);
 
-const asphaltTexture = makePattern('#626566', '#b8b8ae', '#24292a');
-const roadMat = new THREE.MeshStandardMaterial({ map: asphaltTexture, color: 0xb8bab7, roughness: .96 });
+const asphaltTexture = loadTiledTexture('./img/mandrider-asphalt-v1.webp', 3, 1);
+const roadMat = new THREE.MeshStandardMaterial({
+  map: asphaltTexture, bumpMap: asphaltTexture, bumpScale: .09, color: 0xd7d8d5, roughness: .88
+});
 const road = new THREE.Mesh(stripGeometry(-14.1, 14.1, 2), roadMat);
 road.receiveShadow = true;
 scene.add(road);
-const edgeMat = new THREE.MeshStandardMaterial({ color: 0xf6f5eb, roughness: .8 });
+const edgeMat = new THREE.MeshStandardMaterial({ color: 0xfff8de, roughness: .72 });
 scene.add(new THREE.Mesh(stripGeometry(-13.9, -13.55, 2.055), edgeMat));
 scene.add(new THREE.Mesh(stripGeometry(13.55, 13.9, 2.055), edgeMat));
 const curbGeo = new THREE.BoxGeometry(1, 1, 1);
-const curbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .76 });
+const curbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6 });
 const curbs = new THREE.InstancedMesh(curbGeo, curbMat, trackSamples.length * 2);
 const curbMatrix = new THREE.Matrix4();
 const curbQuaternion = new THREE.Quaternion();
-const curbRed = new THREE.Color(0xd7352f);
-const curbWhite = new THREE.Color(0xffffff);
+const curbGreen = new THREE.Color(0x327a4b);
+const curbIvory = new THREE.Color(0xfff4cf);
 let curbIndex = 0;
 for (const side of [-1, 1]) {
   for (let i = 0; i < trackSamples.length; i++) {
@@ -157,41 +153,47 @@ for (const side of [-1, 1]) {
         (p.z + q.z) / 2 + trackNormals[i].y * side * 14.4
       ),
       curbQuaternion,
-      new THREE.Vector3(.72, .22, p.distanceTo(q) + .18)
+      new THREE.Vector3(.78, .16, p.distanceTo(q) + .16)
     );
     curbs.setMatrixAt(curbIndex, curbMatrix);
-    curbs.setColorAt(curbIndex++, Math.floor(i / 5) % 2 ? curbRed : curbWhite);
+    curbs.setColorAt(curbIndex++, Math.floor(i / 5) % 2 ? curbGreen : curbIvory);
   }
 }
 curbs.instanceMatrix.needsUpdate = true;
 curbs.instanceColor.needsUpdate = true;
 scene.add(curbs);
 
-const barrierStep = 4;
-const barriers = new THREE.InstancedMesh(curbGeo, curbMat, Math.ceil(trackSamples.length / barrierStep) * 2);
-let barrierIndex = 0;
+const barrierStep = 5;
+const barrierCount = Math.ceil(trackSamples.length / barrierStep) * 2;
+const railMat = new THREE.MeshStandardMaterial({ color: 0xe8eedb, metalness: .28, roughness: .42 });
+const postMat = new THREE.MeshStandardMaterial({ color: 0x325b46, metalness: .18, roughness: .5 });
+const rails = new THREE.InstancedMesh(curbGeo, railMat, barrierCount * 2);
+const posts = new THREE.InstancedMesh(curbGeo, postMat, barrierCount);
+let railIndex = 0;
+let postIndex = 0;
 for (const side of [-1, 1]) {
   for (let i = 0; i < trackSamples.length; i += barrierStep) {
     const p = trackSamples[i];
     const q = trackSamples[(i + barrierStep) % trackSamples.length];
     curbQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(q.x - p.x, q.z - p.z));
+    const x = (p.x + q.x) / 2 + trackNormals[i].x * side * 16.15;
+    const z = (p.z + q.z) / 2 + trackNormals[i].y * side * 16.15;
+    for (const y of [3.05, 3.82]) {
+      curbMatrix.compose(new THREE.Vector3(x, y, z), curbQuaternion, new THREE.Vector3(.24, .18, p.distanceTo(q) + .65));
+      rails.setMatrixAt(railIndex++, curbMatrix);
+    }
     curbMatrix.compose(
-      new THREE.Vector3(
-        (p.x + q.x) / 2 + trackNormals[i].x * side * 16.2,
-        2.75,
-        (p.z + q.z) / 2 + trackNormals[i].y * side * 16.2
-      ),
+      new THREE.Vector3(p.x + trackNormals[i].x * side * 16.15, 3.15, p.z + trackNormals[i].y * side * 16.15),
       curbQuaternion,
-      new THREE.Vector3(.55, 1.25, p.distanceTo(q) + .5)
+      new THREE.Vector3(.5, 2.05, .5)
     );
-    barriers.setMatrixAt(barrierIndex, curbMatrix);
-    barriers.setColorAt(barrierIndex++, Math.floor(i / 20) % 2 ? curbRed : curbWhite);
+    posts.setMatrixAt(postIndex++, curbMatrix);
   }
 }
-barriers.instanceMatrix.needsUpdate = true;
-barriers.instanceColor.needsUpdate = true;
-barriers.castShadow = true;
-scene.add(barriers);
+rails.instanceMatrix.needsUpdate = true;
+posts.instanceMatrix.needsUpdate = true;
+rails.castShadow = posts.castShadow = true;
+scene.add(rails, posts);
 
 const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf7f5e9, roughness: .75 });
 const stripeGeo = new THREE.BoxGeometry(.18, .05, 5.5);
@@ -231,29 +233,51 @@ for (let i = 0; i < 20; i++) {
   scene.add(tile);
 }
 
-const whiteMat = new THREE.MeshStandardMaterial({ color: 0xfffdf4, roughness: .8 });
-const standBaseMat = new THREE.MeshStandardMaterial({ color: 0x4e514f, roughness: .8 });
-const seatMat = new THREE.MeshStandardMaterial({ color: 0xd63832, roughness: .75 });
+const whiteMat = new THREE.MeshStandardMaterial({ color: 0xfff9dd, emissive: 0xffedb0, emissiveIntensity: .35, roughness: .55 });
+const standBaseMat = new THREE.MeshStandardMaterial({ color: 0xe6d8b5, roughness: .78 });
+const standTrimMat = new THREE.MeshStandardMaterial({ color: 0x315f48, metalness: .18, roughness: .45 });
+const standRoofMat = new THREE.MeshStandardMaterial({ color: 0x79a64c, roughness: .58 });
+const seatMats = [
+  new THREE.MeshStandardMaterial({ color: 0x3f8553, roughness: .68 }),
+  new THREE.MeshStandardMaterial({ color: 0xf0c861, roughness: .66 }),
+  new THREE.MeshStandardMaterial({ color: 0xe98d68, roughness: .66 })
+];
 function addStand(x, z, rotation) {
   const stand = new THREE.Group();
-  const base = new THREE.Mesh(new THREE.BoxGeometry(58, 3, 18), standBaseMat);
-  base.position.y = 1;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(60, 2.4, 20), standBaseMat);
+  base.position.y = 1.2;
   stand.add(base);
-  for (let row = 0; row < 5; row++) {
-    const seats = new THREE.Mesh(new THREE.BoxGeometry(53 - row * 2, 1.6, 2.5), seatMat);
-    seats.position.set(0, 2.8 + row * 1.45, 5 - row * 2.6);
+  for (let row = 0; row < 6; row++) {
+    const step = new THREE.Mesh(new THREE.BoxGeometry(56 - row * 1.2, 1.5 + row * 1.2, 3), standBaseMat);
+    step.position.set(0, 2.4 + row * .6, 7 - row * 2.65);
+    stand.add(step);
+    const seats = new THREE.Mesh(new THREE.BoxGeometry(52 - row * 1.2, .7, 1.45), seatMats[row % seatMats.length]);
+    seats.position.set(0, 3.45 + row * 1.2, 7.2 - row * 2.65);
     stand.add(seats);
   }
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(61, .65, 10), standRoofMat);
+  roof.position.set(0, 14.2, -1.5);
+  roof.rotation.x = -.08;
+  stand.add(roof);
+  for (const supportX of [-27, 27]) {
+    const support = new THREE.Mesh(new THREE.CylinderGeometry(.35, .48, 12, 10), standTrimMat);
+    support.position.set(supportX, 8, -5.3);
+    stand.add(support);
+  }
+  const frontRail = new THREE.Mesh(new THREE.BoxGeometry(58, .35, .35), standTrimMat);
+  frontRail.position.set(0, 4.6, 9.2);
+  stand.add(frontRail);
   for (const side of [-1, 1]) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.3, .42, 17, 8), standBaseMat);
-    pole.position.set(side * 25, 8.5, -7);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.24, .38, 18, 10), standTrimMat);
+    pole.position.set(side * 26, 9, -7);
     stand.add(pole);
-    const light = new THREE.Mesh(new THREE.BoxGeometry(6.5, 3, .7), whiteMat);
-    light.position.set(side * 25, 17, -7);
+    const light = new THREE.Mesh(new THREE.BoxGeometry(7, 2.5, .65), whiteMat);
+    light.position.set(side * 26, 18, -7);
     stand.add(light);
   }
-  stand.position.set(x * MAP_SCALE, 1, z * MAP_SCALE);
+  stand.position.set(x * MAP_SCALE, 1.5, z * MAP_SCALE);
   stand.rotation.y = rotation;
+  stand.traverse((part) => { if (part.isMesh) part.castShadow = part.receiveShadow = true; });
   scene.add(stand);
 }
 addStand(-98, 58, Math.PI / 2);
@@ -275,63 +299,120 @@ for (let i = 0; i < 420 && treePositions.length < 130; i++) {
   }
 }
 const trunks = new THREE.InstancedMesh(
-  new THREE.CylinderGeometry(.45, .65, 1, 8),
-  new THREE.MeshStandardMaterial({ color: 0x765039, roughness: 1 }),
+  new THREE.CylinderGeometry(.38, .76, 1, 10),
+  new THREE.MeshStandardMaterial({ color: 0x765038, roughness: .94 }),
   treePositions.length
 );
-const crowns = new THREE.InstancedMesh(
+const lowerCrowns = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(1, 16, 12),
+  new THREE.MeshStandardMaterial({ color: 0x326f45, emissive: 0x102c19, emissiveIntensity: .24, roughness: .88 }),
+  treePositions.length
+);
+const upperCrowns = new THREE.InstancedMesh(
+  new THREE.SphereGeometry(1, 14, 10),
+  new THREE.MeshStandardMaterial({ color: 0x65a84a, emissive: 0x193510, emissiveIntensity: .2, roughness: .84 }),
+  treePositions.length
+);
+const crownHighlights = new THREE.InstancedMesh(
   new THREE.IcosahedronGeometry(1, 1),
-  new THREE.MeshStandardMaterial({ color: 0x398349, roughness: 1 }),
+  new THREE.MeshStandardMaterial({ color: 0x9aca5a, roughness: .8 }),
   treePositions.length
 );
 const treeMatrix = new THREE.Matrix4();
 const treeQuaternion = new THREE.Quaternion();
-const treeColors = [new THREE.Color(0x2f7c42), new THREE.Color(0x4a963f), new THREE.Color(0x6aa83e)];
+const treeColors = [new THREE.Color(0x2d7342), new THREE.Color(0x438947), new THREE.Color(0x5b9847)];
+const treeLightColors = [new THREE.Color(0x7fb950), new THREE.Color(0x9cca59), new THREE.Color(0x6fac4b)];
 treePositions.forEach(([x, z, height, radius], i) => {
-  treeMatrix.compose(new THREE.Vector3(x, height / 2, z), treeQuaternion, new THREE.Vector3(1, height, 1));
+  treeQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), hash(i + 31) * Math.PI * 2);
+  treeMatrix.compose(new THREE.Vector3(x, 1.5 + height / 2, z), treeQuaternion, new THREE.Vector3(1, height, 1));
   trunks.setMatrixAt(i, treeMatrix);
-  treeMatrix.compose(new THREE.Vector3(x, height + radius * .7, z), treeQuaternion, new THREE.Vector3(radius, radius * 1.15, radius));
-  crowns.setMatrixAt(i, treeMatrix);
-  crowns.setColorAt(i, treeColors[i % treeColors.length]);
+  treeMatrix.compose(
+    new THREE.Vector3(x, 1.5 + height + radius * .48, z), treeQuaternion,
+    new THREE.Vector3(radius * 1.28, radius * .92, radius * 1.1)
+  );
+  lowerCrowns.setMatrixAt(i, treeMatrix);
+  lowerCrowns.setColorAt(i, treeColors[i % treeColors.length]);
+  treeMatrix.compose(
+    new THREE.Vector3(x + radius * .2, 1.5 + height + radius * 1.15, z - radius * .12), treeQuaternion,
+    new THREE.Vector3(radius * .86, radius, radius * .82)
+  );
+  upperCrowns.setMatrixAt(i, treeMatrix);
+  upperCrowns.setColorAt(i, treeLightColors[i % treeLightColors.length]);
+  treeMatrix.compose(
+    new THREE.Vector3(x - radius * .48, 1.5 + height + radius * 1.02, z + radius * .42), treeQuaternion,
+    new THREE.Vector3(radius * .42, radius * .45, radius * .38)
+  );
+  crownHighlights.setMatrixAt(i, treeMatrix);
+  crownHighlights.setColorAt(i, treeLightColors[(i + 1) % treeLightColors.length]);
 });
 trunks.instanceMatrix.needsUpdate = true;
-crowns.instanceMatrix.needsUpdate = true;
-crowns.instanceColor.needsUpdate = true;
-trunks.castShadow = crowns.castShadow = true;
-scene.add(trunks, crowns);
+lowerCrowns.instanceMatrix.needsUpdate = upperCrowns.instanceMatrix.needsUpdate = crownHighlights.instanceMatrix.needsUpdate = true;
+lowerCrowns.instanceColor.needsUpdate = upperCrowns.instanceColor.needsUpdate = crownHighlights.instanceColor.needsUpdate = true;
+trunks.castShadow = lowerCrowns.castShadow = upperCrowns.castShadow = true;
+scene.add(trunks, lowerCrowns, upperCrowns, crownHighlights);
 
 const gate = new THREE.Group();
-const gateMat = new THREE.MeshStandardMaterial({ color: 0x253139, metalness: .55, roughness: .35 });
+const gateStoneMat = new THREE.MeshStandardMaterial({ color: 0xe8d9b7, roughness: .68 });
+const gateGreenMat = new THREE.MeshStandardMaterial({ color: 0x285c43, metalness: .15, roughness: .42 });
+const gateGoldMat = new THREE.MeshStandardMaterial({ color: 0xe2bd5c, metalness: .48, roughness: .32 });
 for (const x of [-16.5, 16.5]) {
-  const post = new THREE.Mesh(new THREE.BoxGeometry(1.1, 15, 1.1), gateMat);
-  post.position.set(x, 7.5, 0);
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.1, 1.3, 12), gateStoneMat);
+  base.position.set(x, .65, 0);
+  gate.add(base);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(.72, 1.08, 12.5, 12), gateStoneMat);
+  post.position.set(x, 7.45, 0);
   gate.add(post);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.05, .75, 12), gateGoldMat);
+  cap.position.set(x, 13.8, 0);
+  gate.add(cap);
+  const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(1.55, 1), gateGreenMat);
+  crown.scale.set(1.35, .85, .9);
+  crown.position.set(x, 15, 0);
+  gate.add(crown);
 }
-const crossbar = new THREE.Mesh(new THREE.BoxGeometry(34, 1, 1.2), gateMat);
-crossbar.position.y = 14.4;
+const crossbar = new THREE.Mesh(new THREE.BoxGeometry(35, 1.3, 1.4), gateGreenMat);
+crossbar.position.y = 13.45;
 gate.add(crossbar);
+for (let x = -13.5, i = 0; x <= 13.5; x += 3, i++) {
+  const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(.72, 0), i % 2 ? gateGreenMat : gateGoldMat);
+  leaf.scale.set(1.3, .55, .62);
+  leaf.position.set(x, 14.3 + Math.cos(x) * .18, 0);
+  leaf.rotation.z = x * .08;
+  gate.add(leaf);
+}
 const signCanvas = document.createElement('canvas');
-signCanvas.width = 512;
-signCanvas.height = 96;
+signCanvas.width = 1024;
+signCanvas.height = 256;
 const signContext = signCanvas.getContext('2d');
-signContext.fillStyle = '#ef542f';
-signContext.fillRect(0, 0, 512, 96);
-signContext.fillStyle = '#fff';
-signContext.font = '900 54px sans-serif';
+const signGradient = signContext.createLinearGradient(0, 0, 0, 256);
+signGradient.addColorStop(0, '#3f8058');
+signGradient.addColorStop(1, '#1d4938');
+signContext.fillStyle = signGradient;
+signContext.fillRect(0, 0, 1024, 256);
+signContext.strokeStyle = '#e7c867';
+signContext.lineWidth = 18;
+signContext.strokeRect(14, 14, 996, 228);
+signContext.fillStyle = '#fff6cf';
+signContext.font = '900 112px sans-serif';
 signContext.textAlign = 'center';
 signContext.textBaseline = 'middle';
-signContext.fillText('MANDRIDER', 256, 51);
+signContext.shadowColor = 'rgba(0,0,0,.42)';
+signContext.shadowBlur = 10;
+signContext.shadowOffsetY = 6;
+signContext.fillText('MANDRIDER', 512, 134);
 const signTexture = new THREE.CanvasTexture(signCanvas);
 signTexture.colorSpace = THREE.SRGBColorSpace;
+signTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 const sign = new THREE.Mesh(
-  new THREE.PlaneGeometry(24, 4.5),
+  new THREE.PlaneGeometry(21, 4.1),
   new THREE.MeshBasicMaterial({ map: signTexture, side: THREE.DoubleSide })
 );
-sign.position.set(0, 14.4, -.65);
+sign.position.set(0, 16.35, -.65);
 sign.rotation.y = Math.PI;
 gate.add(sign);
-gate.position.copy(start);
+gate.position.copy(trackCurve.getPointAt(.0015));
 gate.rotation.y = startAngle;
+gate.traverse((part) => { if (part.isMesh) part.castShadow = part.receiveShadow = true; });
 scene.add(gate);
 
 const minimap = document.getElementById('minimap');
@@ -519,8 +600,6 @@ const percentEl = document.getElementById('drift-percent');
 const slotBox = document.getElementById('boost-slots');
 const slots = [...slotBox.children];
 const countdownEl = document.getElementById('countdown');
-const noticeEl = document.getElementById('race-notice');
-const driveStateEl = document.getElementById('drive-state');
 const lapEl = document.getElementById('lap');
 const timeEl = document.getElementById('race-time');
 const speedDialEl = document.getElementById('speed-dial');
@@ -551,9 +630,7 @@ function updateHud() {
   slots.forEach((slot, i) => slot.classList.toggle('on', i < state.boosts));
   slotBox.setAttribute('aria-label', `부스터 ${state.boosts}개`);
   countdownEl.textContent = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer) : (raceActive && state.startTimer > -0.75 ? 'GO!' : '');
-  noticeEl.textContent = state.noticeTimer > 0 ? state.notice : '';
   lapEl.textContent = `${Math.min(lap, 3)} / 3`;
-  driveStateEl.textContent = raceFinished ? '완주!' : state.boostTimer > 0 ? 'N₂O 부스터' : state.instantTimer > 0 ? '순간 부스터' : state.drifting ? `${state.driftChain > 1 ? `${state.driftChain}연속 ` : ''}드리프트` : state.speed < -0.5 ? '후진' : state.started ? '주행 중' : '출발 준비';
   drawMinimap();
 }
 
