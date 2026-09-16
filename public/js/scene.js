@@ -402,26 +402,6 @@ function buildEdgeIce() {
     ));
   });
 
-  // 가장자리 아래로 고드름을 내려 원래 설원 섬의 두께를 만든다.
-  const icicleGeo = new THREE.ConeGeometry(0.5, 1.8, 5);
-  rockify(icicleGeo, 0.12, 17);
-  const icicleMat = new THREE.MeshStandardMaterial({
-    color: 0xbfe7ff, roughness: 0.2, metalness: 0.08, flatShading: true,
-    emissive: 0x244f78, emissiveIntensity: 0.72
-  });
-  group.add(scatter(icicleGeo, icicleMat, 42,
-    (i, pos, rot, scl) => {
-      const a = (i / 42) * Math.PI * 2 + rnd(-0.045, 0.045);
-      const h = rnd(0.55, 2.1);
-      const w = rnd(0.12, 0.28);
-      const rr = ARENA_RADIUS * rnd(0.98, 1.02);
-      pos.set(Math.cos(a) * rr, -2.25 - h * 0.5, Math.sin(a) * rr);
-      rot.set(rnd(-0.12, 0.12), Math.random() * 6.3, Math.PI + rnd(-0.08, 0.08));
-      scl.set(w, h, w);
-    },
-    () => { const v = rnd(0.82, 1.08); return new THREE.Color(v * 0.82, v * 0.94, v); }
-  ));
-
   return group;
 }
 
@@ -901,11 +881,9 @@ export function paintArena(deck, spec = {}) {
     scene.getObjectByName('pollen')?.userData.setMode?.(spec.particles ?? 'pollen');
   }
 
-  // 가장자리 장식. 설원은 얼음 기둥만 두면 사이가 휑해서, 서리 낀 바위를
-  // 함께 세워 빈틈을 메운다(바위는 spec.stone 색으로 이미 하얗게 칠해진다).
   // 가장자리 장식은 스킨마다 다른 것을 켠다.
   //   (없음) 제멋대로 둘린 돌무리 — 풀숲
-  //   ice    얼음 기둥 + 눈더미 + 서리 낀 바위 — 설원
+  //   ice    얼음 기둥 + 눈더미 — 설원(둥근 바위는 눈밭에 어울리지 않아 뺐다)
   //   orbit  빛나는 고리 + 떠 있는 운석 — 은하수(돌·얼음은 우주와 안 어울린다)
   const ice = deck.getObjectByName('deck-ice');
   const snowy = deck.getObjectByName('deck-snowdeco');

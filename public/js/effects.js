@@ -112,6 +112,7 @@ export const ARENAS = [
     snowfall: true,          // 눈이 내린다(떠다니는 꽃가루를 눈송이로)
     lightHud: true,          // 배경이 밝아 흐린 HUD 글씨가 묻힌다 → 어둡게 뒤집는다
     edge: 'ice',             // 가장자리에 얼음 기둥을 더한다
+    hideStones: true,        // 눈밭 가장자리에 둥근 바위가 굴러다니면 어색하다
     hideTufts: true,         // 눈밭에 초록 풀포기가 서 있으면 어색하다
     thumbSky: ['#1d3349', '#5b81a0', '#c6dbe9'],
     swatchTop: 0xf2f8ff, swatchSide: 0x9ec4e0, thumbEdge: 'ice'
