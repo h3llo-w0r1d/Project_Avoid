@@ -347,6 +347,9 @@ export function makeSnowTexture(size = 1536) {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 16;
+  // 위에 그린 절차형 눈밭은 원본 그림이 도착하기 전까지만 쓰인다.
+  // 원본이 오면 덮어쓴다 — 은하수와 같은 방식이다.
+  applySourceCrop(tex, g, size, 'img/arena-snow-source.png', 367.5, 29.5, 935);
   return tex;
 }
 

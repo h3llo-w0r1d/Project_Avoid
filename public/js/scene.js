@@ -830,7 +830,12 @@ function islandTexture() {
 //   hideTufts : 풀포기를 감춘다. 눈밭에 초록 풀이 서 있으면 어색하다.
 export function paintArena(deck, spec = {}) {
   if (!deck) return;
-  const sourceIsland = spec.topMap === 'galaxy';
+  // 상판을 원본 그림으로 쓰는 스킨. 그림에 조명과 입체감이 이미 들어 있어
+  // 장면 조명을 다시 곱하지 않고, 같은 장식을 3D 로 또 세우지도 않는다.
+  const sourceIsland = spec.topMap === 'galaxy' || spec.topMap === 'snow';
+  // 그 원본에 섬 옆면까지 들어 있는지. 은하수 그림은 옆면을 품고 있지만
+  // 설원 그림은 위에서 내려다본 것이라 옆면이 없다 — 밑동을 살려 두께를 준다.
+  const sourceHasSides = spec.topMap === 'galaxy';
 
   const tint = (name, hex) => {
     const o = deck.getObjectByName(name);
@@ -871,10 +876,9 @@ export function paintArena(deck, spec = {}) {
   tint('deck-stones', spec.stone);
   tint('deck-tufts', spec.tuft);
 
-  // 원본 상판에 옆면까지 들어 있으므로 공통 흙섬 밑동을 겹치지 않는다.
   for (const name of ['deck-cliff', 'deck-under']) {
     const part = deck.getObjectByName(name);
-    if (part) part.visible = !sourceIsland;
+    if (part) part.visible = !sourceHasSides;
   }
 
   // 밝은 배경에서도 절벽 실루엣이 검은 띠로 뭉개지지 않게 스킨 빛을 약하게 받친다.
