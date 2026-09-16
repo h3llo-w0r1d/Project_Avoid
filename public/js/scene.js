@@ -356,51 +356,50 @@ function mergeTwo(a, b) {
 function buildEdgeIce() {
   const group = new THREE.Group();
 
-  // 무리의 중심 각도. 고르게 두되 조금씩 흔들어 기계적이지 않게.
-  const CLUSTERS = 26;
-  const centers = [];
-  for (let i = 0; i < CLUSTERS; i++) {
-    centers.push((i / CLUSTERS) * Math.PI * 2 + (Math.random() - 0.5) * 0.14);
-  }
-
-  // 큰 기둥 · 중간 · 낮은 조각 세 층으로 쌓는다.
-  //   spread : 무리 중심에서 얼마나 벌어지나(라디안)
-  //   inset  : 무대 안쪽으로 얼마나 들어오나
-  const LAYERS = [
-    { seg: 5, n: 2, h: [0.55, 1.15], w: [0.26, 0.44], spread: 0.055, inset: 0.10, rough: 0.24 },
-    { seg: 6, n: 2, h: [0.30, 0.62], w: [0.20, 0.34], spread: 0.100, inset: 0.22, rough: 0.30 },
-    { seg: 5, n: 3, h: [0.14, 0.34], w: [0.16, 0.30], spread: 0.150, inset: 0.34, rough: 0.36 }
-  ];
-
-  LAYERS.forEach((L, li) => {
-    const geo = new THREE.ConeGeometry(0.5, 1.6, L.seg);
-    rockify(geo, L.rough * 0.6, 7 + li);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xdcefff, roughness: 0.26, metalness: 0.06,
-      flatShading: true,
-      // 밤이라 그냥 두면 시커멓게 죽는다. 얼음이 스스로 은은히 빛나게 한다.
-      emissive: 0x2f5075, emissiveIntensity: 0.6
-    });
-
-    const count = CLUSTERS * L.n;
-    group.add(scatter(geo, mat, count,
-      (i, pos, rot, scl) => {
-        const a = centers[i % CLUSTERS] + (Math.random() - 0.5) * L.spread * 2;
-        const h = rnd(L.h[0], L.h[1]);
-        const w = rnd(L.w[0], L.w[1]);
-        const rr = ARENA_RADIUS - L.inset - Math.random() * 0.1;
-        pos.set(Math.cos(a) * rr, -0.12 + h * 0.5, Math.sin(a) * rr);
-        // 안쪽으로 살짝 눕히고 축을 돌려 결이 제각각 보이게
-        rot.set((Math.random() - 0.5) * 0.40, Math.random() * 6.3, (Math.random() - 0.5) * 0.40);
-        scl.set(w, h * 1.5, w);
-      },
-      // 조각마다 푸른 기를 조금씩 — 맑은 얼음과 흐린 얼음이 섞이게
-      () => {
-        const v = 0.80 + Math.random() * 0.28;
-        return new THREE.Color(v * (0.88 + Math.random() * 0.10), v * (0.94 + Math.random() * 0.06), v);
-      }
-    ));
+  // 눈 덮인 둔덕으로 테두리를 두른다. 서로 겹칠 만큼 촘촘히 놓아야
+  // 하나하나가 아니라 이어진 눈 턱으로 보인다.
+  const MOUNDS = 54;
+  const moundGeo = new THREE.IcosahedronGeometry(0.5, 1);
+  rockify(moundGeo, 0.22, 5);
+  const moundMat = new THREE.MeshStandardMaterial({
+    color: 0xf3f8ff, roughness: 0.82, metalness: 0,
+    emissive: 0x2a4466, emissiveIntensity: 0.3
   });
+  group.add(scatter(moundGeo, moundMat, MOUNDS,
+    (i, pos, rot, scl) => {
+      const a = (i / MOUNDS) * Math.PI * 2 + rnd(-0.03, 0.03);
+      const rr = ARENA_RADIUS - rnd(0.05, 0.5);
+      const w = rnd(0.9, 1.7);
+      pos.set(Math.cos(a) * rr, rnd(-0.35, -0.1), Math.sin(a) * rr);
+      rot.set(rnd(-0.2, 0.2), Math.random() * 6.3, rnd(-0.2, 0.2));
+      // 옆으로 퍼지고 납작하게 — 뾰족한 것이 아니라 쌓인 눈이다
+      scl.set(w, rnd(0.35, 0.7), w * rnd(0.8, 1.15));
+    },
+    () => { const v = rnd(0.92, 1.0); return new THREE.Color(v, v, 1); }
+  ));
+
+  // 그 위에 두툼한 얼음 결정을 드문드문. 참고 그림처럼 몇 군데만 뭉쳐 솟는다.
+  // 가늘고 길면 바늘처럼 보여 어색하다 — 밑동을 넓게, 키는 낮게 잡는다.
+  const CRYSTALS = 22;
+  const crystalGeo = new THREE.ConeGeometry(0.5, 1.0, 6);
+  rockify(crystalGeo, 0.16, 9);
+  const crystalMat = new THREE.MeshStandardMaterial({
+    color: 0x9fe3ff, roughness: 0.22, metalness: 0.06, flatShading: true,
+    emissive: 0x2f6f9c, emissiveIntensity: 0.7
+  });
+  group.add(scatter(crystalGeo, crystalMat, CRYSTALS,
+    (i, pos, rot, scl) => {
+      // 무리 지어 솟게 — 두세 개가 한자리에 모이고 사이는 비운다
+      const a = (Math.floor(i / 2) / Math.ceil(CRYSTALS / 2)) * Math.PI * 2 + rnd(-0.08, 0.08);
+      const rr = ARENA_RADIUS - rnd(0.1, 0.45);
+      const w = rnd(0.34, 0.58);
+      const h = rnd(0.5, 0.95);
+      pos.set(Math.cos(a) * rr, -0.15 + h * 0.5, Math.sin(a) * rr);
+      rot.set(rnd(-0.1, 0.1), Math.random() * 6.3, rnd(-0.1, 0.1));
+      scl.set(w, h, w);
+    },
+    () => { const v = rnd(0.85, 1.05); return new THREE.Color(v * 0.8, v * 0.95, v); }
+  ));
 
   return group;
 }
