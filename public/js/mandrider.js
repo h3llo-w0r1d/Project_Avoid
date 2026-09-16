@@ -236,27 +236,118 @@ const arcs = [];
   }
 }
 
-// 막대 하나를 재질까지 같이 쓴다. 깜빡임을 재질 한 곳만 건드려 처리하려는 것.
-const arcMat = new THREE.MeshBasicMaterial({ color: 0xff2f3d, transparent: true, opacity: .92 });
-const arcGlowMat = new THREE.MeshBasicMaterial({ color: 0xff8a5c, transparent: true, opacity: .3, depthWrite: false });
-const arcGeo = new THREE.BoxGeometry(1, 2.7, .42);
-const arcGlowGeo = new THREE.BoxGeometry(1, 3.5, 1.5);
+// 번개 줄기. 본편(hazards.js)과 같은 방식 — 길이 방향으로 마디를 나누고 마디마다
+// 네 점짜리 단면을 둬서, 매 프레임 정점을 흔들어 지그재그를 만든다.
+const BOLT_SEG = 20;
+function makeBoltGeometry() {
+  const index = [];
+  for (let s = 0; s < BOLT_SEG; s++) {
+    for (let r = 0; r < 4; r++) {
+      const a = s * 4 + r, b = s * 4 + (r + 1) % 4;
+      const c = (s + 1) * 4 + r, d = (s + 1) * 4 + (r + 1) % 4;
+      index.push(a, c, b, b, c, d);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((BOLT_SEG + 1) * 4 * 3), 3));
+  geo.setIndex(index);
+  return geo;
+}
+
+// 본편 전기선 색을 그대로 쓴다(config.js COLORS.volt / voltGlow).
+const boltMat = new THREE.MeshBasicMaterial({ color: 0xfff2f0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+const boltGlowMat = new THREE.MeshBasicMaterial({ color: 0xff2a40, transparent: true, opacity: .42, blending: THREE.AdditiveBlending, depthWrite: false });
+const boltSparkMat = new THREE.PointsMaterial({ color: 0xff8a70, size: .42, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false });
+const pylonMat = new THREE.MeshStandardMaterial({ color: 0x2c3238, metalness: .55, roughness: .45 });
+const glowGeo = new THREE.CylinderGeometry(.5, .5, 1, 8, 1, true);
+// 줄기만 있으면 멀리서 가늘어 안 보인다. 두 줄 사이를 옅은 막으로 채워
+// "지나갈 수 없는 벽"으로 먼저 읽히게 하고, 전기 느낌은 줄기가 맡는다.
+const veilMat = new THREE.MeshBasicMaterial({
+  color: 0xff3348, transparent: true, opacity: .22, side: THREE.DoubleSide,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const veilGeo = new THREE.PlaneGeometry(1, 1);
+const pylonGeo = new THREE.CylinderGeometry(.22, .3, 2.9, 8);
+const capGeo = new THREE.SphereGeometry(.3, 10, 8);
+const SPARKS = 10;
+const bolts = [];
 for (const arc of arcs) {
   const point = trackSamples[arc.index];
   const normal = trackNormals[arc.index];
-  // 로컬 +X 를 트랙 법선 방향으로 돌린다. 막대가 도로를 가로질러 서야 한다.
+  // 로컬 +X 를 트랙 법선 방향으로 돌린다. 전기가 도로를 가로질러 흘러야 한다.
   const yaw = Math.atan2(-normal.y, normal.x);
   for (const [from, to] of [[-KART.roadHalfWidth, arc.lane - ARC_GAP], [arc.lane + ARC_GAP, KART.roadHalfWidth]]) {
     const width = to - from;
     if (width < .4) continue;
-    const offset = (from + to) / 2;
-    for (const [geo, mat, y] of [[arcGeo, arcMat, 3.4], [arcGlowGeo, arcGlowMat, 3.4]]) {
-      const bar = new THREE.Mesh(geo, mat);
-      bar.scale.x = width;
-      bar.rotation.y = yaw;
-      bar.position.set(point.x + normal.x * offset, y, point.z + normal.y * offset);
-      scene.add(bar);
+    const group = new THREE.Group();
+    group.position.set(point.x + normal.x * (from + to) / 2, 2.06, point.z + normal.y * (from + to) / 2);
+    group.rotation.y = yaw;
+    // 양 끝 기둥. 전기가 허공에 떠 있지 않고 무언가에 걸린 것으로 보이게 한다.
+    for (const end of [-1, 1]) {
+      const pylon = new THREE.Mesh(pylonGeo, pylonMat);
+      pylon.position.set(end * width / 2, 1.45, 0);
+      pylon.castShadow = true;
+      group.add(pylon);
+      const cap = new THREE.Mesh(capGeo, boltGlowMat);
+      cap.position.set(end * width / 2, 2.9, 0);
+      group.add(cap);
     }
+    const veil = new THREE.Mesh(veilGeo, veilMat);
+    veil.scale.set(width, 1.07, 1);
+    veil.position.y = 2.09;
+    group.add(veil);
+    // 위아래 두 줄로 걸어야 지나갈 수 없는 벽으로 읽힌다.
+    for (const y of [1.55, 2.62]) {
+      const bolt = new THREE.Mesh(makeBoltGeometry(), boltMat);
+      bolt.position.y = y;
+      bolt.frustumCulled = false;   // 정점을 직접 갱신하므로 경계구가 맞지 않는다
+      group.add(bolt);
+      const glow = new THREE.Mesh(glowGeo, boltGlowMat);
+      glow.scale.set(1, width, 1);
+      glow.rotation.z = Math.PI / 2;
+      glow.position.y = y;
+      group.add(glow);
+      bolts.push({ bolt, width, seed: bolts.length * 1.7 });
+    }
+    const sparkGeo = new THREE.BufferGeometry();
+    sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
+    const sparks = new THREE.Points(sparkGeo, boltSparkMat);
+    sparks.position.y = 2.1;
+    sparks.frustumCulled = false;
+    group.add(sparks);
+    bolts[bolts.length - 1].sparks = sparks;
+    bolts[bolts.length - 1].sparkSeed = Array.from({ length: SPARKS }, () => Math.random());
+    scene.add(group);
+  }
+}
+
+// 지그재그를 다시 그린다. 양 끝은 기둥에 물려 있으므로 흔들림을 0으로 좁힌다.
+function shapeBolts(time) {
+  for (const entry of bolts) {
+    const array = entry.bolt.geometry.attributes.position.array;
+    let p = 0;
+    for (let s = 0; s <= BOLT_SEG; s++) {
+      const t = s / BOLT_SEG;
+      const taper = Math.sin(Math.PI * t);
+      const k = t * entry.width + entry.seed;
+      const oy = (Math.sin(k * 1.9 + time * 23) * .62 + Math.sin(k * 4.3 - time * 31) * .3) * .46 * taper;
+      const oz = (Math.cos(k * 2.5 - time * 27) * .62 + Math.cos(k * 5.1 + time * 36) * .3) * .46 * taper;
+      const x = (t - .5) * entry.width;
+      array[p++] = x; array[p++] = oy + .18; array[p++] = oz;
+      array[p++] = x; array[p++] = oy; array[p++] = oz + .18;
+      array[p++] = x; array[p++] = oy - .18; array[p++] = oz;
+      array[p++] = x; array[p++] = oy; array[p++] = oz - .18;
+    }
+    entry.bolt.geometry.attributes.position.needsUpdate = true;
+    if (!entry.sparks) continue;
+    const spark = entry.sparks.geometry.attributes.position.array;
+    for (let i = 0; i < SPARKS; i++) {
+      const seed = entry.sparkSeed[i];
+      spark[i * 3] = (((seed + time * .4) % 1) - .5) * entry.width;
+      spark[i * 3 + 1] = Math.sin(time * (15 + seed * 21) + seed * 40) * .55;
+      spark[i * 3 + 2] = Math.cos(time * (12 + seed * 18) + seed * 25) * .35;
+    }
+    entry.sparks.geometry.attributes.position.needsUpdate = true;
   }
 }
 
@@ -647,9 +738,10 @@ function updateScene(dt, now) {
     cloud.scale.setScalar(.5 + phase * 1.9);
   });
 
-  // 전기선이 지직거리게 한다. 막대들이 재질을 공유해서 여기 두 줄이면 다 같이 떤다.
-  arcMat.opacity = .72 + Math.random() * .28;
-  arcGlowMat.opacity = .16 + Math.random() * .2;
+  // 전기선이 지직거리게 한다. 줄기를 다시 그리고, 재질은 공유하므로 한 번만 떤다.
+  shapeBolts(now);
+  boltMat.opacity = .72 + Math.random() * .28;
+  boltGlowMat.opacity = .3 + Math.random() * .22;
 
   // 카메라는 카트보다 늦게 돈다. 시야가 카트를 그대로 따라 휙 돌면 멀미가 난다.
   // 코너에서는 카트만 화면 안에서 비스듬해지고 시야는 천천히 따라붙는다.
