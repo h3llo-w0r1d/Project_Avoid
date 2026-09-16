@@ -253,6 +253,9 @@ app.use('/js/vendor', express.static(join(root, 'public', 'js', 'vendor'), { max
 // 모델을 고칠 땐 파일 이름을 바꿔서 올린다(캐릭터 스펙의 url 도 같이).
 app.use('/models', express.static(join(root, 'public', 'models'), { maxAge: '7d' }));
 
+// 폰트도 거의 안 바뀐다. 2MB 짜리라 매번 재확인하면 아깝다.
+app.use('/fonts', express.static(join(root, 'public', 'fonts'), { maxAge: '7d' }));
+
 // 나머지(게임 코드·HTML·CSS)는 매번 서버에 물어보게 한다.
 // max-age 를 걸면 브라우저가 그 시간 동안 재확인조차 안 해서,
 // 코드를 고치고 새로고침해도 옛날 파일이 계속 돌아간다.

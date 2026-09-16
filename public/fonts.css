@@ -1,0 +1,10 @@
+/* Pretendard 를 웹폰트로 직접 서빙한다.
+   접속자 PC에 폰트가 깔려 있는지에 따라 다르게 보이는 걸 막기 위함
+   (시스템 폰트로만 지정해두면 포맷 등으로 폰트가 없어진 사람은 다르게 보인다). */
+@font-face {
+  font-family: "Pretendard";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("./fonts/PretendardVariable.woff2") format("woff2");
+}
