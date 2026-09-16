@@ -38,17 +38,17 @@ scene.add(sun.target);
 // 참고 미니맵의 비율과 일곱 연속 헤어핀 순서를 그대로 따라야 손가락형 실루엣이 유지된다.
 // 직선이 지루해서 가로로 줄였다. 코너는 손대지 않았다 — 헤어핀을 이루는 점들을
 // 통째로 같은 거리만큼 밀어서, 직선 길이만 빠지고 회전 반경은 그대로다.
-const MAP_SCALE = 4.5;
+const MAP_SCALE = 4.0;
 const trackCurve = new THREE.CatmullRomCurve3([
-  [0, -62], [-38, -62], [-48, -60], [-54, -54], [-56, -46], [-56, 49],
+  [0, -50], [-38, -50], [-48, -48], [-54, -44], [-56, -38], [-56, 49],
   [-54, 56], [-48, 62], [-38, 65], [43, 65], [50, 63], [54, 59],
   [54, 55], [50, 51], [43, 49], [10, 49], [4, 47], [0, 43],
   [0, 39], [4, 35], [10, 33], [43, 33], [50, 31], [54, 27],
   [54, 23], [50, 19], [43, 17], [10, 17], [4, 15], [0, 11],
   [0, 7], [4, 3], [10, 1], [43, 1], [50, -1], [54, -5],
   [54, -9], [50, -13], [43, -15], [10, -15], [4, -17], [0, -21],
-  [0, -25], [4, -29], [10, -31], [56, -31], [63, -33], [68, -38],
-  [68, -45], [65, -51], [60, -57], [53, -61], [44, -62]
+  [0, -25], [4, -29], [10, -31], [56, -31], [63, -33], [68, -37],
+  [68, -42], [65, -46], [60, -49], [53, -50], [44, -50]
 ].map(([x, z]) => new THREE.Vector3(x * MAP_SCALE, 0, z * MAP_SCALE)), true, 'centripetal');
 const trackSamples = Array.from({ length: 1200 }, (_, i) => trackCurve.getPointAt(i / 1200));
 const trackNormals = trackSamples.map((point, i) => {
@@ -592,6 +592,9 @@ function touchedArc() {
     const along = dx * -normal.y + dz * normal.x;
     if (Math.abs(along) > 2.2) continue;
     const across = dx * normal.x + dz * normal.y;
+    // 도로 밖이면 이 전기선과 무관하다. 트랙이 뱀처럼 접혀 있어서, 이 검사가
+    // 없으면 옆 손가락을 달릴 때 여기 띠에 걸려 보이지도 않는 전기에 죽는다.
+    if (Math.abs(across) > KART.roadHalfWidth) continue;
     if (Math.abs(across - arc.lane) > ARC_GAP) return true;
   }
   return false;
