@@ -347,9 +347,13 @@ export function makeSnowTexture(size = 1536) {
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 16;
-  // 위에 그린 절차형 눈밭은 원본 그림이 도착하기 전까지만 쓰인다.
-  // 원본이 오면 덮어쓴다 — 은하수와 같은 방식이다.
-  applySourceCrop(tex, g, size, 'img/arena-snow-source.png', 367.5, 29.5, 935);
+  // 원본 그림의 '눈밭 안쪽'만 가져다 덮는다. 위에 그린 절차형 무늬는 그림이
+  // 도착하기 전까지만 쓰인다.
+  //
+  // 섬 테두리(나무·얼음)까지 넣으면 안 된다. 상판은 정원(正圓)인데 그림 속
+  // 섬은 찌그러진 타원이라, 넓게 자르면 테두리 바깥의 배경 구름이 상판에
+  // 같이 찍혀 경계가 뚝 끊긴다. 테두리는 3D 얼음 기둥이 맡는다(edge: 'ice').
+  applySourceCrop(tex, g, size, 'img/arena-snow-source.png', 465, 100, 740);
   return tex;
 }
 
