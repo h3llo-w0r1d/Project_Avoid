@@ -36,17 +36,19 @@ scene.add(sun);
 scene.add(sun.target);
 
 // 참고 미니맵의 비율과 일곱 연속 헤어핀 순서를 그대로 따라야 손가락형 실루엣이 유지된다.
+// 직선이 지루해서 가로로 줄였다. 코너는 손대지 않았다 — 헤어핀을 이루는 점들을
+// 통째로 같은 거리만큼 밀어서, 직선 길이만 빠지고 회전 반경은 그대로다.
 const MAP_SCALE = 4.5;
 const trackCurve = new THREE.CatmullRomCurve3([
-  [0, -62], [-48, -62], [-58, -60], [-64, -54], [-66, -46], [-66, 49],
-  [-64, 56], [-58, 62], [-48, 65], [57, 65], [64, 63], [68, 59],
-  [68, 55], [64, 51], [57, 49], [10, 49], [4, 47], [0, 43],
-  [0, 39], [4, 35], [10, 33], [57, 33], [64, 31], [68, 27],
-  [68, 23], [64, 19], [57, 17], [10, 17], [4, 15], [0, 11],
-  [0, 7], [4, 3], [10, 1], [57, 1], [64, -1], [68, -5],
-  [68, -9], [64, -13], [57, -15], [10, -15], [4, -17], [0, -21],
-  [0, -25], [4, -29], [10, -31], [70, -31], [77, -33], [82, -38],
-  [82, -45], [79, -51], [74, -57], [67, -61], [58, -62]
+  [0, -62], [-38, -62], [-48, -60], [-54, -54], [-56, -46], [-56, 49],
+  [-54, 56], [-48, 62], [-38, 65], [43, 65], [50, 63], [54, 59],
+  [54, 55], [50, 51], [43, 49], [10, 49], [4, 47], [0, 43],
+  [0, 39], [4, 35], [10, 33], [43, 33], [50, 31], [54, 27],
+  [54, 23], [50, 19], [43, 17], [10, 17], [4, 15], [0, 11],
+  [0, 7], [4, 3], [10, 1], [43, 1], [50, -1], [54, -5],
+  [54, -9], [50, -13], [43, -15], [10, -15], [4, -17], [0, -21],
+  [0, -25], [4, -29], [10, -31], [56, -31], [63, -33], [68, -38],
+  [68, -45], [65, -51], [60, -57], [53, -61], [44, -62]
 ].map(([x, z]) => new THREE.Vector3(x * MAP_SCALE, 0, z * MAP_SCALE)), true, 'centripetal');
 const trackSamples = Array.from({ length: 1200 }, (_, i) => trackCurve.getPointAt(i / 1200));
 const trackNormals = trackSamples.map((point, i) => {
@@ -209,6 +211,54 @@ for (const lane of [-4.7, 4.7]) {
 }
 stripes.instanceMatrix.needsUpdate = true;
 scene.add(stripes);
+
+// 전기선. 좌우로 피하는 장애물이라 직선에만 세운다 — 코너에 두면 카트가
+// 이미 기울어 들어오는 터라 피할 각이 안 나온다. 트랙을 고치면 직선 위치도
+// 달라지므로, 좌표를 박아 두지 않고 매번 곡률을 재서 자리를 찾는다.
+const ARC_GAP = 4.6;          // 빠져나갈 틈의 절반 너비
+const ARC_LANES = [-6.6, 6.6, 0];  // 틈의 좌우 위치를 번갈아 둬서 계속 꺾게 만든다
+const arcs = [];
+{
+  const headingAt = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
+  const total = trackSamples.length;
+  let previousArc = -Infinity;
+  // 출발선 직후와 결승선 직전은 비워 둔다. 출발하자마자 눈앞에 서 있으면
+  // 피할 판단을 할 시간이 없다.
+  for (let i = 120; i < total - 120; i++) {
+    if (i - previousArc < 96) continue;
+    const a = trackSamples[i - 24];
+    const b = trackSamples[i];
+    const c = trackSamples[i + 24];
+    const turn = headingAt(b, c) - headingAt(a, b);
+    if (Math.abs(Math.atan2(Math.sin(turn), Math.cos(turn))) > .1) continue;
+    arcs.push({ index: i, lane: ARC_LANES[arcs.length % ARC_LANES.length] });
+    previousArc = i;
+  }
+}
+
+// 막대 하나를 재질까지 같이 쓴다. 깜빡임을 재질 한 곳만 건드려 처리하려는 것.
+const arcMat = new THREE.MeshBasicMaterial({ color: 0xff2f3d, transparent: true, opacity: .92 });
+const arcGlowMat = new THREE.MeshBasicMaterial({ color: 0xff8a5c, transparent: true, opacity: .3, depthWrite: false });
+const arcGeo = new THREE.BoxGeometry(1, 2.7, .42);
+const arcGlowGeo = new THREE.BoxGeometry(1, 3.5, 1.5);
+for (const arc of arcs) {
+  const point = trackSamples[arc.index];
+  const normal = trackNormals[arc.index];
+  // 로컬 +X 를 트랙 법선 방향으로 돌린다. 막대가 도로를 가로질러 서야 한다.
+  const yaw = Math.atan2(-normal.y, normal.x);
+  for (const [from, to] of [[-KART.roadHalfWidth, arc.lane - ARC_GAP], [arc.lane + ARC_GAP, KART.roadHalfWidth]]) {
+    const width = to - from;
+    if (width < .4) continue;
+    const offset = (from + to) / 2;
+    for (const [geo, mat, y] of [[arcGeo, arcMat, 3.4], [arcGlowGeo, arcGlowMat, 3.4]]) {
+      const bar = new THREE.Mesh(geo, mat);
+      bar.scale.x = width;
+      bar.rotation.y = yaw;
+      bar.position.set(point.x + normal.x * offset, y, point.z + normal.y * offset);
+      scene.add(bar);
+    }
+  }
+}
 
 const start = trackSamples[0];
 const startNext = trackSamples[1];
@@ -440,6 +490,7 @@ for (const button of document.querySelectorAll('[data-drive]')) {
 let state = createKartState();
 let raceActive = false;
 let raceFinished = false;
+let raceDead = false;
 let lap = 1;
 let lapArmed = false;
 let previousProgress = 0;
@@ -451,6 +502,7 @@ function reset() {
   state.heading = startHeading;
   cameraHeading = startHeading;
   raceFinished = false;
+  raceDead = false;
   lap = 1;
   lapArmed = false;
   previousProgress = 0;
@@ -505,7 +557,11 @@ function updateHud() {
   percentEl.textContent = `${gauge}%`;
   slots.forEach((slot, i) => slot.classList.toggle('on', i < state.boosts));
   slotBox.setAttribute('aria-label', `부스터 ${state.boosts}개`);
-  countdownEl.textContent = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer) : (raceActive && state.startTimer > -0.75 ? 'GO!' : '');
+  // 감전·완주 안내는 카운트다운 자리를 빌려 쓴다. 주행 중 잡다한 알림까지
+  // 여기에 띄우면 화면 한가운데가 계속 번쩍여 방해된다.
+  countdownEl.textContent = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer)
+    : raceActive && state.startTimer > -0.75 ? 'GO!'
+    : raceDead || raceFinished ? state.notice : '';
   lapEl.textContent = `${Math.min(lap, 3)} / 3`;
   drawMinimap();
 }
@@ -523,6 +579,22 @@ function nearestTrackSample() {
     }
   }
   return { index, point: trackSamples[index] };
+}
+
+// 전기선에 닿았는지 본다. 막대의 좌표계로 옮겨서, 트랙을 따라 막대 두께 안에
+// 들어왔고 좌우로는 틈 밖이면 감전이다.
+function touchedArc() {
+  for (const arc of arcs) {
+    const point = trackSamples[arc.index];
+    const normal = trackNormals[arc.index];
+    const dx = state.x - point.x;
+    const dz = state.z - point.z;
+    const along = dx * -normal.y + dz * normal.x;
+    if (Math.abs(along) > 2.2) continue;
+    const across = dx * normal.x + dz * normal.y;
+    if (Math.abs(across - arc.lane) > ARC_GAP) return true;
+  }
+  return false;
 }
 
 function updateLap(index) {
@@ -572,6 +644,10 @@ function updateScene(dt, now) {
     cloud.scale.setScalar(.5 + phase * 1.9);
   });
 
+  // 전기선이 지직거리게 한다. 막대들이 재질을 공유해서 여기 두 줄이면 다 같이 떤다.
+  arcMat.opacity = .72 + Math.random() * .28;
+  arcGlowMat.opacity = .16 + Math.random() * .2;
+
   // 카메라는 카트보다 늦게 돈다. 시야가 카트를 그대로 따라 휙 돌면 멀미가 난다.
   // 코너에서는 카트만 화면 안에서 비스듬해지고 시야는 천천히 따라붙는다.
   cameraHeading += (state.heading - cameraHeading) * (1 - Math.exp(-dt * 3.2));
@@ -611,7 +687,7 @@ let previous = performance.now();
 function frame(nowMs) {
   const dt = Math.min((nowMs - previous) / 1000, 0.05);
   previous = nowMs;
-  if (raceActive && !raceFinished) {
+  if (raceActive && !raceFinished && !raceDead) {
     stepKart(state, {
       up: !!keys.up,
       brake: !!keys.brake,
@@ -627,6 +703,12 @@ function frame(nowMs) {
     const nearest = nearestTrackSample();
     constrainToRoad(state, nearest.point.x, nearest.point.z);
     updateLap(nearest.index);
+    if (!raceFinished && state.startTimer <= 0 && touchedArc()) {
+      raceDead = true;
+      state.speed = state.lateral = 0;
+      state.notice = '감전! R 키로 다시';
+      state.noticeTimer = 3600;
+    }
   }
   pressed.clear();
   updateScene(dt, nowMs / 1000);
