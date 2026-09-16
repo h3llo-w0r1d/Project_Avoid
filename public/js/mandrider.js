@@ -99,6 +99,9 @@ new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.wrapS = THREE.RepeatWrapping;
   texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  // 카메라가 기울 때 배경도 같이 기운다. 화면 한가운데를 축으로 돌려야
+  // 기울기만 생기고 그림이 딸려 움직이지 않는다.
+  texture.center.set(.5, .5);
   raceSky = texture;
   if (raceActive) scene.background = raceSky;
 });
@@ -446,6 +449,7 @@ function reset() {
   state.x = start.x;
   state.z = start.z;
   state.heading = startHeading;
+  cameraHeading = startHeading;
   raceFinished = false;
   lap = 1;
   lapArmed = false;
@@ -542,6 +546,8 @@ function updateLap(index) {
 
 const cameraTarget = new THREE.Vector3();
 const cameraLook = new THREE.Vector3();
+// 카메라가 실제로 보고 있는 각도. 카트 각도를 조금 늦게 따라간다.
+let cameraHeading = 0;
 function updateScene(dt, now) {
   if (!raceActive) {
     camera.position.set(0, 1120, 10);
@@ -566,14 +572,25 @@ function updateScene(dt, now) {
     cloud.scale.setScalar(.5 + phase * 1.9);
   });
 
-  const forwardX = Math.sin(state.heading);
-  const forwardZ = -Math.cos(state.heading);
+  // 카메라는 카트보다 늦게 돈다. 시야가 카트를 그대로 따라 휙 돌면 멀미가 난다.
+  // 코너에서는 카트만 화면 안에서 비스듬해지고 시야는 천천히 따라붙는다.
+  cameraHeading += (state.heading - cameraHeading) * (1 - Math.exp(-dt * 3.2));
+  const forwardX = Math.sin(cameraHeading);
+  const forwardZ = -Math.cos(cameraHeading);
   cameraTarget.set(state.x - forwardX * 18, 9.5, state.z - forwardZ * 18);
   camera.position.lerp(cameraTarget, 1 - Math.exp(-dt * 7));
   cameraLook.set(state.x + forwardX * 15, 2.6, state.z + forwardZ * 15);
   camera.lookAt(cameraLook);
-  if (raceSky) raceSky.offset.x = (state.heading - startHeading) / (Math.PI * 2) + state.elapsed * .0008;
-  camera.rotateZ(-state.lateral * .0015);
+  const roll = -state.lateral * .0009;
+  camera.rotateZ(roll);
+  if (raceSky) {
+    // 배경은 카트가 아니라 카메라 각도를 따라간다. 카트를 따라가면 시야보다
+    // 더 돌아서 배경만 미끄러지는 것처럼 보인다.
+    raceSky.offset.x = (cameraHeading - startHeading) / (Math.PI * 2) + state.elapsed * .0008;
+    // 카메라를 roll 만큼 굴리면 화면 속 세상은 반대쪽으로 기운 것처럼 보인다.
+    // texture.rotation 은 그 값만큼 그림을 같은 방향으로 기울이므로 -roll 을 준다.
+    raceSky.rotation = -roll;
+  }
   camera.fov += ((state.boostTimer > 0 ? 76 : state.drifting ? 73 : 70) - camera.fov) * (1 - Math.exp(-dt * 6));
   camera.updateProjectionMatrix();
   sun.position.set(state.x - 18, 28, state.z + 16);
