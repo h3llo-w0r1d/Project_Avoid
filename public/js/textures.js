@@ -115,7 +115,7 @@ export function makeSoftDotTexture(size = 64) {
 // 알약을 늘린다. 글씨 크기는 그대로 두고 알약만 길어지므로 어떤 이름이든
 // 똑같은 크기로 읽힌다. 늘어난 비율은 tex.userData.aspect 로 알려 주고,
 // 이름표를 붙이는 쪽(Player.setLabel)이 그만큼 옆으로 늘려 붙인다.
-const LABEL_FONT = '700 60px "Pretendard", "Noto Sans KR", sans-serif';
+const LABEL_FONT = '700 60px "Noto Sans KR", sans-serif';
 let labelMeasure = null;
 
 export function makeLabelTexture(text, color = '#4fd6ff') {
