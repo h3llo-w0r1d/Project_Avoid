@@ -212,145 +212,6 @@ for (const lane of [-4.7, 4.7]) {
 stripes.instanceMatrix.needsUpdate = true;
 scene.add(stripes);
 
-// 전기선. 좌우로 피하는 장애물이라 직선에만 세운다 — 코너에 두면 카트가
-// 이미 기울어 들어오는 터라 피할 각이 안 나온다. 트랙을 고치면 직선 위치도
-// 달라지므로, 좌표를 박아 두지 않고 매번 곡률을 재서 자리를 찾는다.
-const ARC_GAP = 4.6;          // 빠져나갈 틈의 절반 너비
-const ARC_LANES = [-6.6, 6.6, 0];  // 틈의 좌우 위치를 번갈아 둬서 계속 꺾게 만든다
-const arcs = [];
-{
-  const headingAt = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
-  const total = trackSamples.length;
-  let previousArc = -Infinity;
-  // 출발선 직후와 결승선 직전은 비워 둔다. 출발하자마자 눈앞에 서 있으면
-  // 피할 판단을 할 시간이 없다.
-  for (let i = 120; i < total - 120; i++) {
-    if (i - previousArc < 96) continue;
-    const a = trackSamples[i - 24];
-    const b = trackSamples[i];
-    const c = trackSamples[i + 24];
-    const turn = headingAt(b, c) - headingAt(a, b);
-    if (Math.abs(Math.atan2(Math.sin(turn), Math.cos(turn))) > .1) continue;
-    arcs.push({ index: i, lane: ARC_LANES[arcs.length % ARC_LANES.length] });
-    previousArc = i;
-  }
-}
-
-// 번개 줄기. 본편(hazards.js)과 같은 방식 — 길이 방향으로 마디를 나누고 마디마다
-// 네 점짜리 단면을 둬서, 매 프레임 정점을 흔들어 지그재그를 만든다.
-const BOLT_SEG = 20;
-function makeBoltGeometry() {
-  const index = [];
-  for (let s = 0; s < BOLT_SEG; s++) {
-    for (let r = 0; r < 4; r++) {
-      const a = s * 4 + r, b = s * 4 + (r + 1) % 4;
-      const c = (s + 1) * 4 + r, d = (s + 1) * 4 + (r + 1) % 4;
-      index.push(a, c, b, b, c, d);
-    }
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((BOLT_SEG + 1) * 4 * 3), 3));
-  geo.setIndex(index);
-  return geo;
-}
-
-// 본편 전기선 색을 그대로 쓴다(config.js COLORS.volt / voltGlow).
-const boltMat = new THREE.MeshBasicMaterial({ color: 0xfff2f0, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
-const boltGlowMat = new THREE.MeshBasicMaterial({ color: 0xff2a40, transparent: true, opacity: .42, blending: THREE.AdditiveBlending, depthWrite: false });
-const boltSparkMat = new THREE.PointsMaterial({ color: 0xff8a70, size: .42, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false });
-const pylonMat = new THREE.MeshStandardMaterial({ color: 0x2c3238, metalness: .55, roughness: .45 });
-const glowGeo = new THREE.CylinderGeometry(.5, .5, 1, 8, 1, true);
-// 줄기만 있으면 멀리서 가늘어 안 보인다. 두 줄 사이를 옅은 막으로 채워
-// "지나갈 수 없는 벽"으로 먼저 읽히게 하고, 전기 느낌은 줄기가 맡는다.
-const veilMat = new THREE.MeshBasicMaterial({
-  color: 0xff3348, transparent: true, opacity: .22, side: THREE.DoubleSide,
-  blending: THREE.AdditiveBlending, depthWrite: false
-});
-const veilGeo = new THREE.PlaneGeometry(1, 1);
-const pylonGeo = new THREE.CylinderGeometry(.22, .3, 2.9, 8);
-const capGeo = new THREE.SphereGeometry(.3, 10, 8);
-const SPARKS = 10;
-const bolts = [];
-for (const arc of arcs) {
-  const point = trackSamples[arc.index];
-  const normal = trackNormals[arc.index];
-  // 로컬 +X 를 트랙 법선 방향으로 돌린다. 전기가 도로를 가로질러 흘러야 한다.
-  const yaw = Math.atan2(-normal.y, normal.x);
-  for (const [from, to] of [[-KART.roadHalfWidth, arc.lane - ARC_GAP], [arc.lane + ARC_GAP, KART.roadHalfWidth]]) {
-    const width = to - from;
-    if (width < .4) continue;
-    const group = new THREE.Group();
-    group.position.set(point.x + normal.x * (from + to) / 2, 2.06, point.z + normal.y * (from + to) / 2);
-    group.rotation.y = yaw;
-    // 양 끝 기둥. 전기가 허공에 떠 있지 않고 무언가에 걸린 것으로 보이게 한다.
-    for (const end of [-1, 1]) {
-      const pylon = new THREE.Mesh(pylonGeo, pylonMat);
-      pylon.position.set(end * width / 2, 1.45, 0);
-      pylon.castShadow = true;
-      group.add(pylon);
-      const cap = new THREE.Mesh(capGeo, boltGlowMat);
-      cap.position.set(end * width / 2, 2.9, 0);
-      group.add(cap);
-    }
-    const veil = new THREE.Mesh(veilGeo, veilMat);
-    veil.scale.set(width, 1.07, 1);
-    veil.position.y = 2.09;
-    group.add(veil);
-    // 위아래 두 줄로 걸어야 지나갈 수 없는 벽으로 읽힌다.
-    for (const y of [1.55, 2.62]) {
-      const bolt = new THREE.Mesh(makeBoltGeometry(), boltMat);
-      bolt.position.y = y;
-      bolt.frustumCulled = false;   // 정점을 직접 갱신하므로 경계구가 맞지 않는다
-      group.add(bolt);
-      const glow = new THREE.Mesh(glowGeo, boltGlowMat);
-      glow.scale.set(1, width, 1);
-      glow.rotation.z = Math.PI / 2;
-      glow.position.y = y;
-      group.add(glow);
-      bolts.push({ bolt, width, seed: bolts.length * 1.7 });
-    }
-    const sparkGeo = new THREE.BufferGeometry();
-    sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
-    const sparks = new THREE.Points(sparkGeo, boltSparkMat);
-    sparks.position.y = 2.1;
-    sparks.frustumCulled = false;
-    group.add(sparks);
-    bolts[bolts.length - 1].sparks = sparks;
-    bolts[bolts.length - 1].sparkSeed = Array.from({ length: SPARKS }, () => Math.random());
-    scene.add(group);
-  }
-}
-
-// 지그재그를 다시 그린다. 양 끝은 기둥에 물려 있으므로 흔들림을 0으로 좁힌다.
-function shapeBolts(time) {
-  for (const entry of bolts) {
-    const array = entry.bolt.geometry.attributes.position.array;
-    let p = 0;
-    for (let s = 0; s <= BOLT_SEG; s++) {
-      const t = s / BOLT_SEG;
-      const taper = Math.sin(Math.PI * t);
-      const k = t * entry.width + entry.seed;
-      const oy = (Math.sin(k * 1.9 + time * 23) * .62 + Math.sin(k * 4.3 - time * 31) * .3) * .46 * taper;
-      const oz = (Math.cos(k * 2.5 - time * 27) * .62 + Math.cos(k * 5.1 + time * 36) * .3) * .46 * taper;
-      const x = (t - .5) * entry.width;
-      array[p++] = x; array[p++] = oy + .18; array[p++] = oz;
-      array[p++] = x; array[p++] = oy; array[p++] = oz + .18;
-      array[p++] = x; array[p++] = oy - .18; array[p++] = oz;
-      array[p++] = x; array[p++] = oy; array[p++] = oz - .18;
-    }
-    entry.bolt.geometry.attributes.position.needsUpdate = true;
-    if (!entry.sparks) continue;
-    const spark = entry.sparks.geometry.attributes.position.array;
-    for (let i = 0; i < SPARKS; i++) {
-      const seed = entry.sparkSeed[i];
-      spark[i * 3] = (((seed + time * .4) % 1) - .5) * entry.width;
-      spark[i * 3 + 1] = Math.sin(time * (15 + seed * 21) + seed * 40) * .55;
-      spark[i * 3 + 2] = Math.cos(time * (12 + seed * 18) + seed * 25) * .35;
-    }
-    entry.sparks.geometry.attributes.position.needsUpdate = true;
-  }
-}
-
 const start = trackSamples[0];
 const startNext = trackSamples[1];
 const startAngle = Math.atan2(startNext.x - start.x, startNext.z - start.z);
@@ -581,7 +442,6 @@ for (const button of document.querySelectorAll('[data-drive]')) {
 let state = createKartState();
 let raceActive = false;
 let raceFinished = false;
-let raceDead = false;
 let lap = 1;
 let lapArmed = false;
 let previousProgress = 0;
@@ -593,7 +453,6 @@ function reset() {
   state.heading = startHeading;
   cameraHeading = startHeading;
   raceFinished = false;
-  raceDead = false;
   lap = 1;
   lapArmed = false;
   previousProgress = 0;
@@ -648,11 +507,11 @@ function updateHud() {
   percentEl.textContent = `${gauge}%`;
   slots.forEach((slot, i) => slot.classList.toggle('on', i < state.boosts));
   slotBox.setAttribute('aria-label', `부스터 ${state.boosts}개`);
-  // 감전·완주 안내는 카운트다운 자리를 빌려 쓴다. 주행 중 잡다한 알림까지
+  // 완주 안내는 카운트다운 자리를 빌려 쓴다. 주행 중 잡다한 알림까지
   // 여기에 띄우면 화면 한가운데가 계속 번쩍여 방해된다.
   countdownEl.textContent = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer)
     : raceActive && state.startTimer > -0.75 ? 'GO!'
-    : raceDead || raceFinished ? state.notice : '';
+    : raceFinished ? state.notice : '';
   lapEl.textContent = `${Math.min(lap, 3)} / 3`;
   drawMinimap();
 }
@@ -672,24 +531,6 @@ function nearestTrackSample() {
   return { index, point: trackSamples[index] };
 }
 
-// 전기선에 닿았는지 본다. 막대의 좌표계로 옮겨서, 트랙을 따라 막대 두께 안에
-// 들어왔고 좌우로는 틈 밖이면 감전이다.
-function touchedArc() {
-  for (const arc of arcs) {
-    const point = trackSamples[arc.index];
-    const normal = trackNormals[arc.index];
-    const dx = state.x - point.x;
-    const dz = state.z - point.z;
-    const along = dx * -normal.y + dz * normal.x;
-    if (Math.abs(along) > 2.2) continue;
-    const across = dx * normal.x + dz * normal.y;
-    // 도로 밖이면 이 전기선과 무관하다. 트랙이 뱀처럼 접혀 있어서, 이 검사가
-    // 없으면 옆 손가락을 달릴 때 여기 띠에 걸려 보이지도 않는 전기에 죽는다.
-    if (Math.abs(across) > KART.roadHalfWidth) continue;
-    if (Math.abs(across - arc.lane) > ARC_GAP) return true;
-  }
-  return false;
-}
 
 function updateLap(index) {
   const progress = index / trackSamples.length;
@@ -738,11 +579,6 @@ function updateScene(dt, now) {
     cloud.scale.setScalar(.5 + phase * 1.9);
   });
 
-  // 전기선이 지직거리게 한다. 줄기를 다시 그리고, 재질은 공유하므로 한 번만 떤다.
-  shapeBolts(now);
-  boltMat.opacity = .72 + Math.random() * .28;
-  boltGlowMat.opacity = .3 + Math.random() * .22;
-
   // 카메라는 카트보다 늦게 돈다. 시야가 카트를 그대로 따라 휙 돌면 멀미가 난다.
   // 코너에서는 카트만 화면 안에서 비스듬해지고 시야는 천천히 따라붙는다.
   cameraHeading += (state.heading - cameraHeading) * (1 - Math.exp(-dt * 3.2));
@@ -782,7 +618,7 @@ let previous = performance.now();
 function frame(nowMs) {
   const dt = Math.min((nowMs - previous) / 1000, 0.05);
   previous = nowMs;
-  if (raceActive && !raceFinished && !raceDead) {
+  if (raceActive && !raceFinished) {
     stepKart(state, {
       up: !!keys.up,
       brake: !!keys.brake,
@@ -798,12 +634,6 @@ function frame(nowMs) {
     const nearest = nearestTrackSample();
     constrainToRoad(state, nearest.point.x, nearest.point.z);
     updateLap(nearest.index);
-    if (!raceFinished && state.startTimer <= 0 && touchedArc()) {
-      raceDead = true;
-      state.speed = state.lateral = 0;
-      state.notice = '감전! R 키로 다시';
-      state.noticeTimer = 3600;
-    }
   }
   pressed.clear();
   updateScene(dt, nowMs / 1000);
