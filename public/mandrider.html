@@ -13,7 +13,8 @@
   <section id="map-select" class="map-select" aria-labelledby="map-title">
     <div class="map-panel">
       <p class="map-kicker">MANDRIDER</p>
-      <h1 id="map-title">달릴 맵을 골라 주세요</h1>
+      <h1 id="map-title">달릴 맵과 카트를 골라 주세요</h1>
+      <h2 class="pick-title">맵</h2>
       <button class="map-card selected" type="button" aria-pressed="true" data-map="circuit">
         <span class="map-thumb" aria-hidden="true">
           <svg viewBox="0 0 100 76">
@@ -34,7 +35,19 @@
         <span class="map-copy"><strong>그랑프리 스피드웨이</strong><small>난이도 ●●○○○ · 초광폭 트랙 · 대형 코너와 시케인</small></span>
         <span class="map-check">선택됨</span>
       </button>
-      <button id="start-race" type="button">이 맵으로 출발</button>
+      <h2 class="pick-title">카트</h2>
+      <button class="kart-card selected" type="button" aria-pressed="true" data-kart="pot">
+        <span class="map-thumb" aria-hidden="true">
+          <svg viewBox="0 0 100 76">
+            <path d="M34 34H66L62 64H38Z" /><path d="M31 30H69V36H31Z" />
+            <path d="M50 30V20" /><path d="M50 22C44 14 38 14 36 10C42 9 47 13 50 20C53 13 58 9 64 10C62 14 56 14 50 22Z" />
+          </svg>
+        </span>
+        <span class="map-copy"><strong>만드라고라 화분</strong><small>기본 카트</small></span>
+        <span class="map-check">선택됨</span>
+      </button>
+
+      <button id="start-race" type="button">출발</button>
       <a href="/">돌아가기</a>
     </div>
   </section>

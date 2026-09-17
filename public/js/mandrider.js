@@ -59,36 +59,22 @@ function makeKart() {
   const kart = new THREE.Group();
   const potMat = new THREE.MeshStandardMaterial({ color: 0xc7613f, roughness: 0.72 });
   const darkPot = new THREE.MeshStandardMaterial({ color: 0x753621, roughness: 0.85 });
-  const tireMat = new THREE.MeshStandardMaterial({ color: 0x202522, roughness: 0.8 });
-  const hubMat = new THREE.MeshStandardMaterial({ color: 0xd8e2d8, metalness: 0.5, roughness: 0.35 });
 
+  // 바퀴 없이 화분만 굴러간다. 바닥에 바로 닿도록 높이를 맞췄다 —
+  // 카트 원점이 노면보다 0.06 아래라 화분 밑동을 거기에 둔다.
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.68, 1.28, 24), potMat);
-  pot.position.set(0, 1.22, 0.08);
+  pot.position.set(0, 0.70, 0);
   pot.castShadow = true;
   kart.add(pot);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.13, 10, 28), darkPot);
   rim.rotation.x = Math.PI / 2;
-  rim.position.set(0, 1.88, 0.08);
+  rim.position.set(0, 1.34, 0);
   rim.castShadow = true;
   kart.add(rim);
 
-  const wheels = [];
-  for (const x of [-0.86, 0.86]) for (const z of [-0.58, 0.72]) {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.34, 18), tireMat);
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(x, 0.48, z);
-    wheel.castShadow = true;
-    kart.add(wheel);
-    wheels.push(wheel);
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.355, 14), hubMat);
-    hub.rotation.z = Math.PI / 2;
-    hub.position.copy(wheel.position);
-    kart.add(hub);
-  }
-
   const plant = buildPlant('mandragora');
   plant.scale.setScalar(1.05);
-  plant.position.set(0, 1.48, 0.03);
+  plant.position.set(0, 0.96, 0);
   kart.add(plant);
 
   const flames = new THREE.Group();
@@ -117,7 +103,7 @@ function makeKart() {
   for (let i = 0; i < 8; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(.24, 1), smokeMat));
   smoke.visible = false;
   kart.add(smoke);
-  kart.userData = { wheels, plant, flames, sparks, smoke };
+  kart.userData = { plant, flames, sparks, smoke };
   return kart;
 }
 
@@ -204,11 +190,26 @@ for (const card of mapCards) {
   });
 }
 
+// 카트는 아직 화분 하나뿐이라 고를 것이 없지만, 고르는 자리는 미리 둔다.
+// 카드를 더 넣으면 이 반복문이 그대로 받아 준다.
+const kartCards = [...document.querySelectorAll('.kart-card')];
+for (const card of kartCards) {
+  card.addEventListener('click', () => {
+    for (const other of kartCards) {
+      const on = other === card;
+      other.classList.toggle('selected', on);
+      other.setAttribute('aria-pressed', on);
+    }
+  });
+}
+
 document.getElementById('start-race').addEventListener('click', () => {
   const map = MAPS[chosenMap];
   track = buildTrack(scene, renderer, map, minimap);
   document.getElementById('race-map-name').textContent = map.name;
   document.getElementById('map-select').classList.add('hidden');
+  // 속도계·게이지·미니맵은 여기서부터 보인다(CSS 의 body.racing).
+  document.body.classList.add('racing');
   raceActive = true;
   if (raceSky) scene.background = raceSky;
   kart.visible = true;
@@ -314,8 +315,7 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { wheels, plant, flames, sparks, smoke } = kart.userData;
-  for (const wheel of wheels) wheel.rotation.x -= state.speed * dt / 0.42;
+  const { plant, flames, sparks, smoke } = kart.userData;
   plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
   sparks.visible = state.drifting;

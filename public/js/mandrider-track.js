@@ -146,41 +146,62 @@ export function buildTrack(scene, renderer, map, minimap) {
   curbs.instanceColor.needsUpdate = true;
   scene.add(curbs);
 
+  // 방벽. 중심선이 아니라 '방벽이 실제로 놓이는 자리' 에서 방향과 길이를 잰다.
+  // 중심선 길이로 만들면 코너 안쪽에서 호가 더 짧은데도 같은 길이를 쓰게 돼
+  // 막대가 넘쳐 부챗살처럼 삐져나온다.
   const barrierStep = 5;
   const barrierCount = Math.ceil(trackSamples.length / barrierStep) * 2;
-  const railMat = new THREE.MeshStandardMaterial({ color: 0xe8eedb, metalness: .28, roughness: .42 });
-  const postMat = new THREE.MeshStandardMaterial({ color: 0x325b46, metalness: .18, roughness: .5 });
-  const rails = new THREE.InstancedMesh(curbGeo, railMat, barrierCount * 2);
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55, metalness: .06 });
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xdfe7dc, metalness: .45, roughness: .3 });
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x2c5240, metalness: .2, roughness: .5 });
+  // 축을 Z 로 눕혀 둔다. 그래야 scale.z 가 곧 길이가 된다.
+  const capGeo = new THREE.CylinderGeometry(.13, .13, 1, 10);
+  capGeo.rotateX(Math.PI / 2);
+  const walls = new THREE.InstancedMesh(curbGeo, wallMat, barrierCount);
+  const caps = new THREE.InstancedMesh(capGeo, capMat, barrierCount);
   const posts = new THREE.InstancedMesh(curbGeo, postMat, barrierCount);
-  let railIndex = 0;
+  const up = new THREE.Vector3(0, 1, 0);
+  let wallIndex = 0;
+  let capIndex = 0;
   let postIndex = 0;
   for (const side of [-1, 1]) {
     for (let i = 0; i < trackSamples.length; i += barrierStep) {
-      const p = trackSamples[i];
-      const q = trackSamples[(i + barrierStep) % trackSamples.length];
-      curbQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(q.x - p.x, q.z - p.z));
-      const x = (p.x + q.x) / 2 + trackNormals[i].x * side * (halfWidth + 3.15);
-      const z = (p.z + q.z) / 2 + trackNormals[i].y * side * (halfWidth + 3.15);
-      for (const y of [3.05, 3.82]) {
-        curbMatrix.compose(new THREE.Vector3(x, y, z), curbQuaternion, new THREE.Vector3(.24, .18, p.distanceTo(q) + .65));
-        rails.setMatrixAt(railIndex++, curbMatrix);
-      }
+      const j = (i + barrierStep) % trackSamples.length;
+      const offset = halfWidth + 3.15;
+      const ax = trackSamples[i].x + trackNormals[i].x * side * offset;
+      const az = trackSamples[i].z + trackNormals[i].y * side * offset;
+      const bx = trackSamples[j].x + trackNormals[j].x * side * offset;
+      const bz = trackSamples[j].z + trackNormals[j].y * side * offset;
+      const length = Math.hypot(bx - ax, bz - az);
+      curbQuaternion.setFromAxisAngle(up, Math.atan2(bx - ax, bz - az));
+      const mid = new THREE.Vector3((ax + bx) / 2, 0, (az + bz) / 2);
+
+      // 벽면 — 흰 패널에 초록을 섞어 서킷 방벽처럼 보이게 한다.
+      mid.y = 2.72;
+      curbMatrix.compose(mid, curbQuaternion, new THREE.Vector3(.3, 1.24, length + .04));
+      walls.setMatrixAt(wallIndex, curbMatrix);
+      walls.setColorAt(wallIndex++, Math.floor(i / barrierStep) % 4 === 0 ? curbGreen : curbIvory);
+
+      // 위에 얹는 둥근 손잡이 — 각진 상자만 있으면 값싸 보인다.
+      mid.y = 3.42;
+      curbMatrix.compose(mid, curbQuaternion, new THREE.Vector3(1, 1, length + .04));
+      caps.setMatrixAt(capIndex++, curbMatrix);
+
+      // 기둥은 이음매마다 하나. 벽보다 조금 밖으로 물려 세운다.
       curbMatrix.compose(
-        new THREE.Vector3(
-          p.x + trackNormals[i].x * side * (halfWidth + 3.15),
-          3.15,
-          p.z + trackNormals[i].y * side * (halfWidth + 3.15)
-        ),
+        new THREE.Vector3(ax + trackNormals[i].x * side * .18, 2.6, az + trackNormals[i].y * side * .18),
         curbQuaternion,
-        new THREE.Vector3(.5, 2.05, .5)
+        new THREE.Vector3(.34, 1.36, .34)
       );
       posts.setMatrixAt(postIndex++, curbMatrix);
     }
   }
-  rails.instanceMatrix.needsUpdate = true;
+  walls.instanceMatrix.needsUpdate = true;
+  caps.instanceMatrix.needsUpdate = true;
   posts.instanceMatrix.needsUpdate = true;
-  rails.castShadow = posts.castShadow = true;
-  scene.add(rails, posts);
+  if (walls.instanceColor) walls.instanceColor.needsUpdate = true;
+  walls.castShadow = caps.castShadow = posts.castShadow = true;
+  scene.add(walls, caps, posts);
 
   const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf7f5e9, roughness: .75 });
   const stripeGeo = new THREE.BoxGeometry(.18, .05, 5.5);
