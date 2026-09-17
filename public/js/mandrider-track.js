@@ -6,7 +6,10 @@ export const MAPS = {
   circuit: {
     name: '만드라고라 서킷',
     scale: 4,
-    roadHalfWidth: 13,
+    // 3차선에서 4차선으로 넓혔다. 차선 폭(9.2)을 유지하려고 반폭도 같이 올렸다.
+    // 헤어핀 곡률 반경이 32 라 상판 끝(반폭+4.3=21.6)보다 넉넉히 크고, 이웃한
+    // 손가락끼리도 54 떨어져 있어 상판이 서로 겹치지 않는다.
+    roadHalfWidth: 17.3,
     // 참고 미니맵의 비율과 일곱 연속 헤어핀 순서를 그대로 따라야 손가락형 실루엣이 유지된다.
     // 직선이 지루해서 가로로 줄였다. 코너는 손대지 않았다 — 헤어핀을 이루는 점들을
     // 통째로 같은 거리만큼 밀어서, 직선 길이만 빠지고 회전 반경은 그대로다.
@@ -97,7 +100,10 @@ export function buildTrack(scene, renderer, map, minimap) {
     stripGeometry(-deckEdge, deckEdge, 1.78),
     new THREE.MeshStandardMaterial({ color: 0xb9c1bd, metalness: .08, roughness: .82 })
   );
-  trackDeck.receiveShadow = true;
+  // 그림자를 받지 않게 한다. 도로(y=2.0)와 0.22 밖에 차이가 안 나서 그림자 깊이
+  // 비교가 뭉개지고, 도로 밖으로 나온 부분이 통째로 그늘 처리돼 긴 직선에서
+  // 커다란 검은 쐐기로 보였다. 도로 밑에 깔린 구조물이라 그림자가 필요 없다.
+  trackDeck.receiveShadow = false;
   scene.add(trackDeck);
 
   // 트랙은 허공에 떠 있다. 상판만 두면 종잇장처럼 보여서, 아래로 두 단을 세워
@@ -190,10 +196,12 @@ export function buildTrack(scene, renderer, map, minimap) {
   const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf7f5e9, roughness: .75 });
   const stripeGeo = new THREE.BoxGeometry(.18, .05, 5.5);
   const stripePerLine = trackSamples.length / 3;
-  const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripePerLine * 2);
+  // 4차선 — 가운데 한 줄과 좌우 한 줄씩. 폭에서 재므로 맵이 넓어져도 비율이 같다.
+  const LANE_LINES = [-halfWidth * .53, 0, halfWidth * .53];
+  const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripePerLine * LANE_LINES.length);
   const stripeMatrix = new THREE.Matrix4();
   let stripeIndex = 0;
-  for (const lane of [-halfWidth * .36, halfWidth * .36]) {
+  for (const lane of LANE_LINES) {
     for (let i = 0; i < stripePerLine; i++) {
       const sample = i * 3;
       const p = trackSamples[sample];
