@@ -55,8 +55,7 @@ export function buildTrack(scene, renderer, map, minimap) {
     return new THREE.Vector2(next.z - previous.z, -(next.x - previous.x)).normalize();
   });
 
-  // yB 를 따로 주면 같은 폭에서 높이만 벌어져 수직면이 된다 — 절벽은 이걸로 세운다.
-  function stripGeometry(offsetA, offsetB, yA, yB = yA) {
+  function stripGeometry(offsetA, offsetB, y) {
     const positions = [];
     const indices = [];
     const uvs = [];
@@ -68,10 +67,10 @@ export function buildTrack(scene, renderer, map, minimap) {
       const qNormal = trackNormals[(i + 1) % trackSamples.length];
       const base = positions.length / 3;
       positions.push(
-        p.x + pNormal.x * offsetA, yA, p.z + pNormal.y * offsetA,
-        p.x + pNormal.x * offsetB, yB, p.z + pNormal.y * offsetB,
-        q.x + qNormal.x * offsetA, yA, q.z + qNormal.y * offsetA,
-        q.x + qNormal.x * offsetB, yB, q.z + qNormal.y * offsetB
+        p.x + pNormal.x * offsetA, y, p.z + pNormal.y * offsetA,
+        p.x + pNormal.x * offsetB, y, p.z + pNormal.y * offsetB,
+        q.x + qNormal.x * offsetA, y, q.z + qNormal.y * offsetA,
+        q.x + qNormal.x * offsetB, y, q.z + qNormal.y * offsetB
       );
       const nextDistance = distance + p.distanceTo(q);
       uvs.push(0, distance / 10, 1, distance / 10, 0, nextDistance / 10, 1, nextDistance / 10);
@@ -105,16 +104,6 @@ export function buildTrack(scene, renderer, map, minimap) {
   // 커다란 검은 쐐기로 보였다. 도로 밑에 깔린 구조물이라 그림자가 필요 없다.
   trackDeck.receiveShadow = false;
   scene.add(trackDeck);
-
-  // 트랙은 허공에 떠 있다. 상판만 두면 종잇장처럼 보여서, 아래로 두 단을 세워
-  // 낭떠러지를 만든다. 안쪽으로 조금씩 좁혀야 깎인 절벽처럼 보인다.
-  // 양면으로 그리는 이유는 좌우 스트립의 감김 방향이 반대라서다.
-  const cliffTop = new THREE.MeshStandardMaterial({ color: 0x6b5138, roughness: .95, side: THREE.DoubleSide });
-  const cliffDeep = new THREE.MeshStandardMaterial({ color: 0x3a2c22, roughness: 1, side: THREE.DoubleSide });
-  for (const side of [-1, 1]) {
-    scene.add(new THREE.Mesh(stripGeometry(deckEdge * side, (deckEdge - 2.2) * side, 1.78, -13), cliffTop));
-    scene.add(new THREE.Mesh(stripGeometry((deckEdge - 2.2) * side, (deckEdge - 9) * side, -13, -120), cliffDeep));
-  }
 
   const asphaltTexture = loadTiledTexture('./img/mandrider-asphalt-v1.webp', 3, 1);
   const roadMat = new THREE.MeshStandardMaterial({
