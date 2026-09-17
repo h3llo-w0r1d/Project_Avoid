@@ -2,6 +2,17 @@ import * as THREE from 'three';
 import { buildPlant } from './plant.js';
 import { constrainToRoad, createKartState, stepKart, KART } from './mandrider-physics.js';
 import { MAPS, buildTrack } from './mandrider-track.js';
+import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from './vendor/jsm/libs/meshopt_decoder.module.js';
+
+// 고를 수 있는 카트. 화분은 코드로 그리고 나머지는 받아 온 모델이다.
+// height 는 화면에 세울 키 — 모델마다 원본 크기가 제각각이라 이 값에 맞춰 줄인다.
+const KARTS = {
+  pot: { name: '만드라고라 화분' },
+  pigeon: { name: '비둘기', url: './models/pigeon.glb', height: 2.2 },
+  chicken: { name: '닭', url: './models/chicken.glb', height: 2.4 },
+  deer: { name: '사슴', url: './models/deer.glb', height: 2.9 }
+};
 
 // 캐시에 화면이 남아도 관리자가 아니면 주행 코드까지 실행하지 않는다.
 const allowed = await fetch('/api/admin/me', { cache: 'no-store' })
@@ -55,8 +66,9 @@ new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
 // 고르지 않은 맵의 지형까지 화면에 같이 남는다.
 let track = null;
 
-function makeKart() {
-  const kart = new THREE.Group();
+// 카트 몸통만 만든다. 불꽃 같은 연출은 몸통이 바뀌어도 그대로 쓰므로 따로 둔다.
+function buildPot() {
+  const body = new THREE.Group();
   const potMat = new THREE.MeshStandardMaterial({ color: 0xc7613f, roughness: 0.72 });
   const darkPot = new THREE.MeshStandardMaterial({ color: 0x753621, roughness: 0.85 });
 
@@ -65,17 +77,44 @@ function makeKart() {
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.68, 1.28, 24), potMat);
   pot.position.set(0, 0.70, 0);
   pot.castShadow = true;
-  kart.add(pot);
+  body.add(pot);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.13, 10, 28), darkPot);
   rim.rotation.x = Math.PI / 2;
   rim.position.set(0, 1.34, 0);
   rim.castShadow = true;
-  kart.add(rim);
+  body.add(rim);
 
   const plant = buildPlant('mandragora');
   plant.scale.setScalar(1.05);
   plant.position.set(0, 0.96, 0);
-  kart.add(plant);
+  body.add(plant);
+  body.userData.plant = plant;
+  return body;
+}
+
+// 받아 온 모델을 카트 자리에 맞춰 앉힌다. 원본 크기와 중심이 제각각이라
+// 키를 재서 줄이고, 발이 노면에 닿도록 내려 준다.
+function fitModel(scene, height) {
+  const body = new THREE.Group();
+  const box = new THREE.Box3().setFromObject(scene);
+  const size = new THREE.Vector3();
+  const centre = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(centre);
+  const scale = height / Math.max(size.y, .001);
+  scene.scale.setScalar(scale);
+  // 좌우·앞뒤는 가운데로, 아래는 바닥(0.06)에 맞춘다.
+  scene.position.set(-centre.x * scale, -box.min.y * scale + .06, -centre.z * scale);
+  scene.traverse((part) => { if (part.isMesh) part.castShadow = true; });
+  body.add(scene);
+  return body;
+}
+
+function makeKart() {
+  const kart = new THREE.Group();
+  const bodyHolder = new THREE.Group();
+  bodyHolder.add(buildPot());
+  kart.add(bodyHolder);
 
   // 부스터 불꽃 — 좌우 두 줄기. 한 줄기를 굵기와 길이가 다른 세 겹으로 겹친다.
   // 한 겹짜리 원뿔은 단면이 또렷해 기둥처럼 보인다. 겹쳐 쌓아야 가운데가 밝고
@@ -104,7 +143,7 @@ function makeKart() {
   flames.visible = false;
   kart.add(flames);
 
-  kart.userData = { plant, flames, plumes };
+  kart.userData = { bodyHolder, flames, plumes };
   return kart;
 }
 
@@ -290,11 +329,36 @@ for (const card of mapCards) {
   });
 }
 
-// 카트는 아직 화분 하나뿐이라 고를 것이 없지만, 고르는 자리는 미리 둔다.
-// 카드를 더 넣으면 이 반복문이 그대로 받아 준다.
+let chosenKart = 'pot';
+let modelLoader = null;
+// 고른 카트로 몸통을 갈아 끼운다. 모델은 처음 고를 때 한 번만 받아 두고 다시 쓴다.
+const modelCache = new Map();
+async function useKart(id) {
+  const spec = KARTS[id] ?? KARTS.pot;
+  const holder = kart.userData.bodyHolder;
+  if (!spec.url) {
+    holder.clear();
+    holder.add(buildPot());
+    return;
+  }
+  if (!modelCache.has(id)) {
+    modelLoader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+    // 못 받아도 게임은 돌아가야 한다 — 화분으로 되돌린다.
+    const gltf = await modelLoader.loadAsync(spec.url).catch((err) => {
+      console.warn('카트 모델을 불러오지 못했습니다: ' + spec.url, err.message);
+      return null;
+    });
+    modelCache.set(id, gltf && fitModel(gltf.scene, spec.height));
+  }
+  const body = modelCache.get(id);
+  holder.clear();
+  holder.add(body ? body.clone(true) : buildPot());
+}
+
 const kartCards = [...document.querySelectorAll('.kart-card')];
 for (const card of kartCards) {
   card.addEventListener('click', () => {
+    chosenKart = card.dataset.kart;
     for (const other of kartCards) {
       const on = other === card;
       other.classList.toggle('selected', on);
@@ -315,6 +379,7 @@ document.getElementById('start-race').addEventListener('click', () => {
   startScreech();
   raceActive = true;
   if (raceSky) scene.background = raceSky;
+  useKart(chosenKart);
   kart.visible = true;
   reset();
   const forwardX = Math.sin(state.heading);
@@ -424,8 +489,9 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { plant, flames, plumes } = kart.userData;
-  plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
+  const { bodyHolder, flames, plumes } = kart.userData;
+  // 화분 카트일 때만 잎이 흔들린다. 받아 온 모델에는 흔들 잎이 없다.
+  bodyHolder.children[0]?.userData.plant?.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
   if (flames.visible) {
