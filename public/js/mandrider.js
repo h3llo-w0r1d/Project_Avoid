@@ -103,9 +103,15 @@ scene.add(kart);
 kart.visible = false;
 
 // 길을 막고 돌아다니는 큰 만드라고라. 맵이 정한 수만큼 코스 전체에 고르게 세운다.
-// 몸통 반지름(1.45×배율의 최대 굵기)에 카트 몸집을 더한 값이 부딪치는 거리다.
-const GIANT_SCALE = 4.4;
-const GIANT_RADIUS = 3.6;
+const GIANT_SCALE = 4.4;          // 기본 몸집
+const GIANT_BODY = 2.53;          // 그 몸집일 때 몸통 반지름(잎은 빼고 잰 값)
+const KART_ROOM = 1.07;           // 카트 몸집. 둘을 더한 값이 부딪치는 거리다.
+
+// 몸집을 섞는다 — 스물 중 둘은 두 배, 절반은 1.5배, 나머지는 기본이다.
+// 홀수 자리를 1.5배로 두면 큰 놈과 기본이 번갈아 서고, 두 배짜리 둘은 코스
+// 앞뒤로 하나씩 떨어져 한쪽에만 몰리지 않는다.
+const sizeOf = (i, total) =>
+  (i === Math.round(total * .2) || i === Math.round(total * .7) ? 2 : i % 2 ? 1.5 : 1);
 let giants = [];
 // 자리는 세계 좌표가 아니라 '코스 어디쯤(along) · 길 가운데서 얼마나 옆(across)'
 // 으로 잡는다. 헤어핀이 이어지는 코스라 세계 좌표로 곧게 움직이면 길 밖으로
@@ -127,8 +133,6 @@ function paintDeadly(body) {
 
 function buildGiants(map) {
   const samples = track.trackSamples;
-  const reach = track.halfWidth - GIANT_RADIUS;
-  const spin = Math.min(reach, 8.5);   // 원을 그리려면 가로세로 폭이 같아야 한다
   const safe = map.giants ?? 0;
   const killers = map.killers ?? 0;
   const total = safe + killers;
@@ -137,8 +141,13 @@ function buildGiants(map) {
   // 들이받으면 죽는 판이 된다. 한 줄에서 고르면 그런 일이 생길 수 없다.
   return Array.from({ length: total }, (_, i) => {
     const deadly = Math.floor((i + 1) * killers / total) > Math.floor(i * killers / total);
+    const size = sizeOf(i, total);
+    // 몸집이 크면 부딪치는 거리도 커지고, 그만큼 오갈 수 있는 폭은 좁아진다.
+    const radius = GIANT_BODY * size + KART_ROOM;
+    const reach = track.halfWidth - radius;
+    const spin = Math.min(reach, 8.5);   // 원을 그리려면 가로세로 폭이 같아야 한다
     const body = buildPlant('mandragora');
-    body.scale.setScalar(GIANT_SCALE);
+    body.scale.setScalar(GIANT_SCALE * size);
     if (deadly) paintDeadly(body);
     body.traverse((part) => { if (part.isMesh) part.castShadow = true; });
     scene.add(body);
@@ -147,6 +156,7 @@ function buildGiants(map) {
     return {
       body,
       deadly,
+      radius,
       // 출발선 앞뒤는 비워 둔다 — 카운트다운이 끝나자마자 막히면 억울하다.
       at: Math.round((i + 1) / (total + 1) * samples.length),
       move,
@@ -719,8 +729,8 @@ function frame(nowMs) {
     moveGiants();
     for (const giant of giants) {
       if (giant.deadly) {
-        if (Math.hypot(state.x - giant.x, state.z - giant.z) < GIANT_RADIUS) killRun();
-      } else if (bounceOff(state, giant.x, giant.z, GIANT_RADIUS)) {
+        if (Math.hypot(state.x - giant.x, state.z - giant.z) < giant.radius) killRun();
+      } else if (bounceOff(state, giant.x, giant.z, giant.radius)) {
         beep(120, .2, .2);
       }
     }
