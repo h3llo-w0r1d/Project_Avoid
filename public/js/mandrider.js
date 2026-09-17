@@ -3,16 +3,6 @@ import { buildPlant } from './plant.js';
 import { bounceOff, constrainToRoad, createKartState, stepKart, KART } from './mandrider-physics.js';
 import { MAPS, buildTrack, drawCourse, sampleCourse } from './mandrider-track.js';
 
-// 캐시에 화면이 남아도 관리자가 아니면 주행 코드까지 실행하지 않는다.
-const allowed = await fetch('/api/admin/me', { cache: 'no-store' })
-  .then((res) => res.ok && res.json())
-  .then((me) => me?.admin === true)
-  .catch(() => false);
-if (!allowed) {
-  location.replace('/');
-  await new Promise(() => {});
-}
-
 const canvas = document.getElementById('race-stage');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -376,6 +366,39 @@ for (const card of mapCards) {
   });
 }
 
+// 기록 제출. 출발할 때 표를 받아 두었다가 완주 기록과 함께 낸다 — 표를 받은 뒤
+// 실제로 그만큼 시간이 흘렀는지 서버가 본다(lib/tickets.js).
+let runTicket = null;
+function askTicket() {
+  fetch('/api/mandrider/start', { method: 'POST' })
+    .then((res) => res.ok && res.json())
+    .then((data) => { runTicket = data?.ticket ?? null; })
+    .catch(() => { runTicket = null; });
+}
+
+// 완주 기록을 올리고, 화면에 붙일 문구를 돌려준다.
+async function sendRecord(seconds) {
+  if (!runTicket) return '기록은 남지 않았습니다';
+  const ticket = runTicket;
+  runTicket = null;                 // 표는 한 번만 쓴다. 다시 달리면 새로 받는다.
+  try {
+    const res = await fetch('/api/mandrider/record', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ticket, seconds })
+    });
+    const data = await res.json();
+    if (!res.ok) return data?.error ?? '기록을 올리지 못했습니다';
+    if (data.excluded) return '관리자 판이라 랭킹에 안 올라갑니다';
+    if (data.needLogin) return '로그인하면 랭킹에 오릅니다';
+    return data.improved
+      ? `최고 기록! 현재 ${data.rank}위`
+      : `내 최고 기록 ${(data.best / 1000).toFixed(2)}초 (${data.rank}위)`;
+  } catch {
+    return '기록을 올리지 못했습니다';
+  }
+}
+
 // 배경음악. 효과음과 달리 파일 하나를 통째로 반복만 하면 되니 Web Audio 대신
 // <audio> 를 쓴다. 자동 재생은 막혀 있어 '출발' 을 누르는 순간에 튼다.
 const bgm = new window.Audio('./sounds/mandrider-bgm.mp3');
@@ -395,6 +418,7 @@ document.getElementById('start-race').addEventListener('click', () => {
   startScreech();
   // 소리를 막아 둔 브라우저도 있으니 실패해도 경기는 그대로 간다.
   bgm.play().catch(() => {});
+  askTicket();
   raceActive = true;
   if (raceSky) scene.background = raceSky;
   kart.visible = true;
@@ -484,8 +508,13 @@ function updateLap(index) {
     if (lap === LAPS) {
       raceFinished = true;
       state.speed = state.lateral = 0;
-      state.notice = `완주! ${state.elapsed.toFixed(2)}초`;
+      const time = state.elapsed;
+      state.notice = `완주! ${time.toFixed(2)}초`;
       state.noticeTimer = 3600;
+      // 서버 답을 기다리지 않는다 — 완주 문구가 먼저 뜨고, 순위는 오면 붙는다.
+      sendRecord(time).then((line) => {
+        if (raceFinished) state.notice = `완주! ${time.toFixed(2)}초 · ${line}`;
+      });
       // 완주는 올라가는 세 음으로 — 바퀴 넘김과 헷갈리면 안 된다.
       beep(880, .16, .2);
       beep(1170, .16, .2, .17);

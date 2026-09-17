@@ -3112,6 +3112,17 @@ kbd {
   width: 100%; max-width: 440px; height: 178px;
 }
 
+/* 만드라이더 알림 그림 — 멀어지는 노면과 그 위의 화분 카트. 탑 그림과 같은
+   자리를 쓰되, 이쪽은 「달린다」 는 것만 읽히면 된다. */
+.promo-road {
+  position: absolute; inset: 10px 0 8px; margin: 0 auto; width: 100%; max-width: 330px;
+  background:
+    repeating-linear-gradient(to bottom, rgba(255,255,255,.9) 0 16px, transparent 16px 40px) center / 5px 100% no-repeat,
+    linear-gradient(#333a3f, #14181b);
+  clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+}
+.promo-kart { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: 58px; line-height: 1; filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
+
 /* 기둥 — 칸마다 X 브레이스, 칸 경계마다 가로 브레이스, 좌우 주각.
    무늬는 아래를 기준으로 쌓아야 차오르는 전류와 격자가 안 어긋난다. */
 .promo-tower {

@@ -90,7 +90,8 @@ export function bounceOff(state, centerX, centerZ, radius) {
   state.z = centerZ + nz * radius;
   const rightX = Math.cos(state.heading);
   const rightZ = Math.sin(state.heading);
-  state.lateral = (nx * rightX + nz * rightZ) * Math.max(16, Math.abs(state.speed) * .95);
+  // 밀어내는 힘. 예전 값(16 / 속도의 .95)의 두 배다 — 스치기만 해도 확실히 튕겨 나간다.
+  state.lateral = (nx * rightX + nz * rightZ) * Math.max(32, Math.abs(state.speed) * 1.9);
   state.speed *= -.3;
   state.drifting = false;
   state.driftTime = 0;

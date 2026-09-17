@@ -549,7 +549,6 @@ profile.onEquipTitles = (equipped) => api.equipTitles(equipped);
 const adminReady = api.amIAdmin()
   .then((yes) => {
     isAdmin = yes;
-    document.getElementById('mandrider-btn')?.classList.toggle('hidden', !yes);
     if (yes) {
       setupNoticeAdmin();
       adminCoins.enableAdmin();   // 코인 지급 버튼(💰) 켜기
@@ -618,15 +617,18 @@ onLangChange(() => { api.notices().then((list) => { notices = list; noticeIndex 
 // 끝낼 때는 PROMO 를 null 로 두면 된다. until 이 지나도 저절로 안 뜬다 —
 // 내리는 걸 잊어도 언젠가는 멈추게 해 둔다.
 const PROMO = {
-  id: 'tower-open',                 // 「오늘 하루 안 보기」 를 기억하는 열쇠
-  until: '2026-10-31',              // 이 날까지만 뜬다
+  id: 'mandrider-open',             // 「오늘 하루 안 보기」 를 기억하는 열쇠
+  until: '2026-12-31',              // 이 날까지만 뜬다
   badge: 'NEW MODE',
   title: t('promo.title'),
   lead: [
     t('promo.lead')
   ],
   foot: t('promo.foot'),
-  cta: t('promo.cta')
+  cta: t('promo.cta'),
+  // 그림과 갈 곳도 여기 둔다. 다음 소식을 낼 때 openPromo 는 안 건드리게.
+  art: '<div class="promo-art"><span class="promo-road"></span><span class="promo-kart">🪴</span></div>',
+  go: () => { location.href = '/mandrider.html'; }
 };
 
 const PROMO_KEY = 'avoidarc.promo';
@@ -654,15 +656,8 @@ function openPromo(promo) {
     `<span class="promo-badge">${promo.badge}</span>` +
     `<h2 class="promo-title">${promo.title}</h2>` +
     `<p class="promo-lead">${promo.lead.join('<br>')}</p>` +
-    // 철탑 한 컷. 탑 오르기 창에 쓰는 것과 같은 격자라, 글을 안 읽어도
-    // 무엇을 말하는지 짐작이 간다. 전류가 아래에서 위로 차오르는 것이
-    // 이 모드가 하는 일 그 자체다.
-    '<div class="promo-art">' +
-    '<i class="promo-tip"></i>' +
-    '<i class="promo-arm a1"></i><i class="promo-arm a2"></i>' +
-    '<span class="promo-tower"><i class="promo-rise"></i></span>' +
-    '<i class="promo-base"></i>' +
-    '</div>' +
+    // 그림 한 컷. 글을 안 읽어도 무엇을 말하는지 짐작이 가야 한다.
+    (promo.art ?? '') +
     `<p class="promo-foot">${promo.foot}</p>` +
     `<button type="button" class="primary promo-go">${promo.cta}</button>` +
     '<div class="promo-acts">' +
@@ -681,7 +676,7 @@ function openPromo(promo) {
     mutePromoToday(promo.id);
     close();
   });
-  overlay.querySelector('.promo-go').addEventListener('click', () => { close(); openTower(); });
+  overlay.querySelector('.promo-go').addEventListener('click', () => { close(); promo.go(); });
   // 바깥을 눌러도 닫힌다. 광고처럼 붙잡아 두면 오히려 미움받는다.
   overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
 }
@@ -3148,6 +3143,10 @@ async function refreshLeaderboard(kind = 'time') {
     }
     if (kind === 'hall') {
       ui.renderHall((await api.hall()).seasons);
+      return;
+    }
+    if (kind === 'mandrider') {   // 만드라이더 — 두 바퀴 완주 시간(짧을수록 위)
+      ui.renderLeaderboard({ ...await api.mandriderRanks(), note: t('rank.noteMandrider') }, null, kind);
       return;
     }
     if (kind === 'tower') {   // 도전모드 — 몇 층까지 올라갔나

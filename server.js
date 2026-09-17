@@ -207,8 +207,9 @@ app.get('/admin', (req, res) => {
   res.sendFile(join(root, 'public', 'admin-dashboard.html'));
 });
 
-// 개발 중인 미니게임은 관리자 세션 없이는 파일 자체를 내주지 않는다.
-app.get('/mandrider.html', requireAdmin, (req, res) => {
+// 만드라이더는 이제 누구나 들어간다. 파일 자체는 정적 미들웨어가 내주고,
+// 여기서는 캐시만 끊는다 — 고치는 중인 게임이라 옛 파일이 남으면 곤란하다.
+app.get('/mandrider.html', (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.sendFile(join(root, 'public', 'mandrider.html'));
 });
@@ -1262,6 +1263,54 @@ app.post('/api/me/wallet/merge', (req, res) => {
   res.json(users.mergeWallet(req.user.id, req.body ?? {}));
 });
 
+
+// ── 만드라이더 ──────────────────────────────────────────────────
+// 두 바퀴 완주 시간(짧을수록 위). 계정마다 최고 기록 하나만 남긴다.
+//
+// 기록이 진짜인지는 버티기와 같은 방식(lib/tickets.js)으로 본다 — 출발할 때
+// 표를 받고, 완주 기록을 올릴 때 그 표를 같이 낸다. 표를 받은 뒤 실제로 그만큼
+// 시간이 흘렀어야 통과한다. 게임 코드를 고치는 것까지는 못 막지만, 명령 한 줄로
+// 1초짜리 기록을 올리는 짓은 막는다.
+//
+// 아래 하한은 사람이 낼 수 없는 값을 거르는 안전망이다. 코스 한 바퀴가 2817,
+// 최고 속도가 58 이라 두 바퀴는 아무리 질러도 60초 밑으로 못 내려간다.
+const MANDRIDER_FLOOR_SECONDS = 60;
+
+app.post('/api/mandrider/start', (req, res) => {
+  res.json({ ticket: runTickets.issue(clientIp(req), req.user?.id ?? null) });
+});
+
+app.post('/api/mandrider/record', (req, res) => {
+  const seconds = Number(req.body?.seconds);
+  if (!Number.isFinite(seconds) || seconds < MANDRIDER_FLOOR_SECONDS || seconds > 3600) {
+    return res.status(400).json({ error: t(req, 'api.invalidTime') });
+  }
+  const ip = clientIp(req);
+  const check = runTickets.redeem(String(req.body?.ticket ?? ''), seconds, { ip, userId: req.user?.id ?? null });
+  if (check.error) return res.status(400).json({ error: t(req, check.error) });
+
+  // 관리자 판은 버티기와 마찬가지로 랭킹에 안 남긴다. 화면은 그대로 뜬다.
+  if (isAdminUser(req.user)) return res.json({ excluded: true });
+  // 로그인해야 기록이 남는다. 계정 한 줄에 최고 기록을 적는 방식이라
+  // 게스트는 다음에 들어왔을 때 그게 자기 기록인지 알 길이 없다.
+  if (!req.user?.nickname) return res.json({ needLogin: true });
+
+  const ms = Math.round(seconds * 1000);
+  const best = users.setMandriderBest(req.user.id, ms);
+  plays.add({ name: req.user.nickname, seconds: Math.round(seconds * 100) / 100, userId: req.user.id,
+    mobile: isMobile(req.get('user-agent')), mode: 'mandrider', country: countryCode(ip),
+    isp: asnOrg(ip), lang: browserLang(req) });
+  res.json({ best, rank: users.mandriderRankOf(best), improved: ms <= best });
+});
+
+app.get('/api/mandrider-ranks', (req, res) => {
+  const me = req.user ? users.byId(req.user.id) : null;
+  const myMs = me?.mandriderMs ?? 0;
+  res.json({
+    top: users.mandriderRanking(TOP_N),
+    me: myMs > 0 ? { name: me.nickname, ms: myMs, rank: users.mandriderRankOf(myMs) } : null
+  });
+});
 
 app.get('/api/tower-ranks', (req, res) => {
   const top = users.towerRanking(TOP_N);

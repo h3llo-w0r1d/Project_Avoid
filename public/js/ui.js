@@ -48,6 +48,11 @@ const BOARDS = {
     value: (e) => t('rank.rowFloor', { floor: e.floor }),
     mine: (me) => t('rank.mineTower', { rank: me.rank, floor: me.floor })
   },
+  mandrider: {
+    empty: () => t('rank.emptyMandrider'),
+    value: (e) => t('rank.rowLap', { lap: lapTime(e.ms) }),
+    mine: (me) => t('rank.mineMandrider', { rank: me.rank, lap: lapTime(me.ms) })
+  },
   plays: {
     empty: () => t('rank.emptyPlays'),
     value: (e) => t('rank.rowPlays', { plays: Number(e.plays).toLocaleString('ko-KR') }),
@@ -59,6 +64,13 @@ const BOARDS = {
     mine: (me) => t('rank.minePlaytime', { rank: me.rank, secs: Number(me.seconds).toLocaleString('ko-KR'), sec: t('common.sec'), hms: hms(me.seconds) })
   },
 };
+
+// 만드라이더 완주 시간. 두 바퀴라 분 단위가 나온다 — 118350 → '1:58.35'
+function lapTime(ms) {
+  const n = Math.max(0, Math.round(Number(ms) || 0));
+  const m = Math.floor(n / 60000);
+  return `${m}:${String(Math.floor((n % 60000) / 1000)).padStart(2, '0')}.${String(Math.floor((n % 1000) / 10)).padStart(2, '0')}`;
+}
 
 // 초를 사람이 읽는 꼴로. 12345 → '3시간 25분'
 function hms(sec) {
@@ -78,6 +90,8 @@ const METRIC = {
   voicehard: (e) => Number(e.time) || 0,
   wins: (e) => Number(e.wins) || 0,
   tower: (e) => Number(e.floor) || 0,
+  // 짧을수록 좋은 기록이다. 그대로 재면 1위 막대가 제일 짧아지므로 뒤집는다.
+  mandrider: (e) => (Number(e.ms) > 0 ? 1 / Number(e.ms) : 0),
   plays: (e) => Number(e.plays) || 0,
   playtime: (e) => Number(e.seconds) || 0
 };
@@ -768,6 +782,12 @@ export const api = {
 
   async towerRanks() {
     const res = await fetch('/api/tower-ranks');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  },
+
+  async mandriderRanks() {
+    const res = await fetch('/api/mandrider-ranks');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   },
