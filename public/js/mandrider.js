@@ -77,49 +77,29 @@ function makeKart() {
   plant.position.set(0, 0.96, 0);
   kart.add(plant);
 
-  // 부스터 불꽃 — 속이 흰 심지와 겉불꽃 두 겹. 더하기 혼합이라 겹칠수록 밝아진다.
+  // 부스터 불꽃 — 좌우 두 줄기. 한 줄기를 굵기와 길이가 다른 세 겹으로 겹친다.
+  // 한 겹짜리 원뿔은 단면이 또렷해 기둥처럼 보인다. 겹쳐 쌓아야 가운데가 밝고
+  // 바깥으로 갈수록 옅어져 불처럼 번진다(더하기 혼합).
   const flames = new THREE.Group();
-  const flameSkin = new THREE.MeshBasicMaterial({
-    color: 0x35b6ff, transparent: true, opacity: .5, blending: THREE.AdditiveBlending, depthWrite: false
-  });
-  const flameCore = new THREE.MeshBasicMaterial({
-    color: 0xf0ffff, transparent: true, opacity: .95, blending: THREE.AdditiveBlending, depthWrite: false
-  });
-  // 축을 뒤(+Z)로 눕혀 둔다. 그래야 scale.z 가 불꽃 길이가 된다.
-  const jetGeo = new THREE.ConeGeometry(.34, 1.6, 12);
-  jetGeo.rotateX(Math.PI / 2);
-  const jets = [];
-  for (const x of [-.46, .46]) {
-    const skin = new THREE.Mesh(jetGeo, flameSkin);
-    skin.position.set(x, .45, 1.15);
-    flames.add(skin);
-    jets.push(skin);
-    const core = new THREE.Mesh(jetGeo, flameCore);
-    core.position.set(x, .45, 1.0);
-    core.scale.set(.42, .42, .62);
-    flames.add(core);
-    jets.push(core);
-  }
-  // 뒤로 길게 뻗는 빛줄기. 짧은 불꽃만으로는 속도가 안 보인다.
   // 뾰족한 끝을 뒤(+Z)로 돌리고 밑동을 원점에 붙여, scale.z 가 곧 길이가 되게 한다.
-  const beamGeo = new THREE.ConeGeometry(.34, 1, 8, 1, true);
-  beamGeo.rotateX(Math.PI / 2);
-  beamGeo.translate(0, 0, .5);
-  const beamMat = new THREE.MeshBasicMaterial({
-    color: 0xb4f2ff, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false
-  });
-  const beams = [];
-  for (const [x, y, yaw, thick] of [
-    [-.5, .52, -.045, 1], [.5, .52, .045, 1],
-    [-.92, .34, -.13, .72], [.92, .34, .13, .72],
-    [0, .8, 0, .85]
-  ]) {
-    const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.position.set(x, y, .85);
-    beam.rotation.y = yaw;
-    beam.scale.set(thick, thick, 19);
-    flames.add(beam);
-    beams.push(beam);
+  const flameGeo = new THREE.ConeGeometry(1, 1, 12, 1, true);
+  flameGeo.rotateX(Math.PI / 2);
+  flameGeo.translate(0, 0, .5);
+  const plumes = [];
+  for (const x of [-.5, .5]) {
+    for (const [color, radius, length, opacity] of [
+      [0xffffff, .26, 3.0, .95],   // 속심지 — 가장 밝고 짧다
+      [0x7fe0ff, .44, 6.2, .5],
+      [0x2f8bff, .66, 9.4, .26]    // 겉불꽃 — 옅게 멀리 번진다
+    ]) {
+      const layer = new THREE.Mesh(flameGeo, new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      layer.position.set(x, .5, .8);
+      layer.scale.set(radius, radius, length);
+      flames.add(layer);
+      plumes.push({ layer, radius, length });
+    }
   }
   flames.visible = false;
   kart.add(flames);
@@ -137,7 +117,7 @@ function makeKart() {
   sparks.userData.seed = Array.from({ length: SPARKS }, () => Math.random());
   kart.add(sparks);
 
-  kart.userData = { plant, flames, jets, beams, sparks, sparkMat };
+  kart.userData = { plant, flames, plumes, sparks, sparkMat };
   return kart;
 }
 
@@ -435,16 +415,16 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { plant, flames, jets, beams, sparks, sparkMat } = kart.userData;
+  const { plant, flames, plumes, sparks, sparkMat } = kart.userData;
   plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
   if (flames.visible) {
-    // 불꽃은 길이만 떤다. 굵기까지 흔들면 지글거려 보기 싫다.
-    for (const jet of jets) jet.scale.z = jet.scale.z * .6 + (.7 + Math.random() * .7) * .4;
-    // 빛줄기는 길이가 살짝 요동친다. 부스터가 살아 있는 느낌을 준다.
-    beams.forEach((beam, i) => {
-      beam.scale.z = 19 + Math.sin(now * 17 + i * 1.7) * 3.4 + Math.random() * 2.6;
+    // 겹마다 길이가 따로 흔들려야 불이 일렁이는 것처럼 보인다.
+    // 굵기까지 흔들면 지글거려 보기 싫으니 길이만 건드린다.
+    plumes.forEach((plume, i) => {
+      const wobble = .82 + Math.sin(now * (13 + i * 2.6) + i) * .12 + Math.random() * .12;
+      plume.layer.scale.z = plume.length * wobble;
     });
   }
 
