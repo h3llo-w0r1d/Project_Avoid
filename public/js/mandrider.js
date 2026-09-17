@@ -266,13 +266,14 @@ for (const button of document.querySelectorAll('[data-drive]')) {
 // 하나뿐이라 내려받을 것이 없다. AudioContext 는 브라우저가 클릭 전에는 못 만들게
 // 막으므로 출발 버튼을 누를 때 만든다.
 let audioContext = null;
-function beep(frequency, seconds, volume) {
+// delay 를 주면 그만큼 뒤에 울린다 — 두 음을 이어 붙여 '딩동' 을 만들 때 쓴다.
+function beep(frequency, seconds, volume, delay = 0) {
   if (!audioContext) return;
   const osc = audioContext.createOscillator();
   const gain = audioContext.createGain();
   osc.type = 'square';
   osc.frequency.value = frequency;
-  const at = audioContext.currentTime;
+  const at = audioContext.currentTime + delay;
   gain.gain.setValueAtTime(0, at);
   gain.gain.linearRampToValueAtTime(volume, at + .012);
   // 뚝 끊으면 '딱' 하고 잡음이 섞인다. 끝을 완만히 줄인다.
@@ -304,6 +305,9 @@ function startScreech() {
   screech = { gain, filter };
 }
 
+// 한 판에 도는 바퀴 수. 화면 표시와 완주 판정이 같은 값을 봐야 한다.
+const LAPS = 2;
+
 let state = createKartState();
 let raceActive = false;
 let raceFinished = false;
@@ -311,6 +315,9 @@ let lap = 1;
 let lapArmed = false;
 let previousProgress = 0;
 let lastCount = 0;
+// 바퀴를 넘긴 알림. 남은 시간 대신 '언제까지' 를 들고 있으면 dt 를 넘길 일이 없다.
+let lapBanner = '';
+let lapBannerUntil = 0;
 
 function reset() {
   state = createKartState();
@@ -322,6 +329,8 @@ function reset() {
   lap = 1;
   lapArmed = false;
   previousProgress = 0;
+  lapBanner = '';
+  lapBannerUntil = 0;
   markLastX = state.x;
   markLastZ = state.z;
   clearMarks();
@@ -418,8 +427,11 @@ function updateHud() {
   }
   countdownEl.textContent = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer)
     : raceActive && state.startTimer > -0.75 ? 'GO!'
-    : raceFinished ? state.notice : '';
-  lapEl.textContent = `${Math.min(lap, 3)} / 3`;
+    : raceFinished ? state.notice
+    : state.elapsed < lapBannerUntil ? lapBanner : '';
+  // 숫자 한 글자는 화면 가득 차도 되지만 '완주!'·'2 / 2 LAP' 은 좁은 화면에서 넘친다.
+  countdownEl.classList.toggle('wordy', countdownEl.textContent.length > 3);
+  lapEl.textContent = `${Math.min(lap, LAPS)} / ${LAPS}`;
   drawMinimap();
 }
 
@@ -444,15 +456,21 @@ function updateLap(index) {
   if (progress > .42 && progress < .68) lapArmed = true;
   if (lapArmed && previousProgress > .85 && progress < .15) {
     lapArmed = false;
-    if (lap === 3) {
+    if (lap === LAPS) {
       raceFinished = true;
       state.speed = state.lateral = 0;
       state.notice = `완주! ${state.elapsed.toFixed(2)}초`;
       state.noticeTimer = 3600;
+      // 완주는 올라가는 세 음으로 — 바퀴 넘김과 헷갈리면 안 된다.
+      beep(880, .16, .2);
+      beep(1170, .16, .2, .17);
+      beep(1560, .6, .22, .34);
     } else {
       lap++;
-      state.notice = `${lap}바퀴째!`;
-      state.noticeTimer = 1.2;
+      lapBanner = `${lap} / ${LAPS} LAP`;
+      lapBannerUntil = state.elapsed + 1.8;
+      beep(1050, .13, .19);
+      beep(1400, .3, .19, .14);
     }
   }
   previousProgress = progress;
