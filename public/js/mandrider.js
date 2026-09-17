@@ -7,11 +7,12 @@ import { MeshoptDecoder } from './vendor/jsm/libs/meshopt_decoder.module.js';
 
 // 고를 수 있는 카트. 화분은 코드로 그리고 나머지는 받아 온 모델이다.
 // height 는 화면에 세울 키 — 모델마다 원본 크기가 제각각이라 이 값에 맞춰 줄인다.
+// yaw 는 모델이 바라보는 쪽을 주행 방향(-Z)으로 돌리는 각도(도), seat 은 돌린 뒤
+// 기준으로 만드라고라가 올라탈 등 위 자리다. 탈것은 만드라고라가 타야 카트다.
 const KARTS = {
   pot: { name: '만드라고라 화분' },
-  pigeon: { name: '비둘기', url: './models/pigeon.glb', height: 2.2 },
-  chicken: { name: '닭', url: './models/chicken.glb', height: 2.4 },
-  deer: { name: '사슴', url: './models/deer.glb', height: 2.9 }
+  pigeon: { name: '비둘기', url: './models/pigeon.glb', height: 2.2, yaw: -90, seat: [0, 1.32, -.28], riderScale: .78 },
+  chicken: { name: '닭', url: './models/chicken.glb', height: 2.4, yaw: 180, seat: [0, 1.52, .06], riderScale: .86 }
 };
 
 // 캐시에 화면이 남아도 관리자가 아니면 주행 코드까지 실행하지 않는다.
@@ -92,21 +93,33 @@ function buildPot() {
   return body;
 }
 
-// 받아 온 모델을 카트 자리에 맞춰 앉힌다. 원본 크기와 중심이 제각각이라
-// 키를 재서 줄이고, 발이 노면에 닿도록 내려 준다.
-function fitModel(scene, height) {
+// 받아 온 모델을 카트 자리에 맞춰 앉히고, 그 등에 만드라고라를 태운다.
+// 원본 크기와 중심이 제각각이라 키를 재서 줄이고, 발이 노면에 닿도록 내려 준다.
+function fitModel(scene, spec) {
   const body = new THREE.Group();
   const box = new THREE.Box3().setFromObject(scene);
   const size = new THREE.Vector3();
   const centre = new THREE.Vector3();
   box.getSize(size);
   box.getCenter(centre);
-  const scale = height / Math.max(size.y, .001);
+  const scale = spec.height / Math.max(size.y, .001);
   scene.scale.setScalar(scale);
   // 좌우·앞뒤는 가운데로, 아래는 바닥(0.06)에 맞춘다.
   scene.position.set(-centre.x * scale, -box.min.y * scale + .06, -centre.z * scale);
   scene.traverse((part) => { if (part.isMesh) part.castShadow = true; });
-  body.add(scene);
+  // 모델이 향한 쪽이 제각각이라, 머리가 앞을 보도록 통째로 돌린다.
+  const mount = new THREE.Group();
+  mount.rotation.y = (spec.yaw ?? 0) * Math.PI / 180;
+  mount.add(scene);
+  body.add(mount);
+
+  // 등에 올라탄 만드라고라. 화분 카트와 같은 잎이라 흔들림도 그대로 쓴다.
+  const plant = buildPlant('mandragora');
+  plant.scale.setScalar(spec.riderScale ?? .8);
+  plant.position.set(...spec.seat);
+  plant.traverse((part) => { if (part.isMesh) part.castShadow = true; });
+  body.add(plant);
+  body.userData.plant = plant;
   return body;
 }
 
@@ -331,7 +344,8 @@ for (const card of mapCards) {
 
 let chosenKart = 'pot';
 let modelLoader = null;
-// 고른 카트로 몸통을 갈아 끼운다. 모델은 처음 고를 때 한 번만 받아 두고 다시 쓴다.
+// 고른 카트로 몸통을 갈아 끼운다. 받아 온 원본만 caching 하고 몸통은 매번
+// 새로 짠다 — clone 은 userData 를 JSON 으로 베껴서 잎 흔들기 참조가 끊긴다.
 const modelCache = new Map();
 async function useKart(id) {
   const spec = KARTS[id] ?? KARTS.pot;
@@ -348,11 +362,11 @@ async function useKart(id) {
       console.warn('카트 모델을 불러오지 못했습니다: ' + spec.url, err.message);
       return null;
     });
-    modelCache.set(id, gltf && fitModel(gltf.scene, spec.height));
+    modelCache.set(id, gltf?.scene ?? null);
   }
-  const body = modelCache.get(id);
+  const source = modelCache.get(id);
   holder.clear();
-  holder.add(body ? body.clone(true) : buildPot());
+  holder.add(source ? fitModel(source.clone(true), spec) : buildPot());
 }
 
 const kartCards = [...document.querySelectorAll('.kart-card')];
@@ -490,7 +504,7 @@ function updateScene(dt, now) {
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
   const { bodyHolder, flames, plumes } = kart.userData;
-  // 화분 카트일 때만 잎이 흔들린다. 받아 온 모델에는 흔들 잎이 없다.
+  // 화분이든 등에 탄 쪽이든, 만드라고라 잎은 달리는 속도만큼 흔들린다.
   bodyHolder.children[0]?.userData.plant?.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
