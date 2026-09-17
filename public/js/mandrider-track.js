@@ -23,7 +23,11 @@ export const MAPS = {
       [54, -9], [50, -13], [43, -15], [10, -15], [4, -17], [0, -21],
       [0, -25], [4, -29], [10, -31], [56, -31], [63, -33], [68, -37],
       [68, -42], [65, -46], [60, -49], [53, -50], [44, -50]
-    ]
+    ],
+    // 왼쪽 긴 직선(x=-56, z -38~49)은 달리기만 하면 끝나 지루하다. 여기에
+    // 큰 만드라고라를 세워 길을 가로지르게 한다. 좌표는 points 와 같은 눈금이고,
+    // 가장 가까운 코스 지점에 붙여 길 한가운데를 기준으로 오간다.
+    giants: [[-56, -28], [-56, -6], [-56, 18], [-56, 40]]
   },
   speedway: {
     name: '그랑프리 스피드웨이',
@@ -355,5 +359,5 @@ export function buildTrack(scene, renderer, map, minimap) {
   strokeMinimap('rgba(10,18,24,.85)', 9);
   strokeMinimap('#f7fbff', 5);
 
-  return { trackSamples, start, startHeading, halfWidth, minimapBase, minimapPoint };
+  return { trackSamples, trackNormals, start, startHeading, halfWidth, minimapBase, minimapPoint };
 }

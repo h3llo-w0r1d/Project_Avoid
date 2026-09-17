@@ -76,6 +76,30 @@ export function constrainToRoad(state, centerX, centerZ, halfWidth = KART.roadHa
   return true;
 }
 
+// 길을 막고 선 것과 부딪쳤을 때. 벽은 긁고 지나가지만 이건 튕겨 나간다 —
+// 겹친 만큼 밀어낸 뒤 앞으로 가던 힘을 꺾고, 부딪친 반대쪽으로 크게 민다.
+export function bounceOff(state, centerX, centerZ, radius) {
+  const dx = state.x - centerX;
+  const dz = state.z - centerZ;
+  const distance = Math.hypot(dx, dz);
+  if (distance >= radius) return false;
+  // 정확히 한가운데서 부딪치면 밀어낼 방향이 없다. 그때는 옆으로 밀어낸다.
+  const nx = distance > .001 ? dx / distance : Math.cos(state.heading);
+  const nz = distance > .001 ? dz / distance : Math.sin(state.heading);
+  state.x = centerX + nx * radius;
+  state.z = centerZ + nz * radius;
+  const rightX = Math.cos(state.heading);
+  const rightZ = Math.sin(state.heading);
+  state.lateral = (nx * rightX + nz * rightZ) * Math.max(16, Math.abs(state.speed) * .95);
+  state.speed *= -.3;
+  state.drifting = false;
+  state.driftTime = 0;
+  state.steer = 0;
+  state.hitWall = .35;
+  flash(state, '만드라고라와 충돌!', .7);
+  return true;
+}
+
 export function stepKart(state, input, rawDt) {
   const dt = Math.min(Math.max(rawDt, 0), 0.05);
   state.noticeTimer = Math.max(0, state.noticeTimer - dt);

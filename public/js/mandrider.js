@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { buildPlant } from './plant.js';
-import { constrainToRoad, createKartState, stepKart, KART } from './mandrider-physics.js';
+import { bounceOff, constrainToRoad, createKartState, stepKart, KART } from './mandrider-physics.js';
 import { MAPS, buildTrack } from './mandrider-track.js';
 
 // 캐시에 화면이 남아도 관리자가 아니면 주행 코드까지 실행하지 않는다.
@@ -111,6 +111,58 @@ function makeKart() {
 const kart = makeKart();
 scene.add(kart);
 kart.visible = false;
+
+// 길을 막는 큰 만드라고라. 맵의 giants 자리마다 하나씩 세워 길을 가로지르게 한다.
+// 몸통 반지름(1.45×배율의 최대 굵기)에 카트 몸집을 더한 값이 부딪치는 거리다.
+const GIANT_SCALE = 4.4;
+const GIANT_RADIUS = 3.6;
+let giants = [];
+function buildGiants(map) {
+  const samples = track.trackSamples;
+  return (map.giants ?? []).map(([mapX, mapZ], i) => {
+    const x = mapX * map.scale;
+    const z = mapZ * map.scale;
+    let at = 0;
+    let best = Infinity;
+    for (let index = 0; index < samples.length; index++) {
+      const distance = (samples[index].x - x) ** 2 + (samples[index].z - z) ** 2;
+      if (distance < best) {
+        best = distance;
+        at = index;
+      }
+    }
+    const body = buildPlant('mandragora');
+    body.scale.setScalar(GIANT_SCALE);
+    body.traverse((part) => { if (part.isMesh) part.castShadow = true; });
+    scene.add(body);
+    return {
+      body,
+      centre: samples[at],
+      normal: track.trackNormals[at],
+      // 넷이 나란히 움직이면 피할 자리가 한 줄로 뚫려 장애물 구실을 못 한다.
+      // 속도와 시작 위치를 어긋나게 둔다.
+      swingRate: .52 + i * .13,
+      phase: i * 1.9,
+      reach: track.halfWidth - GIANT_RADIUS,
+      x, z
+    };
+  });
+}
+
+// 길을 가로질러 오간다. 부딪치는 판정도 이 자리에서 하므로 그리기가 아니라
+// 물리 차례에 부른다 — 화면만 늦게 그려지는 프레임에서 판정이 어긋나면 안 된다.
+function moveGiants() {
+  for (const giant of giants) {
+    const wave = state.elapsed * giant.swingRate + giant.phase;
+    const swing = Math.sin(wave) * giant.reach;
+    giant.x = giant.centre.x + giant.normal.x * swing;
+    giant.z = giant.centre.z + giant.normal.y * swing;
+    // 가는 쪽을 보고 걷는다. 걸음마다 통통 튀어야 살아 있는 것처럼 보인다.
+    const facing = Math.cos(wave);
+    giant.body.position.set(giant.x, 2 + Math.abs(Math.sin(wave * 6)) * .55, giant.z);
+    giant.body.rotation.y = Math.atan2(giant.normal.x * facing, giant.normal.y * facing);
+  }
+}
 
 // 드리프트 자국. 카트를 따라다니면 안 되고 노면에 남아야 하므로 씬에 직접 붙인다.
 // 정해진 개수를 돌려 쓴다 — 오래된 것부터 덮어써서 꼬리가 일정 길이로 유지된다.
@@ -299,6 +351,7 @@ bgm.volume = .32;   // 드리프트 끼익 소리와 카운트다운이 묻히�
 document.getElementById('start-race').addEventListener('click', () => {
   const map = MAPS[chosenMap];
   track = buildTrack(scene, renderer, map, minimap);
+  giants = buildGiants(map);
   document.getElementById('race-map-name').textContent = map.name;
   document.getElementById('map-select').classList.add('hidden');
   // 속도계·게이지·미니맵은 여기서부터 보인다(CSS 의 body.racing).
@@ -421,6 +474,8 @@ function updateScene(dt, now) {
   kart.rotation.z = -state.lateral * 0.006;
   const { plant, flames, plumes } = kart.userData;
   plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
+  // 길 위의 만드라고라도 잎을 흔든다. 가만히 서 있으면 조형물처럼 보인다.
+  for (const giant of giants) giant.body.userData.animate?.(now, 3, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
   if (flames.visible) {
@@ -495,6 +550,10 @@ function frame(nowMs) {
     }, dt);
     const nearest = nearestTrackSample();
     constrainToRoad(state, nearest.point.x, nearest.point.z, track.halfWidth);
+    moveGiants();
+    for (const giant of giants) {
+      if (bounceOff(state, giant.x, giant.z, GIANT_RADIUS)) beep(120, .2, .2);
+    }
     updateLap(nearest.index);
   }
   pressed.clear();
