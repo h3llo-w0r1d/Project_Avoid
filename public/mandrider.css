@@ -23,7 +23,8 @@ body:not(.racing) .minimap-panel,
 body:not(.racing) #race-hud,
 body:not(.racing) .controls-help,
 body:not(.racing) #race-touch,
-body:not(.racing) #countdown { display: none; }
+body:not(.racing) #countdown,
+body:not(.racing) #race-again { display: none; }
 .map-card { width: 100%; display: grid; grid-template-columns: 105px 1fr auto; align-items: center; gap: 15px; padding: 12px; border: 2px solid #9cef67; border-radius: 19px; color: #fff; text-align: left; background: rgba(102,172,69,.18); cursor: pointer; }
 .map-thumb { position: relative; display: grid; place-items: center; width: 105px; height: 78px; overflow: hidden; border-radius: 13px; background: linear-gradient(145deg, #68ba47, #34774e); box-shadow: inset 0 0 24px rgba(5,31,16,.45); }
 /* 코스가 세로로 길어 그림 칸만 조금 높다. 판 색은 다른 칸과 같다. */
@@ -90,6 +91,13 @@ body:not(.racing) #countdown { display: none; }
 }
 /* 숫자 한 글자가 아니라 글이 들어갈 때는 좁은 화면에서 넘치지 않게 줄인다. */
 #countdown.wordy { font-size: clamp(30px, 7vw, 74px); white-space: nowrap; }
+/* 판이 끝났을 때만 나오는 버튼. 카운트다운 문구 바로 아래에 둔다. */
+#race-again {
+  position: fixed; left: 50%; top: calc(50% + 78px); z-index: 4; transform: translateX(-50%);
+  padding: 13px 26px; border: 0; border-radius: 14px; color: #16320c; font-size: 16px; font-weight: 1000;
+  background: linear-gradient(135deg, #d3ff92, #79e348); box-shadow: 0 7px 24px rgba(119,231,73,.32); cursor: pointer;
+}
+#race-again.hidden { display: none; }
 .controls-help { position: fixed; left: 22px; bottom: 24px; z-index: 2; max-width: 550px; padding: 12px 15px; border-radius: 14px; color: #edf8ef; background: rgba(15,24,21,.72); line-height: 1.65; font-size: 13px; }
 .controls-help b { color: #d5ff93; }
 

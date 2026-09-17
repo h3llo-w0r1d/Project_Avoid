@@ -111,25 +111,48 @@ let giants = [];
 // 으로 잡는다. 헤어핀이 이어지는 코스라 세계 좌표로 곧게 움직이면 길 밖으로
 // 걸어 나가 버린다. 코스를 따라 재면 어느 구간에서든 길 위에 남는다.
 const GIANT_MOVES = ['cross', 'along', 'circle'];
+
+// 붉은 쪽은 닿으면 그 자리에서 끝이다. 색으로만 구별되므로 확실히 붉어야 한다 —
+// 원래 색과 섞지 않고 붉은색으로 덮고, 스스로 빛나게 해 그늘에서도 붉게 보인다.
+function paintDeadly(body) {
+  body.traverse((part) => {
+    if (!part.isMesh) return;
+    // 재질은 여러 부위가 나눠 쓰므로 반드시 복제한다. 그냥 칠하면 화분 카트의
+    // 만드라고라까지 같이 붉어진다.
+    part.material = part.material.clone();
+    part.material.color?.set(0xd61f24);
+    part.material.emissive?.set(0x4a0206);
+  });
+}
+
 function buildGiants(map) {
-  const count = map.giants ?? 0;
   const samples = track.trackSamples;
   const reach = track.halfWidth - GIANT_RADIUS;
-  return Array.from({ length: count }, (_, i) => {
+  const spin = Math.min(reach, 8.5);   // 원을 그리려면 가로세로 폭이 같아야 한다
+  const safe = map.giants ?? 0;
+  const killers = map.killers ?? 0;
+  const total = safe + killers;
+  // 스무 마리를 한 줄로 세우고 그 안에서 붉은 쪽을 골라 낸다. 초록과 붉은 것의
+  // 자리를 따로 잡았더니 코스 한가운데에서 둘이 겹쳐 섰다 — 초록인 줄 알고
+  // 들이받으면 죽는 판이 된다. 한 줄에서 고르면 그런 일이 생길 수 없다.
+  return Array.from({ length: total }, (_, i) => {
+    const deadly = Math.floor((i + 1) * killers / total) > Math.floor(i * killers / total);
     const body = buildPlant('mandragora');
     body.scale.setScalar(GIANT_SCALE);
+    if (deadly) paintDeadly(body);
     body.traverse((part) => { if (part.isMesh) part.castShadow = true; });
     scene.add(body);
-    // 3(움직임)과 5(속도)는 서로 나눠떨어지지 않아, 열다섯이면 조합이 겹치지 않는다.
+    // 3(움직임)과 5(속도)는 서로 나눠떨어지지 않아 조합이 골고루 섞인다.
     const move = GIANT_MOVES[i % GIANT_MOVES.length];
-    const spin = Math.min(reach, 8.5);   // 원을 그리려면 가로세로 폭이 같아야 한다
     return {
       body,
+      deadly,
       // 출발선 앞뒤는 비워 둔다 — 카운트다운이 끝나자마자 막히면 억울하다.
-      at: Math.round((i + 1) / (count + 1) * samples.length),
+      at: Math.round((i + 1) / (total + 1) * samples.length),
       move,
-      rate: .28 + (i % 5) * .15,
-      phase: i * 1.37,
+      // 붉은 쪽은 조금 더 빠르다. 피하는 재미가 있으려면 움직임이 읽혀야 하니 두 배까지는 안 간다.
+      rate: (.28 + (i % 5) * .15) * (deadly ? 1.35 : 1),
+      phase: i * 1.37 + (deadly ? .8 : 0),
       across: move === 'cross' ? reach : move === 'circle' ? spin : 0,
       along: move === 'cross' ? 0 : move === 'circle' ? spin : 26,
       // 길 따라 오가는 쪽은 한가운데를 비켜 한 차선에 선다. 좌우로 갈라 세운다.
@@ -137,6 +160,20 @@ function buildGiants(map) {
       x: 0, z: 0, lastX: 0, lastZ: 0
     };
   });
+}
+
+// 붉은 만드라고라에 닿았다. 그 자리에서 판이 끝난다 — 기록은 남지 않는다.
+function killRun() {
+  if (raceFinished) return;
+  raceFinished = true;
+  state.speed = state.lateral = 0;
+  // 문구는 짧게. 왜 죽었는지는 바로 앞의 붉은 만드라고라가 말해 준다.
+  state.notice = 'GAMEOVER';
+  state.noticeTimer = 3600;
+  runTicket = null;
+  // 완주는 올라가는 세 음이었다. 이쪽은 내려가는 두 음으로 반대로 들린다.
+  beep(320, .22, .22);
+  beep(150, .8, .2, .2);
 }
 
 // 저마다 다른 모양으로 돌아다닌다. 부딪치는 판정도 이 자리에서 하므로 그리기가
@@ -328,6 +365,7 @@ function reset() {
   state.heading = track.startHeading;
   cameraHeading = track.startHeading;
   raceFinished = false;
+  askTicket();
   lap = 1;
   lapArmed = false;
   previousProgress = 0;
@@ -418,7 +456,6 @@ document.getElementById('start-race').addEventListener('click', () => {
   startScreech();
   // 소리를 막아 둔 브라우저도 있으니 실패해도 경기는 그대로 간다.
   bgm.play().catch(() => {});
-  askTicket();
   raceActive = true;
   if (raceSky) scene.background = raceSky;
   kart.visible = true;
@@ -435,6 +472,8 @@ const percentEl = document.getElementById('drift-percent');
 const slotBox = document.getElementById('boost-slots');
 const slots = [...slotBox.children];
 const countdownEl = document.getElementById('countdown');
+const againEl = document.getElementById('race-again');
+againEl.addEventListener('click', () => { if (raceActive) reset(); });
 const lapEl = document.getElementById('lap');
 const timeEl = document.getElementById('race-time');
 const speedDialEl = document.getElementById('speed-dial');
@@ -474,6 +513,8 @@ function updateHud() {
     else if (raceActive && state.startTimer > -1) beep(1210, .55, .22);
     lastCount = counting;
   }
+  // 판이 끝나면 다시 달릴 길을 내준다. 휴대폰에는 R 키가 없어 죽으면 막다른 길이었다.
+  againEl.classList.toggle('hidden', !raceFinished);
   countdownEl.textContent = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer)
     : raceActive && state.startTimer > -0.75 ? 'GO!'
     : raceFinished ? state.notice
@@ -624,7 +665,11 @@ function frame(nowMs) {
     constrainToRoad(state, nearest.point.x, nearest.point.z, track.halfWidth);
     moveGiants();
     for (const giant of giants) {
-      if (bounceOff(state, giant.x, giant.z, GIANT_RADIUS)) beep(120, .2, .2);
+      if (giant.deadly) {
+        if (Math.hypot(state.x - giant.x, state.z - giant.z) < GIANT_RADIUS) killRun();
+      } else if (bounceOff(state, giant.x, giant.z, GIANT_RADIUS)) {
+        beep(120, .2, .2);
+      }
     }
     updateLap(nearest.index);
   }

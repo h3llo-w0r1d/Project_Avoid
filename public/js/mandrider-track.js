@@ -26,7 +26,9 @@ export const MAPS = {
     ],
     // 길을 막고 돌아다니는 큰 만드라고라의 수. 코스 전체에 고르게 세운다
     // (자리와 움직임은 mandrider.js 의 buildGiants 가 정한다).
-    giants: 15
+    giants: 15,
+    // 그중 붉은 쪽은 따로 세운다. 닿으면 그 자리에서 판이 끝난다.
+    killers: 5
   }
 };
 
