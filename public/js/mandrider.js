@@ -2,18 +2,6 @@ import * as THREE from 'three';
 import { buildPlant } from './plant.js';
 import { constrainToRoad, createKartState, stepKart, KART } from './mandrider-physics.js';
 import { MAPS, buildTrack } from './mandrider-track.js';
-import { GLTFLoader } from './vendor/jsm/loaders/GLTFLoader.js';
-import { MeshoptDecoder } from './vendor/jsm/libs/meshopt_decoder.module.js';
-
-// 고를 수 있는 카트. 화분은 코드로 그리고 나머지는 받아 온 모델이다.
-// height 는 화면에 세울 키 — 모델마다 원본 크기가 제각각이라 이 값에 맞춰 줄인다.
-// yaw 는 모델이 바라보는 쪽을 주행 방향(-Z)으로 돌리는 각도(도), seat 은 돌린 뒤
-// 기준으로 만드라고라가 올라탈 등 위 자리다. 탈것은 만드라고라가 타야 카트다.
-const KARTS = {
-  pot: { name: '만드라고라 화분' },
-  pigeon: { name: '비둘기', url: './models/pigeon.glb', height: 2.2, yaw: -90, seat: [0, 1.32, -.28], riderScale: .78 },
-  chicken: { name: '닭', url: './models/chicken.glb', height: 2.4, yaw: 180, seat: [0, 1.52, .06], riderScale: .86 }
-};
 
 // 캐시에 화면이 남아도 관리자가 아니면 주행 코드까지 실행하지 않는다.
 const allowed = await fetch('/api/admin/me', { cache: 'no-store' })
@@ -67,9 +55,8 @@ new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
 // 고르지 않은 맵의 지형까지 화면에 같이 남는다.
 let track = null;
 
-// 카트 몸통만 만든다. 불꽃 같은 연출은 몸통이 바뀌어도 그대로 쓰므로 따로 둔다.
-function buildPot() {
-  const body = new THREE.Group();
+function makeKart() {
+  const kart = new THREE.Group();
   const potMat = new THREE.MeshStandardMaterial({ color: 0xc7613f, roughness: 0.72 });
   const darkPot = new THREE.MeshStandardMaterial({ color: 0x753621, roughness: 0.85 });
 
@@ -78,56 +65,17 @@ function buildPot() {
   const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.92, 0.68, 1.28, 24), potMat);
   pot.position.set(0, 0.70, 0);
   pot.castShadow = true;
-  body.add(pot);
+  kart.add(pot);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.13, 10, 28), darkPot);
   rim.rotation.x = Math.PI / 2;
   rim.position.set(0, 1.34, 0);
   rim.castShadow = true;
-  body.add(rim);
+  kart.add(rim);
 
   const plant = buildPlant('mandragora');
   plant.scale.setScalar(1.05);
   plant.position.set(0, 0.96, 0);
-  body.add(plant);
-  body.userData.plant = plant;
-  return body;
-}
-
-// 받아 온 모델을 카트 자리에 맞춰 앉히고, 그 등에 만드라고라를 태운다.
-// 원본 크기와 중심이 제각각이라 키를 재서 줄이고, 발이 노면에 닿도록 내려 준다.
-function fitModel(scene, spec) {
-  const body = new THREE.Group();
-  const box = new THREE.Box3().setFromObject(scene);
-  const size = new THREE.Vector3();
-  const centre = new THREE.Vector3();
-  box.getSize(size);
-  box.getCenter(centre);
-  const scale = spec.height / Math.max(size.y, .001);
-  scene.scale.setScalar(scale);
-  // 좌우·앞뒤는 가운데로, 아래는 바닥(0.06)에 맞춘다.
-  scene.position.set(-centre.x * scale, -box.min.y * scale + .06, -centre.z * scale);
-  scene.traverse((part) => { if (part.isMesh) part.castShadow = true; });
-  // 모델이 향한 쪽이 제각각이라, 머리가 앞을 보도록 통째로 돌린다.
-  const mount = new THREE.Group();
-  mount.rotation.y = (spec.yaw ?? 0) * Math.PI / 180;
-  mount.add(scene);
-  body.add(mount);
-
-  // 등에 올라탄 만드라고라. 화분 카트와 같은 잎이라 흔들림도 그대로 쓴다.
-  const plant = buildPlant('mandragora');
-  plant.scale.setScalar(spec.riderScale ?? .8);
-  plant.position.set(...spec.seat);
-  plant.traverse((part) => { if (part.isMesh) part.castShadow = true; });
-  body.add(plant);
-  body.userData.plant = plant;
-  return body;
-}
-
-function makeKart() {
-  const kart = new THREE.Group();
-  const bodyHolder = new THREE.Group();
-  bodyHolder.add(buildPot());
-  kart.add(bodyHolder);
+  kart.add(plant);
 
   // 부스터 불꽃 — 좌우 두 줄기. 한 줄기를 굵기와 길이가 다른 세 겹으로 겹친다.
   // 한 겹짜리 원뿔은 단면이 또렷해 기둥처럼 보인다. 겹쳐 쌓아야 가운데가 밝고
@@ -156,7 +104,7 @@ function makeKart() {
   flames.visible = false;
   kart.add(flames);
 
-  kart.userData = { bodyHolder, flames, plumes };
+  kart.userData = { plant, flames, plumes };
   return kart;
 }
 
@@ -342,44 +290,11 @@ for (const card of mapCards) {
   });
 }
 
-let chosenKart = 'pot';
-let modelLoader = null;
-// 고른 카트로 몸통을 갈아 끼운다. 받아 온 원본만 caching 하고 몸통은 매번
-// 새로 짠다 — clone 은 userData 를 JSON 으로 베껴서 잎 흔들기 참조가 끊긴다.
-const modelCache = new Map();
-async function useKart(id) {
-  const spec = KARTS[id] ?? KARTS.pot;
-  const holder = kart.userData.bodyHolder;
-  if (!spec.url) {
-    holder.clear();
-    holder.add(buildPot());
-    return;
-  }
-  if (!modelCache.has(id)) {
-    modelLoader ??= new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-    // 못 받아도 게임은 돌아가야 한다 — 화분으로 되돌린다.
-    const gltf = await modelLoader.loadAsync(spec.url).catch((err) => {
-      console.warn('카트 모델을 불러오지 못했습니다: ' + spec.url, err.message);
-      return null;
-    });
-    modelCache.set(id, gltf?.scene ?? null);
-  }
-  const source = modelCache.get(id);
-  holder.clear();
-  holder.add(source ? fitModel(source.clone(true), spec) : buildPot());
-}
-
-const kartCards = [...document.querySelectorAll('.kart-card')];
-for (const card of kartCards) {
-  card.addEventListener('click', () => {
-    chosenKart = card.dataset.kart;
-    for (const other of kartCards) {
-      const on = other === card;
-      other.classList.toggle('selected', on);
-      other.setAttribute('aria-pressed', on);
-    }
-  });
-}
+// 배경음악. 효과음과 달리 파일 하나를 통째로 반복만 하면 되니 Web Audio 대신
+// <audio> 를 쓴다. 자동 재생은 막혀 있어 '출발' 을 누르는 순간에 튼다.
+const bgm = new window.Audio('./sounds/mandrider-bgm.mp3');
+bgm.loop = true;
+bgm.volume = .32;   // 드리프트 끼익 소리와 카운트다운이 묻히지 않을 만큼
 
 document.getElementById('start-race').addEventListener('click', () => {
   const map = MAPS[chosenMap];
@@ -391,9 +306,10 @@ document.getElementById('start-race').addEventListener('click', () => {
   audioContext ??= new (window.AudioContext ?? window.webkitAudioContext)();
   audioContext.resume?.();
   startScreech();
+  // 소리를 막아 둔 브라우저도 있으니 실패해도 경기는 그대로 간다.
+  bgm.play().catch(() => {});
   raceActive = true;
   if (raceSky) scene.background = raceSky;
-  useKart(chosenKart);
   kart.visible = true;
   reset();
   const forwardX = Math.sin(state.heading);
@@ -503,9 +419,8 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { bodyHolder, flames, plumes } = kart.userData;
-  // 화분이든 등에 탄 쪽이든, 만드라고라 잎은 달리는 속도만큼 흔들린다.
-  bodyHolder.children[0]?.userData.plant?.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
+  const { plant, flames, plumes } = kart.userData;
+  plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
   if (flames.visible) {
