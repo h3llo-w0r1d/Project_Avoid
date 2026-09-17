@@ -102,11 +102,11 @@ function makeKart() {
   }
   // 뒤로 길게 뻗는 빛줄기. 짧은 불꽃만으로는 속도가 안 보인다.
   // 뾰족한 끝을 뒤(+Z)로 돌리고 밑동을 원점에 붙여, scale.z 가 곧 길이가 되게 한다.
-  const beamGeo = new THREE.ConeGeometry(.17, 1, 6, 1, true);
+  const beamGeo = new THREE.ConeGeometry(.34, 1, 8, 1, true);
   beamGeo.rotateX(Math.PI / 2);
   beamGeo.translate(0, 0, .5);
   const beamMat = new THREE.MeshBasicMaterial({
-    color: 0x7fe4ff, transparent: true, opacity: .62, blending: THREE.AdditiveBlending, depthWrite: false
+    color: 0xb4f2ff, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false
   });
   const beams = [];
   for (const [x, y, yaw, thick] of [
@@ -117,7 +117,7 @@ function makeKart() {
     const beam = new THREE.Mesh(beamGeo, beamMat);
     beam.position.set(x, y, .85);
     beam.rotation.y = yaw;
-    beam.scale.set(thick, thick, 10);
+    beam.scale.set(thick, thick, 19);
     flames.add(beam);
     beams.push(beam);
   }
@@ -137,12 +137,7 @@ function makeKart() {
   sparks.userData.seed = Array.from({ length: SPARKS }, () => Math.random());
   kart.add(sparks);
 
-  const smoke = new THREE.Group();
-  const smokeMat = new THREE.MeshBasicMaterial({ color: 0xeaf4ef, transparent: true, opacity: .42, depthWrite: false });
-  for (let i = 0; i < 14; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(.24, 1), smokeMat));
-  smoke.visible = false;
-  kart.add(smoke);
-  kart.userData = { plant, flames, jets, beams, sparks, sparkMat, smoke };
+  kart.userData = { plant, flames, jets, beams, sparks, sparkMat };
   return kart;
 }
 
@@ -410,7 +405,7 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { plant, flames, jets, beams, sparks, sparkMat, smoke } = kart.userData;
+  const { plant, flames, jets, beams, sparks, sparkMat } = kart.userData;
   plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
@@ -419,7 +414,7 @@ function updateScene(dt, now) {
     for (const jet of jets) jet.scale.z = jet.scale.z * .6 + (.7 + Math.random() * .7) * .4;
     // 빛줄기는 길이가 살짝 요동친다. 부스터가 살아 있는 느낌을 준다.
     beams.forEach((beam, i) => {
-      beam.scale.z = 8.5 + Math.sin(now * 17 + i * 1.7) * 2.2 + Math.random() * 1.6;
+      beam.scale.z = 19 + Math.sin(now * 17 + i * 1.7) * 3.4 + Math.random() * 2.6;
     });
   }
 
@@ -443,14 +438,6 @@ function updateScene(dt, now) {
   }
 
   if (state.drifting) dropMarks();
-  smoke.visible = state.drifting;
-  smoke.children.forEach((cloud, i) => {
-    const phase = (now * 1.8 + i / smoke.children.length) % 1;
-    cloud.position.set((i % 2 ? .72 : -.72) * (1 + phase * .5), .3 + phase * .8, .7 + phase * 2.4);
-    // 끝에서 다시 줄여 사라지듯 보이게 한다. 같은 재질을 나눠 써서
-    // 투명도는 못 건드리므로 크기로 대신한다.
-    cloud.scale.setScalar((.4 + phase * 2) * Math.min(1, (1 - phase) * 3));
-  });
 
   // 카메라는 카트보다 늦게 돈다. 시야가 카트를 그대로 따라 휙 돌면 멀미가 난다.
   // 코너에서는 카트만 화면 안에서 비스듬해지고 시야는 천천히 따라붙는다.
