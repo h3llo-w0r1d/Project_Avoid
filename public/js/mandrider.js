@@ -243,12 +243,33 @@ for (const button of document.querySelectorAll('[data-drive]')) {
   button.addEventListener('lostpointercapture', up);
 }
 
+// 카운트다운 소리. 소리 파일을 두지 않고 그때그때 만들어 낸다 — 짧은 삐 소리
+// 하나뿐이라 내려받을 것이 없다. AudioContext 는 브라우저가 클릭 전에는 못 만들게
+// 막으므로 출발 버튼을 누를 때 만든다.
+let audioContext = null;
+function beep(frequency, seconds, volume) {
+  if (!audioContext) return;
+  const osc = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+  osc.type = 'square';
+  osc.frequency.value = frequency;
+  const at = audioContext.currentTime;
+  gain.gain.setValueAtTime(0, at);
+  gain.gain.linearRampToValueAtTime(volume, at + .012);
+  // 뚝 끊으면 '딱' 하고 잡음이 섞인다. 끝을 완만히 줄인다.
+  gain.gain.exponentialRampToValueAtTime(.0001, at + seconds);
+  osc.connect(gain).connect(audioContext.destination);
+  osc.start(at);
+  osc.stop(at + seconds + .03);
+}
+
 let state = createKartState();
 let raceActive = false;
 let raceFinished = false;
 let lap = 1;
 let lapArmed = false;
 let previousProgress = 0;
+let lastCount = 0;
 
 function reset() {
   state = createKartState();
@@ -300,6 +321,8 @@ document.getElementById('start-race').addEventListener('click', () => {
   document.getElementById('map-select').classList.add('hidden');
   // 속도계·게이지·미니맵은 여기서부터 보인다(CSS 의 body.racing).
   document.body.classList.add('racing');
+  audioContext ??= new (window.AudioContext ?? window.webkitAudioContext)();
+  audioContext.resume?.();
   raceActive = true;
   if (raceSky) scene.background = raceSky;
   kart.visible = true;
@@ -348,6 +371,13 @@ function updateHud() {
   slotBox.setAttribute('aria-label', `부스터 ${state.boosts}개`);
   // 완주 안내는 카운트다운 자리를 빌려 쓴다. 주행 중 잡다한 알림까지
   // 여기에 띄우면 화면 한가운데가 계속 번쩍여 방해된다.
+  // 숫자가 바뀌는 순간에만 울린다. 매 프레임 검사하지만 값이 같으면 지나간다.
+  const counting = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer) : 0;
+  if (counting !== lastCount) {
+    if (counting > 0) beep(760, .17, .16);
+    else if (raceActive && state.startTimer > -1) beep(1210, .55, .22);
+    lastCount = counting;
+  }
   countdownEl.textContent = raceActive && state.startTimer > 0 ? Math.ceil(state.startTimer)
     : raceActive && state.startTimer > -0.75 ? 'GO!'
     : raceFinished ? state.notice : '';
@@ -418,12 +448,14 @@ function updateScene(dt, now) {
     });
   }
 
-  sparks.visible = state.drifting;
-  if (state.drifting) {
-    // 충전 단계를 색으로 알린다 — 흰빛에서 주황, 끝에 파랑.
-    const tier = state.driftTime >= 1.4 ? 2 : state.driftTime >= .6 ? 1 : 0;
-    sparkMat.color.setHex([0xfff2cc, 0xffa02e, 0x66e6ff][tier]);
-    sparkMat.size = .26 + tier * .09;
+  // 충전이 시작돼야 불똥이 튄다. 미끄러지자마자 튀면 흰 얼룩만 남고
+  // 무엇을 알리는 표시인지도 흐려진다.
+  sparks.visible = state.drifting && state.driftTime >= .6;
+  if (sparks.visible) {
+    // 충전 단계를 색으로 알린다 — 주황에서 파랑.
+    const tier = state.driftTime >= 1.4 ? 1 : 0;
+    sparkMat.color.setHex([0xffa02e, 0x66e6ff][tier]);
+    sparkMat.size = .3 + tier * .1;
     const seed = sparks.userData.seed;
     const array = sparks.geometry.attributes.position.array;
     // 미끄러지는 바깥쪽으로 튄다. 안쪽으로 튀면 도는 방향이 거꾸로 읽힌다.
