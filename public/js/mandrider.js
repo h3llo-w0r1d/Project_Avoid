@@ -100,16 +100,26 @@ function makeKart() {
     flames.add(core);
     jets.push(core);
   }
-  // 뒤로 퍼져 나가는 충격파 고리. 속도감이 한눈에 들어온다.
-  const rings = [];
-  const ringGeo = new THREE.TorusGeometry(.5, .06, 8, 22);
-  for (let i = 0; i < 3; i++) {
-    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
-      color: 0xa8f2ff, transparent: true, opacity: .6, blending: THREE.AdditiveBlending, depthWrite: false
-    }));
-    ring.position.set(0, .5, 1);
-    flames.add(ring);
-    rings.push(ring);
+  // 뒤로 길게 뻗는 빛줄기. 짧은 불꽃만으로는 속도가 안 보인다.
+  // 뾰족한 끝을 뒤(+Z)로 돌리고 밑동을 원점에 붙여, scale.z 가 곧 길이가 되게 한다.
+  const beamGeo = new THREE.ConeGeometry(.17, 1, 6, 1, true);
+  beamGeo.rotateX(Math.PI / 2);
+  beamGeo.translate(0, 0, .5);
+  const beamMat = new THREE.MeshBasicMaterial({
+    color: 0x7fe4ff, transparent: true, opacity: .62, blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const beams = [];
+  for (const [x, y, yaw, thick] of [
+    [-.5, .52, -.045, 1], [.5, .52, .045, 1],
+    [-.92, .34, -.13, .72], [.92, .34, .13, .72],
+    [0, .8, 0, .85]
+  ]) {
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.position.set(x, y, .85);
+    beam.rotation.y = yaw;
+    beam.scale.set(thick, thick, 10);
+    flames.add(beam);
+    beams.push(beam);
   }
   flames.visible = false;
   kart.add(flames);
@@ -132,13 +142,66 @@ function makeKart() {
   for (let i = 0; i < 14; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(.24, 1), smokeMat));
   smoke.visible = false;
   kart.add(smoke);
-  kart.userData = { plant, flames, jets, rings, sparks, sparkMat, smoke };
+  kart.userData = { plant, flames, jets, beams, sparks, sparkMat, smoke };
   return kart;
 }
 
 const kart = makeKart();
 scene.add(kart);
 kart.visible = false;
+
+// 드리프트 자국. 카트를 따라다니면 안 되고 노면에 남아야 하므로 씬에 직접 붙인다.
+// 정해진 개수를 돌려 쓴다 — 오래된 것부터 덮어써서 꼬리가 일정 길이로 유지된다.
+const MARK_COUNT = 160;
+const markGeo = new THREE.PlaneGeometry(1, 1);
+markGeo.rotateX(-Math.PI / 2);
+const marks = new THREE.InstancedMesh(
+  markGeo,
+  // 노면(y=2)보다 살짝 위, 차선(2.06)보다는 아래에 깔아 z 다툼을 피한다.
+  new THREE.MeshBasicMaterial({ color: 0x40202a, transparent: true, opacity: .5, depthWrite: false }),
+  MARK_COUNT
+);
+marks.frustumCulled = false;
+scene.add(marks);
+const markMatrix = new THREE.Matrix4();
+const markQuaternion = new THREE.Quaternion();
+const markUp = new THREE.Vector3(0, 1, 0);
+const markScale = new THREE.Vector3();
+const markPosition = new THREE.Vector3();
+let markIndex = 0;
+let markLastX = 0;
+let markLastZ = 0;
+
+function clearMarks() {
+  markScale.set(0, 0, 0);
+  markPosition.set(0, -50, 0);
+  markQuaternion.identity();
+  for (let i = 0; i < MARK_COUNT; i++) {
+    marks.setMatrixAt(i, markMatrix.compose(markPosition, markQuaternion, markScale));
+  }
+  marks.instanceMatrix.needsUpdate = true;
+  markIndex = 0;
+}
+clearMarks();
+
+// 미끄러지는 동안 일정 거리마다 좌우로 한 쌍씩 찍는다. 매 프레임 찍으면
+// 느릴 때 뭉치고 빠를 때 끊긴다.
+function dropMarks() {
+  const moved = Math.hypot(state.x - markLastX, state.z - markLastZ);
+  if (moved < .9) return;
+  markLastX = state.x;
+  markLastZ = state.z;
+  const rightX = Math.cos(state.heading);
+  const rightZ = Math.sin(state.heading);
+  markQuaternion.setFromAxisAngle(markUp, -state.heading);
+  markScale.set(.42, 1, 1.5);
+  for (const side of [-1, 1]) {
+    markPosition.set(state.x + rightX * side * .62, 2.02, state.z + rightZ * side * .62);
+    marks.setMatrixAt(markIndex, markMatrix.compose(markPosition, markQuaternion, markScale));
+    markIndex = (markIndex + 1) % MARK_COUNT;
+  }
+  marks.instanceMatrix.needsUpdate = true;
+}
 
 const keys = Object.create(null);
 const pressed = new Set();
@@ -202,6 +265,9 @@ function reset() {
   lap = 1;
   lapArmed = false;
   previousProgress = 0;
+  markLastX = state.x;
+  markLastZ = state.z;
+  clearMarks();
   pressed.clear();
   for (const key of Object.keys(keys)) keys[key] = false;
 }
@@ -344,19 +410,16 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { plant, flames, jets, rings, sparks, sparkMat, smoke } = kart.userData;
+  const { plant, flames, jets, beams, sparks, sparkMat, smoke } = kart.userData;
   plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
   if (flames.visible) {
     // 불꽃은 길이만 떤다. 굵기까지 흔들면 지글거려 보기 싫다.
     for (const jet of jets) jet.scale.z = jet.scale.z * .6 + (.7 + Math.random() * .7) * .4;
-    rings.forEach((ring, i) => {
-      const t = (now * 2.4 + i / rings.length) % 1;
-      ring.position.z = 1.1 + t * 3.4;
-      ring.scale.setScalar(.45 + t * 1.9);
-      ring.rotation.z = now * 1.7;
-      ring.material.opacity = .55 * (1 - t);   // 멀어질수록 사그라든다
+    // 빛줄기는 길이가 살짝 요동친다. 부스터가 살아 있는 느낌을 준다.
+    beams.forEach((beam, i) => {
+      beam.scale.z = 8.5 + Math.sin(now * 17 + i * 1.7) * 2.2 + Math.random() * 1.6;
     });
   }
 
@@ -379,6 +442,7 @@ function updateScene(dt, now) {
     sparks.geometry.attributes.position.needsUpdate = true;
   }
 
+  if (state.drifting) dropMarks();
   smoke.visible = state.drifting;
   smoke.children.forEach((cloud, i) => {
     const phase = (now * 1.8 + i / smoke.children.length) % 1;
