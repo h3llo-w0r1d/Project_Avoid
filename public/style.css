@@ -2649,6 +2649,8 @@ kbd {
 }
 #mandrider-btn:hover { transform: scale(1.04); box-shadow: 0 0 46px rgba(91, 220, 81, 0.38); }
 .mandrider-icon { font-size: 43px; line-height: 1; filter: drop-shadow(0 4px 5px rgba(0,0,0,.5)); }
+/* 만드라고라 그림은 글자 크기를 따라간다 — 화면이 좁아지면 아이콘도 같이 준다. */
+.mandrider-icon img { display: block; width: 1.15em; height: 1.15em; object-fit: contain; }
 .mandrider-label { font-size: 15px; text-shadow: 0 2px 6px #000; white-space: nowrap; }
 .mandrider-label i { color: #b9ff86; font-style: normal; }
 
@@ -3121,7 +3123,7 @@ kbd {
     linear-gradient(#333a3f, #14181b);
   clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
 }
-.promo-kart { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: 58px; line-height: 1; filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
+.promo-kart { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); width: 78px; height: 78px; object-fit: contain; filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
 
 /* 기둥 — 칸마다 X 브레이스, 칸 경계마다 가로 브레이스, 좌우 주각.
    무늬는 아래를 기준으로 쌓아야 차오르는 전류와 격자가 안 어긋난다. */

@@ -627,7 +627,11 @@ const PROMO = {
   foot: t('promo.foot'),
   cta: t('promo.cta'),
   // 그림과 갈 곳도 여기 둔다. 다음 소식을 낼 때 openPromo 는 안 건드리게.
-  art: '<div class="promo-art"><span class="promo-road"></span><span class="promo-kart">🪴</span></div>',
+  // 화분은 이모지가 아니라 게임에 나오는 만드라고라를 그대로 찍어 쓴다 —
+  // 창을 열 때 만든다. 캐릭터 그림기는 이 아래에서 만들어진다.
+  art: () => '<div class="promo-art"><span class="promo-road"></span>' +
+    `<img class="promo-kart" src="${characters.preview('mandragora')}" alt="">` +
+    '</div>',
   go: () => { location.href = '/mandrider.html'; }
 };
 
@@ -657,7 +661,7 @@ function openPromo(promo) {
     `<h2 class="promo-title">${promo.title}</h2>` +
     `<p class="promo-lead">${promo.lead.join('<br>')}</p>` +
     // 그림 한 컷. 글을 안 읽어도 무엇을 말하는지 짐작이 가야 한다.
-    (promo.art ?? '') +
+    (promo.art?.() ?? '') +
     `<p class="promo-foot">${promo.foot}</p>` +
     `<button type="button" class="primary promo-go">${promo.cta}</button>` +
     '<div class="promo-acts">' +
@@ -1638,6 +1642,11 @@ const characters = new CharacterUI({
     net.send({ type: 'character', id });
   }
 });
+
+// 타이틀의 만드라이더 버튼도 이모지 화분 대신 진짜 만드라고라를 쓴다.
+// 버튼에서 본 것과 게임에서 타는 것이 달라 보이면 같은 것으로 안 읽힌다.
+const riderIcon = document.querySelector('#mandrider-btn .mandrider-icon');
+if (riderIcon) riderIcon.innerHTML = `<img src="${characters.preview('mandragora')}" alt="">`;
 
 // 점프할 때 낼 내 목소리.
 //
