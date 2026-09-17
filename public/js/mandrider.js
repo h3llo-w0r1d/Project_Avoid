@@ -345,8 +345,14 @@ for (const card of mapCards) {
   // 같은 함수라 코스를 고쳐도 카드가 옛 모습으로 남지 않는다.
   const thumb = card.querySelector('.course-thumb');
   if (thumb) {
+    // 그림칸에 딱 맞는 크기로 그린다. 캔버스를 CSS 로 늘리거나 줄이면 여백까지
+    // 같이 줄어들어 코스가 판 밖으로 잘려 나간다.
+    const box = thumb.getBoundingClientRect();
+    const ratio = Math.min(devicePixelRatio, 2);
+    thumb.width = Math.round(box.width * ratio);
+    thumb.height = Math.round(box.height * ratio);
     drawCourse(thumb, sampleCourse(MAPS[card.dataset.map], 400),
-      { padding: 18, halo: 11, line: 6, startDot: 5 });
+      { padding: 9 * ratio, halo: 7 * ratio, line: 3.6 * ratio, startDot: 3 * ratio });
   }
   card.addEventListener('click', () => {
     chosenMap = card.dataset.map;

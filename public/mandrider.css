@@ -28,8 +28,7 @@ body:not(.racing) #countdown { display: none; }
 .map-thumb { position: relative; display: grid; place-items: center; width: 105px; height: 78px; overflow: hidden; border-radius: 13px; background: linear-gradient(145deg, #68ba47, #34774e); box-shadow: inset 0 0 24px rgba(5,31,16,.45); }
 /* 코스가 세로로 길어 그림 칸만 조금 높다. 판 색은 다른 칸과 같다. */
 .map-card .map-thumb { width: 105px; height: 112px; }
-/* 캔버스는 이미지와 달리 width:auto 가 원본 픽셀 폭이라 상자를 넘는다. 넣어서 맞춘다. */
-.map-thumb canvas { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.map-thumb canvas { width: 100%; height: 100%; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
 .map-copy { display: grid; gap: 6px; }
 .map-copy strong { font-size: 18px; }
 .map-copy small { color: #d5e5d0; line-height: 1.4; }
