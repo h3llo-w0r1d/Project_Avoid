@@ -5,6 +5,9 @@ import * as THREE from 'three';
 export const MAPS = {
   circuit: {
     name: '빌리지 손가락 하나 잘림',
+    // 랭킹에 오르는 코스. 계정에 최고 기록이 한 줄뿐이라 여러 코스를 받으면
+    // 무엇을 잰 기록인지 알 수 없어진다.
+    ranked: true,
     scale: 4,
     // 3차선에서 4차선으로 넓혔다. 차선 폭(9.2)을 유지하려고 반폭도 같이 올렸다.
     // 헤어핀 곡률 반경이 32 라 상판 끝(반폭+4.3=21.6)보다 넉넉히 크고, 이웃한
@@ -29,12 +32,58 @@ export const MAPS = {
     giants: 15,
     // 그중 붉은 쪽은 따로 세운다. 닿으면 그 자리에서 판이 끝난다.
     killers: 5
+  },
+
+  // 탑 꼭대기에서 출발해 열 바퀴를 돌아 내려온 뒤, 마지막에 직선으로 빠져나간다.
+  // 서킷과 달리 고리가 아니라 한 줄짜리 길이다(closed: false) — 끝에 닿으면 끝난다.
+  //
+  // 내려갈수록 반지름이 준다. 같은 반지름으로 쌓으면 위에서 봤을 때 원 하나로
+  // 겹쳐 보여, 미니맵에서 어디쯤인지 읽을 수가 없다.
+  tower: {
+    name: '만드라고라 탑',
+    scale: 1,
+    // 미니맵은 옆에서 본 모습으로. 위에서 보면 열 바퀴가 원 하나로 겹친다.
+    sideView: true,
+    roadHalfWidth: 14,
+    closed: false,
+    giants: 0,
+    spiral: {
+      turns: 10,
+      topRadius: 110,   // 한 바퀴 690 → 아래로 갈수록 짧아진다
+      endRadius: 45,    // 서킷 헤어핀(32)보다 넉넉해 마지막 바퀴도 돌 만하다
+      drop: 21,         // 한 바퀴에 내려오는 높이. 10바퀴면 210
+      exit: 360         // 다 내려온 뒤 곧게 빠지는 길
+    }
   }
 };
 
-// 코스 곡선. 맵 정의의 점을 이어 닫힌 고리를 만든다.
+// 나선 한 줄. 위에서 아래로 돌아 내려온 뒤 마지막에 곧게 빠진다.
+// 한 바퀴를 16 조각으로 나눈다 — 더 성기면 모서리가 지고, 더 잘게 나눠도
+// CatmullRom 이 어차피 부드럽게 이어 준다.
+function spiralPoints({ turns, topRadius, endRadius, drop, exit }) {
+  const steps = turns * 16;
+  const points = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const angle = t * turns * Math.PI * 2;
+    const radius = topRadius + (endRadius - topRadius) * t;
+    points.push(new THREE.Vector3(Math.cos(angle) * radius, (1 - t) * drop * turns, Math.sin(angle) * radius));
+  }
+  // 마지막에 가던 방향 그대로 곧게 빠진다. 바닥 높이는 그대로 0.
+  const last = points[points.length - 1];
+  const before = points[points.length - 2];
+  const dir = new THREE.Vector3(last.x - before.x, 0, last.z - before.z).normalize();
+  for (const at of [.25, .5, .75, 1]) {
+    points.push(new THREE.Vector3(last.x + dir.x * exit * at, 0, last.z + dir.z * exit * at));
+  }
+  return points;
+}
+
+// 코스 곡선. 서킷은 점을 이어 닫힌 고리로, 탑은 나선 한 줄로 만든다.
 export const courseCurve = (map) => new THREE.CatmullRomCurve3(
-  map.points.map(([x, z]) => new THREE.Vector3(x * map.scale, 0, z * map.scale)), true, 'centripetal');
+  map.spiral ? spiralPoints(map.spiral)
+    : map.points.map(([x, z]) => new THREE.Vector3(x * map.scale, 0, z * map.scale)),
+  map.closed !== false, 'centripetal');
 
 export function sampleCourse(map, count) {
   const curve = courseCurve(map);
@@ -44,15 +93,19 @@ export function sampleCourse(map, count) {
 // 코스 윤곽을 캔버스에 그리고, 그린 자리를 되돌려 준다. 달리는 위치 표시도
 // 이 함수를 써야 선과 점이 같은 자리에 찍힌다. 주행 중 미니맵과 맵 고르는
 // 화면이 같은 그림을 쓰므로, 코스를 고쳐도 한쪽만 옛 모습으로 남지 않는다.
-export function drawCourse(canvas, samples, { padding = 16, halo = 9, line = 5, startDot = 0 } = {}) {
+// down 을 켜면 세로축이 Z 가 아니라 높이가 된다 — 탑처럼 위아래로 쌓인 길은
+// 위에서 내려다보면 원 하나로 겹쳐 보여, 어디쯤 내려왔는지 읽을 수가 없다.
+export function drawCourse(canvas, samples,
+    { padding = 16, halo = 9, line = 5, startDot = 0, closed = true, down = false } = {}) {
+  const axis = down ? 'y' : 'z';
   const context = canvas.getContext('2d');
   const bounds = samples.reduce((box, point) => ({
     minX: Math.min(box.minX, point.x), maxX: Math.max(box.maxX, point.x),
-    minZ: Math.min(box.minZ, point.z), maxZ: Math.max(box.maxZ, point.z)
-  }), { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity });
+    minV: Math.min(box.minV, point[axis]), maxV: Math.max(box.maxV, point[axis])
+  }), { minX: Infinity, maxX: -Infinity, minV: Infinity, maxV: -Infinity });
   const place = (point) => [
     padding + (point.x - bounds.minX) / (bounds.maxX - bounds.minX) * (canvas.width - padding * 2),
-    padding + (bounds.maxZ - point.z) / (bounds.maxZ - bounds.minZ) * (canvas.height - padding * 2)
+    padding + (bounds.maxV - (point[axis] ?? 0)) / (bounds.maxV - bounds.minV) * (canvas.height - padding * 2)
   ];
   for (const [color, width] of [['rgba(10,18,24,.85)', halo], ['#f7fbff', line]]) {
     context.beginPath();
@@ -60,7 +113,7 @@ export function drawCourse(canvas, samples, { padding = 16, halo = 9, line = 5, 
       const [x, y] = place(point);
       if (i) context.lineTo(x, y); else context.moveTo(x, y);
     });
-    context.closePath();
+    if (closed) context.closePath();   // 한 줄짜리 길은 끝과 시작을 잇지 않는다
     context.strokeStyle = color;
     context.lineWidth = width;
     context.lineJoin = context.lineCap = 'round';
@@ -84,28 +137,36 @@ export function buildTrack(scene, renderer, map, minimap) {
   const halfWidth = map.roadHalfWidth;
   const trackCurve = courseCurve(map);
   const trackSamples = sampleCourse(map, 1200);
+  // 고리(서킷)와 한 줄짜리 길(탑)을 같이 다룬다. 한 줄짜리는 마지막 지점에서
+  // 처음으로 돌아가면 안 된다 — 탑 꼭대기와 바닥을 잇는 거대한 조각이 생긴다.
+  const closed = map.closed !== false;
+  const count = trackSamples.length;
+  const next = (i) => (closed ? (i + 1) % count : Math.min(i + 1, count - 1));
+  const spans = closed ? count : count - 1;
   const trackNormals = trackSamples.map((point, i) => {
-    const previous = trackSamples[(i - 1 + trackSamples.length) % trackSamples.length];
-    const next = trackSamples[(i + 1) % trackSamples.length];
-    return new THREE.Vector2(next.z - previous.z, -(next.x - previous.x)).normalize();
+    const previous = trackSamples[closed ? (i - 1 + count) % count : Math.max(i - 1, 0)];
+    const after = trackSamples[next(i)];
+    return new THREE.Vector2(after.z - previous.z, -(after.x - previous.x)).normalize();
   });
 
+  // y 는 코스 높이 위로 얼마나 띄울지다. 탑처럼 내려가는 길에서는 지점마다
+  // 바닥 높이가 달라, 숫자를 그대로 쓰면 길이 공중에 남는다.
   function stripGeometry(offsetA, offsetB, y) {
     const positions = [];
     const indices = [];
     const uvs = [];
     let distance = 0;
-    for (let i = 0; i < trackSamples.length; i++) {
+    for (let i = 0; i < spans; i++) {
       const p = trackSamples[i];
-      const q = trackSamples[(i + 1) % trackSamples.length];
+      const q = trackSamples[next(i)];
       const pNormal = trackNormals[i];
-      const qNormal = trackNormals[(i + 1) % trackSamples.length];
+      const qNormal = trackNormals[next(i)];
       const base = positions.length / 3;
       positions.push(
-        p.x + pNormal.x * offsetA, y, p.z + pNormal.y * offsetA,
-        p.x + pNormal.x * offsetB, y, p.z + pNormal.y * offsetB,
-        q.x + qNormal.x * offsetA, y, q.z + qNormal.y * offsetA,
-        q.x + qNormal.x * offsetB, y, q.z + qNormal.y * offsetB
+        p.x + pNormal.x * offsetA, p.y + y, p.z + pNormal.y * offsetA,
+        p.x + pNormal.x * offsetB, p.y + y, p.z + pNormal.y * offsetB,
+        q.x + qNormal.x * offsetA, q.y + y, q.z + qNormal.y * offsetA,
+        q.x + qNormal.x * offsetB, q.y + y, q.z + qNormal.y * offsetB
       );
       const nextDistance = distance + p.distanceTo(q);
       uvs.push(0, distance / 10, 1, distance / 10, 0, nextDistance / 10, 1, nextDistance / 10);
@@ -117,6 +178,18 @@ export function buildTrack(scene, renderer, map, minimap) {
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
+    // 길이 어느 쪽으로 감기느냐에 따라 삼각형 앞뒤가 뒤집힌다(나선은 서킷과
+    // 반대로 감긴다). 뒤집힌 채로 두면 위에서 오는 빛을 못 받아 노면이
+    // 새까맣게 보인다. 법선이 아래를 보면 감는 순서를 되돌린다.
+    if (geometry.attributes.normal.getY(0) < 0) {
+      for (let i = 0; i < indices.length; i += 3) {
+        const keep = indices[i];
+        indices[i] = indices[i + 2];
+        indices[i + 2] = keep;
+      }
+      geometry.setIndex(indices);
+      geometry.computeVertexNormals();
+    }
     return geometry;
   }
 
@@ -152,22 +225,22 @@ export function buildTrack(scene, renderer, map, minimap) {
   scene.add(new THREE.Mesh(stripGeometry(halfWidth + .55, halfWidth + .9, 2.055), edgeMat));
   const curbGeo = new THREE.BoxGeometry(1, 1, 1);
   const curbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6 });
-  const curbs = new THREE.InstancedMesh(curbGeo, curbMat, trackSamples.length * 2);
+  const curbs = new THREE.InstancedMesh(curbGeo, curbMat, spans * 2);
   const curbMatrix = new THREE.Matrix4();
   const curbQuaternion = new THREE.Quaternion();
   const curbGreen = new THREE.Color(0x327a4b);
   const curbIvory = new THREE.Color(0xfff4cf);
   let curbIndex = 0;
   for (const side of [-1, 1]) {
-    for (let i = 0; i < trackSamples.length; i++) {
+    for (let i = 0; i < spans; i++) {
       const p = trackSamples[i];
-      const q = trackSamples[(i + 1) % trackSamples.length];
+      const q = trackSamples[next(i)];
       const angle = Math.atan2(q.x - p.x, q.z - p.z);
       curbQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
       curbMatrix.compose(
         new THREE.Vector3(
           (p.x + q.x) / 2 + trackNormals[i].x * side * (halfWidth + 1.4),
-          2.12,
+          (p.y + q.y) / 2 + 2.12,
           (p.z + q.z) / 2 + trackNormals[i].y * side * (halfWidth + 1.4)
         ),
         curbQuaternion,
@@ -185,7 +258,7 @@ export function buildTrack(scene, renderer, map, minimap) {
   // 중심선 길이로 만들면 코너 안쪽에서 호가 더 짧은데도 같은 길이를 쓰게 돼
   // 막대가 넘쳐 부챗살처럼 삐져나온다.
   const barrierStep = 5;
-  const barrierCount = Math.ceil(trackSamples.length / barrierStep) * 2;
+  const barrierCount = Math.ceil(spans / barrierStep) * 2;
   const wallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .55, metalness: .06 });
   const capMat = new THREE.MeshStandardMaterial({ color: 0xdfe7dc, metalness: .45, roughness: .3 });
   const postMat = new THREE.MeshStandardMaterial({ color: 0x2c5240, metalness: .2, roughness: .5 });
@@ -200,8 +273,8 @@ export function buildTrack(scene, renderer, map, minimap) {
   let capIndex = 0;
   let postIndex = 0;
   for (const side of [-1, 1]) {
-    for (let i = 0; i < trackSamples.length; i += barrierStep) {
-      const j = (i + barrierStep) % trackSamples.length;
+    for (let i = 0; i < spans; i += barrierStep) {
+      const j = closed ? (i + barrierStep) % count : Math.min(i + barrierStep, count - 1);
       const offset = halfWidth + 3.15;
       const ax = trackSamples[i].x + trackNormals[i].x * side * offset;
       const az = trackSamples[i].z + trackNormals[i].y * side * offset;
@@ -210,21 +283,22 @@ export function buildTrack(scene, renderer, map, minimap) {
       const length = Math.hypot(bx - ax, bz - az);
       curbQuaternion.setFromAxisAngle(up, Math.atan2(bx - ax, bz - az));
       const mid = new THREE.Vector3((ax + bx) / 2, 0, (az + bz) / 2);
+      const floor = (trackSamples[i].y + trackSamples[j].y) / 2;
 
       // 벽면 — 흰 패널에 초록을 섞어 서킷 방벽처럼 보이게 한다.
-      mid.y = 2.72;
+      mid.y = floor + 2.72;
       curbMatrix.compose(mid, curbQuaternion, new THREE.Vector3(.3, 1.24, length + .04));
       walls.setMatrixAt(wallIndex, curbMatrix);
       walls.setColorAt(wallIndex++, Math.floor(i / barrierStep) % 4 === 0 ? curbGreen : curbIvory);
 
       // 위에 얹는 둥근 손잡이 — 각진 상자만 있으면 값싸 보인다.
-      mid.y = 3.42;
+      mid.y = floor + 3.42;
       curbMatrix.compose(mid, curbQuaternion, new THREE.Vector3(1, 1, length + .04));
       caps.setMatrixAt(capIndex++, curbMatrix);
 
       // 기둥은 이음매마다 하나. 벽보다 조금 밖으로 물려 세운다.
       curbMatrix.compose(
-        new THREE.Vector3(ax + trackNormals[i].x * side * .18, 2.6, az + trackNormals[i].y * side * .18),
+        new THREE.Vector3(ax + trackNormals[i].x * side * .18, trackSamples[i].y + 2.6, az + trackNormals[i].y * side * .18),
         curbQuaternion,
         new THREE.Vector3(.34, 1.36, .34)
       );
@@ -240,7 +314,7 @@ export function buildTrack(scene, renderer, map, minimap) {
 
   const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf7f5e9, roughness: .75 });
   const stripeGeo = new THREE.BoxGeometry(.18, .05, 5.5);
-  const stripePerLine = trackSamples.length / 3;
+  const stripePerLine = Math.floor(spans / 3);
   // 4차선 — 가운데 한 줄과 좌우 한 줄씩. 폭에서 재므로 맵이 넓어져도 비율이 같다.
   const LANE_LINES = [-halfWidth * .53, 0, halfWidth * .53];
   const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripePerLine * LANE_LINES.length);
@@ -250,11 +324,11 @@ export function buildTrack(scene, renderer, map, minimap) {
     for (let i = 0; i < stripePerLine; i++) {
       const sample = i * 3;
       const p = trackSamples[sample];
-      const q = trackSamples[(sample + 1) % trackSamples.length];
+      const q = trackSamples[next(sample)];
       stripeMatrix.makeRotationY(Math.atan2(q.x - p.x, q.z - p.z));
       stripeMatrix.setPosition(
         p.x + trackNormals[sample].x * lane,
-        2.06,
+        p.y + 2.06,
         p.z + trackNormals[sample].y * lane
       );
       stripes.setMatrixAt(stripeIndex++, stripeMatrix);
@@ -282,7 +356,7 @@ export function buildTrack(scene, renderer, map, minimap) {
   for (let i = 0; i < tileCount; i++) {
     const across = (i - (tileCount - 1) / 2) * 1.36;
     curbMatrix.compose(
-      new THREE.Vector3(start.x + startNormal.x * across, 2.08, start.z + startNormal.y * across),
+      new THREE.Vector3(start.x + startNormal.x * across, start.y + 2.08, start.z + startNormal.y * across),
       curbQuaternion,
       tileScale
     );
@@ -363,7 +437,7 @@ export function buildTrack(scene, renderer, map, minimap) {
   const minimapBase = document.createElement('canvas');
   minimapBase.width = minimap.width;
   minimapBase.height = minimap.height;
-  const minimapPoint = drawCourse(minimapBase, trackSamples);
+  const minimapPoint = drawCourse(minimapBase, trackSamples, { closed, down: !!map.sideView });
 
-  return { trackSamples, trackNormals, start, startHeading, halfWidth, minimapBase, minimapPoint };
+  return { trackSamples, trackNormals, start, startHeading, halfWidth, closed, minimapBase, minimapPoint };
 }

@@ -198,7 +198,7 @@ function moveGiants() {
     // 가는 쪽을 보고 걷는다. 걸음마다 통통 튀어야 살아 있는 것처럼 보인다.
     const dx = giant.x - giant.lastX;
     const dz = giant.z - giant.lastZ;
-    giant.body.position.set(giant.x, 2 + Math.abs(Math.sin(wave * 6)) * .55, giant.z);
+    giant.body.position.set(giant.x, point.y + 2 + Math.abs(Math.sin(wave * 6)) * .55, giant.z);
     if (Math.hypot(dx, dz) > .002) giant.body.rotation.y = Math.atan2(dx, dz);
   }
 }
@@ -249,7 +249,7 @@ function dropMarks() {
   markQuaternion.setFromAxisAngle(markUp, -state.heading);
   markScale.set(.42, 1, 1.5);
   for (const side of [-1, 1]) {
-    markPosition.set(state.x + rightX * side * .62, 2.02, state.z + rightZ * side * .62);
+    markPosition.set(state.x + rightX * side * .62, groundY + 2.02, state.z + rightZ * side * .62);
     marks.setMatrixAt(markIndex, markMatrix.compose(markPosition, markQuaternion, markScale));
     markIndex = (markIndex + 1) % MARK_COUNT;
   }
@@ -369,6 +369,8 @@ function reset() {
   lap = 1;
   lapArmed = false;
   previousProgress = 0;
+  lastSample = 0;
+  groundY = track.start.y;
   lapBanner = '';
   lapBannerUntil = 0;
   markLastX = state.x;
@@ -391,8 +393,10 @@ for (const card of mapCards) {
     const ratio = Math.min(devicePixelRatio, 2);
     thumb.width = Math.round(box.width * ratio);
     thumb.height = Math.round(box.height * ratio);
-    drawCourse(thumb, sampleCourse(MAPS[card.dataset.map], 400),
-      { padding: 9 * ratio, halo: 7 * ratio, line: 3.6 * ratio, startDot: 3 * ratio });
+    const map = MAPS[card.dataset.map];
+    drawCourse(thumb, sampleCourse(map, 400),
+      { padding: 9 * ratio, halo: 7 * ratio, line: 3.6 * ratio, startDot: 3 * ratio,
+        closed: map.closed !== false, down: !!map.sideView });
   }
   card.addEventListener('click', () => {
     chosenMap = card.dataset.map;
@@ -416,6 +420,9 @@ function askTicket() {
 
 // 완주 기록을 올리고, 화면에 붙일 문구를 돌려준다.
 async function sendRecord(seconds) {
+  // 랭킹은 서킷 하나만 받는다. 계정에 최고 기록 한 줄뿐이라 다른 코스 시간이
+  // 섞이면 무엇을 잰 기록인지 알 수 없다.
+  if (!MAPS[chosenMap]?.ranked) return '이 맵은 랭킹에 올라가지 않습니다';
   if (!runTicket) return '기록은 남지 않았습니다';
   const ticket = runTicket;
   runTicket = null;                 // 표는 한 번만 쓴다. 다시 달리면 새로 받는다.
@@ -462,7 +469,8 @@ document.getElementById('start-race').addEventListener('click', () => {
   reset();
   const forwardX = Math.sin(state.heading);
   const forwardZ = -Math.cos(state.heading);
-  camera.position.set(state.x - forwardX * 18, 9.5, state.z - forwardZ * 18);
+  // 탑은 꼭대기(210)에서 출발한다. 높이를 빼먹으면 첫 화면이 하늘만 보인다.
+  camera.position.set(state.x - forwardX * 18, groundY + 9.5, state.z - forwardZ * 18);
   previous = performance.now();
 });
 
@@ -475,6 +483,7 @@ const countdownEl = document.getElementById('countdown');
 const againEl = document.getElementById('race-again');
 againEl.addEventListener('click', () => { if (raceActive) reset(); });
 const lapEl = document.getElementById('lap');
+const lapLabelEl = document.querySelector('.lap span');
 const timeEl = document.getElementById('race-time');
 const speedDialEl = document.getElementById('speed-dial');
 
@@ -482,7 +491,7 @@ function drawMinimap() {
   if (!track) return;
   minimapContext.clearRect(0, 0, minimap.width, minimap.height);
   minimapContext.drawImage(track.minimapBase, 0, 0);
-  const [x, y] = track.minimapPoint(raceActive ? state : track.start);
+  const [x, y] = track.minimapPoint(raceActive ? { x: state.x, z: state.z, y: groundY } : track.start);
   minimapContext.beginPath();
   minimapContext.arc(x, y, 5, 0, Math.PI * 2);
   minimapContext.fillStyle = '#ff4d2e';
@@ -521,15 +530,37 @@ function updateHud() {
     : state.elapsed < lapBannerUntil ? lapBanner : '';
   // 숫자 한 글자는 화면 가득 차도 되지만 '완주!'·'2 / 2 LAP' 은 좁은 화면에서 넘친다.
   countdownEl.classList.toggle('wordy', countdownEl.textContent.length > 3);
-  lapEl.textContent = `${Math.min(lap, LAPS)} / ${LAPS}`;
+  // 한 줄짜리 길은 바퀴가 없다. 몇 바퀴째 대신 얼마나 내려왔는지를 보여 준다.
+  if (raceActive && !track.closed) {
+    lapEl.textContent = `${Math.min(100, Math.round(previousProgress * 100))}%`;
+    lapLabelEl.textContent = 'DOWN';
+  } else {
+    lapEl.textContent = `${Math.min(lap, LAPS)} / ${LAPS}`;
+    lapLabelEl.textContent = 'LAP';
+  }
   drawMinimap();
 }
 
+// 지금 달리고 있는 코스 지점. 직전 자리에서 앞뒤로 조금만 살핀다.
+//
+// 전부 뒤지면 탑에서 무너진다 — 나선은 같은 X·Z 자리에 길이 열 겹 쌓여 있어,
+// 거리만 재면 바로 위나 아래 층에 붙어 버린다. 그러면 몇 바퀴를 건너뛴 것으로
+// 세고, 길 밖으로 밀어내는 계산도 엉뚱한 층을 기준으로 한다.
+// 한 프레임에 움직이는 거리는 1 남짓(최고속 58 × 0.02초)이라 ±90 이면 넉넉하다.
+const LOOK_AROUND = 90;
+let lastSample = 0;
+// 지금 밟고 있는 노면 높이. 탑은 지점마다 높이가 달라, 이 값을 빼면 카트가
+// 꼭대기 높이에 그대로 떠서 달린다.
+let groundY = 0;
 function nearestTrackSample() {
   const samples = track.trackSamples;
-  let index = 0;
+  const count = samples.length;
+  let index = lastSample;
   let distanceSq = Infinity;
-  for (let i = 0; i < samples.length; i++) {
+  for (let step = -LOOK_AROUND; step <= LOOK_AROUND; step++) {
+    const i = track.closed
+      ? (lastSample + step + count) % count
+      : Math.min(count - 1, Math.max(0, lastSample + step));
     const dx = state.x - samples[i].x;
     const dz = state.z - samples[i].z;
     const candidate = dx * dx + dz * dz;
@@ -538,28 +569,40 @@ function nearestTrackSample() {
       distanceSq = candidate;
     }
   }
+  lastSample = index;
   return { index, point: samples[index] };
+}
+
+// 완주 처리는 바퀴를 다 돌았을 때와 한 줄짜리 길 끝에 닿았을 때가 같다.
+function finishRace() {
+  raceFinished = true;
+  state.speed = state.lateral = 0;
+  const time = state.elapsed;
+  state.notice = `완주! ${time.toFixed(2)}초`;
+  state.noticeTimer = 3600;
+  // 서버 답을 기다리지 않는다 — 완주 문구가 먼저 뜨고, 순위는 오면 붙는다.
+  sendRecord(time).then((line) => {
+    if (raceFinished) state.notice = `완주! ${time.toFixed(2)}초 · ${line}`;
+  });
+  // 완주는 올라가는 세 음으로 — 바퀴 넘김과 헷갈리면 안 된다.
+  beep(880, .16, .2);
+  beep(1170, .16, .2, .17);
+  beep(1560, .6, .22, .34);
 }
 
 function updateLap(index) {
   const progress = index / track.trackSamples.length;
+  // 탑처럼 한 줄짜리 길은 끝까지 내려오면 끝이다. 바퀴를 셀 것이 없다.
+  if (!track.closed) {
+    if (progress > .995 && !raceFinished) finishRace();
+    previousProgress = progress;
+    return;
+  }
   if (progress > .42 && progress < .68) lapArmed = true;
   if (lapArmed && previousProgress > .85 && progress < .15) {
     lapArmed = false;
     if (lap === LAPS) {
-      raceFinished = true;
-      state.speed = state.lateral = 0;
-      const time = state.elapsed;
-      state.notice = `완주! ${time.toFixed(2)}초`;
-      state.noticeTimer = 3600;
-      // 서버 답을 기다리지 않는다 — 완주 문구가 먼저 뜨고, 순위는 오면 붙는다.
-      sendRecord(time).then((line) => {
-        if (raceFinished) state.notice = `완주! ${time.toFixed(2)}초 · ${line}`;
-      });
-      // 완주는 올라가는 세 음으로 — 바퀴 넘김과 헷갈리면 안 된다.
-      beep(880, .16, .2);
-      beep(1170, .16, .2, .17);
-      beep(1560, .6, .22, .34);
+      finishRace();
     } else {
       lap++;
       lapBanner = `${lap} / ${LAPS} LAP`;
@@ -581,7 +624,7 @@ function updateScene(dt, now) {
     camera.lookAt(0, 0, 0);
     return;
   }
-  kart.position.set(state.x, 1.94 + (state.hitWall ? .06 : 0), state.z);
+  kart.position.set(state.x, groundY + 1.94 + (state.hitWall ? .06 : 0), state.z);
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
@@ -614,9 +657,9 @@ function updateScene(dt, now) {
   cameraHeading += (state.heading - cameraHeading) * (1 - Math.exp(-dt * 3.2));
   const forwardX = Math.sin(cameraHeading);
   const forwardZ = -Math.cos(cameraHeading);
-  cameraTarget.set(state.x - forwardX * 18, 9.5, state.z - forwardZ * 18);
+  cameraTarget.set(state.x - forwardX * 18, groundY + 9.5, state.z - forwardZ * 18);
   camera.position.lerp(cameraTarget, 1 - Math.exp(-dt * 7));
-  cameraLook.set(state.x + forwardX * 15, 2.6, state.z + forwardZ * 15);
+  cameraLook.set(state.x + forwardX * 15, groundY + 2.6, state.z + forwardZ * 15);
   camera.lookAt(cameraLook);
   const roll = -state.lateral * .0009;
   camera.rotateZ(roll);
@@ -630,8 +673,8 @@ function updateScene(dt, now) {
   }
   camera.fov += ((state.boostTimer > 0 ? 76 : state.drifting ? 73 : 70) - camera.fov) * (1 - Math.exp(-dt * 6));
   camera.updateProjectionMatrix();
-  sun.position.set(state.x - 18, 28, state.z + 16);
-  sun.target.position.set(state.x, 0, state.z);
+  sun.position.set(state.x - 18, groundY + 28, state.z + 16);
+  sun.target.position.set(state.x, groundY, state.z);
 }
 
 function resize() {
@@ -662,6 +705,7 @@ function frame(nowMs) {
       boostPressed: pressed.has('boost')
     }, dt);
     const nearest = nearestTrackSample();
+    groundY = nearest.point.y;
     constrainToRoad(state, nearest.point.x, nearest.point.z, track.halfWidth);
     moveGiants();
     for (const giant of giants) {
