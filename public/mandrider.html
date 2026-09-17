@@ -12,7 +12,16 @@
 
   <section id="map-select" class="map-select" aria-labelledby="map-title">
     <div class="map-panel">
+      <button id="settings-btn" class="settings-btn" type="button" aria-expanded="false" aria-controls="settings-box" title="설정">⚙</button>
       <p class="map-kicker">MANDRIDER</p>
+      <div id="settings-box" class="settings-box hidden">
+        <label class="set-row"><span>배경음악</span>
+          <input id="set-music" type="range" min="0" max="100" step="5"><b id="set-music-val"></b></label>
+        <label class="set-row"><span>효과음</span>
+          <input id="set-sfx" type="range" min="0" max="100" step="5"><b id="set-sfx-val"></b></label>
+        <label class="set-row set-check"><input id="set-endless" type="checkbox">
+          <span>무한 부스터<small>켜면 기록이 랭킹에 올라가지 않습니다</small></span></label>
+      </div>
       <h1 id="map-title">달릴 맵을 골라 주세요</h1>
       <button class="map-card selected" type="button" aria-pressed="true" data-map="circuit">
         <span class="map-thumb" aria-hidden="true">

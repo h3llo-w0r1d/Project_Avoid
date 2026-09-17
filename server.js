@@ -1293,11 +1293,14 @@ app.post('/api/mandrider/record', (req, res) => {
   if (check.error) return res.status(400).json({ error: t(req, check.error) });
 
   // 어느 맵을 달렸는지. 관리 화면 기록에 남는다(랭킹은 지정한 맵만 받는다).
-  const mapName = String(req.body?.map ?? '').slice(0, 40) || '알 수 없음';
+  const rawMap = String(req.body?.map ?? '').slice(0, 40) || '알 수 없음';
+  // 무한 부스터로 달린 판. 랭킹에는 못 올라가고, 기록에는 그렇게 적어 둔다.
+  const endless = req.body?.endless === true;
+  const mapName = endless ? `${rawMap} (무한부스터)` : rawMap;
   // 랭킹에 오르는 코스는 서버가 정한다. 브라우저가 "이건 랭킹용" 이라고 말하게
   // 두면 짧은 코스를 달리고 서킷 기록이라 우길 수 있다.
   // (맵 이름을 바꾸면 이 줄도 같이 바꿔야 한다 — mandrider-track.js 의 ranked 맵)
-  const ranked = mapName === RANKED_MAP && !died;
+  const ranked = rawMap === RANKED_MAP && !died && !endless;
   // 사람이 낼 수 없는 완주 기록은 여기서 거른다(죽은 판은 볼 필요가 없다).
   if (ranked && seconds < MANDRIDER_FLOOR_SECONDS) {
     return res.status(400).json({ error: t(req, 'api.invalidTime') });
@@ -1324,6 +1327,7 @@ app.post('/api/mandrider/record', (req, res) => {
   }
 
   if (died) return res.json({ died: true });
+  if (endless) return res.json({ endless: true });
   if (!ranked) return res.json({ unranked: true });
   if (admin) return res.json({ excluded: true });
   if (!req.user?.nickname) return res.json({ needLogin: true });

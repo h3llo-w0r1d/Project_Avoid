@@ -316,6 +316,10 @@ for (const button of document.querySelectorAll('[data-drive]')) {
 // 하나뿐이라 내려받을 것이 없다. AudioContext 는 브라우저가 클릭 전에는 못 만들게
 // 막으므로 출발 버튼을 누를 때 만든다.
 let audioContext = null;
+// 효과음(삐- 소리·끼익 소리)이 지나는 길. 설정에서 이 손잡이 하나만 돌리면
+// 소리가 다 같이 줄어든다. 배경음악은 <audio> 라 따로 논다.
+let sfxBus = null;
+const sfxOut = () => sfxBus ?? audioContext.destination;
 // delay 를 주면 그만큼 뒤에 울린다 — 두 음을 이어 붙여 '딩동' 을 만들 때 쓴다.
 function beep(frequency, seconds, volume, delay = 0) {
   if (!audioContext) return;
@@ -328,7 +332,7 @@ function beep(frequency, seconds, volume, delay = 0) {
   gain.gain.linearRampToValueAtTime(volume, at + .012);
   // 뚝 끊으면 '딱' 하고 잡음이 섞인다. 끝을 완만히 줄인다.
   gain.gain.exponentialRampToValueAtTime(.0001, at + seconds);
-  osc.connect(gain).connect(audioContext.destination);
+  osc.connect(gain).connect(sfxOut());
   osc.start(at);
   osc.stop(at + seconds + .03);
 }
@@ -350,7 +354,7 @@ function startScreech() {
   filter.Q.value = 11;            // 좁게 조일수록 '쉬익' 이 아니라 '끼익' 에 가까워진다
   const gain = audioContext.createGain();
   gain.gain.value = 0;
-  source.connect(filter).connect(gain).connect(audioContext.destination);
+  source.connect(filter).connect(gain).connect(sfxOut());
   source.start();
   screech = { gain, filter };
 }
@@ -440,10 +444,12 @@ async function sendRecord(seconds, died = false) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       // 맵 이름은 관리 화면 기록에 남는다. 랭킹에 넣을지는 서버가 정한다.
-      body: JSON.stringify({ ticket, seconds, died, map: MAPS[chosenMap]?.name ?? chosenMap })
+      body: JSON.stringify({ ticket, seconds, died, endless: settings.endless,
+        map: MAPS[chosenMap]?.name ?? chosenMap })
     });
     const data = await res.json();
     if (!res.ok) return data?.error ?? '기록을 올리지 못했습니다';
+    if (data.endless) return '무한 부스터 판이라 랭킹에 안 올라갑니다';
     if (data.unranked) return '이 맵은 랭킹에 올라가지 않습니다';
     if (data.excluded) return '관리자 판이라 랭킹에 안 올라갑니다';
     if (data.needLogin) return '로그인하면 랭킹에 오릅니다';
@@ -459,7 +465,42 @@ async function sendRecord(seconds, died = false) {
 // <audio> 를 쓴다. 자동 재생은 막혀 있어 '출발' 을 누르는 순간에 튼다.
 const bgm = new window.Audio('./sounds/mandrider-bgm.mp3');
 bgm.loop = true;
-bgm.volume = .32;   // 드리프트 끼익 소리와 카운트다운이 묻히지 않을 만큼
+
+// 설정. 브라우저에 남겨 두고 다음에 들어와도 그대로 쓴다.
+// 기본 배경음악 32 는 드리프트 끼익 소리와 카운트다운이 묻히지 않는 크기다.
+const SETTINGS_KEY = 'mandrider.settings';
+const settings = { music: 32, sfx: 100, endless: false };
+try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}")); } catch { /* 막혀 있으면 기본값 */ }
+function saveSettings() {
+  bgm.volume = settings.music / 100;
+  if (sfxBus) sfxBus.gain.value = settings.sfx / 100;
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* 안 남아도 이번 판은 된다 */ }
+}
+
+const settingsBox = document.getElementById('settings-box');
+const settingsBtn = document.getElementById('settings-btn');
+settingsBtn.addEventListener('click', () => {
+  const open = settingsBox.classList.toggle('hidden');
+  settingsBtn.setAttribute('aria-expanded', String(!open));
+});
+for (const [key, slider, label] of [['music', 'set-music', 'set-music-val'], ['sfx', 'set-sfx', 'set-sfx-val']]) {
+  const input = document.getElementById(slider);
+  const out = document.getElementById(label);
+  input.value = settings[key];
+  out.textContent = `${settings[key]}%`;
+  input.addEventListener('input', () => {
+    settings[key] = Number(input.value);
+    out.textContent = `${settings[key]}%`;
+    saveSettings();
+  });
+}
+const endlessInput = document.getElementById('set-endless');
+endlessInput.checked = settings.endless;
+endlessInput.addEventListener('change', () => {
+  settings.endless = endlessInput.checked;
+  saveSettings();
+});
+saveSettings();
 
 // 아직 다듬는 중인 맵은 관리자에게만 보인다. 정의는 남아 있지만 고르는 화면에서만 빠진다.
 for (const card of mapCards) {
@@ -481,6 +522,11 @@ document.getElementById('start-race').addEventListener('click', () => {
   document.body.classList.add('racing');
   audioContext ??= new (window.AudioContext ?? window.webkitAudioContext)();
   audioContext.resume?.();
+  if (!sfxBus) {
+    sfxBus = audioContext.createGain();
+    sfxBus.connect(audioContext.destination);
+  }
+  sfxBus.gain.value = settings.sfx / 100;
   startScreech();
   // 소리를 막아 둔 브라우저도 있으니 실패해도 경기는 그대로 간다.
   bgm.play().catch(() => {});
@@ -734,6 +780,8 @@ function frame(nowMs) {
       acceleratePressed: pressed.has('up'),
       boostPressed: pressed.has('boost')
     }, dt);
+    // 무한 부스터 — 슬롯을 계속 채워 둔다. 물리 규칙은 그대로다.
+    if (settings.endless) state.boosts = 2;
     const nearest = nearestTrackSample();
     groundY = nearest.point.y;
     constrainToRoad(state, nearest.point.x, nearest.point.z, track.halfWidth);
