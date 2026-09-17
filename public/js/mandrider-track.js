@@ -31,12 +31,58 @@ export const MAPS = {
   }
 };
 
+// 코스 곡선. 맵 정의의 점을 이어 닫힌 고리를 만든다.
+export const courseCurve = (map) => new THREE.CatmullRomCurve3(
+  map.points.map(([x, z]) => new THREE.Vector3(x * map.scale, 0, z * map.scale)), true, 'centripetal');
+
+export function sampleCourse(map, count) {
+  const curve = courseCurve(map);
+  return Array.from({ length: count }, (_, i) => curve.getPointAt(i / count));
+}
+
+// 코스 윤곽을 캔버스에 그리고, 그린 자리를 되돌려 준다. 달리는 위치 표시도
+// 이 함수를 써야 선과 점이 같은 자리에 찍힌다. 주행 중 미니맵과 맵 고르는
+// 화면이 같은 그림을 쓰므로, 코스를 고쳐도 한쪽만 옛 모습으로 남지 않는다.
+export function drawCourse(canvas, samples, { padding = 16, halo = 9, line = 5, startDot = 0 } = {}) {
+  const context = canvas.getContext('2d');
+  const bounds = samples.reduce((box, point) => ({
+    minX: Math.min(box.minX, point.x), maxX: Math.max(box.maxX, point.x),
+    minZ: Math.min(box.minZ, point.z), maxZ: Math.max(box.maxZ, point.z)
+  }), { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity });
+  const place = (point) => [
+    padding + (point.x - bounds.minX) / (bounds.maxX - bounds.minX) * (canvas.width - padding * 2),
+    padding + (bounds.maxZ - point.z) / (bounds.maxZ - bounds.minZ) * (canvas.height - padding * 2)
+  ];
+  for (const [color, width] of [['rgba(10,18,24,.85)', halo], ['#f7fbff', line]]) {
+    context.beginPath();
+    samples.forEach((point, i) => {
+      const [x, y] = place(point);
+      if (i) context.lineTo(x, y); else context.moveTo(x, y);
+    });
+    context.closePath();
+    context.strokeStyle = color;
+    context.lineWidth = width;
+    context.lineJoin = context.lineCap = 'round';
+    context.stroke();
+  }
+  // 출발선 표시. 주행 중에는 카트가 그 자리를 대신 그리므로 미니맵에서는 끈다.
+  if (startDot) {
+    const [x, y] = place(samples[0]);
+    context.beginPath();
+    context.arc(x, y, startDot, 0, Math.PI * 2);
+    context.fillStyle = '#ff4d2e';
+    context.fill();
+    context.lineWidth = Math.max(1, startDot / 2.5);
+    context.strokeStyle = '#fff';
+    context.stroke();
+  }
+  return place;
+}
+
 export function buildTrack(scene, renderer, map, minimap) {
   const halfWidth = map.roadHalfWidth;
-  const trackCurve = new THREE.CatmullRomCurve3(
-    map.points.map(([x, z]) => new THREE.Vector3(x * map.scale, 0, z * map.scale)), true, 'centripetal'
-  );
-  const trackSamples = Array.from({ length: 1200 }, (_, i) => trackCurve.getPointAt(i / 1200));
+  const trackCurve = courseCurve(map);
+  const trackSamples = sampleCourse(map, 1200);
   const trackNormals = trackSamples.map((point, i) => {
     const previous = trackSamples[(i - 1 + trackSamples.length) % trackSamples.length];
     const next = trackSamples[(i + 1) % trackSamples.length];
@@ -316,32 +362,7 @@ export function buildTrack(scene, renderer, map, minimap) {
   const minimapBase = document.createElement('canvas');
   minimapBase.width = minimap.width;
   minimapBase.height = minimap.height;
-  const minimapBaseContext = minimapBase.getContext('2d');
-  const mapBounds = trackSamples.reduce((bounds, point) => ({
-    minX: Math.min(bounds.minX, point.x), maxX: Math.max(bounds.maxX, point.x),
-    minZ: Math.min(bounds.minZ, point.z), maxZ: Math.max(bounds.maxZ, point.z)
-  }), { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity });
-  function minimapPoint(point) {
-    const padding = 16;
-    return [
-      padding + (point.x - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX) * (minimap.width - padding * 2),
-      padding + (mapBounds.maxZ - point.z) / (mapBounds.maxZ - mapBounds.minZ) * (minimap.height - padding * 2)
-    ];
-  }
-  function strokeMinimap(color, width) {
-    minimapBaseContext.beginPath();
-    trackSamples.forEach((point, i) => {
-      const [x, y] = minimapPoint(point);
-      if (i) minimapBaseContext.lineTo(x, y); else minimapBaseContext.moveTo(x, y);
-    });
-    minimapBaseContext.closePath();
-    minimapBaseContext.strokeStyle = color;
-    minimapBaseContext.lineWidth = width;
-    minimapBaseContext.lineJoin = minimapBaseContext.lineCap = 'round';
-    minimapBaseContext.stroke();
-  }
-  strokeMinimap('rgba(10,18,24,.85)', 9);
-  strokeMinimap('#f7fbff', 5);
+  const minimapPoint = drawCourse(minimapBase, trackSamples);
 
   return { trackSamples, trackNormals, start, startHeading, halfWidth, minimapBase, minimapPoint };
 }

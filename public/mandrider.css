@@ -24,11 +24,11 @@ body:not(.racing) #race-hud,
 body:not(.racing) .controls-help,
 body:not(.racing) #race-touch,
 body:not(.racing) #countdown { display: none; }
-.map-card { width: 100%; display: grid; grid-template-columns: 105px 1fr auto; align-items: center; gap: 15px; padding: 12px; border: 2px solid #9cef67; border-radius: 19px; color: #fff; text-align: left; background: rgba(102,172,69,.18); cursor: pointer; }
+.map-card { width: 100%; display: grid; grid-template-columns: 124px 1fr auto; align-items: center; gap: 15px; padding: 12px; border: 2px solid #9cef67; border-radius: 19px; color: #fff; text-align: left; background: rgba(102,172,69,.18); cursor: pointer; }
 .map-thumb { position: relative; display: grid; place-items: center; width: 105px; height: 78px; overflow: hidden; border-radius: 13px; background: linear-gradient(145deg, #68ba47, #34774e); box-shadow: inset 0 0 24px rgba(5,31,16,.45); }
-.map-thumb svg { width: 88%; height: 88%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
-.map-thumb path { fill: none; stroke: #f8fbff; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
-.map-thumb circle { fill: #f8fbff; }
+.map-card .map-thumb { width: 124px; height: 148px; background: #1d2a2e url('./img/mandrider-asphalt-v1.webp') center/150px; box-shadow: inset 0 0 26px rgba(0,0,0,.6); }
+/* 캔버스는 이미지와 달리 width:auto 가 원본 픽셀 폭이라 상자를 넘는다. 넣어서 맞춘다. */
+.map-thumb canvas { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
 .map-copy { display: grid; gap: 6px; }
 .map-copy strong { font-size: 18px; }
 .map-copy small { color: #d5e5d0; line-height: 1.4; }
@@ -115,8 +115,9 @@ body:not(.racing) #countdown { display: none; }
 @media (max-width: 760px) {
   .map-select { justify-items: center; padding: 18px; }
   .map-panel { padding: 21px; }
-  .map-card { grid-template-columns: 82px 1fr; }
+  .map-card { grid-template-columns: 96px 1fr; }
   .map-thumb { width: 82px; height: 68px; }
+  .map-card .map-thumb { width: 96px; height: 118px; }
   .map-check { display: none; }
   .race-head div { display: none; }
 }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { buildPlant } from './plant.js';
 import { bounceOff, constrainToRoad, createKartState, stepKart, KART } from './mandrider-physics.js';
-import { MAPS, buildTrack } from './mandrider-track.js';
+import { MAPS, buildTrack, drawCourse, sampleCourse } from './mandrider-track.js';
 
 // 캐시에 화면이 남아도 관리자가 아니면 주행 코드까지 실행하지 않는다.
 const allowed = await fetch('/api/admin/me', { cache: 'no-store' })
@@ -341,6 +341,13 @@ function reset() {
 let chosenMap = 'circuit';
 const mapCards = [...document.querySelectorAll('.map-card')];
 for (const card of mapCards) {
+  // 카드 그림은 손으로 그리지 않고 실제 코스 좌표로 그린다. 주행 중 미니맵과
+  // 같은 함수라 코스를 고쳐도 카드가 옛 모습으로 남지 않는다.
+  const thumb = card.querySelector('.course-thumb');
+  if (thumb) {
+    drawCourse(thumb, sampleCourse(MAPS[card.dataset.map], 400),
+      { padding: 18, halo: 11, line: 6, startDot: 5 });
+  }
   card.addEventListener('click', () => {
     chosenMap = card.dataset.map;
     for (const other of mapCards) {
