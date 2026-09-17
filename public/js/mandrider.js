@@ -77,33 +77,62 @@ function makeKart() {
   plant.position.set(0, 0.96, 0);
   kart.add(plant);
 
+  // 부스터 불꽃 — 속이 흰 심지와 겉불꽃 두 겹. 더하기 혼합이라 겹칠수록 밝아진다.
   const flames = new THREE.Group();
-  const flameMat = new THREE.MeshBasicMaterial({ color: 0x6ee9ff, transparent: true, opacity: 0.9 });
-  for (const x of [-0.52, 0.52]) {
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.18, 1.1, 10), flameMat);
-    flame.rotation.x = Math.PI / 2;
-    flame.position.set(x, 0.58, 1.05);
-    flames.add(flame);
+  const flameSkin = new THREE.MeshBasicMaterial({
+    color: 0x35b6ff, transparent: true, opacity: .5, blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const flameCore = new THREE.MeshBasicMaterial({
+    color: 0xf0ffff, transparent: true, opacity: .95, blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  // 축을 뒤(+Z)로 눕혀 둔다. 그래야 scale.z 가 불꽃 길이가 된다.
+  const jetGeo = new THREE.ConeGeometry(.34, 1.6, 12);
+  jetGeo.rotateX(Math.PI / 2);
+  const jets = [];
+  for (const x of [-.46, .46]) {
+    const skin = new THREE.Mesh(jetGeo, flameSkin);
+    skin.position.set(x, .45, 1.15);
+    flames.add(skin);
+    jets.push(skin);
+    const core = new THREE.Mesh(jetGeo, flameCore);
+    core.position.set(x, .45, 1.0);
+    core.scale.set(.42, .42, .62);
+    flames.add(core);
+    jets.push(core);
+  }
+  // 뒤로 퍼져 나가는 충격파 고리. 속도감이 한눈에 들어온다.
+  const rings = [];
+  const ringGeo = new THREE.TorusGeometry(.5, .06, 8, 22);
+  for (let i = 0; i < 3; i++) {
+    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
+      color: 0xa8f2ff, transparent: true, opacity: .6, blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    ring.position.set(0, .5, 1);
+    flames.add(ring);
+    rings.push(ring);
   }
   flames.visible = false;
   kart.add(flames);
 
-  const sparks = new THREE.Group();
-  const sparkMat = new THREE.MeshBasicMaterial({ color: 0xffcf4f });
-  for (const x of [-1.15, 1.15]) {
-    const spark = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 0), sparkMat);
-    spark.position.set(x, 0.28, 0.72);
-    sparks.add(spark);
-  }
+  // 드리프트 불똥 — 점 입자로 뿌린다. 충전이 쌓일수록 색이 올라간다.
+  const SPARKS = 54;
+  const sparkGeo = new THREE.BufferGeometry();
+  sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
+  const sparkMat = new THREE.PointsMaterial({
+    size: .3, transparent: true, opacity: .95, blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const sparks = new THREE.Points(sparkGeo, sparkMat);
+  sparks.frustumCulled = false;   // 정점을 직접 갱신하므로 경계구가 맞지 않는다
   sparks.visible = false;
+  sparks.userData.seed = Array.from({ length: SPARKS }, () => Math.random());
   kart.add(sparks);
 
   const smoke = new THREE.Group();
   const smokeMat = new THREE.MeshBasicMaterial({ color: 0xeaf4ef, transparent: true, opacity: .42, depthWrite: false });
-  for (let i = 0; i < 8; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(.24, 1), smokeMat));
+  for (let i = 0; i < 14; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(.24, 1), smokeMat));
   smoke.visible = false;
   kart.add(smoke);
-  kart.userData = { plant, flames, sparks, smoke };
+  kart.userData = { plant, flames, jets, rings, sparks, sparkMat, smoke };
   return kart;
 }
 
@@ -315,17 +344,48 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { plant, flames, sparks, smoke } = kart.userData;
+  const { plant, flames, jets, rings, sparks, sparkMat, smoke } = kart.userData;
   plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
+
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
+  if (flames.visible) {
+    // 불꽃은 길이만 떤다. 굵기까지 흔들면 지글거려 보기 싫다.
+    for (const jet of jets) jet.scale.z = jet.scale.z * .6 + (.7 + Math.random() * .7) * .4;
+    rings.forEach((ring, i) => {
+      const t = (now * 2.4 + i / rings.length) % 1;
+      ring.position.z = 1.1 + t * 3.4;
+      ring.scale.setScalar(.45 + t * 1.9);
+      ring.rotation.z = now * 1.7;
+      ring.material.opacity = .55 * (1 - t);   // 멀어질수록 사그라든다
+    });
+  }
+
   sparks.visible = state.drifting;
+  if (state.drifting) {
+    // 충전 단계를 색으로 알린다 — 흰빛에서 주황, 끝에 파랑.
+    const tier = state.driftTime >= 1.4 ? 2 : state.driftTime >= .6 ? 1 : 0;
+    sparkMat.color.setHex([0xfff2cc, 0xffa02e, 0x66e6ff][tier]);
+    sparkMat.size = .26 + tier * .09;
+    const seed = sparks.userData.seed;
+    const array = sparks.geometry.attributes.position.array;
+    // 미끄러지는 바깥쪽으로 튄다. 안쪽으로 튀면 도는 방향이 거꾸로 읽힌다.
+    const outward = -state.driftDirection;
+    for (let i = 0; i < seed.length; i++) {
+      const t = (seed[i] + now * 2.6) % 1;
+      array[i * 3] = outward * (.6 + t * 1.8) + (seed[i] - .5) * (.4 + t * 1.2);
+      array[i * 3 + 1] = .1 + Math.sin(t * 3.1) * .5 * (.4 + seed[i]);
+      array[i * 3 + 2] = .3 + t * 2.3 + (seed[i] - .5) * .5;
+    }
+    sparks.geometry.attributes.position.needsUpdate = true;
+  }
+
   smoke.visible = state.drifting;
-  flames.scale.z = 0.8 + Math.random() * 0.45;
-  sparks.rotation.y += dt * 13;
   smoke.children.forEach((cloud, i) => {
     const phase = (now * 1.8 + i / smoke.children.length) % 1;
-    cloud.position.set((i % 2 ? .72 : -.72) * (1 + phase * .4), .32 + phase * .7, .78 + phase * 2.1);
-    cloud.scale.setScalar(.5 + phase * 1.9);
+    cloud.position.set((i % 2 ? .72 : -.72) * (1 + phase * .5), .3 + phase * .8, .7 + phase * 2.4);
+    // 끝에서 다시 줄여 사라지듯 보이게 한다. 같은 재질을 나눠 써서
+    // 투명도는 못 건드리므로 크기로 대신한다.
+    cloud.scale.setScalar((.4 + phase * 2) * Math.min(1, (1 - phase) * 3));
   });
 
   // 카메라는 카트보다 늦게 돈다. 시야가 카트를 그대로 따라 휙 돌면 멀미가 난다.
