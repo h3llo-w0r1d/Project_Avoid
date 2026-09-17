@@ -15,6 +15,10 @@ export const KART = Object.freeze({
   driftTurnRate: 0.62,
   driftEntryTurn: 0.055,
   driftSpeedLoss: 3.1,
+  // 드리프트로 게이지가 차는 속도. 1 이 예전 값이고 지금은 그보다 1.5배 빠르다.
+  driftCharge: 1.5,
+  // 벽을 정면으로 들이받았을 때 잃는 속도 비율. 스쳐 지나가면 이보다 훨씬 덜 잃는다.
+  wallBite: 0.4,
   driftExitSeconds: 0.22,
   driftMinSpeed: 10,
   driftMinTime: 0.18,
@@ -60,6 +64,14 @@ export function createKartState() {
   };
 }
 
+// 길 밖으로 나가면 가장자리로 되돌린다.
+//
+// 예전에는 속도 자체를 매 프레임 0.68 배로 깎았다. 그런데 벽에 붙어 있는 동안은
+// 이 계산이 계속 돌아, 살짝 스친 것만으로도 속도가 순식간에 0 으로 무너졌다
+// ('부딪히면 너무 멈추고 잘 안 움직인다'). 벽을 등지고 있어도 마찬가지였다.
+//
+// 이제는 벽을 파고드는 성분만 덜어 낸다. 벽과 나란한 성분은 남으므로 긁으면서도
+// 계속 달린다. 정면으로 처박으면 파고드는 성분이 곧 속도 전부라 제대로 멈춘다.
 export function constrainToRoad(state, centerX, centerZ, halfWidth = KART.roadHalfWidth) {
   const dx = state.x - centerX;
   const dz = state.z - centerZ;
@@ -68,10 +80,32 @@ export function constrainToRoad(state, centerX, centerZ, halfWidth = KART.roadHa
   const scale = (halfWidth - .15) / distance;
   state.x = centerX + dx * scale;
   state.z = centerZ + dz * scale;
-  state.speed *= .68;
-  state.lateral *= -.3;
-  state.steer *= .35;
-  state.hitWall = .2;
+
+  // 지금 실제로 가고 있는 방향(세계 기준). 앞으로 가는 힘과 옆으로 미끄러지는 힘을 합친 것.
+  const forwardX = Math.sin(state.heading);
+  const forwardZ = -Math.cos(state.heading);
+  const rightX = Math.cos(state.heading);
+  const rightZ = Math.sin(state.heading);
+  let vx = forwardX * state.speed + rightX * state.lateral;
+  let vz = forwardZ * state.speed + rightZ * state.lateral;
+
+  const nx = dx / distance;   // 벽을 향한 방향
+  const nz = dz / distance;
+  const into = vx * nx + vz * nz;
+  if (into > 0) {
+    vx -= nx * into;
+    vz -= nz * into;
+    // 긁히는 만큼만 깎는다. 스치면 거의 그대로, 정면일수록 많이 잃는다.
+    const bite = Math.min(1, into / Math.max(8, Math.hypot(vx, vz) + Math.abs(into)));
+    const keep = 1 - KART.wallBite * bite;
+    vx *= keep;
+    vz *= keep;
+  }
+  state.speed = vx * forwardX + vz * forwardZ;
+  state.lateral = vx * rightX + vz * rightZ;
+  // 조향은 거의 그대로 둔다 — 벽에 붙었을 때 빠져나올 방법이 조향뿐이다.
+  state.steer *= .9;
+  state.hitWall = .12;
   flash(state, '충돌!', .35);
   return true;
 }
@@ -212,7 +246,7 @@ export function stepKart(state, input, rawDt) {
     // 고속턴이라는 이름값을 하려면 속도가 남아야 한다. 이어 걸수록 덜 깎는다.
     state.speed = toward(state.speed, 0,
       KART.driftSpeedLoss * (.72 + Math.abs(state.steer) * .28) * (1 - chain * KART.chainKeep) * dt);
-    charge(state, Math.abs(state.speed) * (.7 + Math.abs(state.steer) * .3) * (1 + state.driftChain * .08) * dt);
+    charge(state, KART.driftCharge * Math.abs(state.speed) * (.7 + Math.abs(state.steer) * .3) * (1 + state.driftChain * .08) * dt);
   } else {
     const recoveryGrip = state.driftExitTimer > 0 ? KART.grip * 1.7 : boosting ? KART.grip * 1.35 : KART.grip;
     state.lateral = toward(state.lateral, 0, recoveryGrip * dt);

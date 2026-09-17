@@ -567,8 +567,11 @@ function updateHud() {
 // 전부 뒤지면 탑에서 무너진다 — 나선은 같은 X·Z 자리에 길이 열 겹 쌓여 있어,
 // 거리만 재면 바로 위나 아래 층에 붙어 버린다. 그러면 몇 바퀴를 건너뛴 것으로
 // 세고, 길 밖으로 밀어내는 계산도 엉뚱한 층을 기준으로 한다.
-// 한 프레임에 움직이는 거리는 1 남짓(최고속 58 × 0.02초)이라 ±90 이면 넉넉하다.
-const LOOK_AROUND = 90;
+// 살피는 범위는 지점 수가 아니라 거리로 잡는다. 지점 간격이 맵마다 달라서,
+// 같은 숫자를 쓰면 탑에서는 창이 한 바퀴를 통째로 덮어 버린다 — 그러면 바로
+// 위아래 층(X·Z 로 6 남짓 떨어져 있다)이 답으로 뽑힌다.
+// 한 프레임에 움직이는 거리는 3 을 넘지 않으므로(최고속 58 × 0.05초) 60 이면 넉넉하다.
+const LOOK_AROUND_UNITS = 60;
 let lastSample = 0;
 // 지금 밟고 있는 노면 높이. 탑은 지점마다 높이가 달라, 이 값을 빼면 카트가
 // 꼭대기 높이에 그대로 떠서 달린다.
@@ -576,9 +579,10 @@ let groundY = 0;
 function nearestTrackSample() {
   const samples = track.trackSamples;
   const count = samples.length;
+  const look = Math.max(6, Math.round(LOOK_AROUND_UNITS / samples[0].distanceTo(samples[1])));
   let index = lastSample;
   let distanceSq = Infinity;
-  for (let step = -LOOK_AROUND; step <= LOOK_AROUND; step++) {
+  for (let step = -look; step <= look; step++) {
     const i = track.closed
       ? (lastSample + step + count) % count
       : Math.min(count - 1, Math.max(0, lastSample + step));
@@ -590,6 +594,11 @@ function nearestTrackSample() {
       distanceSq = candidate;
     }
   }
+  // 창 안에서 찾은 것조차 길 폭 밖으로 멀다면, 그건 지금 달리는 층의 길이 아니다.
+  // 카트는 매 프레임 길 가장자리로 되돌려지므로 가까운 지점이 없을 수가 없다.
+  // 나선에서 벽에 끼면 창 끝자락이 답으로 뽑혀 몇십 지점씩 미끄러지는데,
+  // 그대로 두면 진행도가 튀고 완주 판정까지 건너뛴다.
+  if (distanceSq > (track.halfWidth + 8) ** 2) return { index: lastSample, point: samples[lastSample] };
   lastSample = index;
   return { index, point: samples[index] };
 }
