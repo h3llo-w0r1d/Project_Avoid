@@ -112,55 +112,67 @@ const kart = makeKart();
 scene.add(kart);
 kart.visible = false;
 
-// 길을 막는 큰 만드라고라. 맵의 giants 자리마다 하나씩 세워 길을 가로지르게 한다.
+// 길을 막고 돌아다니는 큰 만드라고라. 맵이 정한 수만큼 코스 전체에 고르게 세운다.
 // 몸통 반지름(1.45×배율의 최대 굵기)에 카트 몸집을 더한 값이 부딪치는 거리다.
 const GIANT_SCALE = 4.4;
 const GIANT_RADIUS = 3.6;
 let giants = [];
+// 자리는 세계 좌표가 아니라 '코스 어디쯤(along) · 길 가운데서 얼마나 옆(across)'
+// 으로 잡는다. 헤어핀이 이어지는 코스라 세계 좌표로 곧게 움직이면 길 밖으로
+// 걸어 나가 버린다. 코스를 따라 재면 어느 구간에서든 길 위에 남는다.
+const GIANT_MOVES = ['cross', 'along', 'circle'];
 function buildGiants(map) {
+  const count = map.giants ?? 0;
   const samples = track.trackSamples;
-  return (map.giants ?? []).map(([mapX, mapZ], i) => {
-    const x = mapX * map.scale;
-    const z = mapZ * map.scale;
-    let at = 0;
-    let best = Infinity;
-    for (let index = 0; index < samples.length; index++) {
-      const distance = (samples[index].x - x) ** 2 + (samples[index].z - z) ** 2;
-      if (distance < best) {
-        best = distance;
-        at = index;
-      }
-    }
+  const reach = track.halfWidth - GIANT_RADIUS;
+  return Array.from({ length: count }, (_, i) => {
     const body = buildPlant('mandragora');
     body.scale.setScalar(GIANT_SCALE);
     body.traverse((part) => { if (part.isMesh) part.castShadow = true; });
     scene.add(body);
+    // 3(움직임)과 5(속도)는 서로 나눠떨어지지 않아, 열다섯이면 조합이 겹치지 않는다.
+    const move = GIANT_MOVES[i % GIANT_MOVES.length];
+    const spin = Math.min(reach, 8.5);   // 원을 그리려면 가로세로 폭이 같아야 한다
     return {
       body,
-      centre: samples[at],
-      normal: track.trackNormals[at],
-      // 넷이 나란히 움직이면 피할 자리가 한 줄로 뚫려 장애물 구실을 못 한다.
-      // 속도와 시작 위치를 어긋나게 둔다.
-      swingRate: .52 + i * .13,
-      phase: i * 1.9,
-      reach: track.halfWidth - GIANT_RADIUS,
-      x, z
+      // 출발선 앞뒤는 비워 둔다 — 카운트다운이 끝나자마자 막히면 억울하다.
+      at: Math.round((i + 1) / (count + 1) * samples.length),
+      move,
+      rate: .28 + (i % 5) * .15,
+      phase: i * 1.37,
+      across: move === 'cross' ? reach : move === 'circle' ? spin : 0,
+      along: move === 'cross' ? 0 : move === 'circle' ? spin : 26,
+      // 길 따라 오가는 쪽은 한가운데를 비켜 한 차선에 선다. 좌우로 갈라 세운다.
+      lane: move === 'along' ? (i % 2 ? 1 : -1) * reach * .45 : 0,
+      x: 0, z: 0, lastX: 0, lastZ: 0
     };
   });
 }
 
-// 길을 가로질러 오간다. 부딪치는 판정도 이 자리에서 하므로 그리기가 아니라
-// 물리 차례에 부른다 — 화면만 늦게 그려지는 프레임에서 판정이 어긋나면 안 된다.
+// 저마다 다른 모양으로 돌아다닌다. 부딪치는 판정도 이 자리에서 하므로 그리기가
+// 아니라 물리 차례에 부른다 — 화면만 늦게 그려지는 프레임에서 판정이 어긋나면 안 된다.
 function moveGiants() {
+  const samples = track.trackSamples;
+  // 코스 지점은 길이로 고르게 잡혀 있다. 한 칸이 몇 걸음인지 재 두면
+  // '코스를 따라 얼마나' 를 지점 수로 바꿀 수 있다.
+  const step = samples[0].distanceTo(samples[1]);
   for (const giant of giants) {
-    const wave = state.elapsed * giant.swingRate + giant.phase;
-    const swing = Math.sin(wave) * giant.reach;
-    giant.x = giant.centre.x + giant.normal.x * swing;
-    giant.z = giant.centre.z + giant.normal.y * swing;
+    const wave = state.elapsed * giant.rate + giant.phase;
+    // 원을 그리는 쪽만 가로세로가 90° 어긋나야 한다. 나머지는 폭이 0 이라 절로 꺼진다.
+    const across = giant.lane + (giant.move === 'circle' ? Math.cos(wave) : Math.sin(wave)) * giant.across;
+    const along = Math.sin(wave) * giant.along;
+    const at = (giant.at + Math.round(along / step) % samples.length + samples.length) % samples.length;
+    const point = samples[at];
+    const normal = track.trackNormals[at];
+    giant.lastX = giant.x;
+    giant.lastZ = giant.z;
+    giant.x = point.x + normal.x * across;
+    giant.z = point.z + normal.y * across;
     // 가는 쪽을 보고 걷는다. 걸음마다 통통 튀어야 살아 있는 것처럼 보인다.
-    const facing = Math.cos(wave);
+    const dx = giant.x - giant.lastX;
+    const dz = giant.z - giant.lastZ;
     giant.body.position.set(giant.x, 2 + Math.abs(Math.sin(wave * 6)) * .55, giant.z);
-    giant.body.rotation.y = Math.atan2(giant.normal.x * facing, giant.normal.y * facing);
+    if (Math.hypot(dx, dz) > .002) giant.body.rotation.y = Math.atan2(dx, dz);
   }
 }
 
