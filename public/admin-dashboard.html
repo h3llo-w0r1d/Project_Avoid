@@ -356,6 +356,7 @@
     <button type="button" data-panel="poll">투표 결과</button>
     <button type="button" data-panel="tower">탑 오르기 기록</button>
     <button type="button" data-panel="bot">봇전 기록</button>
+    <button type="button" data-panel="mandrider">만드라이더 기록</button>
     <button type="button" data-panel="title">칭호 획득 기록</button>
     <button type="button" data-panel="rename">닉네임 변경 기록</button>
     <button type="button" data-panel="shop">상점 구매 기록</button>
@@ -447,6 +448,17 @@
     </div>
     <div class="wrap" id="tower-table"></div>
     <div class="pager" id="tower-pager"></div>
+  </section>
+
+  <section class="tab-panel hidden" id="panel-mandrider">
+    <h2>만드라이더 기록 <span class="dim" id="mandrider-count"></span></h2>
+    <p class="hint">완주한 판만 남습니다. 어느 맵을 몇 초에 돌았는지 · <b>최고</b> 는 그 계정 기록을 갈아치운 판입니다.</p>
+    <div class="tools">
+      <span class="grow"></span>
+      <button class="danger" id="mandrider-clear" type="button">전체 비우기</button>
+    </div>
+    <div class="wrap" id="mandrider-table"></div>
+    <div class="pager" id="mandrider-pager"></div>
   </section>
 
   <section class="tab-panel hidden" id="panel-bot">
@@ -970,7 +982,7 @@ async function clearScores() {
    받아 오지 않으려는 것이다. 페이지를 넘길 때마다 그 쪽만 받아 온다. */
 const PLAY_PER = 20;
 let playPage = 0;
-let towerPage = 0, botPage = 0;
+let towerPage = 0, botPage = 0, mandriderPage = 0;
 
 /* ---- 탑 오르기 기록(도전모드) — 성공·실패 모두 ---- */
 async function drawTowerLog() {
@@ -992,6 +1004,27 @@ async function drawTowerLog() {
     towerPage = Math.min(towerPage, pages - 1);
     pager('tower-pager', pages, towerPage, (p) => { towerPage = p; drawTowerLog(); });
   } catch (e) { $('tower-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
+}
+
+/* ---- 만드라이더 기록 — 완주한 판만 ---- */
+async function drawMandriderLog() {
+  try {
+    const { rows, total } = await api(`/api/admin/mandrider-log?limit=${PLAY_PER}&offset=${mandriderPage * PLAY_PER}`);
+    $('mandrider-count').textContent = total ? `${total}판` : '';
+    $('mandrider-clear').style.display = total ? '' : 'none';
+    if (total === 0) { $('mandrider-table').innerHTML = '<p class="empty">아직 기록이 없습니다</p>'; $('mandrider-pager').innerHTML = ''; return; }
+    const body = rows.map((r) =>
+      `<tr><td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
+        <td>${esc(r.map)}</td>
+        <td class="num">${r.seconds.toFixed(2)}초</td>
+        <td class="${r.best ? 'ok-yes' : 'dim'}">${r.best ? '최고' : '—'}</td>
+        <td class="dim">${stamp(r.at)}</td></tr>`).join('');
+    $('mandrider-table').innerHTML =
+      `<table><thead><tr><th>이름</th><th>맵</th><th>기록</th><th>최고</th><th>때</th></tr></thead><tbody>${body}</tbody></table>`;
+    const pages = Math.max(1, Math.ceil(total / PLAY_PER));
+    mandriderPage = Math.min(mandriderPage, pages - 1);
+    pager('mandrider-pager', pages, mandriderPage, (p) => { mandriderPage = p; drawMandriderLog(); });
+  } catch (e) { $('mandrider-table').innerHTML = `<p class="empty">${esc(e.message)}</p>`; }
 }
 
 /* ---- 봇전 기록 ---- */
@@ -1062,7 +1095,8 @@ async function drawRenameLog() {
 }
 
 /* ---- 탭 전환. 처음 열 때 그 표를 불러온다. ---- */
-const PANEL_DRAW = { tower: drawTowerLog, bot: drawBotLog, title: drawTitleLog, rename: drawRenameLog, shop: drawShopLog };
+const PANEL_DRAW = { tower: drawTowerLog, mandrider: drawMandriderLog, bot: drawBotLog,
+                     title: drawTitleLog, rename: drawRenameLog, shop: drawShopLog };
 function showPanel(name) {
   for (const b of document.querySelectorAll('#tabs button')) {
     b.classList.toggle('on', b.dataset.panel === name);
@@ -1408,6 +1442,8 @@ async function clearLog(path, label, after) {
 }
 $('tower-clear').addEventListener('click', () =>
   clearLog('/api/admin/challenge-log/clear', '탑 오르기 기록', () => { towerPage = 0; drawTowerLog(); }));
+$('mandrider-clear').addEventListener('click', () =>
+  clearLog('/api/admin/mandrider-log/clear', '만드라이더 기록', () => { mandriderPage = 0; drawMandriderLog(); }));
 $('botlog-clear').addEventListener('click', () =>
   clearLog('/api/admin/bot-log/clear', '봇전 기록', () => { botPage = 0; drawBotLog(); }));
 $('titlelog-clear').addEventListener('click', () =>

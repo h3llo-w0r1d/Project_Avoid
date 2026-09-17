@@ -1275,6 +1275,7 @@ app.post('/api/me/wallet/merge', (req, res) => {
 // 아래 하한은 사람이 낼 수 없는 값을 거르는 안전망이다. 코스 한 바퀴가 2817,
 // 최고 속도가 58 이라 두 바퀴는 아무리 질러도 60초 밑으로 못 내려간다.
 const MANDRIDER_FLOOR_SECONDS = 60;
+const RANKED_MAP = '빌리지 손가락 하나 잘림';
 
 app.post('/api/mandrider/start', (req, res) => {
   res.json({ ticket: runTickets.issue(clientIp(req), req.user?.id ?? null) });
@@ -1289,17 +1290,35 @@ app.post('/api/mandrider/record', (req, res) => {
   const check = runTickets.redeem(String(req.body?.ticket ?? ''), seconds, { ip, userId: req.user?.id ?? null });
   if (check.error) return res.status(400).json({ error: t(req, check.error) });
 
-  // 관리자 판은 버티기와 마찬가지로 랭킹에 안 남긴다. 화면은 그대로 뜬다.
-  if (isAdminUser(req.user)) return res.json({ excluded: true });
-  // 로그인해야 기록이 남는다. 계정 한 줄에 최고 기록을 적는 방식이라
-  // 게스트는 다음에 들어왔을 때 그게 자기 기록인지 알 길이 없다.
-  if (!req.user?.nickname) return res.json({ needLogin: true });
+  // 어느 맵을 달렸는지. 관리 화면 기록에 남는다(랭킹은 지정한 맵만 받는다).
+  const mapName = String(req.body?.map ?? '').slice(0, 40) || '알 수 없음';
+  // 랭킹에 오르는 코스는 서버가 정한다. 브라우저가 "이건 랭킹용" 이라고 말하게
+  // 두면 짧은 코스를 달리고 서킷 기록이라 우길 수 있다.
+  // (맵 이름을 바꾸면 이 줄도 같이 바꿔야 한다 — mandrider-track.js 의 ranked 맵)
+  const ranked = mapName === RANKED_MAP;
+  // 게스트는 이름이 없다 — 만드라이더는 이름을 따로 받지 않는다.
+  const who = req.user?.nickname ?? '게스트';
 
+  // 관리자 판은 버티기와 마찬가지로 랭킹에 안 남긴다. 화면은 그대로 뜨고,
+  // 관리 화면 기록에는 남는다 — 내가 달린 것도 봐야 하니까.
+  const admin = isAdminUser(req.user);
+  // 랭킹은 로그인한 계정만. 계정 한 줄에 최고 기록을 적는 방식이라 게스트는
+  // 다음에 들어왔을 때 그게 자기 기록인지 알 길이 없다.
   const ms = Math.round(seconds * 1000);
-  const best = users.setMandriderBest(req.user.id, ms);
-  plays.add({ name: req.user.nickname, seconds: Math.round(seconds * 100) / 100, userId: req.user.id,
-    mobile: isMobile(req.get('user-agent')), mode: 'mandrider', country: countryCode(ip),
-    isp: asnOrg(ip), lang: browserLang(req) });
+  const counts = ranked && !admin && !!req.user?.nickname;
+  const best = counts ? users.setMandriderBest(req.user.id, ms) : 0;
+
+  modeLogs.mandrider.add({ name: who, userId: req.user?.id ?? null,
+    map: mapName, seconds: Math.round(seconds * 100) / 100, best: counts && ms <= best ? 1 : 0 });
+  if (counts) {
+    plays.add({ name: who, seconds: Math.round(seconds * 100) / 100, userId: req.user.id,
+      mobile: isMobile(req.get('user-agent')), mode: 'mandrider', country: countryCode(ip),
+      isp: asnOrg(ip), lang: browserLang(req) });
+  }
+
+  if (!ranked) return res.json({ unranked: true });
+  if (admin) return res.json({ excluded: true });
+  if (!req.user?.nickname) return res.json({ needLogin: true });
   res.json({ best, rank: users.mandriderRankOf(best), improved: ms <= best });
 });
 
@@ -1472,7 +1491,8 @@ for (const [path, log] of Object.entries({
   'challenge-log': modeLogs.challenge,
   'title-log': modeLogs.title,
   'rename-log': modeLogs.rename,
-  'bot-log': modeLogs.bot
+  'bot-log': modeLogs.bot,
+  'mandrider-log': modeLogs.mandrider
 })) {
   app.get(`/api/admin/${path}`, requireAdmin, (req, res) => {
     const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));

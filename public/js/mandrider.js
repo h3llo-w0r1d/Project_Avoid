@@ -420,9 +420,6 @@ function askTicket() {
 
 // 완주 기록을 올리고, 화면에 붙일 문구를 돌려준다.
 async function sendRecord(seconds) {
-  // 랭킹은 서킷 하나만 받는다. 계정에 최고 기록 한 줄뿐이라 다른 코스 시간이
-  // 섞이면 무엇을 잰 기록인지 알 수 없다.
-  if (!MAPS[chosenMap]?.ranked) return '이 맵은 랭킹에 올라가지 않습니다';
   if (!runTicket) return '기록은 남지 않았습니다';
   const ticket = runTicket;
   runTicket = null;                 // 표는 한 번만 쓴다. 다시 달리면 새로 받는다.
@@ -430,10 +427,12 @@ async function sendRecord(seconds) {
     const res = await fetch('/api/mandrider/record', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ticket, seconds })
+      // 맵 이름은 관리 화면 기록에 남는다. 랭킹에 넣을지는 서버가 정한다.
+      body: JSON.stringify({ ticket, seconds, map: MAPS[chosenMap]?.name ?? chosenMap })
     });
     const data = await res.json();
     if (!res.ok) return data?.error ?? '기록을 올리지 못했습니다';
+    if (data.unranked) return '이 맵은 랭킹에 올라가지 않습니다';
     if (data.excluded) return '관리자 판이라 랭킹에 안 올라갑니다';
     if (data.needLogin) return '로그인하면 랭킹에 오릅니다';
     return data.improved
@@ -449,6 +448,16 @@ async function sendRecord(seconds) {
 const bgm = new window.Audio('./sounds/mandrider-bgm.mp3');
 bgm.loop = true;
 bgm.volume = .32;   // 드리프트 끼익 소리와 카운트다운이 묻히지 않을 만큼
+
+// 아직 다듬는 중인 맵은 관리자에게만 보인다. 정의는 남아 있지만 고르는 화면에서만 빠진다.
+for (const card of mapCards) {
+  if (!MAPS[card.dataset.map]?.draft) continue;
+  card.classList.add('hidden');
+  fetch('/api/admin/me', { cache: 'no-store' })
+    .then((res) => res.ok && res.json())
+    .then((me) => { if (me?.admin) card.classList.remove('hidden'); })
+    .catch(() => {});
+}
 
 document.getElementById('start-race').addEventListener('click', () => {
   const map = MAPS[chosenMap];
