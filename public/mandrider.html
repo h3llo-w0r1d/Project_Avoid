@@ -14,7 +14,7 @@
     <div class="map-panel">
       <p class="map-kicker">MANDRIDER</p>
       <h1 id="map-title">달릴 맵을 골라 주세요</h1>
-      <button class="map-card selected" type="button" aria-pressed="true">
+      <button class="map-card selected" type="button" aria-pressed="true" data-map="circuit">
         <span class="map-thumb" aria-hidden="true">
           <svg viewBox="0 0 100 76">
             <path d="M50 68H18V8H86V18H47V28H86V38H47V48H86V58H47V68H91Z" />
@@ -24,6 +24,16 @@
         <span class="map-copy"><strong>만드라고라 서킷</strong><small>난이도 ●●●○○ · 장거리 연속 헤어핀</small></span>
         <span class="map-check">선택됨</span>
       </button>
+      <button class="map-card" type="button" aria-pressed="false" data-map="speedway">
+        <span class="map-thumb" aria-hidden="true">
+          <svg viewBox="0 0 100 76">
+            <path d="M50 68L27.4 68L16.5 65.3L10 59.1L10 16.9L16.5 10.7L27.4 8L38.4 9.4L50 11.4L61.6 9.4L72.6 8L83.5 10.7L90 16.9L90 59.1L83.5 65.3L72.6 68Z" />
+            <path d="M50 68V73" /><circle cx="50" cy="74" r="2.2" />
+          </svg>
+        </span>
+        <span class="map-copy"><strong>그랑프리 스피드웨이</strong><small>난이도 ●●○○○ · 초광폭 트랙 · 대형 코너와 시케인</small></span>
+        <span class="map-check">선택됨</span>
+      </button>
       <button id="start-race" type="button">이 맵으로 출발</button>
       <a href="/">돌아가기</a>
     </div>
@@ -31,7 +41,7 @@
 
   <header class="race-head">
     <a href="/" aria-label="AvoidArc로 돌아가기">← 돌아가기</a>
-    <div><strong>만드라이더</strong><small>만드라고라 서킷</small></div>
+    <div><strong>만드라이더</strong><small id="race-map-name">만드라고라 서킷</small></div>
   </header>
 
   <section class="minimap-panel" aria-label="코스 지도">

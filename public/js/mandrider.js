@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { buildPlant } from './plant.js';
 import { constrainToRoad, createKartState, stepKart, KART } from './mandrider-physics.js';
+import { MAPS, buildTrack } from './mandrider-track.js';
 
 // 캐시에 화면이 남아도 관리자가 아니면 주행 코드까지 실행하지 않는다.
 const allowed = await fetch('/api/admin/me', { cache: 'no-store' })
@@ -35,66 +36,8 @@ sun.shadow.camera.right = sun.shadow.camera.top = 85;
 scene.add(sun);
 scene.add(sun.target);
 
-// 참고 미니맵의 비율과 일곱 연속 헤어핀 순서를 그대로 따라야 손가락형 실루엣이 유지된다.
-// 직선이 지루해서 가로로 줄였다. 코너는 손대지 않았다 — 헤어핀을 이루는 점들을
-// 통째로 같은 거리만큼 밀어서, 직선 길이만 빠지고 회전 반경은 그대로다.
-const MAP_SCALE = 4.0;
-const trackCurve = new THREE.CatmullRomCurve3([
-  [0, -50], [-38, -50], [-48, -48], [-54, -44], [-56, -38], [-56, 49],
-  [-54, 56], [-48, 62], [-38, 65], [43, 65], [50, 63], [54, 59],
-  [54, 55], [50, 51], [43, 49], [10, 49], [4, 47], [0, 43],
-  [0, 39], [4, 35], [10, 33], [43, 33], [50, 31], [54, 27],
-  [54, 23], [50, 19], [43, 17], [10, 17], [4, 15], [0, 11],
-  [0, 7], [4, 3], [10, 1], [43, 1], [50, -1], [54, -5],
-  [54, -9], [50, -13], [43, -15], [10, -15], [4, -17], [0, -21],
-  [0, -25], [4, -29], [10, -31], [56, -31], [63, -33], [68, -37],
-  [68, -42], [65, -46], [60, -49], [53, -50], [44, -50]
-].map(([x, z]) => new THREE.Vector3(x * MAP_SCALE, 0, z * MAP_SCALE)), true, 'centripetal');
-const trackSamples = Array.from({ length: 1200 }, (_, i) => trackCurve.getPointAt(i / 1200));
-const trackNormals = trackSamples.map((point, i) => {
-  const previous = trackSamples[(i - 1 + trackSamples.length) % trackSamples.length];
-  const next = trackSamples[(i + 1) % trackSamples.length];
-  return new THREE.Vector2(next.z - previous.z, -(next.x - previous.x)).normalize();
-});
-
-function stripGeometry(offsetA, offsetB, y) {
-  const positions = [];
-  const indices = [];
-  const uvs = [];
-  let distance = 0;
-  for (let i = 0; i < trackSamples.length; i++) {
-    const p = trackSamples[i];
-    const q = trackSamples[(i + 1) % trackSamples.length];
-    const pNormal = trackNormals[i];
-    const qNormal = trackNormals[(i + 1) % trackSamples.length];
-    const base = positions.length / 3;
-    positions.push(
-      p.x + pNormal.x * offsetA, y, p.z + pNormal.y * offsetA,
-      p.x + pNormal.x * offsetB, y, p.z + pNormal.y * offsetB,
-      q.x + qNormal.x * offsetA, y, q.z + qNormal.y * offsetA,
-      q.x + qNormal.x * offsetB, y, q.z + qNormal.y * offsetB
-    );
-    const nextDistance = distance + p.distanceTo(q);
-    uvs.push(0, distance / 10, 1, distance / 10, 0, nextDistance / 10, 1, nextDistance / 10);
-    indices.push(base, base + 2, base + 1, base + 1, base + 2, base + 3);
-    distance = nextDistance;
-  }
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  geometry.setIndex(indices);
-  geometry.computeVertexNormals();
-  return geometry;
-}
-
-function loadTiledTexture(path, repeatX, repeatY) {
-  const texture = new THREE.TextureLoader().load(path);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(repeatX, repeatY);
-  texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-  return texture;
-}
+const minimap = document.getElementById('minimap');
+const minimapContext = minimap.getContext('2d');
 
 let raceSky;
 new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
@@ -108,221 +51,9 @@ new THREE.TextureLoader().load('./img/mandrider-sky-v1.webp', (texture) => {
   if (raceActive) scene.background = raceSky;
 });
 
-// 주변 지형 없이도 난간이 공중에 뜨지 않도록 트랙 폭만큼의 구조물만 남긴다.
-const trackDeck = new THREE.Mesh(
-  stripGeometry(-17.3, 17.3, 1.78),
-  new THREE.MeshStandardMaterial({ color: 0xb9c1bd, metalness: .08, roughness: .82 })
-);
-trackDeck.receiveShadow = true;
-scene.add(trackDeck);
-
-const asphaltTexture = loadTiledTexture('./img/mandrider-asphalt-v1.webp', 3, 1);
-const roadMat = new THREE.MeshStandardMaterial({
-  map: asphaltTexture, bumpMap: asphaltTexture, bumpScale: .09, color: 0xd7d8d5, roughness: .88
-});
-const road = new THREE.Mesh(stripGeometry(-14.1, 14.1, 2), roadMat);
-road.receiveShadow = true;
-scene.add(road);
-const edgeMat = new THREE.MeshStandardMaterial({ color: 0xfff8de, roughness: .72 });
-scene.add(new THREE.Mesh(stripGeometry(-13.9, -13.55, 2.055), edgeMat));
-scene.add(new THREE.Mesh(stripGeometry(13.55, 13.9, 2.055), edgeMat));
-const curbGeo = new THREE.BoxGeometry(1, 1, 1);
-const curbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .6 });
-const curbs = new THREE.InstancedMesh(curbGeo, curbMat, trackSamples.length * 2);
-const curbMatrix = new THREE.Matrix4();
-const curbQuaternion = new THREE.Quaternion();
-const curbGreen = new THREE.Color(0x327a4b);
-const curbIvory = new THREE.Color(0xfff4cf);
-let curbIndex = 0;
-for (const side of [-1, 1]) {
-  for (let i = 0; i < trackSamples.length; i++) {
-    const p = trackSamples[i];
-    const q = trackSamples[(i + 1) % trackSamples.length];
-    const angle = Math.atan2(q.x - p.x, q.z - p.z);
-    curbQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-    curbMatrix.compose(
-      new THREE.Vector3(
-        (p.x + q.x) / 2 + trackNormals[i].x * side * 14.4,
-        2.12,
-        (p.z + q.z) / 2 + trackNormals[i].y * side * 14.4
-      ),
-      curbQuaternion,
-      new THREE.Vector3(.78, .16, p.distanceTo(q) + .16)
-    );
-    curbs.setMatrixAt(curbIndex, curbMatrix);
-    curbs.setColorAt(curbIndex++, Math.floor(i / 5) % 2 ? curbGreen : curbIvory);
-  }
-}
-curbs.instanceMatrix.needsUpdate = true;
-curbs.instanceColor.needsUpdate = true;
-scene.add(curbs);
-
-const barrierStep = 5;
-const barrierCount = Math.ceil(trackSamples.length / barrierStep) * 2;
-const railMat = new THREE.MeshStandardMaterial({ color: 0xe8eedb, metalness: .28, roughness: .42 });
-const postMat = new THREE.MeshStandardMaterial({ color: 0x325b46, metalness: .18, roughness: .5 });
-const rails = new THREE.InstancedMesh(curbGeo, railMat, barrierCount * 2);
-const posts = new THREE.InstancedMesh(curbGeo, postMat, barrierCount);
-let railIndex = 0;
-let postIndex = 0;
-for (const side of [-1, 1]) {
-  for (let i = 0; i < trackSamples.length; i += barrierStep) {
-    const p = trackSamples[i];
-    const q = trackSamples[(i + barrierStep) % trackSamples.length];
-    curbQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(q.x - p.x, q.z - p.z));
-    const x = (p.x + q.x) / 2 + trackNormals[i].x * side * 16.15;
-    const z = (p.z + q.z) / 2 + trackNormals[i].y * side * 16.15;
-    for (const y of [3.05, 3.82]) {
-      curbMatrix.compose(new THREE.Vector3(x, y, z), curbQuaternion, new THREE.Vector3(.24, .18, p.distanceTo(q) + .65));
-      rails.setMatrixAt(railIndex++, curbMatrix);
-    }
-    curbMatrix.compose(
-      new THREE.Vector3(p.x + trackNormals[i].x * side * 16.15, 3.15, p.z + trackNormals[i].y * side * 16.15),
-      curbQuaternion,
-      new THREE.Vector3(.5, 2.05, .5)
-    );
-    posts.setMatrixAt(postIndex++, curbMatrix);
-  }
-}
-rails.instanceMatrix.needsUpdate = true;
-posts.instanceMatrix.needsUpdate = true;
-rails.castShadow = posts.castShadow = true;
-scene.add(rails, posts);
-
-const stripeMat = new THREE.MeshStandardMaterial({ color: 0xf7f5e9, roughness: .75 });
-const stripeGeo = new THREE.BoxGeometry(.18, .05, 5.5);
-const stripePerLine = trackSamples.length / 3;
-const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripePerLine * 2);
-const stripeMatrix = new THREE.Matrix4();
-let stripeIndex = 0;
-for (const lane of [-4.7, 4.7]) {
-  for (let i = 0; i < stripePerLine; i++) {
-    const sample = i * 3;
-    const p = trackSamples[sample];
-    const q = trackSamples[(sample + 1) % trackSamples.length];
-    stripeMatrix.makeRotationY(Math.atan2(q.x - p.x, q.z - p.z));
-    stripeMatrix.setPosition(
-      p.x + trackNormals[sample].x * lane,
-      2.06,
-      p.z + trackNormals[sample].y * lane
-    );
-    stripes.setMatrixAt(stripeIndex++, stripeMatrix);
-  }
-}
-stripes.instanceMatrix.needsUpdate = true;
-scene.add(stripes);
-
-const start = trackSamples[0];
-const startNext = trackSamples[1];
-const startAngle = Math.atan2(startNext.x - start.x, startNext.z - start.z);
-const startHeading = Math.atan2(startNext.x - start.x, -(startNext.z - start.z));
-const startNormal = new THREE.Vector2(startNext.z - start.z, -(startNext.x - start.x)).normalize();
-for (let i = 0; i < 20; i++) {
-  const tile = new THREE.Mesh(
-    new THREE.BoxGeometry(1.36, .07, 1.35),
-    new THREE.MeshStandardMaterial({ color: i % 2 ? 0x202522 : 0xffffff, roughness: .75 })
-  );
-  const across = (i - 9.5) * 1.36;
-  tile.position.set(start.x + startNormal.x * across, 2.08, start.z + startNormal.y * across);
-  tile.rotation.y = startAngle;
-  scene.add(tile);
-}
-
-const gate = new THREE.Group();
-const gateStoneMat = new THREE.MeshStandardMaterial({ color: 0xe8d9b7, roughness: .68 });
-const gateGreenMat = new THREE.MeshStandardMaterial({ color: 0x285c43, metalness: .15, roughness: .42 });
-const gateGoldMat = new THREE.MeshStandardMaterial({ color: 0xe2bd5c, metalness: .48, roughness: .32 });
-for (const x of [-16.5, 16.5]) {
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.1, 1.3, 12), gateStoneMat);
-  base.position.set(x, .65, 0);
-  gate.add(base);
-  const post = new THREE.Mesh(new THREE.CylinderGeometry(.72, 1.08, 12.5, 12), gateStoneMat);
-  post.position.set(x, 7.45, 0);
-  gate.add(post);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.05, .75, 12), gateGoldMat);
-  cap.position.set(x, 13.8, 0);
-  gate.add(cap);
-  const crown = new THREE.Mesh(new THREE.DodecahedronGeometry(1.55, 1), gateGreenMat);
-  crown.scale.set(1.35, .85, .9);
-  crown.position.set(x, 15, 0);
-  gate.add(crown);
-}
-const crossbar = new THREE.Mesh(new THREE.BoxGeometry(35, 1.3, 1.4), gateGreenMat);
-crossbar.position.y = 13.45;
-gate.add(crossbar);
-for (let x = -13.5, i = 0; x <= 13.5; x += 3, i++) {
-  const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(.72, 0), i % 2 ? gateGreenMat : gateGoldMat);
-  leaf.scale.set(1.3, .55, .62);
-  leaf.position.set(x, 14.3 + Math.cos(x) * .18, 0);
-  leaf.rotation.z = x * .08;
-  gate.add(leaf);
-}
-const signCanvas = document.createElement('canvas');
-signCanvas.width = 1024;
-signCanvas.height = 256;
-const signContext = signCanvas.getContext('2d');
-const signGradient = signContext.createLinearGradient(0, 0, 0, 256);
-signGradient.addColorStop(0, '#3f8058');
-signGradient.addColorStop(1, '#1d4938');
-signContext.fillStyle = signGradient;
-signContext.fillRect(0, 0, 1024, 256);
-signContext.strokeStyle = '#e7c867';
-signContext.lineWidth = 18;
-signContext.strokeRect(14, 14, 996, 228);
-signContext.fillStyle = '#fff6cf';
-signContext.font = '900 112px sans-serif';
-signContext.textAlign = 'center';
-signContext.textBaseline = 'middle';
-signContext.shadowColor = 'rgba(0,0,0,.42)';
-signContext.shadowBlur = 10;
-signContext.shadowOffsetY = 6;
-signContext.fillText('MANDRIDER', 512, 134);
-const signTexture = new THREE.CanvasTexture(signCanvas);
-signTexture.colorSpace = THREE.SRGBColorSpace;
-signTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-const sign = new THREE.Mesh(
-  new THREE.PlaneGeometry(21, 4.1),
-  new THREE.MeshBasicMaterial({ map: signTexture, side: THREE.DoubleSide })
-);
-sign.position.set(0, 16.35, -.65);
-sign.rotation.y = Math.PI;
-gate.add(sign);
-gate.position.copy(trackCurve.getPointAt(.0015));
-gate.rotation.y = startAngle;
-gate.traverse((part) => { if (part.isMesh) part.castShadow = part.receiveShadow = true; });
-scene.add(gate);
-
-const minimap = document.getElementById('minimap');
-const minimapBase = document.createElement('canvas');
-minimapBase.width = minimap.width;
-minimapBase.height = minimap.height;
-const minimapBaseContext = minimapBase.getContext('2d');
-const minimapContext = minimap.getContext('2d');
-const mapBounds = trackSamples.reduce((bounds, point) => ({
-  minX: Math.min(bounds.minX, point.x), maxX: Math.max(bounds.maxX, point.x),
-  minZ: Math.min(bounds.minZ, point.z), maxZ: Math.max(bounds.maxZ, point.z)
-}), { minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity });
-function minimapPoint(point) {
-  const padding = 16;
-  return [
-    padding + (point.x - mapBounds.minX) / (mapBounds.maxX - mapBounds.minX) * (minimap.width - padding * 2),
-    padding + (mapBounds.maxZ - point.z) / (mapBounds.maxZ - mapBounds.minZ) * (minimap.height - padding * 2)
-  ];
-}
-function strokeMinimap(context, color, width) {
-  context.beginPath();
-  trackSamples.forEach((point, i) => {
-    const [x, y] = minimapPoint(point);
-    if (i) context.lineTo(x, y); else context.moveTo(x, y);
-  });
-  context.closePath();
-  context.strokeStyle = color;
-  context.lineWidth = width;
-  context.lineJoin = context.lineCap = 'round';
-  context.stroke();
-}
-strokeMinimap(minimapBaseContext, 'rgba(10,18,24,.85)', 9);
-strokeMinimap(minimapBaseContext, '#f7fbff', 5);
+// 맵마다 도로 폭이 달라 트랙은 고른 다음에 짓는다. 둘 다 미리 지어 두면
+// 고르지 않은 맵의 지형까지 화면에 같이 남는다.
+let track = null;
 
 function makeKart() {
   const kart = new THREE.Group();
@@ -448,10 +179,10 @@ let previousProgress = 0;
 
 function reset() {
   state = createKartState();
-  state.x = start.x;
-  state.z = start.z;
-  state.heading = startHeading;
-  cameraHeading = startHeading;
+  state.x = track.start.x;
+  state.z = track.start.z;
+  state.heading = track.startHeading;
+  cameraHeading = track.startHeading;
   raceFinished = false;
   lap = 1;
   lapArmed = false;
@@ -460,7 +191,23 @@ function reset() {
   for (const key of Object.keys(keys)) keys[key] = false;
 }
 
+let chosenMap = 'circuit';
+const mapCards = [...document.querySelectorAll('.map-card')];
+for (const card of mapCards) {
+  card.addEventListener('click', () => {
+    chosenMap = card.dataset.map;
+    for (const other of mapCards) {
+      const on = other === card;
+      other.classList.toggle('selected', on);
+      other.setAttribute('aria-pressed', on);
+    }
+  });
+}
+
 document.getElementById('start-race').addEventListener('click', () => {
+  const map = MAPS[chosenMap];
+  track = buildTrack(scene, renderer, map, minimap);
+  document.getElementById('race-map-name').textContent = map.name;
   document.getElementById('map-select').classList.add('hidden');
   raceActive = true;
   if (raceSky) scene.background = raceSky;
@@ -483,9 +230,10 @@ const timeEl = document.getElementById('race-time');
 const speedDialEl = document.getElementById('speed-dial');
 
 function drawMinimap() {
+  if (!track) return;
   minimapContext.clearRect(0, 0, minimap.width, minimap.height);
-  minimapContext.drawImage(minimapBase, 0, 0);
-  const [x, y] = minimapPoint(raceActive ? state : start);
+  minimapContext.drawImage(track.minimapBase, 0, 0);
+  const [x, y] = track.minimapPoint(raceActive ? state : track.start);
   minimapContext.beginPath();
   minimapContext.arc(x, y, 5, 0, Math.PI * 2);
   minimapContext.fillStyle = '#ff4d2e';
@@ -517,23 +265,24 @@ function updateHud() {
 }
 
 function nearestTrackSample() {
+  const samples = track.trackSamples;
   let index = 0;
   let distanceSq = Infinity;
-  for (let i = 0; i < trackSamples.length; i++) {
-    const dx = state.x - trackSamples[i].x;
-    const dz = state.z - trackSamples[i].z;
+  for (let i = 0; i < samples.length; i++) {
+    const dx = state.x - samples[i].x;
+    const dz = state.z - samples[i].z;
     const candidate = dx * dx + dz * dz;
     if (candidate < distanceSq) {
       index = i;
       distanceSq = candidate;
     }
   }
-  return { index, point: trackSamples[index] };
+  return { index, point: samples[index] };
 }
 
 
 function updateLap(index) {
-  const progress = index / trackSamples.length;
+  const progress = index / track.trackSamples.length;
   if (progress > .42 && progress < .68) lapArmed = true;
   if (lapArmed && previousProgress > .85 && progress < .15) {
     lapArmed = false;
@@ -593,7 +342,7 @@ function updateScene(dt, now) {
   if (raceSky) {
     // 배경은 카트가 아니라 카메라 각도를 따라간다. 카트를 따라가면 시야보다
     // 더 돌아서 배경만 미끄러지는 것처럼 보인다.
-    raceSky.offset.x = (cameraHeading - startHeading) / (Math.PI * 2) + state.elapsed * .0008;
+    raceSky.offset.x = (cameraHeading - track.startHeading) / (Math.PI * 2) + state.elapsed * .0008;
     // 카메라를 roll 만큼 굴리면 화면 속 세상은 반대쪽으로 기운 것처럼 보인다.
     // texture.rotation 은 그 값만큼 그림을 같은 방향으로 기울이므로 -roll 을 준다.
     raceSky.rotation = -roll;
@@ -632,7 +381,7 @@ function frame(nowMs) {
       boostPressed: pressed.has('boost')
     }, dt);
     const nearest = nearestTrackSample();
-    constrainToRoad(state, nearest.point.x, nearest.point.z);
+    constrainToRoad(state, nearest.point.x, nearest.point.z, track.halfWidth);
     updateLap(nearest.index);
   }
   pressed.clear();

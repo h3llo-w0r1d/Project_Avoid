@@ -24,6 +24,10 @@ button, a { font: inherit; }
 .map-copy strong { font-size: 18px; }
 .map-copy small { color: #d5e5d0; line-height: 1.4; }
 .map-check { align-self: start; padding: 5px 8px; border-radius: 9px; color: #17320c; background: #b9f486; font-size: 11px; font-weight: 1000; }
+.map-card + .map-card { margin-top: 10px; }
+.map-card:not(.selected) { border-color: rgba(226,255,210,.22); background: rgba(255,255,255,.05); }
+/* 뱃지를 지우지 않고 숨긴다. display:none 으로 빼면 그 칸이 접혀 카드마다 글자 폭이 달라진다. */
+.map-card:not(.selected) .map-check { visibility: hidden; }
 #start-race { width: 100%; margin-top: 16px; padding: 14px; border: 0; border-radius: 14px; color: #16320c; background: linear-gradient(135deg, #d3ff92, #79e348); font-weight: 1000; cursor: pointer; box-shadow: 0 7px 24px rgba(119,231,73,.28); }
 .map-panel > a { display: block; margin-top: 13px; color: #d9e4d7; text-align: center; text-decoration: none; font-size: 13px; }
 
