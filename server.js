@@ -1283,7 +1283,9 @@ app.post('/api/mandrider/start', (req, res) => {
 
 app.post('/api/mandrider/record', (req, res) => {
   const seconds = Number(req.body?.seconds);
-  if (!Number.isFinite(seconds) || seconds < MANDRIDER_FLOOR_SECONDS || seconds > 3600) {
+  // 죽은 판은 몇 초 만에 끝나기도 한다. 하한은 아래에서 랭킹에 오를 때만 본다.
+  const died = req.body?.died === true;
+  if (!Number.isFinite(seconds) || seconds < 0 || seconds > 3600) {
     return res.status(400).json({ error: t(req, 'api.invalidTime') });
   }
   const ip = clientIp(req);
@@ -1295,7 +1297,11 @@ app.post('/api/mandrider/record', (req, res) => {
   // 랭킹에 오르는 코스는 서버가 정한다. 브라우저가 "이건 랭킹용" 이라고 말하게
   // 두면 짧은 코스를 달리고 서킷 기록이라 우길 수 있다.
   // (맵 이름을 바꾸면 이 줄도 같이 바꿔야 한다 — mandrider-track.js 의 ranked 맵)
-  const ranked = mapName === RANKED_MAP;
+  const ranked = mapName === RANKED_MAP && !died;
+  // 사람이 낼 수 없는 완주 기록은 여기서 거른다(죽은 판은 볼 필요가 없다).
+  if (ranked && seconds < MANDRIDER_FLOOR_SECONDS) {
+    return res.status(400).json({ error: t(req, 'api.invalidTime') });
+  }
   // 게스트는 이름이 없다 — 만드라이더는 이름을 따로 받지 않는다.
   const who = req.user?.nickname ?? '게스트';
 
@@ -1309,13 +1315,15 @@ app.post('/api/mandrider/record', (req, res) => {
   const best = counts ? users.setMandriderBest(req.user.id, ms) : 0;
 
   modeLogs.mandrider.add({ name: who, userId: req.user?.id ?? null,
-    map: mapName, seconds: Math.round(seconds * 100) / 100, best: counts && ms <= best ? 1 : 0 });
+    map: mapName, seconds: Math.round(seconds * 100) / 100,
+    best: counts && ms <= best ? 1 : 0, died: died ? 1 : 0 });
   if (counts) {
     plays.add({ name: who, seconds: Math.round(seconds * 100) / 100, userId: req.user.id,
       mobile: isMobile(req.get('user-agent')), mode: 'mandrider', country: countryCode(ip),
       isp: asnOrg(ip), lang: browserLang(req) });
   }
 
+  if (died) return res.json({ died: true });
   if (!ranked) return res.json({ unranked: true });
   if (admin) return res.json({ excluded: true });
   if (!req.user?.nickname) return res.json({ needLogin: true });

@@ -452,7 +452,7 @@
 
   <section class="tab-panel hidden" id="panel-mandrider">
     <h2>만드라이더 기록 <span class="dim" id="mandrider-count"></span></h2>
-    <p class="hint">완주한 판만 남습니다. 어느 맵을 몇 초에 돌았는지 · <b>최고</b> 는 그 계정 기록을 갈아치운 판입니다.</p>
+    <p class="hint">완주도 죽은 판도 남습니다. 어느 맵을 몇 초에 돌았는지 · <b>최고</b> 는 그 계정 기록을 갈아치운 판입니다.</p>
     <div class="tools">
       <span class="grow"></span>
       <button class="danger" id="mandrider-clear" type="button">전체 비우기</button>
@@ -1016,11 +1016,12 @@ async function drawMandriderLog() {
     const body = rows.map((r) =>
       `<tr><td class="name${r.member ? ' member' : ''}">${esc(r.name)}</td>
         <td>${esc(r.map)}</td>
+        <td class="${r.died ? 'ok-no' : 'ok-yes'}">${r.died ? '죽음' : '완주'}</td>
         <td class="num">${r.seconds.toFixed(2)}초</td>
         <td class="${r.best ? 'ok-yes' : 'dim'}">${r.best ? '최고' : '—'}</td>
         <td class="dim">${stamp(r.at)}</td></tr>`).join('');
     $('mandrider-table').innerHTML =
-      `<table><thead><tr><th>이름</th><th>맵</th><th>기록</th><th>최고</th><th>때</th></tr></thead><tbody>${body}</tbody></table>`;
+      `<table><thead><tr><th>이름</th><th>맵</th><th>결과</th><th>기록</th><th>최고</th><th>때</th></tr></thead><tbody>${body}</tbody></table>`;
     const pages = Math.max(1, Math.ceil(total / PLAY_PER));
     mandriderPage = Math.min(mandriderPage, pages - 1);
     pager('mandrider-pager', pages, mandriderPage, (p) => { mandriderPage = p; drawMandriderLog(); });

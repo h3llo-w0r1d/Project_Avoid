@@ -180,7 +180,8 @@ function killRun() {
   // 문구는 짧게. 왜 죽었는지는 바로 앞의 붉은 만드라고라가 말해 준다.
   state.notice = 'GAMEOVER';
   state.noticeTimer = 3600;
-  runTicket = null;
+  // 죽은 판도 관리 화면 기록에는 남긴다. 화면 문구는 그대로 GAMEOVER 다.
+  sendRecord(state.elapsed, true);
   // 완주는 올라가는 세 음이었다. 이쪽은 내려가는 두 음으로 반대로 들린다.
   beep(320, .22, .22);
   beep(150, .8, .2, .2);
@@ -428,8 +429,9 @@ function askTicket() {
     .catch(() => { runTicket = null; });
 }
 
-// 완주 기록을 올리고, 화면에 붙일 문구를 돌려준다.
-async function sendRecord(seconds) {
+// 판이 끝난 기록을 올리고, 화면에 붙일 문구를 돌려준다. 죽은 판도 올린다 —
+// 랭킹에는 안 가지만 관리 화면 기록에는 남는다.
+async function sendRecord(seconds, died = false) {
   if (!runTicket) return '기록은 남지 않았습니다';
   const ticket = runTicket;
   runTicket = null;                 // 표는 한 번만 쓴다. 다시 달리면 새로 받는다.
@@ -438,7 +440,7 @@ async function sendRecord(seconds) {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       // 맵 이름은 관리 화면 기록에 남는다. 랭킹에 넣을지는 서버가 정한다.
-      body: JSON.stringify({ ticket, seconds, map: MAPS[chosenMap]?.name ?? chosenMap })
+      body: JSON.stringify({ ticket, seconds, died, map: MAPS[chosenMap]?.name ?? chosenMap })
     });
     const data = await res.json();
     if (!res.ok) return data?.error ?? '기록을 올리지 못했습니다';
