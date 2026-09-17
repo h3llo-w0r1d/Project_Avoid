@@ -104,20 +104,7 @@ function makeKart() {
   flames.visible = false;
   kart.add(flames);
 
-  // 드리프트 불똥 — 점 입자로 뿌린다. 충전이 쌓일수록 색이 올라간다.
-  const SPARKS = 54;
-  const sparkGeo = new THREE.BufferGeometry();
-  sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(SPARKS * 3), 3));
-  const sparkMat = new THREE.PointsMaterial({
-    size: .3, transparent: true, opacity: .95, blending: THREE.AdditiveBlending, depthWrite: false
-  });
-  const sparks = new THREE.Points(sparkGeo, sparkMat);
-  sparks.frustumCulled = false;   // 정점을 직접 갱신하므로 경계구가 맞지 않는다
-  sparks.visible = false;
-  sparks.userData.seed = Array.from({ length: SPARKS }, () => Math.random());
-  kart.add(sparks);
-
-  kart.userData = { plant, flames, plumes, sparks, sparkMat };
+  kart.userData = { plant, flames, plumes };
   return kart;
 }
 
@@ -381,7 +368,6 @@ function nearestTrackSample() {
   return { index, point: samples[index] };
 }
 
-
 function updateLap(index) {
   const progress = index / track.trackSamples.length;
   if (progress > .42 && progress < .68) lapArmed = true;
@@ -415,7 +401,7 @@ function updateScene(dt, now) {
   // 물리의 +회전과 Three.js의 로컬 -Z 회전 방향이 반대라 부호를 뒤집는다.
   kart.rotation.y = -state.heading;
   kart.rotation.z = -state.lateral * 0.006;
-  const { plant, flames, plumes, sparks, sparkMat } = kart.userData;
+  const { plant, flames, plumes } = kart.userData;
   plant.userData.animate?.(now, Math.abs(state.speed) * 0.25, true);
 
   flames.visible = state.boostTimer > 0 || state.instantTimer > 0;
@@ -426,27 +412,6 @@ function updateScene(dt, now) {
       const wobble = .82 + Math.sin(now * (13 + i * 2.6) + i) * .12 + Math.random() * .12;
       plume.layer.scale.z = plume.length * wobble;
     });
-  }
-
-  // 충전이 시작돼야 불똥이 튄다. 미끄러지자마자 튀면 흰 얼룩만 남고
-  // 무엇을 알리는 표시인지도 흐려진다.
-  sparks.visible = state.drifting && state.driftTime >= .6;
-  if (sparks.visible) {
-    // 충전 단계를 색으로 알린다 — 주황에서 파랑.
-    const tier = state.driftTime >= 1.4 ? 1 : 0;
-    sparkMat.color.setHex([0xffa02e, 0x66e6ff][tier]);
-    sparkMat.size = .3 + tier * .1;
-    const seed = sparks.userData.seed;
-    const array = sparks.geometry.attributes.position.array;
-    // 미끄러지는 바깥쪽으로 튄다. 안쪽으로 튀면 도는 방향이 거꾸로 읽힌다.
-    const outward = -state.driftDirection;
-    for (let i = 0; i < seed.length; i++) {
-      const t = (seed[i] + now * 2.6) % 1;
-      array[i * 3] = outward * (.6 + t * 1.8) + (seed[i] - .5) * (.4 + t * 1.2);
-      array[i * 3 + 1] = .1 + Math.sin(t * 3.1) * .5 * (.4 + seed[i]);
-      array[i * 3 + 2] = .3 + t * 2.3 + (seed[i] - .5) * .5;
-    }
-    sparks.geometry.attributes.position.needsUpdate = true;
   }
 
   if (state.drifting) dropMarks();
