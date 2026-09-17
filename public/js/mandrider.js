@@ -230,6 +230,28 @@ function beep(frequency, seconds, volume) {
   osc.stop(at + seconds + .03);
 }
 
+// 타이어 끼익 소리. 잡음을 만들어 좁은 대역만 통과시키면 미끄러지는 소리가 된다.
+// 한 번 켜 두고 소리 크기만 여닫는다 — 드리프트마다 새로 만들면 딱딱 끊긴다.
+let screech = null;
+function startScreech() {
+  if (!audioContext || screech) return;
+  const buffer = audioContext.createBuffer(1, audioContext.sampleRate, audioContext.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  const filter = audioContext.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 2100;
+  filter.Q.value = 11;            // 좁게 조일수록 '쉬익' 이 아니라 '끼익' 에 가까워진다
+  const gain = audioContext.createGain();
+  gain.gain.value = 0;
+  source.connect(filter).connect(gain).connect(audioContext.destination);
+  source.start();
+  screech = { gain, filter };
+}
+
 let state = createKartState();
 let raceActive = false;
 let raceFinished = false;
@@ -290,6 +312,7 @@ document.getElementById('start-race').addEventListener('click', () => {
   document.body.classList.add('racing');
   audioContext ??= new (window.AudioContext ?? window.webkitAudioContext)();
   audioContext.resume?.();
+  startScreech();
   raceActive = true;
   if (raceSky) scene.background = raceSky;
   kart.visible = true;
@@ -415,6 +438,13 @@ function updateScene(dt, now) {
   }
 
   if (state.drifting) dropMarks();
+  // 끼익 소리. 빠를수록 크고 높게, 이어 걸수록 더 날카롭게.
+  if (screech) {
+    const speedPart = Math.min(Math.abs(state.speed) / KART.maxSpeed, 1);
+    const want = state.drifting ? .05 + speedPart * .13 : 0;
+    screech.gain.gain.setTargetAtTime(want, audioContext.currentTime, .04);
+    screech.filter.frequency.setTargetAtTime(1750 + speedPart * 900 + state.driftChain * 130, audioContext.currentTime, .08);
+  }
 
   // 카메라는 카트보다 늦게 돈다. 시야가 카트를 그대로 따라 휙 돌면 멀미가 난다.
   // 코너에서는 카트만 화면 안에서 비스듬해지고 시야는 천천히 따라붙는다.

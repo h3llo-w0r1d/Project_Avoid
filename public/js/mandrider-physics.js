@@ -19,6 +19,10 @@ export const KART = Object.freeze({
   driftMinSpeed: 10,
   driftMinTime: 0.18,
   driftChainWindow: 0.48,
+  // 빠르게 이어 드리프트했을 때 붙는 '고속턴' 보정. 한 번 이어질 때마다
+  // 회전은 이만큼 더 날카로워지고 속도는 덜 깎인다(둘 다 두 번까지만 쌓인다).
+  chainTurn: 0.55,
+  chainKeep: 0.3,
   boostSeconds: 2.35,
   instantSeconds: 0.72,
   instantWindow: 0.62
@@ -168,14 +172,21 @@ export function stepKart(state, input, rawDt) {
   const highSpeedGrip = 1 - Math.max(0, speedRatio - .72) * .45;
   const baseTurn = state.steer * KART.turnRate * (.2 + Math.min(speedRatio, 1) * .8) * highSpeedGrip;
   const driftBuild = state.drifting ? Math.min(state.driftTime / .32, 1) : 0;
-  const driftTurn = state.drifting ? state.driftDirection * KART.driftTurnRate * speedRatio * (.72 + driftBuild * .28) : 0;
+  // 고속턴 — 짧은 시간 안에 다시 드리프트를 걸면 그만큼 더 날카롭게 돈다.
+  // 첫 드리프트는 0 이라 종전과 같고, 두 번째부터 붙는다.
+  const chain = Math.min(Math.max(0, state.driftChain - 1), 2);
+  const driftTurn = state.drifting
+    ? state.driftDirection * KART.driftTurnRate * speedRatio * (.72 + driftBuild * .28) * (1 + chain * KART.chainTurn)
+    : 0;
   state.heading += (baseTurn * (state.drifting ? .62 : 1) + driftTurn) * reverse * dt;
 
   if (state.drifting) {
     state.driftTime += dt;
     const slip = -state.driftDirection * Math.abs(state.speed) * (.27 + driftBuild * .1 + state.driftChain * .015);
     state.lateral = toward(state.lateral, slip, KART.driftGrip * dt);
-    state.speed = toward(state.speed, 0, KART.driftSpeedLoss * (.72 + Math.abs(state.steer) * .28) * dt);
+    // 고속턴이라는 이름값을 하려면 속도가 남아야 한다. 이어 걸수록 덜 깎는다.
+    state.speed = toward(state.speed, 0,
+      KART.driftSpeedLoss * (.72 + Math.abs(state.steer) * .28) * (1 - chain * KART.chainKeep) * dt);
     charge(state, Math.abs(state.speed) * (.7 + Math.abs(state.steer) * .3) * (1 + state.driftChain * .08) * dt);
   } else {
     const recoveryGrip = state.driftExitTimer > 0 ? KART.grip * 1.7 : boosting ? KART.grip * 1.35 : KART.grip;
